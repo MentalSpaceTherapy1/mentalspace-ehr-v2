@@ -1,0 +1,964 @@
+// MentalSpace EHR V2 - Prisma Schema
+// Based on comprehensive PRD documentation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// PHASE 1: USER MANAGEMENT & AUTHENTICATION
+// ============================================================================
+
+enum UserRole {
+  ADMINISTRATOR
+  SUPERVISOR
+  CLINICIAN
+  BILLING_STAFF
+  FRONT_DESK
+  ASSOCIATE
+}
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  password          String // bcrypt hashed
+  firstName         String
+  middleName        String?
+  lastName          String
+  suffix            String?
+  preferredName     String?
+  role              UserRole
+
+  // Professional Information
+  title             String // PhD, PsyD, LCSW, etc.
+  licenseNumber     String
+  licenseState      String
+  licenseExpiration DateTime
+  npiNumber         String?
+  deaNumber         String?
+  taxonomyCode      String?
+
+  // Credentials
+  credentials       String[] // Array of credentials
+  specialties       String[]
+  languagesSpoken   String[]
+
+  // Supervision
+  isUnderSupervision        Boolean @default(false)
+  supervisorId              String?
+  supervisor                User?   @relation("Supervision", fields: [supervisorId], references: [id])
+  supervisees               User[]  @relation("Supervision")
+  supervisionStartDate      DateTime?
+  supervisionEndDate        DateTime?
+  requiredSupervisionHours  Int?
+  completedSupervisionHours Float?
+
+  isSupervisor              Boolean @default(false)
+  supervisionLicenses       String[]
+
+  // Contact
+  phoneNumber               String
+  officeExtension           String?
+  personalEmail             String?
+  emergencyContactName      String?
+  emergencyContactPhone     String?
+
+  // Practice Settings
+  defaultOfficeLocation     String?
+  availableForScheduling    Boolean @default(true)
+  acceptsNewClients         Boolean @default(true)
+
+  // Notifications
+  emailNotifications        Boolean @default(true)
+  smsNotifications          Boolean @default(false)
+  appointmentReminders      Boolean @default(true)
+  noteReminders             Boolean @default(true)
+  supervisoryAlerts         Boolean @default(true)
+
+  // Billing
+  defaultRate               Decimal? @db.Decimal(10, 2)
+  hourlyPayrollRate         Decimal? @db.Decimal(10, 2)
+  taxId                     String?
+
+  // Account Status
+  isActive                  Boolean  @default(true)
+  mfaEnabled                Boolean  @default(false)
+  lastLoginDate             DateTime?
+
+  // Signature
+  digitalSignature          String? // base64
+  signatureDate             DateTime?
+
+  // Timestamps
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  // Relations
+  clinicalNotesCreated      ClinicalNote[]         @relation("NoteCreator")
+  clinicalNotesCosigned     ClinicalNote[]         @relation("NoteCosigner")
+  appointmentsAsClinician   Appointment[]          @relation("AppointmentClinician")
+  supervisionSessions       SupervisionSession[]   @relation("SupervisionSessionSupervisor")
+  superviseeSessions        SupervisionSession[]   @relation("SupervisionSessionSupervisee")
+  supervisionHoursLogs      SupervisionHoursLog[]
+
+  @@map("users")
+}
+
+// ============================================================================
+// PHASE 2: CLIENT MANAGEMENT & DEMOGRAPHICS
+// ============================================================================
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  DISCHARGED
+  DECEASED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+model Client {
+  id                    String        @id @default(uuid())
+  medicalRecordNumber   String        @unique
+
+  // Personal Information
+  firstName             String
+  middleName            String?
+  lastName              String
+  suffix                String?
+  previousNames         String[]
+  preferredName         String?
+  pronouns              String?
+
+  // Date of Birth
+  dateOfBirth           DateTime
+
+  // Contact Information
+  primaryPhone          String
+  primaryPhoneType      String        @default("Mobile")
+  secondaryPhone        String?
+  secondaryPhoneType    String?
+  email                 String?
+  preferredContactMethod String       @default("Phone")
+  okayToLeaveMessage    Boolean       @default(true)
+
+  // Address
+  addressStreet1        String
+  addressStreet2        String?
+  addressCity           String
+  addressState          String
+  addressZipCode        String
+  addressCounty         String?
+  isTemporaryAddress    Boolean       @default(false)
+  temporaryUntil        DateTime?
+
+  // Mailing Address (if different)
+  mailingStreet1        String?
+  mailingStreet2        String?
+  mailingCity           String?
+  mailingState          String?
+  mailingZipCode        String?
+
+  // Demographics
+  gender                Gender
+  genderIdentity        String?
+  sexAssignedAtBirth    String?
+  sexualOrientation     String?
+  maritalStatus         String
+  race                  String[]
+  ethnicity             String?
+  primaryLanguage       String        @default("English")
+  otherLanguages        String[]
+  needsInterpreter      Boolean       @default(false)
+  interpreterLanguage   String?
+  religion              String?
+
+  // Social Information
+  education             String?
+  employmentStatus      String?
+  occupation            String?
+  employer              String?
+  livingArrangement     String?
+  housingStatus         String?
+
+  // Veteran Status
+  isVeteran             Boolean       @default(false)
+  militaryBranch        String?
+  militaryDischargeType String?
+
+  // Legal
+  legalStatus           String?
+  guardianName          String?
+  guardianPhone         String?
+  guardianRelationship  String?
+
+  // Account Status
+  status                ClientStatus  @default(ACTIVE)
+  statusDate            DateTime      @default(now())
+  registrationDate      DateTime      @default(now())
+  dischargeDate         DateTime?
+  dischargeReason       String?
+  deceasedDate          DateTime?
+
+  // Assignment
+  primaryTherapistId    String
+  primaryTherapist      User          @relation("ClientTherapist", fields: [primaryTherapistId], references: [id])
+  psychiatristId        String?
+  caseManagerId         String?
+
+  // Consents
+  treatmentConsent      Boolean       @default(false)
+  treatmentConsentDate  DateTime?
+  hipaaAcknowledgment   Boolean       @default(false)
+  hipaaAcknowledgmentDate DateTime?
+  releaseOfInformation  Boolean       @default(false)
+  releaseOfInformationDate DateTime?
+  electronicCommunication Boolean     @default(false)
+  appointmentReminders  Boolean       @default(true)
+  photographyConsent    Boolean       @default(false)
+
+  // Special Needs
+  specialNeeds          String?
+  accessibilityNeeds    String[]
+  allergyAlerts         String[]
+
+  // Previous System
+  previousMRN           String?
+  previousSystemName    String?
+
+  // Timestamps
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  createdBy             String
+  lastModifiedBy        String
+
+  // Relations
+  emergencyContacts     EmergencyContact[]
+  insuranceInfo         InsuranceInformation[]
+  appointments          Appointment[]
+  clinicalNotes         ClinicalNote[]
+  treatmentPlans        TreatmentPlan[]
+  diagnoses             Diagnosis[]
+  medications           Medication[]
+  documents             ClientDocument[]
+  charges               ChargeEntry[]
+  payments              PaymentRecord[]
+  statements            ClientStatement[]
+  portalAccount         PortalAccount?
+
+  @@map("clients")
+}
+
+model EmergencyContact {
+  id                    String   @id @default(uuid())
+  clientId              String
+  client                Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  name                  String
+  relationship          String
+  phone                 String
+  alternatePhone        String?
+  email                 String?
+  address               String?
+  isPrimary             Boolean  @default(false)
+  okayToDiscussHealth   Boolean  @default(false)
+  okayToLeaveMessage    Boolean  @default(true)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("emergency_contacts")
+}
+
+// ============================================================================
+// PHASE 2: INSURANCE INFORMATION
+// ============================================================================
+
+model InsuranceInformation {
+  id                    String   @id @default(uuid())
+  clientId              String
+  client                Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  rank                  String // Primary, Secondary, Tertiary
+  insuranceCompany      String
+  insuranceCompanyId    String?
+  planName              String
+  planType              String
+  memberId              String
+  groupNumber           String?
+
+  effectiveDate         DateTime
+  terminationDate       DateTime?
+
+  // Subscriber Info
+  subscriberIsClient    Boolean  @default(true)
+  subscriberFirstName   String?
+  subscriberLastName    String?
+  subscriberDOB         DateTime?
+  subscriberSSN         String?
+  relationshipToSubscriber String?
+  subscriberEmployer    String?
+
+  // Contact
+  customerServicePhone  String?
+  precertificationPhone String?
+  providerPhone         String?
+
+  // Coverage
+  requiresReferral      Boolean  @default(false)
+  requiresPriorAuth     Boolean  @default(false)
+  mentalHealthCoverage  Boolean  @default(true)
+  copay                 Decimal? @db.Decimal(10, 2)
+  coinsurance           Int? // percentage
+  deductible            Decimal? @db.Decimal(10, 2)
+  deductibleMet         Decimal? @db.Decimal(10, 2)
+  outOfPocketMax        Decimal? @db.Decimal(10, 2)
+  outOfPocketMet        Decimal? @db.Decimal(10, 2)
+
+  // Verification
+  lastVerificationDate  DateTime?
+  lastVerifiedBy        String?
+  verificationNotes     String?
+  remainingSessions     Int?
+
+  // Card Images
+  frontCardImage        String? // S3 URL
+  backCardImage         String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("insurance_information")
+}
+
+// ============================================================================
+// PHASE 3: SCHEDULING & APPOINTMENTS
+// ============================================================================
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  CHECKED_IN
+  IN_SESSION
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+  RESCHEDULED
+}
+
+model Appointment {
+  id                    String            @id @default(uuid())
+  clientId              String
+  client                Client            @relation(fields: [clientId], references: [id])
+  clinicianId           String
+  clinician             User              @relation("AppointmentClinician", fields: [clinicianId], references: [id])
+
+  // Date/Time
+  appointmentDate       DateTime
+  startTime             String
+  endTime               String
+  duration              Int // minutes
+  timezone              String            @default("America/New_York")
+
+  // Details
+  appointmentType       String
+  serviceLocation       String
+  officeLocationId      String?
+  room                  String?
+
+  // Status
+  status                AppointmentStatus @default(SCHEDULED)
+  statusUpdatedDate     DateTime          @default(now())
+  statusUpdatedBy       String
+
+  // Cancellation
+  cancellationDate      DateTime?
+  cancellationReason    String?
+  cancellationNotes     String?
+  cancelledBy           String?
+  cancellationFeeApplied Boolean          @default(false)
+
+  // No Show
+  noShowDate            DateTime?
+  noShowFeeApplied      Boolean          @default(false)
+  noShowNotes           String?
+
+  // Check-in/out
+  checkedInTime         String?
+  checkedInBy           String?
+  checkedOutTime        String?
+  checkedOutBy          String?
+  actualDuration        Int?
+
+  // Billing
+  cptCode               String?
+  icdCodes              String[]
+  chargeAmount          Decimal?         @db.Decimal(10, 2)
+  billingStatus         String           @default("Not Billed")
+
+  // Reminders
+  emailReminderSent     Boolean          @default(false)
+  emailReminderDate     DateTime?
+  smsReminderSent       Boolean          @default(false)
+  smsReminderDate       DateTime?
+
+  // Recurring
+  isRecurring           Boolean          @default(false)
+  recurrenceFrequency   String?
+  recurrenceInterval    Int?
+  recurrenceDaysOfWeek  String[]
+  recurrenceEndDate     DateTime?
+  parentRecurrenceId    String?
+
+  // Notes
+  appointmentNotes      String?
+  clientNotes           String?
+
+  // Telehealth
+  telehealthLink        String?
+  telehealthPlatform    String?
+
+  // Timestamps
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  createdBy             String
+  lastModifiedBy        String
+
+  // Relations
+  clinicalNotes         ClinicalNote[]
+
+  @@map("appointments")
+}
+
+// ============================================================================
+// PHASE 4: CLINICAL DOCUMENTATION
+// ============================================================================
+
+enum NoteStatus {
+  DRAFT
+  SIGNED
+  LOCKED
+  PENDING_COSIGN
+  COSIGNED
+}
+
+model ClinicalNote {
+  id                    String      @id @default(uuid())
+  clientId              String
+  client                Client      @relation(fields: [clientId], references: [id])
+  clinicianId           String
+  clinician             User        @relation("NoteCreator", fields: [clinicianId], references: [id])
+  appointmentId         String?
+  appointment           Appointment? @relation(fields: [appointmentId], references: [id])
+
+  noteType              String // SOAP, Intake, Treatment Plan, etc.
+  sessionDate           DateTime
+  sessionStartTime      String?
+  sessionEndTime        String?
+  sessionDuration       Int? // minutes
+
+  // SOAP Note Fields
+  subjective            String?
+  objective             String?
+  assessment            String?
+  plan                  String?
+
+  // Risk Assessment
+  suicidalIdeation      Boolean     @default(false)
+  suicidalPlan          Boolean     @default(false)
+  homicidalIdeation     Boolean     @default(false)
+  selfHarm              Boolean     @default(false)
+  riskLevel             String?
+  riskAssessmentDetails String?
+  interventionsTaken    String?
+
+  // Diagnosis
+  diagnosisCodes        String[] // ICD-10 codes
+
+  // Treatment
+  interventionsUsed     String[]
+  progressTowardGoals   String?
+
+  // Next Session
+  nextSessionPlan       String?
+  nextSessionDate       DateTime?
+
+  // Status & Signatures
+  status                NoteStatus  @default(DRAFT)
+  signedDate            DateTime?
+  signedBy              String?
+  lockedDate            DateTime?
+  lockReason            String?
+
+  // Supervision/Co-signing
+  requiresCosign        Boolean     @default(false)
+  cosignedDate          DateTime?
+  cosignedBy            String?
+  cosigner              User?       @relation("NoteCosigner", fields: [cosignedBy], references: [id])
+  supervisorComments    String?
+
+  // Compliance
+  dueDate               DateTime
+  completedOnTime       Boolean     @default(false)
+  daysToComplete        Int?
+
+  // Billing
+  cptCode               String?
+  billingCode           String?
+  billable              Boolean     @default(true)
+
+  // AI Generated
+  aiGenerated           Boolean     @default(false)
+  aiModel               String?
+  aiPrompt              String?
+  inputTranscript       String?
+
+  // Timestamps
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  lastModifiedBy        String
+
+  @@map("clinical_notes")
+}
+
+model TreatmentPlan {
+  id                    String      @id @default(uuid())
+  clientId              String
+  client                Client      @relation(fields: [clientId], references: [id])
+  clinicianId           String
+
+  planDate              DateTime    @default(now())
+  reviewDate            DateTime?
+  nextReviewDate        DateTime
+
+  // Presenting Problems
+  presentingProblems    String[]
+
+  // Goals (stored as JSON)
+  goalsJson             Json // Array of goal objects
+
+  // Interventions
+  interventions         String[]
+  frequency             String
+  estimatedDuration     String
+
+  // Discharge Criteria
+  dischargeCriteria     String?
+
+  // Status
+  status                String      @default("Active")
+
+  // Signatures
+  clinicianSignature    String?
+  clinicianSignDate     DateTime?
+  clientSignature       String?
+  clientSignDate        DateTime?
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@map("treatment_plans")
+}
+
+model Diagnosis {
+  id                    String      @id @default(uuid())
+  clientId              String
+  client                Client      @relation(fields: [clientId], references: [id])
+
+  icdCode               String
+  diagnosisDescription  String
+  diagnosisType         String      @default("Primary")
+  onsetDate             DateTime?
+  resolvedDate          DateTime?
+  status                String      @default("Active")
+  notes                 String?
+
+  diagnosedBy           String
+  diagnosisDate         DateTime    @default(now())
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@map("diagnoses")
+}
+
+model Medication {
+  id                    String      @id @default(uuid())
+  clientId              String
+  client                Client      @relation(fields: [clientId], references: [id])
+
+  medicationName        String
+  dosage                String
+  frequency             String
+  route                 String
+  prescribedBy          String
+  prescribedDate        DateTime
+  startDate             DateTime
+  endDate               DateTime?
+
+  status                String      @default("Active")
+  discontinuedDate      DateTime?
+  discontinuedReason    String?
+
+  instructions          String?
+  sideEffects           String?
+  notes                 String?
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@map("medications")
+}
+
+// ============================================================================
+// PHASE 5: SUPERVISION
+// ============================================================================
+
+model SupervisionSession {
+  id                    String      @id @default(uuid())
+  supervisorId          String
+  supervisor            User        @relation("SupervisionSessionSupervisor", fields: [supervisorId], references: [id])
+  superviseeId          String
+  supervisee            User        @relation("SupervisionSessionSupervisee", fields: [superviseeId], references: [id])
+
+  sessionDate           DateTime
+  sessionStartTime      String
+  sessionEndTime        String
+  sessionDuration       Int // minutes
+
+  sessionType           String // Individual, Group, Triadic
+  sessionFormat         String // In-Person, Virtual, Phone
+
+  // Content
+  casesDiscussedJson    Json // Array of cases
+  topicsCovered         String[]
+  skillsDeveloped       String[]
+
+  feedbackProvided      String
+  areasOfStrength       String[]
+  areasForImprovement   String[]
+
+  actionItemsJson       Json // Array of action items
+
+  nextSessionScheduled  Boolean     @default(false)
+  nextSessionDate       DateTime?
+
+  // Hours Credit
+  hoursEarned           Float
+  hourType              String // Direct, Indirect, Group
+
+  // Signatures
+  supervisorSignature   String
+  supervisorSignDate    DateTime
+  superviseeSignature   String
+  superviseeSignDate    DateTime
+  superviseeReflection  String?
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@map("supervision_sessions")
+}
+
+model SupervisionHoursLog {
+  id                    String      @id @default(uuid())
+  superviseeId          String
+  supervisee            User        @relation(fields: [superviseeId], references: [id])
+  supervisorId          String
+
+  hourDate              DateTime
+  hourType              String
+  hoursEarned           Float
+
+  sessionDescription    String
+  topicsCovered         String[]
+
+  verifiedBySupervisor  Boolean     @default(false)
+  supervisorVerificationDate DateTime?
+  supervisorSignature   String?
+
+  appliesTo             String // License requirement
+  status                String      @default("Pending")
+
+  createdAt             DateTime    @default(now())
+  createdBy             String
+
+  @@map("supervision_hours_log")
+}
+
+// ============================================================================
+// PHASE 7: CLIENT PORTAL
+// ============================================================================
+
+enum PortalAccountStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+  PENDING_VERIFICATION
+}
+
+model PortalAccount {
+  id                    String              @id @default(uuid())
+  clientId              String              @unique
+  client                Client              @relation(fields: [clientId], references: [id])
+
+  email                 String              @unique
+  password              String // hashed
+  mfaEnabled            Boolean             @default(false)
+  mfaMethod             String?
+
+  accountStatus         PortalAccountStatus @default(PENDING_VERIFICATION)
+  emailVerified         Boolean             @default(false)
+  verificationToken     String?
+
+  lastLoginDate         DateTime?
+  failedLoginAttempts   Int                 @default(0)
+  accountLockedUntil    DateTime?
+
+  // Preferences
+  emailNotifications    Boolean             @default(true)
+  smsNotifications      Boolean             @default(false)
+  appointmentReminders  Boolean             @default(true)
+  billingReminders      Boolean             @default(true)
+  messageNotifications  Boolean             @default(true)
+
+  portalAccessGranted   Boolean             @default(false)
+  grantedBy             String?
+  grantedDate           DateTime?
+
+  isGuardianAccount     Boolean             @default(false)
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@map("portal_accounts")
+}
+
+// ============================================================================
+// PHASE 8: BILLING & FINANCIAL
+// ============================================================================
+
+model ChargeEntry {
+  id                    String      @id @default(uuid())
+  clientId              String
+  client                Client      @relation(fields: [clientId], references: [id])
+  appointmentId         String?
+
+  serviceDate           DateTime
+  providerId            String
+  supervisingProviderId String?
+
+  cptCode               String
+  cptDescription        String
+  modifiers             String[]
+  units                 Int         @default(1)
+
+  diagnosisCodesJson    Json // Array of diagnosis objects
+
+  placeOfService        String
+  locationId            String?
+
+  chargeAmount          Decimal     @db.Decimal(10, 2)
+  allowedAmount         Decimal?    @db.Decimal(10, 2)
+  adjustmentAmount      Decimal?    @db.Decimal(10, 2)
+  paymentAmount         Decimal?    @db.Decimal(10, 2)
+  clientResponsibility  Decimal?    @db.Decimal(10, 2)
+
+  primaryInsuranceId    String?
+  secondaryInsuranceId  String?
+
+  chargeStatus          String      @default("Unbilled")
+  claimId               String?
+  claimStatus           String?
+  billedDate            DateTime?
+
+  denialCode            String?
+  denialReason          String?
+  appealFiled           Boolean     @default(false)
+  appealDate            DateTime?
+
+  writeOffAmount        Decimal?    @db.Decimal(10, 2)
+  writeOffReason        String?
+  writeOffDate          DateTime?
+
+  createdAt             DateTime    @default(now())
+  createdBy             String
+
+  @@map("charge_entries")
+}
+
+model PaymentRecord {
+  id                    String      @id @default(uuid())
+  clientId              String
+  client                Client      @relation(fields: [clientId], references: [id])
+
+  paymentDate           DateTime
+  paymentAmount         Decimal     @db.Decimal(10, 2)
+
+  paymentSource         String // Insurance, Client, Guarantor
+  paymentMethod         String // Check, Card, Cash, ACH
+
+  checkNumber           String?
+  cardLast4             String?
+  transactionId         String?
+
+  appliedPaymentsJson   Json // Array of applied payment objects
+
+  eobDate               DateTime?
+  eobAttachment         String? // S3 URL
+  claimNumber           String?
+
+  adjustmentsJson       Json? // Array of adjustment objects
+
+  overpaymentAmount     Decimal?    @db.Decimal(10, 2)
+  refundIssued          Boolean     @default(false)
+  refundDate            DateTime?
+  refundAmount          Decimal?    @db.Decimal(10, 2)
+
+  unappliedAmount       Decimal     @db.Decimal(10, 2) @default(0)
+
+  paymentStatus         String      @default("Posted")
+
+  postedBy              String
+  postedDate            DateTime    @default(now())
+  notes                 String?
+
+  createdAt             DateTime    @default(now())
+
+  @@map("payment_records")
+}
+
+model ClientStatement {
+  id                    String      @id @default(uuid())
+  clientId              String
+  client                Client      @relation(fields: [clientId], references: [id])
+
+  statementDate         DateTime
+  periodStartDate       DateTime
+  periodEndDate         DateTime
+
+  previousBalance       Decimal     @db.Decimal(10, 2)
+  currentCharges        Decimal     @db.Decimal(10, 2)
+  payments              Decimal     @db.Decimal(10, 2)
+  adjustments           Decimal     @db.Decimal(10, 2)
+  currentBalance        Decimal     @db.Decimal(10, 2)
+
+  aging0to30            Decimal     @db.Decimal(10, 2)
+  aging31to60           Decimal     @db.Decimal(10, 2)
+  aging61to90           Decimal     @db.Decimal(10, 2)
+  aging91to120          Decimal     @db.Decimal(10, 2)
+  aging120Plus          Decimal     @db.Decimal(10, 2)
+
+  statementMessage      String?
+  dueDate               DateTime?
+
+  statementStatus       String      @default("Generated")
+  sentDate              DateTime?
+  sentMethod            String? // Mail, Email, Portal
+
+  viewedInPortal        Boolean     @default(false)
+  viewedDate            DateTime?
+
+  inCollections         Boolean     @default(false)
+  collectionDate        DateTime?
+  collectionAgency      String?
+
+  createdAt             DateTime    @default(now())
+
+  @@map("client_statements")
+}
+
+// ============================================================================
+// PHASE 10: DOCUMENT MANAGEMENT
+// ============================================================================
+
+model ClientDocument {
+  id                    String      @id @default(uuid())
+  clientId              String
+  client                Client      @relation(fields: [clientId], references: [id])
+
+  documentName          String
+  documentType          String
+  documentCategory      String?
+  documentDescription   String?
+
+  fileUrl               String
+  fileName              String
+  fileSize              Int
+  fileType              String
+
+  uploadedBy            String
+  uploadedDate          DateTime    @default(now())
+  uploadedMethod        String
+
+  documentSource        String
+  externalProvider      String?
+  documentDate          DateTime
+
+  requiresSignature     Boolean     @default(false)
+  signaturesJson        Json? // Array of signature objects
+
+  sharedWithClient      Boolean     @default(false)
+  sharedViaPortal       Boolean     @default(false)
+  sharedDate            DateTime?
+  clientViewedDate      DateTime?
+
+  isEmbeddedForm        Boolean     @default(false)
+  formResponsesJson     Json?
+
+  versionNumber         Int         @default(1)
+  previousVersionId     String?
+  latestVersion         Boolean     @default(true)
+
+  ocrProcessed          Boolean     @default(false)
+  extractedText         String?
+
+  tags                  String[]
+  status                String      @default("Active")
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@map("client_documents")
+}
+
+// ============================================================================
+// SYSTEM TABLES
+// ============================================================================
+
+model AuditLog {
+  id                    String      @id @default(uuid())
+  userId                String?
+  clientId              String?
+  action                String
+  entityType            String
+  entityId              String
+  changes               Json?
+  ipAddress             String?
+  userAgent             String?
+  timestamp             DateTime    @default(now())
+
+  @@map("audit_logs")
+}
+
+model SystemConfig {
+  id                    String      @id @default(uuid())
+  key                   String      @unique
+  value                 String
+  description           String?
+  updatedAt             DateTime    @updatedAt
+  updatedBy             String
+
+  @@map("system_config")
+}
