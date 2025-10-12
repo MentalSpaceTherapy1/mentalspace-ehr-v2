@@ -1,0 +1,48 @@
+{
+  "name": "mentalspace-ehr-v2",
+  "version": "2.0.0",
+  "description": "MentalSpace EHR V2 - Enterprise Electronic Health Record System",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "infrastructure"
+  ],
+  "scripts": {
+    "bootstrap": "npm install && npm run install:all",
+    "install:all": "npm install --workspace=packages/backend && npm install --workspace=packages/frontend && npm install --workspace=packages/shared && npm install --workspace=packages/database && npm install --workspace=infrastructure",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "cdk:deploy": "npm run cdk deploy --workspace=infrastructure",
+    "cdk:destroy": "npm run cdk destroy --workspace=infrastructure",
+    "cdk:diff": "npm run cdk diff --workspace=infrastructure",
+    "dev:backend": "npm run dev --workspace=packages/backend",
+    "dev:frontend": "npm run dev --workspace=packages/frontend",
+    "prisma:generate": "npm run generate --workspace=packages/database",
+    "prisma:migrate": "npm run migrate:dev --workspace=packages/database",
+    "prisma:studio": "npm run studio --workspace=packages/database"
+  },
+  "keywords": [
+    "ehr",
+    "healthcare",
+    "mental-health",
+    "hipaa",
+    "aws",
+    "typescript"
+  ],
+  "author": "MentalSpace Team",
+  "license": "PROPRIETARY",
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "@typescript-eslint/eslint-plugin": "^7.5.0",
+    "@typescript-eslint/parser": "^7.5.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
