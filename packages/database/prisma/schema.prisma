@@ -105,6 +105,7 @@ model User {
   supervisionSessions       SupervisionSession[]   @relation("SupervisionSessionSupervisor")
   superviseeSessions        SupervisionSession[]   @relation("SupervisionSessionSupervisee")
   supervisionHoursLogs      SupervisionHoursLog[]
+  clientsAsTherapist        Client[]               @relation("ClientTherapist")
 
   @@map("users")
 }

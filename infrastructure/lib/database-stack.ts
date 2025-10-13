@@ -39,9 +39,11 @@ export class DatabaseStack extends cdk.Stack {
       instanceType,
       vpc,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+        // Use PUBLIC subnets in dev for initial setup, then move to PRIVATE_WITH_EGRESS
+        subnetType: environment === 'prod' ? ec2.SubnetType.PRIVATE_WITH_EGRESS : ec2.SubnetType.PUBLIC,
       },
       securityGroups: [dbSecurityGroup],
+      publiclyAccessible: environment !== 'prod', // Allow public access in dev for setup
       databaseName: 'mentalspace_ehr',
       credentials: rds.Credentials.fromGeneratedSecret('mentalspace_admin'),
       allocatedStorage: environment === 'prod' ? 100 : 20,
