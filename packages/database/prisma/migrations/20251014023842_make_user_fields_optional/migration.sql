@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "users" ALTER COLUMN "title" DROP NOT NULL,
+ALTER COLUMN "licenseNumber" DROP NOT NULL,
+ALTER COLUMN "licenseState" DROP NOT NULL,
+ALTER COLUMN "licenseExpiration" DROP NOT NULL,
+ALTER COLUMN "phoneNumber" DROP NOT NULL;

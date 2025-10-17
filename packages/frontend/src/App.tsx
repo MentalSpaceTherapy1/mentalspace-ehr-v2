@@ -1,35 +1,199 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import UserList from './pages/Users/UserList';
+import UserForm from './pages/Users/UserForm';
+import UserDetail from './pages/Users/UserDetail';
+import PracticeSettings from './pages/PracticeSettings';
+import ClientList from './pages/Clients/ClientList';
+import ClientForm from './pages/Clients/ClientForm';
+import ClientDetail from './pages/Clients/ClientDetail';
+import ClinicalNoteDetail from './pages/ClinicalNotes/ClinicalNoteDetail';
+import CosignQueue from './pages/ClinicalNotes/CosignQueue';
+import NoteTypeSelector from './pages/ClinicalNotes/NoteTypeSelector';
+import IntakeAssessmentForm from './pages/ClinicalNotes/Forms/IntakeAssessmentForm';
+import ProgressNoteForm from './pages/ClinicalNotes/Forms/ProgressNoteForm';
+import TreatmentPlanForm from './pages/ClinicalNotes/Forms/TreatmentPlanForm';
+import CancellationNoteForm from './pages/ClinicalNotes/Forms/CancellationNoteForm';
+import ConsultationNoteForm from './pages/ClinicalNotes/Forms/ConsultationNoteForm';
+import ContactNoteForm from './pages/ClinicalNotes/Forms/ContactNoteForm';
+import TerminationNoteForm from './pages/ClinicalNotes/Forms/TerminationNoteForm';
+import MiscellaneousNoteForm from './pages/ClinicalNotes/Forms/MiscellaneousNoteForm';
+import AppointmentsCalendar from './pages/Appointments/AppointmentsCalendar';
+import NewAppointment from './pages/Appointments/NewAppointment';
+import Waitlist from './pages/Appointments/Waitlist';
+import ClinicianSchedule from './pages/Appointments/ClinicianSchedule';
+import TimeOffRequests from './pages/Appointments/TimeOffRequests';
+import ReminderSettings from './pages/Settings/ReminderSettings';
+import VideoSession from './pages/Telehealth/VideoSession';
+import BillingDashboard from './pages/Billing/BillingDashboard';
+import ChargesPage from './pages/Billing/ChargesPage';
+import PaymentsPage from './pages/Billing/PaymentsPage';
+import ClinicianDashboard from './pages/Productivity/ClinicianDashboard';
+import SupervisorDashboard from './pages/Productivity/SupervisorDashboard';
+import AdministratorDashboard from './pages/Productivity/AdministratorDashboard';
+import PortalLayout from './components/PortalLayout';
+import PortalLogin from './pages/Portal/PortalLogin';
+import PortalRegister from './pages/Portal/PortalRegister';
+import PortalForgotPassword from './pages/Portal/PortalForgotPassword';
+import PortalDashboard from './pages/Portal/PortalDashboard';
+import PortalAppointments from './pages/Portal/PortalAppointments';
+import PortalMessages from './pages/Portal/PortalMessages';
+import PortalMoodTracking from './pages/Portal/PortalMoodTracking';
+import PortalBilling from './pages/Portal/PortalBilling';
+import PortalProfile from './pages/Portal/PortalProfile';
+import PortalDocuments from './pages/Portal/PortalDocuments';
+import PortalAssessments from './pages/Portal/PortalAssessments';
+import PortalAppointmentRequest from './pages/Portal/PortalAppointmentRequest';
+import PortalReferrals from './pages/Portal/PortalReferrals';
+import PortalTherapistChange from './pages/Portal/PortalTherapistChange';
+import PortalTherapistProfile from './pages/Portal/PortalTherapistProfile';
 
-// Placeholder components - will be implemented later
-const LoginPage = () => <div className="p-8">Login Page</div>;
-const DashboardPage = () => <div className="p-8">Dashboard</div>;
-const ClientsPage = () => <div className="p-8">Clients</div>;
-const AppointmentsPage = () => <div className="p-8">Appointments</div>;
-const NotesPage = () => <div className="p-8">Clinical Notes</div>;
-const SupervisionPage = () => <div className="p-8">Supervision</div>;
-const BillingPage = () => <div className="p-8">Billing</div>;
+
+const SupervisionPage = () => (
+  <div className="p-8">
+    <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+      <div className="text-6xl mb-4">👨‍🏫</div>
+      <h2 className="text-3xl font-bold text-gray-800 mb-2">Supervision Module</h2>
+      <p className="text-gray-600">Coming Soon - Phase 6</p>
+    </div>
+  </div>
+);
+
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const token = localStorage.getItem('token');
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (!token) {
+    return <Navigate to="/login" />;
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  return <Layout>{children}</Layout>;
+}
+
+function PortalRoute({ children }: { children: React.ReactNode }) {
+  const token = localStorage.getItem('portalToken');
+
+  if (!token) {
+    return <Navigate to="/portal/login" />;
+  }
+
+  return <PortalLayout>{children}</PortalLayout>;
 }
 
 function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<Login />} />
+
+        {/* Client Portal Routes */}
+        <Route path="/portal/login" element={<PortalLogin />} />
+        <Route path="/portal/register" element={<PortalRegister />} />
+        <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
+        <Route
+          path="/portal/dashboard"
+          element={
+            <PortalRoute>
+              <PortalDashboard />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/appointments"
+          element={
+            <PortalRoute>
+              <PortalAppointments />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/messages"
+          element={
+            <PortalRoute>
+              <PortalMessages />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/mood"
+          element={
+            <PortalRoute>
+              <PortalMoodTracking />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/billing"
+          element={
+            <PortalRoute>
+              <PortalBilling />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/profile"
+          element={
+            <PortalRoute>
+              <PortalProfile />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/documents"
+          element={
+            <PortalRoute>
+              <PortalDocuments />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/assessments"
+          element={
+            <PortalRoute>
+              <PortalAssessments />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/appointments/request"
+          element={
+            <PortalRoute>
+              <PortalAppointmentRequest />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/referrals"
+          element={
+            <PortalRoute>
+              <PortalReferrals />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/therapist/change"
+          element={
+            <PortalRoute>
+              <PortalTherapistChange />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/therapist/profile"
+          element={
+            <PortalRoute>
+              <PortalTherapistProfile />
+            </PortalRoute>
+          }
+        />
+
         <Route
           path="/"
           element={
             <PrivateRoute>
-              <DashboardPage />
+              <Dashboard />
             </PrivateRoute>
           }
         />
@@ -37,7 +201,31 @@ function App() {
           path="/clients"
           element={
             <PrivateRoute>
-              <ClientsPage />
+              <ClientList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/new"
+          element={
+            <PrivateRoute>
+              <ClientForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:id"
+          element={
+            <PrivateRoute>
+              <ClientDetail />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:id/edit"
+          element={
+            <PrivateRoute>
+              <ClientForm />
             </PrivateRoute>
           }
         />
@@ -45,7 +233,55 @@ function App() {
           path="/appointments"
           element={
             <PrivateRoute>
-              <AppointmentsPage />
+              <AppointmentsCalendar />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/appointments/new"
+          element={
+            <PrivateRoute>
+              <NewAppointment />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/appointments/waitlist"
+          element={
+            <PrivateRoute>
+              <Waitlist />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/appointments/schedules"
+          element={
+            <PrivateRoute>
+              <ClinicianSchedule />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/appointments/time-off"
+          element={
+            <PrivateRoute>
+              <TimeOffRequests />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/settings/reminders"
+          element={
+            <PrivateRoute>
+              <ReminderSettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/telehealth/session/:appointmentId"
+          element={
+            <PrivateRoute>
+              <VideoSession />
             </PrivateRoute>
           }
         />
@@ -53,7 +289,87 @@ function App() {
           path="/notes"
           element={
             <PrivateRoute>
-              <NotesPage />
+              <CosignQueue />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/new"
+          element={
+            <PrivateRoute>
+              <NoteTypeSelector />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/new/intake-assessment"
+          element={
+            <PrivateRoute>
+              <IntakeAssessmentForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/new/progress-note"
+          element={
+            <PrivateRoute>
+              <ProgressNoteForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/new/treatment-plan"
+          element={
+            <PrivateRoute>
+              <TreatmentPlanForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/new/cancellation-note"
+          element={
+            <PrivateRoute>
+              <CancellationNoteForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/new/consultation-note"
+          element={
+            <PrivateRoute>
+              <ConsultationNoteForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/new/contact-note"
+          element={
+            <PrivateRoute>
+              <ContactNoteForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/new/termination-note"
+          element={
+            <PrivateRoute>
+              <TerminationNoteForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/new/miscellaneous-note"
+          element={
+            <PrivateRoute>
+              <MiscellaneousNoteForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/:noteId"
+          element={
+            <PrivateRoute>
+              <ClinicalNoteDetail />
             </PrivateRoute>
           }
         />
@@ -69,7 +385,103 @@ function App() {
           path="/billing"
           element={
             <PrivateRoute>
-              <BillingPage />
+              <BillingDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/charges"
+          element={
+            <PrivateRoute>
+              <ChargesPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/charges/new"
+          element={
+            <PrivateRoute>
+              <ChargesPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payments"
+          element={
+            <PrivateRoute>
+              <PaymentsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payments/new"
+          element={
+            <PrivateRoute>
+              <PaymentsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <PrivateRoute>
+              <UserList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/users/new"
+          element={
+            <PrivateRoute>
+              <UserForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/users/:id"
+          element={
+            <PrivateRoute>
+              <UserDetail />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/users/:id/edit"
+          element={
+            <PrivateRoute>
+              <UserForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <PrivateRoute>
+              <PracticeSettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/productivity/clinician"
+          element={
+            <PrivateRoute>
+              <ClinicianDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/productivity/supervisor"
+          element={
+            <PrivateRoute>
+              <SupervisorDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/productivity/administrator"
+          element={
+            <PrivateRoute>
+              <AdministratorDashboard />
             </PrivateRoute>
           }
         />

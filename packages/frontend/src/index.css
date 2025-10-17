@@ -27,3 +27,8 @@ body {
 #root {
   width: 100%;
 }
+
+/* Telehealth Video Mirror Effect */
+.mirror {
+  transform: scaleX(-1);
+}

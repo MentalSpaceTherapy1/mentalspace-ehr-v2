@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql:*)",
+      "Bash(\"C:\\Program Files\\PostgreSQL\\17\\bin\\psql.exe\" -U postgres -c \"CREATE DATABASE mentalspace_ehr;\")",
+      "Bash(npx prisma:*)",
+      "Bash(powershell:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

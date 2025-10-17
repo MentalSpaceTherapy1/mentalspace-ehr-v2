@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import config from './config';
 import logger from './utils/logger';
 import { requestLogger } from './middleware/requestLogger';
+import { sessionTimeoutMiddleware } from './middleware/sessionTimeout';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import routes from './routes';
 
@@ -32,6 +33,9 @@ app.use(compression());
 
 // Request logging
 app.use(requestLogger);
+
+// Session timeout middleware (HIPAA compliance - 15 minute inactivity timeout)
+app.use(sessionTimeoutMiddleware);
 
 // Rate limiting
 const limiter = rateLimit({

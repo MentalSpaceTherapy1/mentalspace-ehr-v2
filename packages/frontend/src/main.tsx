@@ -2,8 +2,33 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import axios from 'axios';
 import App from './App';
 import './index.css';
+
+// Configure axios defaults globally
+const API_URL = import.meta.env.VITE_API_URL || 'http://mentalspace-ehr-dev-881286108.us-east-1.elb.amazonaws.com';
+axios.defaults.baseURL = API_URL;
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+// Add request interceptor for auth token
+axios.interceptors.request.use(
+  (config) => {
+    // Check if this is a portal request
+    const isPortalRequest = config.url?.includes('/portal');
+
+    // Use appropriate token based on request type
+    const token = isPortalRequest
+      ? localStorage.getItem('portalToken')
+      : localStorage.getItem('token');
+
+    if (token && config.headers && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {

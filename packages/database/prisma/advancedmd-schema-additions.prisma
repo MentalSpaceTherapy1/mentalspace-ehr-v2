@@ -1,0 +1,294 @@
+// ============================================================================
+// ADVANCEDMD INTEGRATION ADDITIONS
+// Add these to the main schema.prisma file
+// ============================================================================
+
+// 1. ADD TO Client MODEL (after line 250):
+// AdvancedMD Integration Fields
+advancedMDPatientId String?   @unique
+lastSyncedToAMD     DateTime?
+amdSyncStatus       String?   // 'pending', 'synced', 'error'
+amdSyncError        String?
+
+// 2. ADD TO ChargeEntry MODEL (after line 1220):
+// AdvancedMD Integration Fields
+advancedMDChargeId   String?
+advancedMDVisitId    String?
+syncStatus           String    @default("pending") // 'pending', 'synced', 'error'
+syncError            String?
+lastSyncAttempt      DateTime?
+
+// 3. ADD TO InsuranceInformation MODEL (after line 327):
+// AdvancedMD Integration Fields
+advancedMDPayerId    String?
+advancedMDPayerName  String?
+lastEligibilityCheck DateTime?
+
+// 4. NEW MODELS - Add after ClientStatement model (around line 1301):
+
+// Eligibility Verification Results
+model EligibilityCheck {
+  id           String   @id @default(uuid())
+  clientId     String
+  client       Client   @relation("ClientEligibilityCheck", fields: [clientId], references: [id])
+  insuranceId  String
+
+  checkDate    DateTime @default(now())
+
+  // Request Info
+  serviceType  String?  // '30' for Mental Health
+  providerId   String?
+
+  // Response Data
+  responseData Json     // Full response from AdvancedMD
+
+  // Coverage Status
+  coverageActive   Boolean?
+  eligibleForService Boolean?
+
+  // Financial Responsibility
+  copay              Decimal?  @db.Decimal(10, 2)
+  coinsurance        Int?      // percentage
+  deductible         Decimal?  @db.Decimal(10, 2)
+  deductibleMet      Decimal?  @db.Decimal(10, 2)
+  outOfPocketMax     Decimal?  @db.Decimal(10, 2)
+  outOfPocketMet     Decimal?  @db.Decimal(10, 2)
+
+  // Coverage Details
+  planName           String?
+  planType           String?
+  coverageLevel      String?   // 'Individual', 'Family'
+
+  // Authorization
+  requiresAuth       Boolean   @default(false)
+  authNumber         String?
+
+  // Limitations
+  serviceLimit       Int?      // Visit limit
+  serviceUsed        Int?      // Visits used
+  serviceRemaining   Int?
+
+  // Caching
+  cachedUntil    DateTime  // 24 hours from checkDate
+
+  // Status
+  checkStatus    String    // 'success', 'failed', 'error'
+  errorMessage   String?
+
+  createdAt      DateTime  @default(now())
+
+  @@index([clientId, checkDate])
+  @@index([cachedUntil])
+  @@map("eligibility_checks")
+}
+
+// Claims Management
+model Claim {
+  id             String   @id @default(uuid())
+  claimNumber    String   @unique
+  clientId       String
+  client         Client   @relation("ClientClaim", fields: [clientId], references: [id])
+  insuranceId    String
+
+  // Claim Info
+  claimType      String   @default("Professional") // 'Professional', 'Institutional'
+  billingProvider String
+  renderingProvider String?
+  supervisingProvider String?
+
+  // Dates
+  serviceStartDate DateTime
+  serviceEndDate   DateTime
+  submissionDate   DateTime?
+
+  // Status
+  claimStatus        String   @default("draft") // 'draft', 'ready', 'submitted', 'accepted', 'rejected', 'in_process', 'paid', 'denied', 'partial_paid'
+  statusDate         DateTime @default(now())
+  statusUpdatedBy    String?
+
+  // Financial
+  totalChargeAmount    Decimal  @db.Decimal(10, 2)
+  totalAllowedAmount   Decimal? @db.Decimal(10, 2)
+  totalPaidAmount      Decimal  @default(0) @db.Decimal(10, 2)
+  totalAdjustmentAmount Decimal @default(0) @db.Decimal(10, 2)
+  totalPatientResponsibility Decimal? @db.Decimal(10, 2)
+
+  // AdvancedMD Integration
+  advancedMDClaimId    String?
+  advancedMDVisitId    String?
+
+  // Clearinghouse
+  clearinghouseId      String?
+  clearinghouseName    String?  // 'Waystar', 'Change'
+  clearinghouseStatus  String?
+  clearinghouseResponse Json?
+
+  // Rejection/Denial
+  rejectionReason      String?
+  rejectionCode        String?
+  denialReason         String?
+  denialCode           String?
+
+  // Resubmission
+  isResubmission       Boolean  @default(false)
+  originalClaimId      String?
+  resubmissionReason   String?
+  resubmissionDate     DateTime?
+
+  // Notes
+  notes                String?
+
+  // Timestamps
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  createdBy            String
+  lastModifiedBy       String?
+
+  // Relations
+  charges              ClaimCharge[]
+  payments             ClaimPayment[]
+  eraRecords           ERARecord[]
+
+  @@index([clientId, claimStatus])
+  @@index([claimStatus, submissionDate])
+  @@index([advancedMDClaimId])
+  @@map("claims")
+}
+
+// Claim Charge Line Items
+model ClaimCharge {
+  id         String @id @default(uuid())
+  claimId    String
+  claim      Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  chargeId   String
+
+  // Line Item Details (denormalized for claim submission)
+  serviceDate    DateTime
+  cptCode        String
+  modifiers      String[]
+  units          Int
+  chargeAmount   Decimal  @db.Decimal(10, 2)
+  diagnosisCodes String[] // Pointers to claim diagnosis codes
+
+  createdAt      DateTime @default(now())
+
+  @@index([claimId])
+  @@map("claim_charges")
+}
+
+// Claim Payments (from ERA/EOB)
+model ClaimPayment {
+  id              String   @id @default(uuid())
+  claimId         String
+  claim           Claim    @relation(fields: [claimId], references: [id])
+
+  paymentDate     DateTime
+  paymentAmount   Decimal  @db.Decimal(10, 2)
+  checkNumber     String?
+  payerClaimNumber String?
+
+  // Payment Breakdown
+  paidAmount         Decimal  @db.Decimal(10, 2)
+  adjustmentAmount   Decimal  @db.Decimal(10, 2)
+  patientResponsibility Decimal? @db.Decimal(10, 2)
+
+  // Adjustment Codes
+  adjustmentCodes    Json?    // Array of adjustment code objects
+  remarkCodes        Json?    // Array of remark code objects
+
+  // Source
+  paymentSource      String   // 'ERA', 'Manual', 'Check'
+  eraRecordId        String?
+
+  createdAt          DateTime @default(now())
+  createdBy          String
+
+  @@index([claimId, paymentDate])
+  @@map("claim_payments")
+}
+
+// ERA (Electronic Remittance Advice) 835 EDI Records
+model ERARecord {
+  id                String   @id @default(uuid())
+  claimId           String?
+  claim             Claim?   @relation(fields: [claimId], references: [id])
+
+  // ERA Header Info
+  transactionType   String   // '835'
+  payerName         String
+  payerId           String?
+  payerClaimNumber  String?
+
+  // Payment Info
+  paymentMethod     String   // 'CHK', 'ACH', 'EFT'
+  checkEFTNumber    String?
+  paymentDate       DateTime
+  totalPaidAmount   Decimal  @db.Decimal(10, 2)
+
+  // File Info
+  eraFileName       String?
+  eraFileS3Key      String?  // S3 location of original 835 file
+  receivedDate      DateTime @default(now())
+
+  // Raw EDI Data
+  rawEDI            String   @db.Text // Full 835 EDI content
+  parsedData        Json     // Parsed 835 data structure
+
+  // Processing Status
+  processingStatus  String   @default("pending") // 'pending', 'parsed', 'posted', 'error'
+  processingError   String?
+  processedDate     DateTime?
+  processedBy       String?
+
+  // Auto-posting
+  autoPosted        Boolean  @default(false)
+  autoPostingRules  Json?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([payerId, paymentDate])
+  @@index([processingStatus])
+  @@index([eraFileName])
+  @@map("era_records")
+}
+
+// Patient/Appointment Sync Log
+model AdvancedMDSyncLog {
+  id           String   @id @default(uuid())
+  syncType     String   // 'patient', 'appointment', 'charge', 'claim', 'eligibility'
+  entityId     String   // Client ID, Appointment ID, Charge ID, etc.
+  entityType   String   // 'Client', 'Appointment', 'ChargeEntry', 'Claim'
+
+  syncDirection String  // 'to_amd', 'from_amd'
+  syncStatus    String  // 'success', 'error', 'pending'
+
+  // Request/Response
+  requestData   Json?
+  responseData  Json?
+  errorMessage  String?
+
+  // AdvancedMD IDs
+  advancedMDId  String?
+
+  // Timing
+  syncStarted   DateTime @default(now())
+  syncCompleted DateTime?
+  durationMs    Int?
+
+  // Metadata
+  triggeredBy   String?  // User ID or 'SYSTEM'
+  retryCount    Int      @default(0)
+
+  createdAt     DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([syncStatus, syncStarted])
+  @@index([advancedMDId])
+  @@map("advancedmd_sync_logs")
+}
+
+// ADDITIONS TO EXISTING MODEL RELATIONS:
+// Add these to the Client model relations section (after line 223):
+eligibilityChecks       EligibilityCheck[] @relation("ClientEligibilityCheck")
+claims                  Claim[]            @relation("ClientClaim")

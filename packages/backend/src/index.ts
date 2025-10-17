@@ -2,6 +2,7 @@ import app from './app';
 import config from './config';
 import logger from './utils/logger';
 import prisma from './services/database';
+import { startAllProductivityJobs } from './jobs/productivityJobs';
 
 const PORT = config.port;
 
@@ -16,6 +17,9 @@ const server = app.listen(PORT, () => {
 prisma.$connect()
   .then(() => {
     logger.info('✅ Database connected successfully');
+
+    // Start productivity module scheduled jobs
+    startAllProductivityJobs();
   })
   .catch((error) => {
     logger.error('❌ Database connection failed', { error: error.message });

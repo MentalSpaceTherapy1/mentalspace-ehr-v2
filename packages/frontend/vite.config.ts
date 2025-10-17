@@ -9,11 +9,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  define: {
+    // Polyfill global for AWS Chime SDK
+    global: 'globalThis',
+  },
   server: {
-    port: 5173,
+    port: 5175,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3001',
         changeOrigin: true,
       },
     },

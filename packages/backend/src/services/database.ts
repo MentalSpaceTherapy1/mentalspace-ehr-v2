@@ -1,4 +1,4 @@
-import { PrismaClient } from '@mentalspace/database';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 
 // Create Prisma client instance

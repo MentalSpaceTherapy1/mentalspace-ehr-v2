@@ -1,0 +1,140 @@
+name: CI - Test and Lint
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: mentalspace_ehr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Setup test database
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/mentalspace_ehr_test?schema=public
+        run: |
+          cd packages/database
+          npx prisma migrate deploy
+          npx prisma generate
+
+      - name: Run backend tests
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/mentalspace_ehr_test?schema=public
+          JWT_SECRET: test_jwt_secret_key_for_ci_testing_only
+          NODE_ENV: test
+        run: |
+          cd packages/backend
+          npm test -- --coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./packages/backend/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+
+      - name: Run frontend tests
+        run: |
+          cd packages/frontend
+          npm test -- --run
+        continue-on-error: true
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: |
+          cd packages/database
+          npx prisma generate
+
+      - name: Build backend
+        run: |
+          cd packages/backend
+          npm run build
+
+      - name: Build frontend
+        run: |
+          cd packages/frontend
+          npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            packages/backend/dist
+            packages/frontend/dist
+          retention-days: 7

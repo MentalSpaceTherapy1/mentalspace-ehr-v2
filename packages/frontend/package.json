@@ -9,16 +9,26 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fullcalendar/daygrid": "^6.1.19",
+    "@fullcalendar/interaction": "^6.1.19",
+    "@fullcalendar/list": "^6.1.19",
+    "@fullcalendar/react": "^6.1.19",
+    "@fullcalendar/timegrid": "^6.1.19",
     "@mentalspace/shared": "*",
     "@tanstack/react-query": "^5.64.2",
     "@tanstack/react-query-devtools": "^5.64.2",
+    "amazon-chime-sdk-component-library-react": "^3.11.0",
+    "amazon-chime-sdk-js": "^3.29.0",
     "axios": "^1.7.9",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.546.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.1.1",
-    "zustand": "^5.0.3",
-    "clsx": "^2.1.1",
-    "date-fns": "^4.1.0"
+    "socket.io-client": "^4.8.1",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",

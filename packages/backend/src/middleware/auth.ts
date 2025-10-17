@@ -88,3 +88,6 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction) =>
     next();
   }
 };
+
+// Export authenticate as authMiddleware for backwards compatibility
+export const authMiddleware = authenticate;

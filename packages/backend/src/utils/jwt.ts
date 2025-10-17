@@ -6,6 +6,9 @@ export interface JwtPayload {
   userId: string;
   email: string;
   role: string;
+  iat?: number; // Issued at (added by JWT automatically)
+  exp?: number; // Expiration (added by JWT automatically)
+  lastActivity?: number; // Track last activity for session timeout
 }
 
 export interface TokenPair {

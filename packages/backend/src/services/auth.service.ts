@@ -101,7 +101,7 @@ export class AuthService {
     // Update last login
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: { lastLoginDate: new Date() },
     });
 
     // Generate tokens
@@ -146,7 +146,7 @@ export class AuthService {
         lastName: true,
         title: true,
         role: true,
-        phone: true,
+        phoneNumber: true,
         licenseNumber: true,
         licenseState: true,
         licenseExpiration: true,
@@ -162,7 +162,7 @@ export class AuthService {
           },
         },
         createdAt: true,
-        lastLoginAt: true,
+        lastLoginDate: true,
       },
     });
 

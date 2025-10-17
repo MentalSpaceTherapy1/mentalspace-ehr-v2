@@ -14,6 +14,7 @@ export interface DatabaseStackProps extends cdk.StackProps {
 
 export class DatabaseStack extends cdk.Stack {
   public readonly rdsInstance: rds.DatabaseInstance;
+  public readonly databaseSecret: cdk.aws_secretsmanager.ISecret;
   public readonly sessionsTable: dynamodb.Table;
   public readonly cacheTable: dynamodb.Table;
 
@@ -76,6 +77,13 @@ export class DatabaseStack extends cdk.Stack {
         : undefined,
       monitoringInterval: environment === 'prod' ? cdk.Duration.seconds(60) : undefined,
     });
+
+    // Export the database secret for use by compute stack
+    if (this.rdsInstance.secret) {
+      this.databaseSecret = this.rdsInstance.secret;
+    } else {
+      throw new Error('Database secret was not created');
+    }
 
     // DynamoDB Table for Sessions
     this.sessionsTable = new dynamodb.Table(this, 'SessionsTable', {
