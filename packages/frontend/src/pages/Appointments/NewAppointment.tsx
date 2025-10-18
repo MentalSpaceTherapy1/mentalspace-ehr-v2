@@ -9,9 +9,10 @@ export default function NewAppointment() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const preselectedDate = searchParams.get('date');
+  const preselectedClientId = searchParams.get('clientId');
 
   const [formData, setFormData] = useState({
-    clientId: '',
+    clientId: preselectedClientId || '',
     clinicianId: '',
     appointmentDate: preselectedDate || new Date().toISOString().split('T')[0],
     startTime: '09:00',
@@ -31,6 +32,25 @@ export default function NewAppointment() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [clientSearch, setClientSearch] = useState('');
+  const [selectedClientData, setSelectedClientData] = useState<any>(null);
+
+  // Fetch preselected client if clientId is in URL
+  const { data: preselectedClient } = useQuery({
+    queryKey: ['client', preselectedClientId],
+    queryFn: async () => {
+      const response = await api.get(`/clients/${preselectedClientId}`);
+      return response.data.data;
+    },
+    enabled: !!preselectedClientId,
+  });
+
+  // Auto-populate client search when preselected client loads
+  useEffect(() => {
+    if (preselectedClient && !clientSearch) {
+      setClientSearch(`${preselectedClient.firstName} ${preselectedClient.lastName}`);
+      setSelectedClientData(preselectedClient);
+    }
+  }, [preselectedClient]);
 
   // Fetch clients
   const { data: clients } = useQuery({
@@ -41,7 +61,7 @@ export default function NewAppointment() {
       const response = await api.get(`/clients?${params.toString()}`);
       return response.data.data;
     },
-    enabled: clientSearch.length > 2,
+    enabled: clientSearch.length > 2 && !preselectedClientId,
   });
 
   // Fetch clinicians
@@ -206,32 +226,59 @@ export default function NewAppointment() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Client <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              placeholder="Search for client by name..."
-              value={clientSearch}
-              onChange={(e) => setClientSearch(e.target.value)}
-              className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
-            />
-            {clientSearch.length > 2 && clients && clients.length > 0 && (
-              <div className="max-h-48 overflow-y-auto bg-white border-2 border-purple-200 rounded-xl">
-                {clients.map((client: any) => (
+            {formData.clientId && selectedClientData ? (
+              <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-2 border-purple-300 rounded-xl p-4 mb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-gray-900">
+                      {selectedClientData.firstName} {selectedClientData.lastName}
+                    </div>
+                    <div className="text-sm text-gray-600">{selectedClientData.email}</div>
+                  </div>
                   <button
-                    key={client.id}
                     type="button"
                     onClick={() => {
-                      setFormData({ ...formData, clientId: client.id });
-                      setClientSearch(`${client.firstName} ${client.lastName}`);
+                      setFormData({ ...formData, clientId: '' });
+                      setClientSearch('');
+                      setSelectedClientData(null);
                     }}
-                    className={`w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors ${
-                      formData.clientId === client.id ? 'bg-purple-100' : ''
-                    }`}
+                    className="text-purple-600 hover:text-purple-800 font-medium text-sm"
                   >
-                    <div className="font-semibold">{client.firstName} {client.lastName}</div>
-                    <div className="text-sm text-gray-600">{client.email}</div>
+                    Change
                   </button>
-                ))}
+                </div>
               </div>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  placeholder="Search for client by name..."
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
+                />
+                {clientSearch.length > 2 && clients && clients.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto bg-white border-2 border-purple-200 rounded-xl">
+                    {clients.map((client: any) => (
+                      <button
+                        key={client.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, clientId: client.id });
+                          setClientSearch(`${client.firstName} ${client.lastName}`);
+                          setSelectedClientData(client);
+                        }}
+                        className={`w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors ${
+                          formData.clientId === client.id ? 'bg-purple-100' : ''
+                        }`}
+                      >
+                        <div className="font-semibold">{client.firstName} {client.lastName}</div>
+                        <div className="text-sm text-gray-600">{client.email}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
             {errors.clientId && <p className="text-red-500 text-sm mt-1">{errors.clientId}</p>}
           </div>
@@ -239,20 +286,26 @@ export default function NewAppointment() {
           {/* Clinician Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Clinician <span className="text-red-500">*</span>
+              Clinician (Therapist) <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.clinicianId}
-              onChange={(e) => setFormData({ ...formData, clinicianId: e.target.value })}
-              className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+              onChange={(e) => {
+                console.log('Selected clinician ID:', e.target.value);
+                setFormData({ ...formData, clinicianId: e.target.value });
+              }}
+              className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none cursor-pointer"
             >
               <option value="">Select Clinician</option>
               {clinicians?.map((clinician: any) => (
                 <option key={clinician.id} value={clinician.id}>
-                  {clinician.title} {clinician.firstName} {clinician.lastName}
+                  {clinician.title ? `${clinician.title} ` : ''}{clinician.firstName} {clinician.lastName}
                 </option>
               ))}
             </select>
+            {!clinicians || clinicians.length === 0 ? (
+              <p className="text-amber-600 text-sm mt-1">Loading clinicians...</p>
+            ) : null}
             {errors.clinicianId && <p className="text-red-500 text-sm mt-1">{errors.clinicianId}</p>}
           </div>
 

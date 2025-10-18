@@ -147,6 +147,16 @@ export default function ProgressNoteForm() {
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
 
+  // Fetch client data
+  const { data: clientData } = useQuery({
+    queryKey: ['client', clientId],
+    queryFn: async () => {
+      const response = await api.get(`/clients/${clientId}`);
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
   // Fetch eligible appointments
   const { data: eligibleAppointmentsData } = useQuery({
     queryKey: ['eligible-appointments', clientId, 'Progress Note'],
@@ -320,7 +330,17 @@ export default function ProgressNoteForm() {
     if (data.sessionType) setSessionType(data.sessionType);
     if (data.location) setLocation(data.location);
     if (data.symptoms) setSymptoms(data.symptoms);
-    if (data.goals) setGoals(data.goals);
+
+    // Handle goals - ensure it's always an array
+    if (data.goals) {
+      if (Array.isArray(data.goals)) {
+        setGoals(data.goals);
+      } else if (typeof data.goals === 'object') {
+        // If it's a single goal object, wrap it in an array
+        setGoals([data.goals]);
+      }
+    }
+
     if (data.appearance) setAppearance(data.appearance);
     if (data.mood) setMood(data.mood);
     if (data.affect) setAffect(data.affect);
@@ -463,33 +483,12 @@ export default function ProgressNoteForm() {
                 duration={appointmentData.duration || 45}
                 serviceCode={appointmentData.serviceCode}
                 location={appointmentData.location}
-                participants={appointmentData.participants}
+                sessionType={appointmentData.appointmentType}
+                clientName={clientData ? `${clientData.firstName} ${clientData.lastName}` : ''}
+                clientDOB={clientData?.dateOfBirth}
+                diagnoses={diagnosisCodes}
                 editable={false}
               />
-            )}
-
-            {/* Diagnosis Display (Inherited from Intake) */}
-            {diagnosisCodes.length > 0 && (
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Active Diagnoses (from Intake Assessment)
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {diagnosisCodes.map((code, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800"
-                    >
-                      {code}
-                    </span>
-                  ))}
-                </div>
-                {!canSign && diagnosisValidationMessage && (
-                  <div className="mt-3 text-sm text-red-600 font-medium">
-                    {diagnosisValidationMessage}
-                  </div>
-                )}
-              </div>
             )}
 
             {/* AI-Powered Note Generation */}
@@ -499,41 +498,8 @@ export default function ProgressNoteForm() {
               noteType="Progress Note"
             />
 
-            {/* Session Information */}
-            <FormSection title="Session Information" number={1}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <TextField
-                label="Session Date"
-                type="date"
-                value={sessionDate}
-                onChange={setSessionDate}
-                required
-              />
-              <TextField
-                label="Session Duration"
-                value={sessionDuration}
-                onChange={setSessionDuration}
-                placeholder="e.g., 45 minutes, 1 hour"
-              />
-              <SelectField
-                label="Session Type"
-                value={sessionType}
-                onChange={setSessionType}
-                options={SESSION_TYPES.map(type => ({ value: type, label: type }))}
-                required
-              />
-              <SelectField
-                label="Location"
-                value={location}
-                onChange={setLocation}
-                options={LOCATIONS.map(loc => ({ value: loc, label: loc }))}
-                required
-              />
-            </div>
-          </FormSection>
-
           {/* Current Symptoms */}
-          <FormSection title="Current Symptoms" number={2}>
+          <FormSection title="Current Symptoms" number={1}>
             <p className="text-sm text-gray-600 mb-4">Rate the severity of each symptom present in this session</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {SYMPTOMS.map(symptom => (
@@ -555,7 +521,7 @@ export default function ProgressNoteForm() {
           </FormSection>
 
           {/* Progress Toward Goals */}
-          <FormSection title="Progress Toward Goals" number={3}>
+          <FormSection title="Progress Toward Goals" number={2}>
             <div className="space-y-6">
               {goals.map((goal, index) => (
                 <div key={index} className="p-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl">
@@ -621,7 +587,7 @@ export default function ProgressNoteForm() {
           </FormSection>
 
           {/* Brief Mental Status */}
-          <FormSection title="Brief Mental Status" number={4}>
+          <FormSection title="Brief Mental Status" number={3}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SelectField
                 label="Appearance"
@@ -674,7 +640,7 @@ export default function ProgressNoteForm() {
           </FormSection>
 
           {/* Interventions Used */}
-          <FormSection title="Interventions Used" number={5}>
+          <FormSection title="Interventions Used" number={4}>
             <p className="text-sm text-gray-600 mb-4">Select all interventions used in this session</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {INTERVENTIONS.map(intervention => (
@@ -695,7 +661,7 @@ export default function ProgressNoteForm() {
           </FormSection>
 
           {/* Client Response */}
-          <FormSection title="Client Response" number={6}>
+          <FormSection title="Client Response" number={5}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <SelectField
                 label="Engagement Level"
@@ -728,7 +694,7 @@ export default function ProgressNoteForm() {
           </FormSection>
 
           {/* SOAP Notes */}
-          <FormSection title="SOAP Notes" number={7}>
+          <FormSection title="SOAP Notes" number={6}>
             <div className="space-y-6">
               <TextAreaField
                 label="Subjective"
@@ -766,7 +732,7 @@ export default function ProgressNoteForm() {
           </FormSection>
 
           {/* Safety & Risk */}
-          <FormSection title="Safety & Risk" number={8}>
+          <FormSection title="Safety & Risk" number={7}>
             <div className="space-y-6">
               <SelectField
                 label="Risk Level"
@@ -796,7 +762,7 @@ export default function ProgressNoteForm() {
           </FormSection>
 
           {/* Billing */}
-          <FormSection title="Billing Information" number={9}>
+          <FormSection title="Billing Information" number={8}>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>

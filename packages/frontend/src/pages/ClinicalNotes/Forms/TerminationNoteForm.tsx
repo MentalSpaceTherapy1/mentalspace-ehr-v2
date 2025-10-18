@@ -69,8 +69,16 @@ export default function TerminationNoteForm() {
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
 
+  // Fetch client data
+  const { data: clientData } = useQuery({
+    queryKey: ['client', clientId],
+    queryFn: async () => {
+      const response = await api.get(`/clients/${clientId}`);
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
 
-  
   // Fetch eligible appointments
   const { data: eligibleAppointmentsData } = useQuery({
     queryKey: ['eligible-appointments', clientId, 'Termination Note'],
@@ -292,7 +300,9 @@ export default function TerminationNoteForm() {
                 duration={appointmentData.duration || 45}
                 serviceCode={appointmentData.serviceCode}
                 location={appointmentData.location}
-                participants={appointmentData.participants}
+                sessionType={appointmentData.appointmentType}
+                clientName={clientData ? `${clientData.firstName} ${clientData.lastName}` : ''}
+                clientDOB={clientData?.dateOfBirth}
                 editable={false}
               />
             )}
@@ -303,7 +313,7 @@ export default function TerminationNoteForm() {
             noteType="Termination Note"
           />
 
-          {/* Basic Information */}
+          {/* Termination Information */}
           <FormSection title="Termination Information" number={1}>
             <div className="space-y-6">
               <TextField
@@ -348,7 +358,7 @@ export default function TerminationNoteForm() {
           </FormSection>
 
           {/* Final Diagnosis */}
-          <FormSection title="Final Diagnosis" number={3}>
+          <FormSection title="Final Diagnosis" number={2}>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Final Diagnosis Codes (ICD-10) <span className="text-red-500">*</span>
@@ -364,7 +374,7 @@ export default function TerminationNoteForm() {
           </FormSection>
 
           {/* Aftercare Planning */}
-          <FormSection title="Aftercare Planning" number={4}>
+          <FormSection title="Aftercare Planning" number={3}>
             <div className="space-y-6">
               <TextAreaField
                 label="Aftercare Recommendations"
@@ -394,7 +404,7 @@ export default function TerminationNoteForm() {
           </FormSection>
 
           {/* Billing */}
-          <FormSection title="Billing Information" number={5}>
+          <FormSection title="Billing Information" number={4}>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>

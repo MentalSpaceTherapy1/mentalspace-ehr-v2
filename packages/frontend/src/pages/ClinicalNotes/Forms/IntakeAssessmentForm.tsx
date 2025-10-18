@@ -260,6 +260,16 @@ export default function IntakeAssessmentForm() {
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
 
+  // Fetch client data
+  const { data: clientData } = useQuery({
+    queryKey: ['client', clientId],
+    queryFn: async () => {
+      const response = await api.get(`/clients/${clientId}`);
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
   // Fetch appointment data when appointmentId is selected
   const { data: eligibleAppointmentsData } = useQuery({
     queryKey: ['eligible-appointments', clientId, 'Intake Assessment'],
@@ -639,7 +649,9 @@ export default function IntakeAssessmentForm() {
                 duration={appointmentData.duration || 60}
                 serviceCode={appointmentData.serviceCode}
                 location={appointmentData.location}
-                participants={appointmentData.participants}
+                sessionType={appointmentData.appointmentType}
+                clientName={clientData ? `${clientData.firstName} ${clientData.lastName}` : ''}
+                clientDOB={clientData?.dateOfBirth}
                 editable={false}
               />
             )}
@@ -651,34 +663,8 @@ export default function IntakeAssessmentForm() {
               noteType="Intake Assessment"
             />
 
-            {/* Session Information */}
-            <FormSection title="Session Information" number={1}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <TextField
-                label="Session Date"
-                type="date"
-                value={sessionDate}
-                onChange={setSessionDate}
-                required
-              />
-              <TextField
-                label="Due Date (7-day rule)"
-                type="date"
-                value={dueDate}
-                onChange={setDueDate}
-                required
-              />
-              <TextField
-                label="Next Session Date"
-                type="date"
-                value={nextSessionDate}
-                onChange={setNextSessionDate}
-              />
-            </div>
-          </FormSection>
-
           {/* Presenting Problem */}
-          <FormSection title="Presenting Problem" number={2}>
+          <FormSection title="Presenting Problem" number={1}>
             <div className="space-y-6">
               <TextAreaField
                 label="Chief Complaint"
@@ -700,7 +686,7 @@ export default function IntakeAssessmentForm() {
           </FormSection>
 
           {/* Current Symptoms Checklist */}
-          <FormSection title="Current Symptoms" number={3}>
+          <FormSection title="Current Symptoms" number={2}>
             <div className="space-y-6">
               {/* Search and Add Interface */}
               <div>
@@ -853,7 +839,7 @@ export default function IntakeAssessmentForm() {
           </FormSection>
 
           {/* Clinical History */}
-          <FormSection title="Clinical History" number={4}>
+          <FormSection title="Clinical History" number={3}>
             <div className="space-y-6">
               <TextAreaField
                 label="Psychiatric History"
@@ -880,7 +866,7 @@ export default function IntakeAssessmentForm() {
           </FormSection>
 
           {/* Substance Use History */}
-          <FormSection title="Substance Use History" number={5}>
+          <FormSection title="Substance Use History" number={4}>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <TextAreaField
@@ -931,7 +917,7 @@ export default function IntakeAssessmentForm() {
           </FormSection>
 
           {/* Family & Social History */}
-          <FormSection title="Family & Social History" number={6}>
+          <FormSection title="Family & Social History" number={5}>
             <div className="space-y-6">
               <TextAreaField
                 label="Family Psychiatric History"
@@ -958,7 +944,7 @@ export default function IntakeAssessmentForm() {
           </FormSection>
 
           {/* Mental Status Examination */}
-          <FormSection title="Mental Status Examination" number={7}>
+          <FormSection title="Mental Status Examination" number={6}>
             {/* Appearance */}
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Appearance</h3>
@@ -1288,7 +1274,7 @@ export default function IntakeAssessmentForm() {
           </FormSection>
 
           {/* Enhanced Safety Assessment */}
-          <FormSection title="Safety Assessment" number={8}>
+          <FormSection title="Safety Assessment" number={7}>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <CheckboxField label="Self-Harm" checked={selfHarm} onChange={setSelfHarm} />
@@ -1377,7 +1363,7 @@ export default function IntakeAssessmentForm() {
           </FormSection>
 
           {/* Clinical Assessment */}
-          <FormSection title="Clinical Assessment" number={9}>
+          <FormSection title="Clinical Assessment" number={8}>
             <div className="space-y-6">
               <TextAreaField
                 label="Assessment"
@@ -1399,7 +1385,7 @@ export default function IntakeAssessmentForm() {
           </FormSection>
 
           {/* Diagnosis & Billing */}
-          <FormSection title="Diagnosis & Billing" number={10}>
+          <FormSection title="Diagnosis & Billing" number={9}>
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1430,7 +1416,7 @@ export default function IntakeAssessmentForm() {
           </FormSection>
 
           {/* Treatment Recommendations */}
-          <FormSection title="Treatment Recommendations" number={11}>
+          <FormSection title="Treatment Recommendations" number={10}>
             <div className="space-y-6">
               <TextAreaField
                 label="Treatment Recommendations"

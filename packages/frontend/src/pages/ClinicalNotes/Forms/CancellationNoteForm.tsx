@@ -68,6 +68,16 @@ export default function CancellationNoteForm() {
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
 
+  // Fetch client data
+  const { data: clientData } = useQuery({
+    queryKey: ['client', clientId],
+    queryFn: async () => {
+      const response = await api.get(`/clients/${clientId}`);
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
   // Fetch eligible appointments
   const { data: eligibleAppointmentsData } = useQuery({
     queryKey: ['eligible-appointments', clientId, 'Cancellation Note'],
@@ -284,7 +294,9 @@ export default function CancellationNoteForm() {
                 duration={appointmentData.duration || 45}
                 serviceCode={appointmentData.serviceCode}
                 location={appointmentData.location}
-                participants={appointmentData.participants}
+                sessionType={appointmentData.appointmentType}
+                clientName={clientData ? `${clientData.firstName} ${clientData.lastName}` : ''}
+                clientDOB={clientData?.dateOfBirth}
                 editable={false}
               />
             )}

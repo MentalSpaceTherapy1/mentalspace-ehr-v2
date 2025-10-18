@@ -52,8 +52,8 @@ export default function AppointmentSelector() {
   };
 
   const handleCreateWithoutAppointment = () => {
-    // For note types that don't require appointments (like Miscellaneous)
-    navigate(`/clients/${clientId}/notes/new`);
+    // Navigate to new appointment page with client pre-populated
+    navigate(`/appointments/new?clientId=${clientId}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -198,21 +198,26 @@ export default function AppointmentSelector() {
           </div>
         )}
 
-        {/* Create Without Appointment Option */}
+        {/* Create New Appointment Option */}
         <button
           onClick={handleCreateWithoutAppointment}
-          className="w-full bg-gray-100 hover:bg-gray-200 rounded-xl shadow-md p-6 text-left border-2 border-gray-300 hover:border-gray-400 transition-all duration-200"
+          className="w-full bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 rounded-xl shadow-md p-6 text-left border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 transform hover:scale-[1.01]"
         >
-          <div className="flex items-center space-x-3">
-            <div className="bg-gray-400 rounded-full p-3 text-white text-2xl">
-              📄
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-full p-3 text-white text-2xl">
+                ➕
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">Create New Appointment</h3>
+                <p className="text-sm text-gray-600">
+                  Schedule a new appointment for this client, then create your note
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-800">Create Note Without Appointment</h3>
-              <p className="text-sm text-gray-600">
-                For note types that don't require an appointment (e.g., Miscellaneous Notes)
-              </p>
-            </div>
+            <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </div>
         </button>
       </div>

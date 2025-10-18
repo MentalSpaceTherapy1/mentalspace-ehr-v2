@@ -75,6 +75,16 @@ export default function TreatmentPlanForm() {
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
 
+  // Fetch client data
+  const { data: clientData } = useQuery({
+    queryKey: ['client', clientId],
+    queryFn: async () => {
+      const response = await api.get(`/clients/${clientId}`);
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
   // Fetch eligible appointments
   const { data: eligibleAppointmentsData } = useQuery({
     queryKey: ['eligible-appointments', clientId, 'Treatment Plan'],
@@ -376,33 +386,12 @@ export default function TreatmentPlanForm() {
                 duration={appointmentData.duration || 60}
                 serviceCode={appointmentData.serviceCode}
                 location={appointmentData.location}
-                participants={appointmentData.participants}
+                sessionType={appointmentData.appointmentType}
+                clientName={clientData ? `${clientData.firstName} ${clientData.lastName}` : ''}
+                clientDOB={clientData?.dateOfBirth}
+                diagnoses={diagnosisCodes}
                 editable={false}
               />
-            )}
-
-            {/* Diagnosis Display (Inherited from Intake) */}
-            {diagnosisCodes.length > 0 && (
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Active Diagnoses (from Intake Assessment)
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {diagnosisCodes.map((code, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800"
-                    >
-                      {code}
-                    </span>
-                  ))}
-                </div>
-                {!canSign && diagnosisValidationMessage && (
-                  <div className="mt-3 text-sm text-red-600 font-medium">
-                    {diagnosisValidationMessage}
-                  </div>
-                )}
-              </div>
             )}
 
             {/* AI-Powered Note Generation */}
@@ -412,34 +401,8 @@ export default function TreatmentPlanForm() {
               noteType="Treatment Plan"
             />
 
-            {/* Basic Information */}
-            <FormSection title="Session Information" number={1}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <TextField
-                label="Session Date"
-                type="date"
-                value={sessionDate}
-                onChange={setSessionDate}
-                required
-              />
-              <TextField
-                label="Due Date (7-day rule)"
-                type="date"
-                value={dueDate}
-                onChange={setDueDate}
-                required
-              />
-              <TextField
-                label="Next Session Date"
-                type="date"
-                value={nextSessionDate}
-                onChange={setNextSessionDate}
-              />
-            </div>
-          </FormSection>
-
           {/* Goals and Objectives */}
-          <FormSection title="Treatment Goals and Objectives" number={2}>
+          <FormSection title="Treatment Goals and Objectives" number={1}>
             <div className="space-y-6">
               {goals.map((goal, goalIndex) => (
                 <div key={goalIndex} className="p-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl">
@@ -540,7 +503,7 @@ export default function TreatmentPlanForm() {
           </FormSection>
 
           {/* Treatment Details */}
-          <FormSection title="Treatment Details" number={3}>
+          <FormSection title="Treatment Details" number={2}>
             <div className="space-y-6">
               {/* Treatment Modalities */}
               <div>
@@ -657,7 +620,7 @@ export default function TreatmentPlanForm() {
           </FormSection>
 
           {/* Diagnosis & Billing */}
-          <FormSection title="Diagnosis & Billing" number={4}>
+          <FormSection title="Diagnosis & Billing" number={3}>
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">

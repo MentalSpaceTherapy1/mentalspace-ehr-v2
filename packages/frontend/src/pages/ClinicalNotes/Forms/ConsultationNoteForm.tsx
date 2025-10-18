@@ -58,6 +58,16 @@ export default function ConsultationNoteForm() {
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
 
+  // Fetch client data
+  const { data: clientData } = useQuery({
+    queryKey: ['client', clientId],
+    queryFn: async () => {
+      const response = await api.get(`/clients/${clientId}`);
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
   // Auto-set due date to 7 days from session date
   useEffect(() => {
     if (sessionDate && !dueDate) {
@@ -278,7 +288,9 @@ export default function ConsultationNoteForm() {
                 duration={appointmentData.duration || 45}
                 serviceCode={appointmentData.serviceCode}
                 location={appointmentData.location}
-                participants={appointmentData.participants}
+                sessionType={appointmentData.appointmentType}
+                clientName={clientData ? `${clientData.firstName} ${clientData.lastName}` : ''}
+                clientDOB={clientData?.dateOfBirth}
                 editable={false}
               />
             )}
@@ -289,34 +301,8 @@ export default function ConsultationNoteForm() {
             noteType="Consultation Note"
           />
 
-          {/* Basic Information */}
-          <FormSection title="Session Information" number={1}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <TextField
-                label="Consultation Date"
-                type="date"
-                value={sessionDate}
-                onChange={setSessionDate}
-                required
-              />
-              <TextField
-                label="Due Date (7-day rule)"
-                type="date"
-                value={dueDate}
-                onChange={setDueDate}
-                required
-              />
-              <TextField
-                label="Next Session Date"
-                type="date"
-                value={nextSessionDate}
-                onChange={setNextSessionDate}
-              />
-            </div>
-          </FormSection>
-
           {/* Consultation Details */}
-          <FormSection title="Consultation Details" number={2}>
+          <FormSection title="Consultation Details" number={1}>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <TextField
@@ -372,7 +358,7 @@ export default function ConsultationNoteForm() {
           </FormSection>
 
           {/* Billing */}
-          <FormSection title="Billing Information" number={3}>
+          <FormSection title="Billing Information" number={2}>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>

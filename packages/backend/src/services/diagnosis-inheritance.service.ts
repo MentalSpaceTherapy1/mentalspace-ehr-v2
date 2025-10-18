@@ -21,7 +21,7 @@ export class DiagnosisInheritanceService {
       where: {
         clientId,
         noteType: 'Intake Assessment',
-        status: 'Signed', // Only consider signed notes
+        status: 'SIGNED', // Only consider signed notes
       },
       orderBy: {
         sessionDate: 'desc',

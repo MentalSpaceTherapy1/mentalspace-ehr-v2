@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Calendar, AlertCircle, X } from 'lucide-react';
 
 // Note types that require appointments (Business Rule #1)
 const APPOINTMENT_REQUIRED_NOTE_TYPES = [
@@ -72,6 +74,7 @@ export default function NoteTypeSelector() {
   const { clientId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
 
   const appointmentId = searchParams.get('appointmentId');
 
@@ -80,8 +83,7 @@ export default function NoteTypeSelector() {
     const requiresAppointment = APPOINTMENT_REQUIRED_NOTE_TYPES.includes(noteType);
 
     if (requiresAppointment && !appointmentId) {
-      alert('This note type requires an appointment. Please select an appointment first.');
-      navigate(`/clients/${clientId}/notes/select-appointment`);
+      setShowAppointmentModal(true);
       return;
     }
 
@@ -90,6 +92,11 @@ export default function NoteTypeSelector() {
       ? `/clients/${clientId}/notes/new/${urlSafeType}?appointmentId=${appointmentId}`
       : `/clients/${clientId}/notes/new/${urlSafeType}`;
     navigate(url);
+  };
+
+  const handleGoToAppointmentSelector = () => {
+    setShowAppointmentModal(false);
+    navigate(`/clients/${clientId}/notes/select-appointment`);
   };
 
   return (
@@ -185,6 +192,65 @@ export default function NoteTypeSelector() {
           </div>
         </div>
       </div>
+
+      {/* Modern Appointment Requirement Modal */}
+      {showAppointmentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-white relative">
+              <button
+                onClick={() => setShowAppointmentModal(false)}
+                className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+              <div className="flex items-center space-x-3">
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <Calendar className="h-8 w-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Appointment Required</h3>
+                  <p className="text-purple-100 text-sm mt-1">Please select an appointment to continue</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="flex items-start space-x-3 mb-6">
+                <div className="flex-shrink-0 mt-1">
+                  <AlertCircle className="h-5 w-5 text-blue-500" />
+                </div>
+                <div className="text-gray-700">
+                  <p className="font-medium mb-2">This note type requires an appointment.</p>
+                  <p className="text-sm text-gray-600">
+                    Most clinical notes (Intake Assessment, Progress Note, Cancellation, Consultation, and Contact notes)
+                    must be linked to a scheduled appointment for proper documentation and billing.
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col space-y-3">
+                <button
+                  onClick={handleGoToAppointmentSelector}
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+                >
+                  <Calendar className="h-5 w-5" />
+                  <span>Select Appointment</span>
+                </button>
+                <button
+                  onClick={() => setShowAppointmentModal(false)}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

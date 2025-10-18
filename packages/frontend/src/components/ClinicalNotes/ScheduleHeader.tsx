@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Clock, MapPin, Users, Edit2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Edit2, User, Cake, FileText } from 'lucide-react';
 
 interface ScheduleHeaderProps {
   appointmentDate: Date | string;
@@ -9,6 +9,10 @@ interface ScheduleHeaderProps {
   serviceCode?: string;
   location?: string;
   participants?: string;
+  clientName?: string;
+  clientDOB?: Date | string;
+  sessionType?: string;
+  diagnoses?: string[]; // For Progress Note and Treatment Plan
   onEdit?: () => void;
   editable?: boolean;
 }
@@ -21,6 +25,10 @@ export default function ScheduleHeader({
   serviceCode,
   location,
   participants,
+  clientName,
+  clientDOB,
+  sessionType,
+  diagnoses,
   onEdit,
   editable = false,
 }: ScheduleHeaderProps) {
@@ -31,6 +39,15 @@ export default function ScheduleHeader({
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+    });
+  };
+
+  const formatDOB = (date: Date | string) => {
+    const d = new Date(date);
+    return d.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
     });
   };
 
@@ -54,6 +71,28 @@ export default function ScheduleHeader({
             <h3 className="text-xl font-bold text-gray-900">Session Information</h3>
           </div>
 
+          {/* Patient Information - First Row */}
+          {(clientName || clientDOB) && (
+            <div className="mb-4 pb-4 border-b border-purple-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {clientName && (
+                  <div className="flex items-center space-x-2 text-gray-700">
+                    <User className="h-4 w-4 text-purple-600" />
+                    <span className="font-semibold">Patient:</span>
+                    <span className="font-medium">{clientName}</span>
+                  </div>
+                )}
+                {clientDOB && (
+                  <div className="flex items-center space-x-2 text-gray-700">
+                    <Cake className="h-4 w-4 text-purple-600" />
+                    <span className="font-semibold">DOB:</span>
+                    <span>{formatDOB(clientDOB)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Date & Time */}
             <div className="space-y-2">
@@ -70,6 +109,13 @@ export default function ScheduleHeader({
                 </span>
                 <span className="text-sm text-gray-500">({duration} min)</span>
               </div>
+              {sessionType && (
+                <div className="flex items-center space-x-2 text-gray-700">
+                  <FileText className="h-4 w-4 text-purple-600" />
+                  <span className="font-semibold">Type:</span>
+                  <span>{sessionType}</span>
+                </div>
+              )}
             </div>
 
             {/* Service & Location */}
@@ -79,7 +125,7 @@ export default function ScheduleHeader({
                   <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
                     {serviceCode}
                   </div>
-                  <span className="text-sm text-gray-600">Service Code</span>
+                  <span className="text-sm text-gray-600">CPT Code</span>
                 </div>
               )}
               {location && (
@@ -98,6 +144,25 @@ export default function ScheduleHeader({
               )}
             </div>
           </div>
+
+          {/* Diagnoses Section (for Progress Note and Treatment Plan) */}
+          {diagnoses && diagnoses.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-purple-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                Active Diagnoses (from Intake Assessment):
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {diagnoses.map((code, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800"
+                  >
+                    {code}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Edit Button */}

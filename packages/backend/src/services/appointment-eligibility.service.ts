@@ -81,16 +81,16 @@ export class AppointmentEligibilityService {
     const where: any = {
       clientId,
       status: {
-        in: ['Scheduled', 'Completed'],
+        in: ['SCHEDULED', 'COMPLETED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
       },
       // Only past and current appointments (not future)
       appointmentDate: {
         lte: now,
       },
-      // Exclude cancelled/deleted
+      // Exclude cancelled/deleted/no-show
       NOT: {
         status: {
-          in: ['Cancelled', 'Deleted', 'No-show'],
+          in: ['CANCELLED', 'NO_SHOW'],
         },
       },
     };
@@ -180,7 +180,7 @@ export class AppointmentEligibilityService {
     }
 
     // Check status
-    if (!['Scheduled', 'Completed'].includes(appointment.status)) {
+    if (!['SCHEDULED', 'COMPLETED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'].includes(appointment.status)) {
       return false;
     }
 

@@ -64,7 +64,16 @@ export default function ContactNoteForm() {
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
 
-  
+  // Fetch client data
+  const { data: clientData } = useQuery({
+    queryKey: ['client', clientId],
+    queryFn: async () => {
+      const response = await api.get(`/clients/${clientId}`);
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
   // Fetch eligible appointments
   const { data: eligibleAppointmentsData } = useQuery({
     queryKey: ['eligible-appointments', clientId, 'Contact Note'],
@@ -272,7 +281,9 @@ export default function ContactNoteForm() {
                 duration={appointmentData.duration || 45}
                 serviceCode={appointmentData.serviceCode}
                 location={appointmentData.location}
-                participants={appointmentData.participants}
+                sessionType={appointmentData.appointmentType}
+                clientName={clientData ? `${clientData.firstName} ${clientData.lastName}` : ''}
+                clientDOB={clientData?.dateOfBirth}
                 editable={false}
               />
             )}
@@ -283,8 +294,8 @@ export default function ContactNoteForm() {
             noteType="Contact Note"
           />
 
-          {/* Contact Information */}
-          <FormSection title="Contact Information" number={1}>
+          {/* Contact Details */}
+          <FormSection title="Contact Details" number={1}>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <TextField
@@ -322,8 +333,8 @@ export default function ContactNoteForm() {
             </div>
           </FormSection>
 
-          {/* Contact Details */}
-          <FormSection title="Contact Details" number={2}>
+          {/* Additional Notes */}
+          <FormSection title="Additional Notes" number={2}>
             <div className="space-y-6">
               <TextAreaField
                 label="Purpose of Contact"
