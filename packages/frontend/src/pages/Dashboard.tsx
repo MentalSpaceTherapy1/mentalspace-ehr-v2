@@ -9,7 +9,7 @@ export default function Dashboard() {
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
-      const response = await api.get('/api/v1/auth/me');
+      const response = await api.get('/auth/me');
       return response.data.data;
     },
   });
@@ -18,7 +18,7 @@ export default function Dashboard() {
   const { data: usersStats, isLoading: usersLoading } = useQuery({
     queryKey: ['users-stats'],
     queryFn: async () => {
-      const response = await api.get('/api/v1/users');
+      const response = await api.get('/users');
       const users = response.data.data;
 
       // Calculate statistics
@@ -40,7 +40,7 @@ export default function Dashboard() {
   const { data: clientStats, isLoading: clientsLoading } = useQuery({
     queryKey: ['client-stats'],
     queryFn: async () => {
-      const response = await api.get('/api/v1/clients');
+      const response = await api.get('/clients');
       const clients = response.data.data;
 
       // Calculate statistics

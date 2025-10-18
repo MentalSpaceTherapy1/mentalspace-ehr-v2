@@ -41,7 +41,7 @@ export default function Guardians({ clientId }: GuardiansProps) {
     queryKey: ['guardians', clientId],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/v1/guardians/client/${clientId}`, {
+      const response = await axios.get(`/guardians/client/${clientId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data as Guardian[];
@@ -53,7 +53,7 @@ export default function Guardians({ clientId }: GuardiansProps) {
     mutationFn: async (data: typeof formData) => {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        '/api/v1/guardians',
+        '/guardians',
         { ...data, clientId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -70,7 +70,7 @@ export default function Guardians({ clientId }: GuardiansProps) {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<typeof formData> }) => {
       const token = localStorage.getItem('token');
-      const response = await axios.patch(`/api/v1/guardians/${id}`, data, {
+      const response = await axios.patch(`/guardians/${id}`, data, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
@@ -86,7 +86,7 @@ export default function Guardians({ clientId }: GuardiansProps) {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('token');
-      const response = await axios.delete(`/api/v1/guardians/${id}`, {
+      const response = await axios.delete(`/guardians/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

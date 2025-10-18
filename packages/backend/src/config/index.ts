@@ -55,6 +55,15 @@ interface Config {
   stripeApiKey?: string;
   stripeWebhookSecret?: string;
   s3BucketName: string;
+
+  // Twilio
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioApiKeySid?: string;
+  twilioApiKeySecret?: string;
+
+  // Backend URL (for webhooks)
+  backendUrl: string;
 }
 
 // Construct DATABASE_URL from individual components if not provided directly
@@ -121,6 +130,15 @@ const config: Config = {
   stripeApiKey: process.env.STRIPE_API_KEY,
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   s3BucketName: process.env.S3_BUCKET_NAME || 'mentalspace-portal-uploads-dev',
+
+  // Twilio
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
+  twilioApiKeySid: process.env.TWILIO_API_KEY_SID,
+  twilioApiKeySecret: process.env.TWILIO_API_KEY_SECRET,
+
+  // Backend URL
+  backendUrl: process.env.BACKEND_URL || 'http://localhost:3001',
 };
 
 // Validate required environment variables

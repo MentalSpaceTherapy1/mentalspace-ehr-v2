@@ -54,11 +54,16 @@ export const joinTelehealthSession = async (req: Request, res: Response) => {
   try {
     const validatedData = joinSessionSchema.parse(req.body);
     const userId = (req as any).user?.userId;
+    const user = (req as any).user;
+    const userName = user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.email || 'User';
 
     const result = await telehealthService.joinTelehealthSession({
       sessionId: validatedData.appointmentId,
       userId,
       userRole: validatedData.userRole,
+      userName,
     });
 
     res.status(200).json({

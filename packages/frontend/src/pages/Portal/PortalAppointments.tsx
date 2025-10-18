@@ -47,14 +47,14 @@ export default function PortalAppointments() {
       const token = localStorage.getItem('portalToken');
 
       if (activeTab === 'upcoming') {
-        const response = await axios.get('/api/v1/portal/appointments/upcoming?limit=20', {
+        const response = await axios.get('/portal/appointments/upcoming?limit=20', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.success) {
           setUpcomingAppointments(response.data.data);
         }
       } else {
-        const response = await axios.get('/api/v1/portal/appointments/past?limit=20', {
+        const response = await axios.get('/portal/appointments/past?limit=20', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.success) {
@@ -90,7 +90,7 @@ export default function PortalAppointments() {
       setIsCanceling(true);
       const token = localStorage.getItem('portalToken');
       const response = await axios.post(
-        `/api/v1/portal/appointments/${selectedAppointment.id}/cancel`,
+        `/portal/appointments/${selectedAppointment.id}/cancel`,
         { reason: cancelReason },
         { headers: { Authorization: `Bearer ${token}` } }
       );

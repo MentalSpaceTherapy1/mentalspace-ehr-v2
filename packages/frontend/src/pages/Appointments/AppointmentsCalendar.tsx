@@ -66,7 +66,7 @@ export default function AppointmentsCalendar() {
       if (filters.status) params.append('status', filters.status);
       if (filters.appointmentType) params.append('appointmentType', filters.appointmentType);
 
-      const response = await axios.get(`/api/v1/appointments?${params.toString()}`, {
+      const response = await axios.get(`/appointments?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -78,7 +78,7 @@ export default function AppointmentsCalendar() {
     queryKey: ['clinicians'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/users?role=CLINICIAN', {
+      const response = await axios.get('/users?role=CLINICIAN', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -114,7 +114,7 @@ export default function AppointmentsCalendar() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const token = localStorage.getItem('token');
-      await axios.put(`/api/v1/appointments/${id}`, { status }, {
+      await axios.put(`/appointments/${id}`, { status }, {
         headers: { Authorization: `Bearer ${token}` },
       });
     },
@@ -130,7 +130,7 @@ export default function AppointmentsCalendar() {
       const now = new Date();
       const checkedInTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-      axios.post(`/api/v1/appointments/${selectedAppointment.id}/check-in`, {
+      axios.post(`/appointments/${selectedAppointment.id}/check-in`, {
         checkedInTime,
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -146,7 +146,7 @@ export default function AppointmentsCalendar() {
       const now = new Date();
       const checkedOutTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-      axios.post(`/api/v1/appointments/${selectedAppointment.id}/check-out`, {
+      axios.post(`/appointments/${selectedAppointment.id}/check-out`, {
         checkedOutTime,
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },

@@ -15,7 +15,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await api.post('/api/v1/auth/login', {
+      const response = await api.post('/auth/login', {
         email,
         password,
       });
@@ -42,11 +42,23 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-4xl font-extrabold text-gray-900">
-            MentalSpace EHR
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+        <div className="text-center">
+          <img
+            src="/logo.png"
+            alt="MentalSpace Therapy"
+            className="mx-auto h-24 w-auto object-contain mb-4"
+            onError={(e) => {
+              // Fallback to text if logo not found
+              e.currentTarget.style.display = 'none';
+              const fallback = document.createElement('div');
+              fallback.innerHTML = `
+                <h2 class="text-4xl font-extrabold text-gray-900">MentalSpace EHR</h2>
+                <p class="mt-2 text-sm text-gray-600">Electronic Health Records System</p>
+              `;
+              e.currentTarget.parentElement!.appendChild(fallback);
+            }}
+          />
+          <p className="mt-2 text-sm text-gray-600">
             Electronic Health Records System
           </p>
         </div>

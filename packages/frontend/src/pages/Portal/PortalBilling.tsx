@@ -53,7 +53,7 @@ export default function PortalBilling() {
   const fetchBalanceInfo = async () => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/billing/balance', {
+      const response = await axios.get('/portal/billing/balance', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -77,7 +77,7 @@ export default function PortalBilling() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/billing/charges', {
+      const response = await axios.get('/portal/billing/charges', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -94,7 +94,7 @@ export default function PortalBilling() {
   const fetchPayments = async () => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/billing/payments', {
+      const response = await axios.get('/portal/billing/payments', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -122,7 +122,7 @@ export default function PortalBilling() {
       setIsProcessing(true);
       const token = localStorage.getItem('portalToken');
       const response = await axios.post(
-        '/api/v1/portal/billing/payments',
+        '/portal/billing/payments',
         {
           amount,
           paymentMethod,

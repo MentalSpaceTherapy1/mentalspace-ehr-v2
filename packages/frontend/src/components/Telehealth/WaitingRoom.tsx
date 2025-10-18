@@ -21,7 +21,7 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
       try {
         const token = localStorage.getItem('token');
         const response = await axios.get(
-          `/api/v1/telehealth/sessions/${appointmentId}`,
+          `/telehealth/sessions/${appointmentId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

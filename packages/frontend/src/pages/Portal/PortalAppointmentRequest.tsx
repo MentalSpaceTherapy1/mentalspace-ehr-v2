@@ -63,7 +63,7 @@ export default function PortalAppointmentRequest() {
   const fetchAppointmentTypes = async () => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/appointments/types', {
+      const response = await axios.get('/portal/appointments/types', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -80,7 +80,7 @@ export default function PortalAppointmentRequest() {
   const fetchRequestedAppointments = async () => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/appointments/requested', {
+      const response = await axios.get('/portal/appointments/requested', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -101,7 +101,7 @@ export default function PortalAppointmentRequest() {
       const endDate = new Date(selectedDate);
       endDate.setHours(23, 59, 59, 999);
 
-      const response = await axios.get('/api/v1/portal/appointments/availability', {
+      const response = await axios.get('/portal/appointments/availability', {
         params: {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
@@ -181,7 +181,7 @@ export default function PortalAppointmentRequest() {
       const duration = selectedTypeObj?.duration || 60;
 
       const response = await axios.post(
-        '/api/v1/portal/appointments/request',
+        '/portal/appointments/request',
         {
           appointmentDate: selectedDate.toISOString().split('T')[0],
           startTime: selectedTime,
@@ -218,7 +218,7 @@ export default function PortalAppointmentRequest() {
     try {
       const token = localStorage.getItem('portalToken');
       const response = await axios.delete(
-        `/api/v1/portal/appointments/request/${appointmentId}`,
+        `/portal/appointments/request/${appointmentId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

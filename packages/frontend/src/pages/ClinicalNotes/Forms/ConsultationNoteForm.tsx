@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../../lib/api';
 import {
   FormSection,
   TextField,
@@ -34,13 +34,6 @@ export default function ConsultationNoteForm() {
 
   const [nextSessionDate, setNextSessionDate] = useState('');
 
-  const token = localStorage.getItem('token');
-  const apiClient = axios.create({
-    baseURL: 'http://localhost:3000/api/v1',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
 
   // Auto-set due date to 7 days from session date
   useEffect(() => {
@@ -53,7 +46,7 @@ export default function ConsultationNoteForm() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiClient.post('/clinical-notes', data);
+      return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });

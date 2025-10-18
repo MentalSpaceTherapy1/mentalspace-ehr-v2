@@ -1,4 +1,13 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+
+// Note types that require appointments (Business Rule #1)
+const APPOINTMENT_REQUIRED_NOTE_TYPES = [
+  'Intake Assessment',
+  'Progress Note',
+  'Cancellation Note',
+  'Consultation Note',
+  'Contact Note',
+];
 
 const NOTE_TYPES = [
   {
@@ -61,11 +70,26 @@ const NOTE_TYPES = [
 
 export default function NoteTypeSelector() {
   const { clientId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  const appointmentId = searchParams.get('appointmentId');
+
   const handleSelectNoteType = (noteType: string) => {
+    // Check if this note type requires an appointment
+    const requiresAppointment = APPOINTMENT_REQUIRED_NOTE_TYPES.includes(noteType);
+
+    if (requiresAppointment && !appointmentId) {
+      alert('This note type requires an appointment. Please select an appointment first.');
+      navigate(`/clients/${clientId}/notes/select-appointment`);
+      return;
+    }
+
     const urlSafeType = noteType.toLowerCase().replace(/\s+/g, '-');
-    navigate(`/clients/${clientId}/notes/new/${urlSafeType}`);
+    const url = appointmentId
+      ? `/clients/${clientId}/notes/new/${urlSafeType}?appointmentId=${appointmentId}`
+      : `/clients/${clientId}/notes/new/${urlSafeType}`;
+    navigate(url);
   };
 
   return (
@@ -108,18 +132,55 @@ export default function NoteTypeSelector() {
         </div>
 
         {/* Info Box */}
-        <div className="mt-8 bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+        <div className="mt-8 space-y-4">
+          {appointmentId && (
+            <div className="bg-green-50 border-l-4 border-green-400 p-6 rounded-lg">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-700">
+                    <span className="font-semibold">Appointment Selected!</span> You can now create any note type for this appointment.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="ml-3">
-              <p className="text-sm text-blue-700">
-                <span className="font-semibold">Note:</span> Each note type has its own specific form fields tailored to that documentation requirement.
-                Progress Notes require a completed Intake Assessment.
-              </p>
+          )}
+
+          {!appointmentId && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    <span className="font-semibold">No Appointment Selected:</span> Most note types require an appointment.
+                    Only Miscellaneous and Treatment Plan notes can be created without one.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-blue-700">
+                  <span className="font-semibold">Business Rules:</span> Progress Notes require a completed Intake Assessment.
+                  Note types marked with 📅 require an appointment.
+                </p>
+              </div>
             </div>
           </div>
         </div>

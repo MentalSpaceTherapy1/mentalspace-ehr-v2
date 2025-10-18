@@ -43,7 +43,7 @@ export default function ReminderSettings() {
     queryKey: ['clinicians'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/users?role=CLINICIAN', {
+      const response = await axios.get('/users?role=CLINICIAN', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -57,7 +57,7 @@ export default function ReminderSettings() {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `/api/v1/reminders/settings/${selectedClinicianId}`,
+        `/reminders/settings/${selectedClinicianId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -76,7 +76,7 @@ export default function ReminderSettings() {
   const saveSettingsMutation = useMutation({
     mutationFn: async (data: ReminderSettings) => {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/v1/reminders/settings', data, {
+      const response = await axios.post('/reminders/settings', data, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

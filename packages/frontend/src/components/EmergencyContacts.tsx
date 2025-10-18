@@ -42,7 +42,7 @@ export default function EmergencyContacts({ clientId }: EmergencyContactsProps) 
     queryKey: ['emergency-contacts', clientId],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/v1/emergency-contacts/client/${clientId}`, {
+      const response = await axios.get(`/emergency-contacts/client/${clientId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -54,12 +54,12 @@ export default function EmergencyContacts({ clientId }: EmergencyContactsProps) 
     mutationFn: async (data: any) => {
       const token = localStorage.getItem('token');
       if (editingContact) {
-        const response = await axios.patch(`/api/v1/emergency-contacts/${editingContact.id}`, data, {
+        const response = await axios.patch(`/emergency-contacts/${editingContact.id}`, data, {
           headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
       } else {
-        const response = await axios.post('/api/v1/emergency-contacts', { ...data, clientId }, {
+        const response = await axios.post('/emergency-contacts', { ...data, clientId }, {
           headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
@@ -75,7 +75,7 @@ export default function EmergencyContacts({ clientId }: EmergencyContactsProps) 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('token');
-      const response = await axios.delete(`/api/v1/emergency-contacts/${id}`, {
+      const response = await axios.delete(`/emergency-contacts/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

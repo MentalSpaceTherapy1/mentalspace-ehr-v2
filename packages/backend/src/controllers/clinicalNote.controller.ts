@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { ClinicalNotesValidationService } from '../services/clinical-notes-validation.service';
 
 const prisma = new PrismaClient();
 
@@ -69,45 +70,27 @@ const clinicalNoteSchema = z.object({
 });
 
 /**
- * Validate note workflow rules
+ * Validate note workflow rules using Business Rules validation service
  */
 async function validateNoteWorkflow(
   clientId: string,
+  clinicianId: string,
   noteType: string,
-  appointmentId: string
+  appointmentId?: string
 ): Promise<{ valid: boolean; message?: string }> {
-  // 1. Verify appointment exists
-  const appointment = await prisma.appointment.findUnique({
-    where: { id: appointmentId },
-  });
-
-  if (!appointment) {
-    return { valid: false, message: 'Appointment not found. All notes must be linked to an appointment.' };
-  }
-
-  if (appointment.clientId !== clientId) {
-    return { valid: false, message: 'Appointment does not belong to this client.' };
-  }
-
-  // 2. Check if Progress Note - requires completed Intake Assessment
-  if (noteType === 'Progress Note') {
-    const intakeNote = await prisma.clinicalNote.findFirst({
-      where: {
-        clientId,
-        noteType: 'Intake Assessment',
-        status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] }, // Must be fully signed
-      },
+  try {
+    // Use the comprehensive validation service
+    await ClinicalNotesValidationService.validateNoteCreation({
+      noteType,
+      clientId,
+      clinicianId,
+      appointmentId
     });
 
-    if (!intakeNote) {
-      return {
-        valid: false,
-        message: 'Cannot create Progress Note. Client must have a completed (signed) Intake Assessment first.',
-      };
-    }
+    return { valid: true };
+  } catch (error: any) {
+    return { valid: false, message: error.message };
   }
-
-  return { valid: true };
 }
 
 /**
@@ -262,9 +245,10 @@ export const createClinicalNote = async (req: Request, res: Response) => {
     const userId = (req as any).user.userId;
     const validatedData = clinicalNoteSchema.parse(req.body);
 
-    // Validate workflow rules
+    // Validate workflow rules (Business Rules #1 and #2)
     const workflowCheck = await validateNoteWorkflow(
       validatedData.clientId,
+      userId,
       validatedData.noteType,
       validatedData.appointmentId
     );

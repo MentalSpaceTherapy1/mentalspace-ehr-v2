@@ -46,14 +46,14 @@ export default function PortalDocuments() {
       const token = localStorage.getItem('portalToken');
 
       if (activeTab === 'forms') {
-        const response = await axios.get('/api/v1/portal/forms/assignments', {
+        const response = await axios.get('/portal/forms/assignments', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.success) {
           setFormAssignments(response.data.data);
         }
       } else {
-        const response = await axios.get('/api/v1/portal/documents/shared', {
+        const response = await axios.get('/portal/documents/shared', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.success) {
@@ -79,7 +79,7 @@ export default function PortalDocuments() {
   const handleDocumentView = async (document: SharedDocument) => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get(`/api/v1/portal/documents/${document.id}/download`, {
+      const response = await axios.get(`/portal/documents/${document.id}/download`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob',
       });
@@ -113,7 +113,7 @@ export default function PortalDocuments() {
       formData.append('documentType', 'CLIENT_UPLOAD');
       formData.append('documentName', file.name);
 
-      await axios.post('/api/v1/portal/documents/upload', formData, {
+      await axios.post('/portal/documents/upload', formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',

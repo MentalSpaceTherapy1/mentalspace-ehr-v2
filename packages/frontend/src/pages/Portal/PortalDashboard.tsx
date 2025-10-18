@@ -49,7 +49,7 @@ export default function PortalDashboard() {
   const fetchDashboard = async () => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/dashboard', {
+      const response = await axios.get('/portal/dashboard', {
         headers: { Authorization: `Bearer ${token}` },
       });
 

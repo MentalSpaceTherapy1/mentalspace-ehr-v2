@@ -50,7 +50,7 @@ export default function PortalReferrals() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/referrals', {
+      const response = await axios.get('/portal/referrals', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -66,7 +66,7 @@ export default function PortalReferrals() {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/referrals/stats', {
+      const response = await axios.get('/portal/referrals/stats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -90,7 +90,7 @@ export default function PortalReferrals() {
       const token = localStorage.getItem('portalToken');
 
       const response = await axios.post(
-        '/api/v1/portal/referrals',
+        '/portal/referrals',
         {
           referredPersonName,
           referredPersonEmail: referredPersonEmail || undefined,

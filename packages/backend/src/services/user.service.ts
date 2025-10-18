@@ -9,7 +9,7 @@ export interface CreateUserDto {
   firstName: string;
   lastName: string;
   title?: string;
-  role: UserRole;
+  roles: UserRole[]; // Multiple roles support
   npiNumber?: string;
   licenseNumber?: string;
   licenseState?: string;
@@ -23,7 +23,7 @@ export interface UpdateUserDto {
   firstName?: string;
   lastName?: string;
   title?: string;
-  role?: UserRole;
+  roles?: UserRole[]; // Multiple roles support
   npiNumber?: string;
   licenseNumber?: string;
   licenseState?: string;
@@ -34,7 +34,7 @@ export interface UpdateUserDto {
 
 export interface UserFilters {
   search?: string;
-  role?: UserRole;
+  role?: UserRole; // Filter by specific role (user must have this role in their roles array)
   isActive?: boolean;
   page?: number;
   limit?: number;
@@ -65,7 +65,7 @@ class UserService {
     }
 
     if (role) {
-      where.role = role;
+      where.roles = { has: role }; // Filter users who have this role in their roles array
     }
 
     if (isActive !== undefined) {
@@ -84,7 +84,7 @@ class UserService {
         firstName: true,
         lastName: true,
         title: true,
-        role: true,
+        roles: true,
         isActive: true,
         npiNumber: true,
         licenseNumber: true,
@@ -126,7 +126,7 @@ class UserService {
         firstName: true,
         lastName: true,
         title: true,
-        role: true,
+        roles: true,
         isActive: true,
         npiNumber: true,
         licenseNumber: true,
@@ -169,7 +169,7 @@ class UserService {
         firstName: data.firstName,
         lastName: data.lastName,
         title: data.title,
-        role: data.role,
+        roles: data.roles,
         npiNumber: data.npiNumber,
         licenseNumber: data.licenseNumber,
         licenseState: data.licenseState,
@@ -187,7 +187,7 @@ class UserService {
         firstName: true,
         lastName: true,
         title: true,
-        role: true,
+        roles: true,
         isActive: true,
         npiNumber: true,
         licenseNumber: true,
@@ -232,7 +232,7 @@ class UserService {
         firstName: data.firstName,
         lastName: data.lastName,
         title: data.title,
-        role: data.role,
+        roles: data.roles,
         npiNumber: data.npiNumber,
         licenseNumber: data.licenseNumber,
         licenseState: data.licenseState,
@@ -246,7 +246,7 @@ class UserService {
         firstName: true,
         lastName: true,
         title: true,
-        role: true,
+        roles: true,
         isActive: true,
         npiNumber: true,
         licenseNumber: true,
@@ -337,24 +337,31 @@ class UserService {
    * Get user statistics
    */
   async getUserStats() {
-    const [total, active, inactive, byRole] = await Promise.all([
+    const [total, active, inactive, allUsers] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { isActive: true } }),
       prisma.user.count({ where: { isActive: false } }),
-      prisma.user.groupBy({
-        by: ['role'],
-        _count: { role: true },
-      }),
+      prisma.user.findMany({ select: { roles: true } }),
     ]);
+
+    // Count users by role (users can have multiple roles)
+    const roleCounts: Record<string, number> = {};
+    allUsers.forEach(user => {
+      user.roles.forEach(role => {
+        roleCounts[role] = (roleCounts[role] || 0) + 1;
+      });
+    });
+
+    const byRole = Object.entries(roleCounts).map(([role, count]) => ({
+      role,
+      count,
+    }));
 
     return {
       total,
       active,
       inactive,
-      byRole: byRole.map(r => ({
-        role: r.role,
-        count: r._count.role,
-      })),
+      byRole,
     };
   }
 }

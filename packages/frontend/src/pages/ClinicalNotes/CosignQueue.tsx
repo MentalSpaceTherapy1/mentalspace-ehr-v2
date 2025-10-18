@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface ClinicalNote {
   id: string;
@@ -36,18 +36,11 @@ const NOTE_TYPE_COLORS: Record<string, string> = {
 export default function CosignQueue() {
   const navigate = useNavigate();
 
-  const token = localStorage.getItem('token');
-  const apiClient = axios.create({
-    baseURL: 'http://localhost:3000/api/v1',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
 
   const { data: notesData, isLoading } = useQuery({
     queryKey: ['cosign-queue'],
     queryFn: async () => {
-      const response = await apiClient.get('/clinical-notes/cosigning');
+      const response = await api.get('/clinical-notes/cosigning');
       return response.data;
     },
   });

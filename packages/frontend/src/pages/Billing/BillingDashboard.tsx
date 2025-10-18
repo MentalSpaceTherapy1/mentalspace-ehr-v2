@@ -48,7 +48,7 @@ export default function BillingDashboard() {
     queryKey: ['billing', 'aging'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/billing/reports/aging', {
+      const response = await axios.get('/billing/reports/aging', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -64,7 +64,7 @@ export default function BillingDashboard() {
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       });
-      const response = await axios.get(`/api/v1/billing/reports/revenue?${params.toString()}`, {
+      const response = await axios.get(`/billing/reports/revenue?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;

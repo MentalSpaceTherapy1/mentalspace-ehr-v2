@@ -70,7 +70,7 @@ export default function ClinicianSchedule() {
     queryKey: ['clinicians'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/users?role=CLINICIAN', {
+      const response = await axios.get('/users?role=CLINICIAN', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -83,7 +83,7 @@ export default function ClinicianSchedule() {
     enabled: !!selectedClinicianId,
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/v1/clinician-schedules/${selectedClinicianId}`, {
+      const response = await axios.get(`/clinician-schedules/${selectedClinicianId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -109,7 +109,7 @@ export default function ClinicianSchedule() {
   const saveScheduleMutation = useMutation({
     mutationFn: async (data: ScheduleData) => {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/v1/clinician-schedules', data, {
+      const response = await axios.post('/clinician-schedules', data, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

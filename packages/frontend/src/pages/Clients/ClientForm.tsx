@@ -25,7 +25,7 @@ export default function ClientForm() {
     queryKey: ['client', id],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/v1/clients/${id}`, {
+      const response = await axios.get(`/clients/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -38,7 +38,7 @@ export default function ClientForm() {
     queryKey: ['therapists'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/users?role=CLINICIAN', {
+      const response = await axios.get('/users?role=CLINICIAN', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -179,7 +179,7 @@ export default function ClientForm() {
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       const token = localStorage.getItem('token');
-      const url = isEditMode ? `/api/v1/clients/${id}` : '/api/v1/clients';
+      const url = isEditMode ? `/clients/${id}` : '/clients';
       const method = isEditMode ? 'patch' : 'post';
 
       // Convert dateOfBirth to ISO string

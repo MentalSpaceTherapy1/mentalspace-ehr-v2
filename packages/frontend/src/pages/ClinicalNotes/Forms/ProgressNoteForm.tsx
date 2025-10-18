@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../../lib/api';
 import {
   FormSection,
   TextField,
@@ -67,8 +67,11 @@ interface InterventionState {
 
 export default function ProgressNoteForm() {
   const { clientId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const appointmentId = searchParams.get('appointmentId');
 
   // Session Information
   const [sessionDate, setSessionDate] = useState('');
@@ -119,13 +122,6 @@ export default function ProgressNoteForm() {
   const [sessionDurationMinutes, setSessionDurationMinutes] = useState('');
   const [billable, setBillable] = useState(true);
 
-  const token = localStorage.getItem('token');
-  const apiClient = axios.create({
-    baseURL: 'http://localhost:3000/api/v1',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
 
   // Auto-set due date to 7 days from session date
   useEffect(() => {
@@ -163,7 +159,7 @@ export default function ProgressNoteForm() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiClient.post('/clinical-notes', data);
+      return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
@@ -210,7 +206,7 @@ export default function ProgressNoteForm() {
     const data = {
       clientId,
       noteType: 'Progress Note',
-      appointmentId: 'temp-appointment-id',
+      appointmentId,
       sessionDate: new Date(sessionDate).toISOString(),
       sessionDuration,
       sessionType,

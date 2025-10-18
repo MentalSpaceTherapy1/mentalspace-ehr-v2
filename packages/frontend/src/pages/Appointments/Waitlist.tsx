@@ -55,7 +55,7 @@ export default function Waitlist() {
       if (filterStatus) params.append('status', filterStatus);
       if (filterPriority) params.append('priority', filterPriority);
 
-      const response = await axios.get(`/api/v1/waitlist?${params.toString()}`, {
+      const response = await axios.get(`/waitlist?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -67,7 +67,7 @@ export default function Waitlist() {
     queryKey: ['clients'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/clients', {
+      const response = await axios.get('/clients', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -79,7 +79,7 @@ export default function Waitlist() {
     queryKey: ['clinicians'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/users?role=CLINICIAN', {
+      const response = await axios.get('/users?role=CLINICIAN', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -91,7 +91,7 @@ export default function Waitlist() {
     mutationFn: async (entryId: string) => {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `/api/v1/waitlist/${entryId}/available-slots?daysAhead=14`,
+        `/waitlist/${entryId}/available-slots?daysAhead=14`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -112,7 +112,7 @@ export default function Waitlist() {
     mutationFn: async ({ entryId, slot }: { entryId: string; slot: AvailableSlot }) => {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `/api/v1/waitlist/${entryId}/book`,
+        `/waitlist/${entryId}/book`,
         {
           clinicianId: slot.clinicianId,
           appointmentDate: slot.date,
@@ -145,7 +145,7 @@ export default function Waitlist() {
     mutationFn: async ({ entryId, priority }: { entryId: string; priority: string }) => {
       const token = localStorage.getItem('token');
       const response = await axios.patch(
-        `/api/v1/waitlist/${entryId}/priority`,
+        `/waitlist/${entryId}/priority`,
         { priority },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -166,7 +166,7 @@ export default function Waitlist() {
   const removeMutation = useMutation({
     mutationFn: async ({ entryId, reason }: { entryId: string; reason: string }) => {
       const token = localStorage.getItem('token');
-      const response = await axios.delete(`/api/v1/waitlist/${entryId}`, {
+      const response = await axios.delete(`/waitlist/${entryId}`, {
         headers: { Authorization: `Bearer ${token}` },
         data: { reason },
       });

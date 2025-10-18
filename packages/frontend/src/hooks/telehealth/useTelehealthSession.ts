@@ -34,7 +34,7 @@ export function useTelehealthSession(appointmentId: string, userRole: 'clinician
 
       const token = localStorage.getItem('token');
       const response = await axios.post<{ success: boolean; data: JoinSessionResponse }>(
-        `/api/v1/telehealth/sessions/${appointmentId}/join`,
+        `/telehealth/sessions/${appointmentId}/join`,
         { userRole },
         {
           headers: {
@@ -61,7 +61,7 @@ export function useTelehealthSession(appointmentId: string, userRole: 'clinician
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `/api/v1/telehealth/sessions/${session?.id}/end`,
+        `/telehealth/sessions/${session?.id}/end`,
         { endReason: 'Normal' },
         {
           headers: {
@@ -79,7 +79,7 @@ export function useTelehealthSession(appointmentId: string, userRole: 'clinician
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `/api/v1/telehealth/sessions/${session?.id}/recording/start`,
+        `/telehealth/sessions/${session?.id}/recording/start`,
         { consent },
         {
           headers: {
@@ -102,7 +102,7 @@ export function useTelehealthSession(appointmentId: string, userRole: 'clinician
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `/api/v1/telehealth/sessions/${session?.id}/recording/stop`,
+        `/telehealth/sessions/${session?.id}/recording/stop`,
         {},
         {
           headers: {

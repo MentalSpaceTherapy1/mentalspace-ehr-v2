@@ -32,12 +32,12 @@ export default function PortalAssessments() {
       setIsLoading(true);
 
       if (activeTab === 'pending') {
-        const response = await axios.get('/api/v1/portal/assessments/pending');
+        const response = await axios.get('/portal/assessments/pending');
         if (response.data.success) {
           setPendingAssessments(response.data.data);
         }
       } else {
-        const response = await axios.get('/api/v1/portal/assessments/completed');
+        const response = await axios.get('/portal/assessments/completed');
         if (response.data.success) {
           setCompletedAssessments(response.data.data);
         }

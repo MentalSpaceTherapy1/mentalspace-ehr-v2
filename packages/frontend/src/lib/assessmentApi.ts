@@ -121,7 +121,7 @@ export const getClientAssessments = async (
   status?: AssessmentStatus
 ): Promise<AssessmentAssignment[]> => {
   const params = status ? { status } : {};
-  const response = await api.get(`/api/v1/clients/${clientId}/assessments`, { params });
+  const response = await api.get(`/clients/${clientId}/assessments`, { params });
   return response.data.data;
 };
 
@@ -132,7 +132,7 @@ export const assignAssessmentToClient = async (
   clientId: string,
   data: AssignAssessmentRequest
 ): Promise<AssessmentAssignment> => {
-  const response = await api.post(`/api/v1/clients/${clientId}/assessments/assign`, data);
+  const response = await api.post(`/clients/${clientId}/assessments/assign`, data);
   return response.data.data;
 };
 
@@ -143,7 +143,7 @@ export const removeAssessmentAssignment = async (
   clientId: string,
   assessmentId: string
 ): Promise<void> => {
-  await api.delete(`/api/v1/clients/${clientId}/assessments/${assessmentId}`);
+  await api.delete(`/clients/${clientId}/assessments/${assessmentId}`);
 };
 
 /**
@@ -153,7 +153,7 @@ export const sendAssessmentReminder = async (
   clientId: string,
   assessmentId: string
 ): Promise<void> => {
-  await api.post(`/api/v1/clients/${clientId}/assessments/${assessmentId}/remind`);
+  await api.post(`/clients/${clientId}/assessments/${assessmentId}/remind`);
 };
 
 /**
@@ -163,7 +163,7 @@ export const viewAssessmentResults = async (
   clientId: string,
   assessmentId: string
 ): Promise<AssessmentAssignment> => {
-  const response = await api.get(`/api/v1/clients/${clientId}/assessments/${assessmentId}/results`);
+  const response = await api.get(`/clients/${clientId}/assessments/${assessmentId}/results`);
   return response.data.data;
 };
 
@@ -175,7 +175,7 @@ export const getAssessmentHistory = async (
   assessmentType?: AssessmentType
 ): Promise<AssessmentHistoryItem[]> => {
   const params = assessmentType ? { assessmentType } : {};
-  const response = await api.get(`/api/v1/clients/${clientId}/assessments/history`, { params });
+  const response = await api.get(`/clients/${clientId}/assessments/history`, { params });
   return response.data.data;
 };
 
@@ -187,7 +187,7 @@ export const exportAssessmentPDF = async (
   assessmentId: string
 ): Promise<Blob> => {
   const response = await api.get(
-    `/api/v1/clients/${clientId}/assessments/${assessmentId}/export`,
+    `/clients/${clientId}/assessments/${assessmentId}/export`,
     {
       responseType: 'blob',
     }

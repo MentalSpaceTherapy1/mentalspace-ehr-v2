@@ -35,7 +35,7 @@ export default function PortalTherapistProfile() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/therapist/profile', {
+      const response = await axios.get('/portal/therapist/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {

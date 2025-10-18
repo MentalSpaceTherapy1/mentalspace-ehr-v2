@@ -46,7 +46,7 @@ export default function PortalTherapistChange() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/therapist/available', {
+      const response = await axios.get('/portal/therapist/available', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -62,7 +62,7 @@ export default function PortalTherapistChange() {
   const fetchExistingRequests = async () => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/therapist-change-requests', {
+      const response = await axios.get('/portal/therapist-change-requests', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -84,7 +84,7 @@ export default function PortalTherapistChange() {
       const token = localStorage.getItem('portalToken');
 
       const response = await axios.post(
-        '/api/v1/portal/therapist-change-requests',
+        '/portal/therapist-change-requests',
         {
           requestReason,
           isUrgent,
@@ -114,7 +114,7 @@ export default function PortalTherapistChange() {
     try {
       const token = localStorage.getItem('portalToken');
       const response = await axios.delete(
-        `/api/v1/portal/therapist-change-requests/${requestId}`,
+        `/portal/therapist-change-requests/${requestId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

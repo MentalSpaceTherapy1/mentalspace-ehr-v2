@@ -44,7 +44,7 @@ export default function PortalMessages() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/messages', {
+      const response = await axios.get('/portal/messages', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -69,7 +69,7 @@ export default function PortalMessages() {
   const fetchThreadMessages = async (threadId: string) => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get(`/api/v1/portal/messages/thread/${threadId}`, {
+      const response = await axios.get(`/portal/messages/thread/${threadId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -91,7 +91,7 @@ export default function PortalMessages() {
       setIsSending(true);
       const token = localStorage.getItem('portalToken');
       const response = await axios.post(
-        '/api/v1/portal/messages',
+        '/portal/messages',
         {
           subject: newSubject,
           message: newMessage,
@@ -130,7 +130,7 @@ export default function PortalMessages() {
       if (!originalMessage) return;
 
       const response = await axios.post(
-        `/api/v1/portal/messages/${originalMessage.id}/reply`,
+        `/portal/messages/${originalMessage.id}/reply`,
         { message: replyText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -152,7 +152,7 @@ export default function PortalMessages() {
     try {
       const token = localStorage.getItem('portalToken');
       await axios.post(
-        `/api/v1/portal/messages/${messageId}/read`,
+        `/portal/messages/${messageId}/read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

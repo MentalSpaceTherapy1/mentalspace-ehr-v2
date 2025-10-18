@@ -23,7 +23,7 @@ export function useClinicianDashboard(userId: string) {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       const response = await axios.get<{ success: boolean; data: DashboardData }>(
-        `/api/v1/productivity/dashboard/clinician/${userId}`,
+        `/productivity/dashboard/clinician/${userId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -40,7 +40,7 @@ export function useSupervisorDashboard(supervisorId: string) {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `/api/v1/productivity/dashboard/supervisor/${supervisorId}`,
+        `/productivity/dashboard/supervisor/${supervisorId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -57,7 +57,7 @@ export function useAdministratorDashboard() {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `/api/v1/productivity/dashboard/administrator`,
+        `/productivity/dashboard/administrator`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -77,7 +77,7 @@ export function useMetricsHistory(userId: string, metricType?: string) {
       if (metricType) params.append('metricType', metricType);
 
       const response = await axios.get(
-        `/api/v1/productivity/metrics/${userId}/history?${params}`,
+        `/productivity/metrics/${userId}/history?${params}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

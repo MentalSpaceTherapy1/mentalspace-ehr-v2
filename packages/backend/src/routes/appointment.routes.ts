@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getAllAppointments,
   getAppointmentById,
+  getAppointmentsByClientId,
   createAppointment,
   createRecurringAppointments,
   updateAppointment,
@@ -21,6 +22,9 @@ router.use(authMiddleware);
 
 // Get all appointments (with filters)
 router.get('/', getAllAppointments);
+
+// Get all appointments for a specific client (must be before /:id to avoid route collision)
+router.get('/client/:clientId', getAppointmentsByClientId);
 
 // Get single appointment
 router.get('/:id', getAppointmentById);

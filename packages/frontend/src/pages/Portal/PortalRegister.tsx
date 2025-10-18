@@ -31,7 +31,7 @@ export default function PortalRegister() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/api/v1/portal-auth/register', {
+      const response = await axios.post('/portal-auth/register', {
         email: formData.email,
         password: formData.password,
         clientId: formData.clientId,

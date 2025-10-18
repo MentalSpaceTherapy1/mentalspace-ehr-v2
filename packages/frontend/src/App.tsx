@@ -10,7 +10,9 @@ import ClientList from './pages/Clients/ClientList';
 import ClientForm from './pages/Clients/ClientForm';
 import ClientDetail from './pages/Clients/ClientDetail';
 import ClinicalNoteDetail from './pages/ClinicalNotes/ClinicalNoteDetail';
+import ClinicalNotesPage from './pages/ClinicalNotes/ClinicalNotesPage';
 import CosignQueue from './pages/ClinicalNotes/CosignQueue';
+import AppointmentSelector from './pages/ClinicalNotes/AppointmentSelector';
 import NoteTypeSelector from './pages/ClinicalNotes/NoteTypeSelector';
 import IntakeAssessmentForm from './pages/ClinicalNotes/Forms/IntakeAssessmentForm';
 import ProgressNoteForm from './pages/ClinicalNotes/Forms/ProgressNoteForm';
@@ -33,6 +35,7 @@ import PaymentsPage from './pages/Billing/PaymentsPage';
 import ClinicianDashboard from './pages/Productivity/ClinicianDashboard';
 import SupervisorDashboard from './pages/Productivity/SupervisorDashboard';
 import AdministratorDashboard from './pages/Productivity/AdministratorDashboard';
+import ReportsDashboard from './pages/Reports/ReportsDashboard';
 import PortalLayout from './components/PortalLayout';
 import PortalLogin from './pages/Portal/PortalLogin';
 import PortalRegister from './pages/Portal/PortalRegister';
@@ -294,6 +297,22 @@ function App() {
           }
         />
         <Route
+          path="/clients/:clientId/notes"
+          element={
+            <PrivateRoute>
+              <ClinicalNotesPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/select-appointment"
+          element={
+            <PrivateRoute>
+              <AppointmentSelector />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/clients/:clientId/notes/new"
           element={
             <PrivateRoute>
@@ -482,6 +501,14 @@ function App() {
           element={
             <PrivateRoute>
               <AdministratorDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <PrivateRoute>
+              <ReportsDashboard />
             </PrivateRoute>
           }
         />

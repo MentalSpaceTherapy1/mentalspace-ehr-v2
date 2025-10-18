@@ -45,6 +45,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
 /**
  * Middleware to authorize specific roles
+ * User must have at least ONE of the allowed roles
  */
 export const authorize = (...allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -53,7 +54,14 @@ export const authorize = (...allowedRoles: string[]) => {
         throw new UnauthorizedError('Authentication required');
       }
 
-      if (!allowedRoles.includes(req.user.role)) {
+      // Handle backward compatibility: old tokens may have 'role' instead of 'roles'
+      // @ts-ignore - for backward compatibility with old tokens
+      const userRoles = req.user.roles || (req.user.role ? [req.user.role] : []);
+
+      // Check if user has any of the allowed roles
+      const hasAllowedRole = userRoles.some((role: string) => allowedRoles.includes(role));
+
+      if (!hasAllowedRole) {
         throw new ForbiddenError(
           `Access denied. Required roles: ${allowedRoles.join(', ')}`
         );

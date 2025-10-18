@@ -61,7 +61,7 @@ export default function PortalMoodTracking() {
         params.append('days', '30');
       }
 
-      const response = await axios.get(`/api/v1/portal/mood-entries?${params.toString()}`, {
+      const response = await axios.get(`/portal/mood-entries?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -93,7 +93,7 @@ export default function PortalMoodTracking() {
       setIsSaving(true);
       const token = localStorage.getItem('portalToken');
       const response = await axios.post(
-        '/api/v1/portal/mood-entries',
+        '/portal/mood-entries',
         {
           moodScore,
           timeOfDay,

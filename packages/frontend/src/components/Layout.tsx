@@ -30,13 +30,16 @@ export default function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { path: '/', icon: '🏠', label: 'Dashboard', color: 'from-blue-500 to-cyan-500' },
-    { path: '/users', icon: '👥', label: 'Users', color: 'from-indigo-500 to-purple-500' },
     { path: '/clients', icon: '🧑‍⚕️', label: 'Clients', color: 'from-purple-500 to-pink-500' },
     { path: '/appointments', icon: '📅', label: 'Appointments', color: 'from-green-500 to-emerald-500' },
     { path: '/notes', icon: '📝', label: 'Clinical Notes', color: 'from-amber-500 to-orange-500' },
+    { path: '/billing', icon: '💰', label: 'Billing', color: 'from-teal-500 to-cyan-500' },
+    { path: '/reports', icon: '📈', label: 'Reports', color: 'from-sky-500 to-blue-600' },
+    { path: '/telehealth/session/demo', icon: '📹', label: 'Telehealth', color: 'from-blue-600 to-indigo-600' },
+    { path: '/portal/dashboard', icon: '🌐', label: 'Client Portal', color: 'from-emerald-500 to-teal-500' },
     { path: '/supervision', icon: '👨‍🏫', label: 'Supervision', color: 'from-rose-500 to-red-500' },
     { path: getProductivityPath(), icon: '📊', label: 'Productivity', color: 'from-violet-500 to-fuchsia-500' },
-    { path: '/billing', icon: '💰', label: 'Billing', color: 'from-teal-500 to-cyan-500' },
+    { path: '/users', icon: '👥', label: 'Users', color: 'from-indigo-500 to-purple-500' },
     { path: '/settings', icon: '⚙️', label: 'Settings', color: 'from-gray-500 to-slate-600' },
   ];
 
@@ -60,16 +63,29 @@ export default function Layout({ children }: LayoutProps) {
         <div className="h-full w-64 bg-white shadow-2xl border-r border-gray-200 flex flex-col">
           {/* Logo Header */}
           <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-xl">M</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  MentalSpace
-                </h1>
-                <p className="text-xs text-gray-500 font-semibold">EHR System</p>
-              </div>
+            <div className="flex items-center justify-center">
+              <img
+                src="/logo.png"
+                alt="MentalSpace Therapy"
+                className="h-16 w-auto object-contain"
+                onError={(e) => {
+                  // Fallback if logo image is not found
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement!.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                      <div class="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+                        <span class="text-white font-bold text-xl">M</span>
+                      </div>
+                      <div>
+                        <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                          MentalSpace
+                        </h1>
+                        <p class="text-xs text-gray-500 font-semibold">THERAPY</p>
+                      </div>
+                    </div>
+                  `;
+                }}
+              />
             </div>
           </div>
 

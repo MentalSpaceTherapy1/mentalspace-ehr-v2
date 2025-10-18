@@ -3,20 +3,12 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import {
-  DefaultDeviceController,
-  DefaultMeetingSession,
-  ConsoleLogger,
-  LogLevel,
-  MeetingSessionConfiguration,
-  VideoTileState,
-  AudioVideoObserver,
-} from 'amazon-chime-sdk-js';
+import Video, { Room, LocalVideoTrack, LocalAudioTrack, RemoteParticipant, RemoteTrack, RemoteTrackPublication } from 'twilio-video';
 
 interface TelehealthSession {
   id: string;
   appointmentId: string;
-  chimeMeetingId: string;
+  chimeMeetingId: string; // Actually stores Twilio Room SID
   clinicianJoinUrl: string;
   clientJoinUrl: string;
   meetingDataJson: any;
@@ -36,12 +28,6 @@ interface TelehealthSession {
   };
 }
 
-interface Participant {
-  attendeeId: string;
-  externalUserId: string;
-  name: string;
-}
-
 export default function VideoSession() {
   const { appointmentId } = useParams<{ appointmentId: string }>();
   const [searchParams] = useSearchParams();
@@ -52,20 +38,24 @@ export default function VideoSession() {
   const isValidAppointmentId = appointmentId && appointmentId !== '{appointmentId}' &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentId);
 
-  const [meetingSession, setMeetingSession] = useState<DefaultMeetingSession | null>(null);
+  const [room, setRoom] = useState<Room | null>(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [sessionStatus, setSessionStatus] = useState<'loading' | 'waiting' | 'connecting' | 'connected' | 'reconnecting' | 'ended'>('loading');
   const [sessionDuration, setSessionDuration] = useState(0);
-  const [networkQuality] = useState<'good' | 'fair' | 'poor'>('good');
+  const [networkQuality, setNetworkQuality] = useState<'good' | 'fair' | 'poor'>('good');
   const [devicePermissionsGranted, setDevicePermissionsGranted] = useState(false);
+  const [remoteParticipantCount, setRemoteParticipantCount] = useState(0);
 
-  const localVideoElementRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoElementRef = useRef<HTMLVideoElement>(null);
-  const screenShareElementRef = useRef<HTMLVideoElement>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const screenShareRef = useRef<HTMLVideoElement>(null);
   const sessionStartTimeRef = useRef<number | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const localVideoTrackRef = useRef<LocalVideoTrack | null>(null);
+  const localAudioTrackRef = useRef<LocalAudioTrack | null>(null);
+  const screenShareTrackRef = useRef<any>(null);
 
   // Fetch session details
   const { data: sessionData, isLoading, refetch } = useQuery({
@@ -73,7 +63,7 @@ export default function VideoSession() {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       try {
-        const response = await axios.get(`/api/v1/telehealth/sessions/${appointmentId}`, {
+        const response = await axios.get(`/telehealth/sessions/${appointmentId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         return response.data.data as TelehealthSession;
@@ -82,7 +72,7 @@ export default function VideoSession() {
         if (error.response?.status === 404) {
           console.log('Session not found, creating new session...');
           const createResponse = await axios.post(
-            '/api/v1/telehealth/sessions',
+            '/telehealth/sessions',
             { appointmentId },
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -100,7 +90,7 @@ export default function VideoSession() {
     mutationFn: async () => {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        '/api/v1/telehealth/sessions/join',
+        '/telehealth/sessions/join',
         {
           appointmentId,
           userRole,
@@ -113,7 +103,7 @@ export default function VideoSession() {
     },
     onSuccess: async (data) => {
       toast.success('Joining session...');
-      await initializeMeetingSession(data);
+      await initializeTwilioSession(data);
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to join session');
@@ -127,7 +117,7 @@ export default function VideoSession() {
       const token = localStorage.getItem('token');
       if (sessionData?.id) {
         await axios.post(
-          '/api/v1/telehealth/sessions/end',
+          '/telehealth/sessions/end',
           {
             sessionId: sessionData.id,
             endReason: 'Normal',
@@ -140,7 +130,7 @@ export default function VideoSession() {
     },
     onSuccess: () => {
       toast.success('Session ended');
-      cleanupMeetingSession();
+      cleanupTwilioSession();
       navigate('/appointments');
     },
   });
@@ -159,8 +149,8 @@ export default function VideoSession() {
     }
   };
 
-  // Initialize Amazon Chime meeting session
-  const initializeMeetingSession = async (joinData: any) => {
+  // Initialize Twilio Video session
+  const initializeTwilioSession = async (joinData: any) => {
     try {
       setSessionStatus('connecting');
 
@@ -171,134 +161,244 @@ export default function VideoSession() {
         return;
       }
 
-      const logger = new ConsoleLogger('MentalSpaceChime', LogLevel.INFO);
-      const deviceController = new DefaultDeviceController(logger);
+      // Get Twilio token and room name from backend response
+      const { twilioToken, twilioRoomName } = joinData;
 
-      const configuration = new MeetingSessionConfiguration(
-        joinData.meeting,
-        joinData.attendee
-      );
+      console.log('Connecting to Twilio room:', twilioRoomName);
 
-      const session = new DefaultMeetingSession(configuration, logger, deviceController);
-      const audioVideo = session.audioVideo;
+      // Check if this is a mock session (offline mode)
+      const isMockMode = twilioToken?.startsWith('MOCK_TOKEN_');
 
-      // Set up observer
-      const observer: AudioVideoObserver = {
-        audioVideoDidStart: () => {
-          console.log('Audio/Video started');
-          setSessionStatus('connected');
-          toast.success('Connected to session');
+      if (isMockMode) {
+        console.warn('⚠️ MOCK MODE: Twilio unavailable - using simulated video session');
+        toast('Demo Mode: Twilio service unavailable', { icon: '⚠️' });
 
-          // Start session timer
-          sessionStartTimeRef.current = Date.now();
-          durationIntervalRef.current = setInterval(() => {
-            if (sessionStartTimeRef.current) {
-              setSessionDuration(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
-            }
-          }, 1000);
-        },
-        audioVideoDidStop: (sessionStatus) => {
-          console.log('Audio/Video stopped', sessionStatus);
-          if (sessionStatus.statusCode() === 2) { // MeetingSessionStatusCode.AudioCallEnded
-            setSessionStatus('ended');
-            toast('Session has ended', { icon: 'ℹ️' });
-          } else {
-            setSessionStatus('reconnecting');
-            toast('Connection lost. Trying to reconnect...', { icon: '⚠️' });
+        // Create local tracks for preview
+        try {
+          const localVideoTrack = await Video.createLocalVideoTrack({
+            width: 1280,
+            height: 720,
+            frameRate: 24,
+          });
+          const localAudioTrack = await Video.createLocalAudioTrack();
+
+          localVideoTrackRef.current = localVideoTrack;
+          localAudioTrackRef.current = localAudioTrack;
+
+          // Attach local video to video element
+          if (localVideoRef.current) {
+            localVideoTrack.attach(localVideoRef.current);
           }
-        },
-        videoTileDidUpdate: (tileState: VideoTileState) => {
-          console.log('Video tile updated:', tileState);
-
-          if (!tileState.boundVideoElement) {
-            if (tileState.localTile && localVideoElementRef.current) {
-              // Bind local video
-              audioVideo.bindVideoElement(tileState.tileId!, localVideoElementRef.current);
-              console.log('Bound local video tile:', tileState.tileId);
-            } else if (!tileState.localTile && !tileState.isContent && remoteVideoElementRef.current) {
-              // Bind remote participant video
-              audioVideo.bindVideoElement(tileState.tileId!, remoteVideoElementRef.current);
-              console.log('Bound remote video tile:', tileState.tileId);
-            } else if (tileState.isContent && screenShareElementRef.current) {
-              // Bind screen share
-              audioVideo.bindVideoElement(tileState.tileId!, screenShareElementRef.current);
-              setIsScreenSharing(true);
-              console.log('Bound screen share tile:', tileState.tileId);
-            }
-          }
-        },
-        videoTileWasRemoved: (tileId: number) => {
-          console.log('Video tile removed:', tileId);
-          const tileState = audioVideo.getVideoTile(tileId)?.state();
-          if (tileState?.isContent) {
-            setIsScreenSharing(false);
-          }
-        },
-      };
-
-      audioVideo.addObserver(observer);
-
-      // List and select audio/video devices
-      try {
-        const audioInputDevices = await audioVideo.listAudioInputDevices();
-        const videoInputDevices = await audioVideo.listVideoInputDevices();
-
-        console.log('Available audio devices:', audioInputDevices);
-        console.log('Available video devices:', videoInputDevices);
-
-        // Choose default devices
-        if (audioInputDevices.length > 0) {
-          await audioVideo.startAudioInput(audioInputDevices[0].deviceId);
+        } catch (error) {
+          console.error('Failed to create local tracks:', error);
         }
 
-        if (videoInputDevices.length > 0) {
-          await audioVideo.startVideoInput(videoInputDevices[0].deviceId);
-        }
-      } catch (error) {
-        console.error('Error selecting devices:', error);
-        toast.error('Failed to access camera/microphone');
+        // Simulate connection success
+        setSessionStatus('connected');
+        toast.success('Connected to demo session');
+
+        // Start session timer
+        sessionStartTimeRef.current = Date.now();
+        durationIntervalRef.current = setInterval(() => {
+          if (sessionStartTimeRef.current) {
+            setSessionDuration(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
+          }
+        }, 1000);
+
+        setRemoteParticipantCount(0);
+        setNetworkQuality('good');
+
+        console.log('✅ Mock session initialized - video UI will work without remote connection');
+        return;
       }
 
-      // Start audio and video
-      audioVideo.start();
-      audioVideo.startLocalVideoTile();
+      // Create local tracks
+      const localVideoTrack = await Video.createLocalVideoTrack({
+        width: 1280,
+        height: 720,
+        frameRate: 24,
+      });
+      const localAudioTrack = await Video.createLocalAudioTrack();
 
-      setMeetingSession(session);
-    } catch (error) {
-      console.error('Failed to initialize meeting session:', error);
-      toast.error('Failed to connect to session');
+      localVideoTrackRef.current = localVideoTrack;
+      localAudioTrackRef.current = localAudioTrack;
+
+      // Attach local video to video element
+      if (localVideoRef.current) {
+        localVideoTrack.attach(localVideoRef.current);
+      }
+
+      // Connect to Twilio room
+      const twilioRoom = await Video.connect(twilioToken, {
+        name: twilioRoomName,
+        tracks: [localVideoTrack, localAudioTrack],
+        networkQuality: {
+          local: 1, // LocalNetworkQualityVerbosity
+          remote: 1,
+        },
+        bandwidthProfile: {
+          video: {
+            mode: 'collaboration',
+            maxSubscriptionBitrate: 2500000,
+          },
+        },
+        maxAudioBitrate: 16000,
+        preferredVideoCodecs: ['VP8'],
+      });
+
+      setRoom(twilioRoom);
+      setSessionStatus('connected');
+      toast.success('Connected to session');
+
+      // Start session timer
+      sessionStartTimeRef.current = Date.now();
+      durationIntervalRef.current = setInterval(() => {
+        if (sessionStartTimeRef.current) {
+          setSessionDuration(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
+        }
+      }, 1000);
+
+      // Handle existing remote participants
+      twilioRoom.participants.forEach(handleParticipantConnected);
+      setRemoteParticipantCount(twilioRoom.participants.size);
+
+      // Set up event listeners
+      twilioRoom.on('participantConnected', (participant: RemoteParticipant) => {
+        console.log('Participant connected:', participant.identity);
+        handleParticipantConnected(participant);
+        setRemoteParticipantCount(twilioRoom.participants.size);
+        toast.success(`${participant.identity} joined the session`);
+      });
+
+      twilioRoom.on('participantDisconnected', (participant: RemoteParticipant) => {
+        console.log('Participant disconnected:', participant.identity);
+        handleParticipantDisconnected(participant);
+        setRemoteParticipantCount(twilioRoom.participants.size);
+        toast(`${participant.identity} left the session`, { icon: 'ℹ️' });
+      });
+
+      twilioRoom.on('reconnecting', (error: any) => {
+        console.log('Reconnecting to room...', error);
+        setSessionStatus('reconnecting');
+        toast('Connection lost. Trying to reconnect...', { icon: '⚠️' });
+      });
+
+      twilioRoom.on('reconnected', () => {
+        console.log('Reconnected to room');
+        setSessionStatus('connected');
+        toast.success('Reconnected to session');
+      });
+
+      twilioRoom.on('disconnected', (room: Room, error: any) => {
+        console.log('Disconnected from room', error);
+        setSessionStatus('ended');
+        if (error) {
+          toast.error('Disconnected from session');
+        } else {
+          toast('Session has ended', { icon: 'ℹ️' });
+        }
+        cleanupTwilioSession();
+      });
+
+      // Monitor network quality
+      twilioRoom.localParticipant.on('networkQualityLevelChanged', (networkQualityLevel: number) => {
+        console.log('Network quality:', networkQualityLevel);
+        if (networkQualityLevel >= 4) {
+          setNetworkQuality('good');
+        } else if (networkQualityLevel >= 2) {
+          setNetworkQuality('fair');
+        } else {
+          setNetworkQuality('poor');
+        }
+      });
+
+      console.log('Successfully connected to Twilio room');
+    } catch (error: any) {
+      console.error('Failed to initialize Twilio session:', error);
+      toast.error(error.message || 'Failed to connect to session');
       setSessionStatus('ended');
     }
   };
 
-  // Cleanup meeting session
-  const cleanupMeetingSession = useCallback(() => {
-    if (meetingSession) {
-      try {
-        // Stop all video tiles
-        meetingSession.audioVideo.stopLocalVideoTile();
-        meetingSession.audioVideo.stop();
+  // Handle remote participant connected
+  const handleParticipantConnected = (participant: RemoteParticipant) => {
+    console.log('Setting up tracks for participant:', participant.identity);
 
-        // Stop all media tracks on video elements
-        if (localVideoElementRef.current && localVideoElementRef.current.srcObject) {
-          const stream = localVideoElementRef.current.srcObject as MediaStream;
-          stream.getTracks().forEach(track => track.stop());
-          localVideoElementRef.current.srcObject = null;
-        }
-        if (remoteVideoElementRef.current && remoteVideoElementRef.current.srcObject) {
-          const stream = remoteVideoElementRef.current.srcObject as MediaStream;
-          stream.getTracks().forEach(track => track.stop());
-          remoteVideoElementRef.current.srcObject = null;
-        }
-        if (screenShareElementRef.current && screenShareElementRef.current.srcObject) {
-          const stream = screenShareElementRef.current.srcObject as MediaStream;
-          stream.getTracks().forEach(track => track.stop());
-          screenShareElementRef.current.srcObject = null;
-        }
-      } catch (error) {
-        console.error('Error during cleanup:', error);
+    // Handle existing tracks
+    participant.tracks.forEach((publication: RemoteTrackPublication) => {
+      if (publication.track) {
+        handleTrackSubscribed(publication.track);
       }
-      setMeetingSession(null);
+    });
+
+    // Handle new tracks
+    participant.on('trackSubscribed', handleTrackSubscribed);
+    participant.on('trackUnsubscribed', handleTrackUnsubscribed);
+  };
+
+  // Handle remote participant disconnected
+  const handleParticipantDisconnected = (participant: RemoteParticipant) => {
+    console.log('Cleaning up tracks for participant:', participant.identity);
+    participant.removeAllListeners();
+  };
+
+  // Handle track subscribed
+  const handleTrackSubscribed = (track: RemoteTrack) => {
+    console.log('Track subscribed:', track.kind, track.name);
+
+    if (track.kind === 'video') {
+      // Check if this is a screen share track
+      if (track.name.includes('screen')) {
+        if (screenShareRef.current) {
+          track.attach(screenShareRef.current);
+          setIsScreenSharing(true);
+        }
+      } else {
+        // Regular video track
+        if (remoteVideoRef.current) {
+          track.attach(remoteVideoRef.current);
+        }
+      }
+    } else if (track.kind === 'audio') {
+      // Attach audio track (will play automatically)
+      track.attach();
+    }
+  };
+
+  // Handle track unsubscribed
+  const handleTrackUnsubscribed = (track: RemoteTrack) => {
+    console.log('Track unsubscribed:', track.kind);
+    track.detach();
+
+    if (track.kind === 'video' && track.name.includes('screen')) {
+      setIsScreenSharing(false);
+    }
+  };
+
+  // Cleanup Twilio session
+  const cleanupTwilioSession = useCallback(() => {
+    console.log('Cleaning up Twilio session');
+
+    // Stop screen sharing if active
+    if (screenShareTrackRef.current) {
+      screenShareTrackRef.current.stop();
+      screenShareTrackRef.current = null;
+    }
+
+    // Stop local tracks
+    if (localVideoTrackRef.current) {
+      localVideoTrackRef.current.stop();
+      localVideoTrackRef.current = null;
+    }
+    if (localAudioTrackRef.current) {
+      localAudioTrackRef.current.stop();
+      localAudioTrackRef.current = null;
+    }
+
+    // Disconnect from room
+    if (room) {
+      room.disconnect();
+      setRoom(null);
     }
 
     // Clear session timer
@@ -311,16 +411,17 @@ export default function VideoSession() {
     setSessionStatus('ended');
     setSessionDuration(0);
     sessionStartTimeRef.current = null;
-  }, [meetingSession]);
+    setRemoteParticipantCount(0);
+  }, [room]);
 
   // Toggle audio mute
   const toggleAudio = () => {
-    if (meetingSession) {
+    if (localAudioTrackRef.current) {
       if (isAudioMuted) {
-        meetingSession.audioVideo.realtimeUnmuteLocalAudio();
+        localAudioTrackRef.current.enable();
         toast.success('Microphone unmuted');
       } else {
-        meetingSession.audioVideo.realtimeMuteLocalAudio();
+        localAudioTrackRef.current.disable();
         toast.success('Microphone muted');
       }
       setIsAudioMuted(!isAudioMuted);
@@ -329,12 +430,12 @@ export default function VideoSession() {
 
   // Toggle video
   const toggleVideo = () => {
-    if (meetingSession) {
+    if (localVideoTrackRef.current) {
       if (isVideoOff) {
-        meetingSession.audioVideo.startLocalVideoTile();
+        localVideoTrackRef.current.enable();
         toast.success('Camera turned on');
       } else {
-        meetingSession.audioVideo.stopLocalVideoTile();
+        localVideoTrackRef.current.disable();
         toast.success('Camera turned off');
       }
       setIsVideoOff(!isVideoOff);
@@ -343,13 +444,37 @@ export default function VideoSession() {
 
   // Start screen sharing
   const startScreenShare = async () => {
-    if (meetingSession && !isScreenSharing) {
+    if (room && !isScreenSharing) {
       try {
-        await meetingSession.audioVideo.startContentShare(await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: false,
-        }) as MediaStream);
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30 },
+          },
+        });
+
+        const screenTrack = stream.getVideoTracks()[0];
+
+        // Create a Twilio LocalVideoTrack from the screen track
+        const twilioScreenTrack = new Video.LocalVideoTrack(screenTrack);
+        screenShareTrackRef.current = twilioScreenTrack;
+
+        // Publish the screen share track
+        await room.localParticipant.publishTrack(twilioScreenTrack);
+
+        // Attach to local screen share element
+        if (screenShareRef.current) {
+          twilioScreenTrack.attach(screenShareRef.current);
+        }
+
+        setIsScreenSharing(true);
         toast.success('Screen sharing started');
+
+        // Handle when user stops sharing via browser UI
+        screenTrack.onended = () => {
+          stopScreenShare();
+        };
       } catch (error) {
         console.error('Failed to start screen share:', error);
         toast.error('Failed to share screen');
@@ -359,8 +484,14 @@ export default function VideoSession() {
 
   // Stop screen sharing
   const stopScreenShare = () => {
-    if (meetingSession && isScreenSharing) {
-      meetingSession.audioVideo.stopContentShare();
+    if (room && screenShareTrackRef.current) {
+      // Unpublish the screen share track
+      room.localParticipant.unpublishTrack(screenShareTrackRef.current);
+
+      // Stop the track
+      screenShareTrackRef.current.stop();
+      screenShareTrackRef.current = null;
+
       setIsScreenSharing(false);
       toast.success('Screen sharing stopped');
     }
@@ -382,7 +513,7 @@ export default function VideoSession() {
 
   // Auto-join when component mounts
   useEffect(() => {
-    if (appointmentId && !isLoading && sessionData && !meetingSession) {
+    if (appointmentId && !isLoading && sessionData && !room) {
       // Check if we're in waiting room
       if (sessionData.status === 'WAITING_ROOM' && userRole === 'client') {
         setSessionStatus('waiting');
@@ -396,9 +527,9 @@ export default function VideoSession() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      cleanupMeetingSession();
+      cleanupTwilioSession();
     };
-  }, [cleanupMeetingSession]);
+  }, [cleanupTwilioSession]);
 
   // Invalid appointment ID
   if (!isValidAppointmentId) {
@@ -521,7 +652,7 @@ export default function VideoSession() {
         {/* Remote Video (Full Screen) */}
         <div className="absolute inset-0">
           <video
-            ref={remoteVideoElementRef}
+            ref={remoteVideoRef}
             className="w-full h-full object-cover"
             autoPlay
             playsInline
@@ -534,12 +665,22 @@ export default function VideoSession() {
               </div>
             </div>
           )}
+          {sessionStatus === 'connected' && remoteParticipantCount === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75">
+              <div className="text-center text-white">
+                <svg className="w-24 h-24 mx-auto mb-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+                <p className="text-xl">Waiting for other participant to join...</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Self View (Picture-in-Picture) */}
         <div className="absolute top-4 right-4 w-64 h-48 bg-gray-900 rounded-lg shadow-2xl overflow-hidden border-4 border-white">
           <video
-            ref={localVideoElementRef}
+            ref={localVideoRef}
             className="w-full h-full object-cover mirror"
             autoPlay
             playsInline
@@ -558,7 +699,7 @@ export default function VideoSession() {
         {isScreenSharing && (
           <div className="absolute bottom-24 left-4 right-4 h-64 bg-gray-900 rounded-lg shadow-2xl overflow-hidden border-2 border-purple-500">
             <video
-              ref={screenShareElementRef}
+              ref={screenShareRef}
               className="w-full h-full object-contain"
               autoPlay
               playsInline
@@ -575,7 +716,7 @@ export default function VideoSession() {
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
             </svg>
-            <span className="font-semibold">2 participants</span>
+            <span className="font-semibold">{remoteParticipantCount + 1} participant{remoteParticipantCount !== 0 ? 's' : ''}</span>
           </div>
         )}
       </div>

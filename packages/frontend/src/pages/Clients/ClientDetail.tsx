@@ -6,6 +6,7 @@ import EmergencyContacts from '../../components/EmergencyContacts';
 import InsuranceInfo from '../../components/InsuranceInfo';
 import Guardians from '../../components/Guardians';
 import ClinicalNotesList from '../../components/ClinicalNotes/ClinicalNotesList';
+import AppointmentsTab from '../../components/Appointments/AppointmentsTab';
 import PortalTab from '../../components/ClientPortal/PortalTab';
 import AssessmentTab from '../../components/ClientPortal/AssessmentTab';
 
@@ -13,14 +14,14 @@ export default function ClientDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'demographics' | 'clinical-notes' | 'portal' | 'assessments'>('demographics');
+  const [activeTab, setActiveTab] = useState<'demographics' | 'appointments' | 'clinical-notes' | 'portal' | 'assessments'>('demographics');
 
   // Fetch client data
   const { data: clientData, isLoading, error } = useQuery({
     queryKey: ['client', id],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/v1/clients/${id}`, {
+      const response = await axios.get(`/clients/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -33,7 +34,7 @@ export default function ClientDetail() {
   const deactivateMutation = useMutation({
     mutationFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.delete(`/api/v1/clients/${id}`, {
+      const response = await axios.delete(`/clients/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
@@ -161,6 +162,16 @@ export default function ClientDetail() {
             }`}
           >
             Demographics
+          </button>
+          <button
+            onClick={() => setActiveTab('appointments')}
+            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              activeTab === 'appointments'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+            }`}
+          >
+            Appointments
           </button>
           <button
             onClick={() => setActiveTab('clinical-notes')}
@@ -438,6 +449,8 @@ export default function ClientDetail() {
         </div>
         </div>
       )}
+
+      {activeTab === 'appointments' && <AppointmentsTab clientId={id!} />}
 
       {activeTab === 'clinical-notes' && (
         <div>

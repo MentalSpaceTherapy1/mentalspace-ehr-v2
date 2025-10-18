@@ -14,7 +14,7 @@ export default function PortalLogin() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/api/v1/portal-auth/login', {
+      const response = await axios.post('/portal-auth/login', {
         email,
         password,
       });

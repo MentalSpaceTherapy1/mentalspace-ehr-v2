@@ -12,7 +12,7 @@ export default function PracticeSettings() {
     queryKey: ['profile'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/auth/me', {
+      const response = await axios.get('/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -66,7 +66,7 @@ export default function PracticeSettings() {
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: any) => {
       const token = localStorage.getItem('token');
-      const response = await axios.patch('/api/v1/users/me', data, {
+      const response = await axios.patch('/users/me', data, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

@@ -1,7 +1,7 @@
 import prisma from './database';
 import logger from '../utils/logger';
 import config from '../config';
-import * as chimeService from './chime.service';
+import * as twilioService from './twilio.service';
 import { v4 as uuidv4 } from 'uuid';
 
 interface CreateTelehealthSessionData {
@@ -13,10 +13,11 @@ interface JoinSessionData {
   sessionId: string;
   userId: string;
   userRole: 'clinician' | 'client';
+  userName: string;
 }
 
 /**
- * Create a telehealth session for an appointment
+ * Create a telehealth session for an appointment using Twilio Video
  */
 export async function createTelehealthSession(data: CreateTelehealthSessionData) {
   try {
@@ -56,26 +57,58 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
       return existingSession;
     }
 
-    // Generate external meeting ID (used for Chime)
-    const externalMeetingId = `telehealth-${data.appointmentId}-${uuidv4()}`;
+    // Generate unique room name for Twilio
+    const roomName = `telehealth-${data.appointmentId}-${uuidv4().substring(0, 8)}`;
 
-    // Create Amazon Chime meeting
-    const chimeMeeting = await chimeService.createChimeMeeting(externalMeetingId);
+    //Try to create Twilio Video room, but fallback to mock mode if it fails
+    let twilioRoom: any;
+    let isMockMode = false;
 
-    if (!chimeMeeting || !chimeMeeting.MeetingId) {
-      throw new Error('Failed to create Chime meeting');
+    try {
+      twilioRoom = await twilioService.createTwilioRoom(roomName, false);
+
+      if (!twilioRoom || !twilioRoom.roomSid) {
+        throw new Error('Invalid Twilio room response');
+      }
+    } catch (twilioError: any) {
+      // Check if it's a network/DNS error
+      const isNetworkError = twilioError.message?.includes('getaddrinfo') ||
+                             twilioError.message?.includes('ENOTFOUND') ||
+                             twilioError.message?.includes('EAI_AGAIN') ||
+                             twilioError.code === 'ENOTFOUND';
+
+      if (isNetworkError) {
+        // Use mock mode for development/offline testing
+        logger.warn('Twilio unavailable - using mock mode for telehealth', {
+          appointmentId: data.appointmentId,
+          error: twilioError.message,
+        });
+
+        isMockMode = true;
+        twilioRoom = {
+          roomSid: `MOCK-${uuidv4()}`,
+          roomName: roomName,
+          status: 'mock',
+          dateCreated: new Date(),
+          maxParticipants: 10,
+        };
+      } else {
+        // Re-throw non-network errors
+        throw twilioError;
+      }
     }
 
     // Create telehealth session in database
+    // Note: We reuse Chime field names to avoid database migration
     const session = await prisma.telehealthSession.create({
       data: {
         appointmentId: data.appointmentId,
-        chimeMeetingId: chimeMeeting.MeetingId,
-        chimeExternalMeetingId: externalMeetingId,
-        chimeMeetingRegion: chimeMeeting.MediaRegion,
+        chimeMeetingId: twilioRoom.roomSid, // Store Twilio Room SID
+        chimeExternalMeetingId: twilioRoom.roomName, // Store Twilio Room Name
+        chimeMeetingRegion: 'twilio', // Indicator that this is Twilio
         clinicianJoinUrl: `${config.frontendUrl}/telehealth/session/${data.appointmentId}?role=clinician`,
         clientJoinUrl: `${config.frontendUrl}/telehealth/session/${data.appointmentId}?role=client`,
-        meetingDataJson: chimeMeeting,
+        meetingDataJson: twilioRoom, // Store Twilio room data
         status: 'SCHEDULED',
         recordingConsent: false,
         recordingEnabled: false,
@@ -84,10 +117,11 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
       },
     });
 
-    logger.info('Telehealth session created', {
+    logger.info('Telehealth session created with Twilio', {
       sessionId: session.id,
       appointmentId: data.appointmentId,
-      chimeMeetingId: chimeMeeting.MeetingId,
+      twilioRoomSid: twilioRoom.roomSid,
+      twilioRoomName: twilioRoom.roomName,
     });
 
     return session;
@@ -96,7 +130,6 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
       errorMessage: error.message,
       errorName: error.name,
       errorStack: error.stack,
-      errorCode: error.code || error.$metadata?.httpStatusCode,
       appointmentId: data.appointmentId,
     });
     throw error;
@@ -104,7 +137,7 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
 }
 
 /**
- * Get join credentials for a telehealth session
+ * Get join credentials for a telehealth session using Twilio
  */
 export async function joinTelehealthSession(data: JoinSessionData) {
   try {
@@ -129,38 +162,74 @@ export async function joinTelehealthSession(data: JoinSessionData) {
       throw new Error('Telehealth session not found');
     }
 
-    // Determine external user ID based on role
-    let externalUserId = '';
-    if (data.userRole === 'clinician') {
-      externalUserId = `clinician-${session.appointment.clinicianId}`;
+    // Get room name from database (stored in chimeExternalMeetingId)
+    const roomName = session.chimeExternalMeetingId;
+    const roomSid = session.chimeMeetingId;
+
+    // Create identity string for Twilio
+    const identity = `${data.userRole}-${data.userName}-${Date.now()}`;
+
+    // Check if this is a mock session
+    const isMockMode = roomSid?.startsWith('MOCK-');
+
+    // Generate Twilio access token or mock token
+    let tokenData: any;
+
+    if (isMockMode) {
+      // Use mock token for offline development
+      logger.warn('Using mock token for offline telehealth session', {
+        sessionId: session.id,
+        userRole: data.userRole,
+      });
+
+      tokenData = {
+        token: `MOCK_TOKEN_${uuidv4()}`,
+        identity,
+        roomName,
+      };
     } else {
-      externalUserId = `client-${session.appointment.clientId}`;
+      try {
+        tokenData = await twilioService.generateTwilioAccessToken(roomName, identity);
+
+        if (!tokenData || !tokenData.token) {
+          throw new Error('Invalid Twilio token response');
+        }
+      } catch (twilioError: any) {
+        const isNetworkError = twilioError.message?.includes('getaddrinfo') ||
+                               twilioError.message?.includes('ENOTFOUND') ||
+                               twilioError.message?.includes('EAI_AGAIN');
+
+        if (isNetworkError) {
+          logger.warn('Twilio unavailable - using mock token', {
+            sessionId: session.id,
+            error: twilioError.message,
+          });
+
+          tokenData = {
+            token: `MOCK_TOKEN_${uuidv4()}`,
+            identity,
+            roomName,
+          };
+        } else {
+          throw twilioError;
+        }
+      }
     }
 
-    // Create Chime attendee
-    const attendee = await chimeService.createChimeAttendee(
-      session.chimeMeetingId,
-      externalUserId
-    );
-
-    if (!attendee || !attendee.AttendeeId) {
-      throw new Error('Failed to create meeting attendee');
-    }
-
-    // Update session with attendee info
+    // Update session with join info
     const updateData: any = {
       lastModifiedBy: data.userId,
     };
 
     if (data.userRole === 'clinician') {
-      updateData.clinicianAttendeeId = attendee.AttendeeId;
+      updateData.clinicianAttendeeId = identity; // Store Twilio identity
       // If clinician joins, start the session
       if (session.status === 'WAITING_ROOM' || session.status === 'SCHEDULED') {
         updateData.status = 'IN_PROGRESS';
         updateData.sessionStartedAt = new Date();
       }
     } else {
-      updateData.clientAttendeeId = attendee.AttendeeId;
+      updateData.clientAttendeeId = identity; // Store Twilio identity
       // Client enters waiting room
       if (session.status === 'SCHEDULED') {
         updateData.status = 'WAITING_ROOM';
@@ -178,13 +247,14 @@ export async function joinTelehealthSession(data: JoinSessionData) {
       sessionId: session.id,
       userId: data.userId,
       userRole: data.userRole,
-      attendeeId: attendee.AttendeeId,
+      identity,
     });
 
     return {
       session: updatedSession,
-      meeting: session.meetingDataJson,
-      attendee: attendee,
+      twilioToken: tokenData.token,
+      twilioRoomName: roomName,
+      twilioIdentity: identity,
     };
   } catch (error: any) {
     logger.error('Failed to join telehealth session', {
@@ -199,7 +269,7 @@ export async function joinTelehealthSession(data: JoinSessionData) {
 }
 
 /**
- * End a telehealth session
+ * End a telehealth session using Twilio
  */
 export async function endTelehealthSession(sessionId: string, userId: string, endReason?: string) {
   try {
@@ -219,8 +289,22 @@ export async function endTelehealthSession(sessionId: string, userId: string, en
       );
     }
 
-    // Delete Chime meeting
-    await chimeService.deleteChimeMeeting(session.chimeMeetingId);
+    // End Twilio room (Room SID stored in chimeMeetingId)
+    const roomSid = session.chimeMeetingId;
+    const isMockMode = roomSid?.startsWith('MOCK-');
+
+    if (!isMockMode) {
+      try {
+        await twilioService.endTwilioRoom(roomSid);
+      } catch (twilioError: any) {
+        // Log but don't fail if Twilio is unavailable
+        logger.warn('Failed to end Twilio room - continuing with local cleanup', {
+          sessionId,
+          roomSid,
+          error: twilioError.message,
+        });
+      }
+    }
 
     // Update session status
     const updatedSession = await prisma.telehealthSession.update({
@@ -236,6 +320,7 @@ export async function endTelehealthSession(sessionId: string, userId: string, en
 
     logger.info('Telehealth session ended', {
       sessionId,
+      twilioRoomSid: roomSid,
       actualDuration,
       endReason,
     });
@@ -394,4 +479,11 @@ export async function stopRecording(sessionId: string, userId: string) {
     });
     throw error;
   }
+}
+
+/**
+ * Get Twilio configuration status
+ */
+export function getTwilioStatus() {
+  return twilioService.getTwilioConfigStatus();
 }

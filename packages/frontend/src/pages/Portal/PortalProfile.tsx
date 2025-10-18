@@ -70,7 +70,7 @@ export default function PortalProfile() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/profile', {
+      const response = await axios.get('/portal/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -108,7 +108,7 @@ export default function PortalProfile() {
   const fetchAccountSettings = async () => {
     try {
       const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/api/v1/portal/account/settings', {
+      const response = await axios.get('/portal/account/settings', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -135,7 +135,7 @@ export default function PortalProfile() {
       setIsSaving(true);
       const token = localStorage.getItem('portalToken');
       const response = await axios.put(
-        '/api/v1/portal/profile',
+        '/portal/profile',
         {
           firstName,
           lastName,
@@ -177,7 +177,7 @@ export default function PortalProfile() {
       setIsSaving(true);
       const token = localStorage.getItem('portalToken');
       const response = await axios.put(
-        '/api/v1/portal/account/notifications',
+        '/portal/account/notifications',
         {
           emailNotifications,
           smsNotifications,
@@ -218,7 +218,7 @@ export default function PortalProfile() {
       setIsSaving(true);
       const token = localStorage.getItem('portalToken');
       const response = await axios.post(
-        '/api/v1/portal/account/change-password',
+        '/portal/account/change-password',
         {
           currentPassword,
           newPassword,

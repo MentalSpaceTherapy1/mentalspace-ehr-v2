@@ -45,7 +45,7 @@ export default function ClientList() {
         ...(statusFilter && { status: statusFilter }),
       });
 
-      const response = await axios.get(`/api/v1/clients?${params}`, {
+      const response = await axios.get(`/clients?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

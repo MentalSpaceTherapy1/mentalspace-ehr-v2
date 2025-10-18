@@ -13,7 +13,7 @@ export default function PortalForgotPassword() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/api/v1/portal-auth/forgot-password', {
+      const response = await axios.post('/portal-auth/forgot-password', {
         email,
       });
 

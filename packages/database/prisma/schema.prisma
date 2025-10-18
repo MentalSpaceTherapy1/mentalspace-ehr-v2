@@ -33,7 +33,7 @@ model User {
   lastName      String
   suffix        String?
   preferredName String?
-  role          UserRole
+  roles         UserRole[] // Multiple roles support
 
   // Professional Information
   title             String? // PhD, PsyD, LCSW, etc.
@@ -139,6 +139,9 @@ model User {
   journalCommentsPosted      JournalComment[]         @relation("JournalCommenter")
   sessionSummariesCreated    SessionSummary[]         @relation("SessionSummaryCreator")
   scheduledCheckInsCreated   ScheduledCheckIn[]       @relation("CheckInCreator")
+
+  // Clinical Notes Business Rules
+  diagnosisHistoryEntries DiagnosisHistory[] @relation("DiagnosisHistoryUser")
 
   @@map("users")
 }
@@ -883,6 +886,12 @@ model ClinicalNote {
   updatedAt      DateTime @updatedAt
   lastModifiedBy String
 
+  // Clinical Notes Business Rules Relations
+  diagnosesCreated           Diagnosis[]             @relation("DiagnosisOriginNote")
+  diagnosesLastUpdated       Diagnosis[]             @relation("DiagnosisLastUpdatedNote")
+  diagnosisHistoryEntries    DiagnosisHistory[]
+  clinicalNoteDiagnoses      ClinicalNoteDiagnosis[]
+
   @@map("clinical_notes")
 }
 
@@ -941,6 +950,20 @@ model Diagnosis {
   diagnosedBy   String
   diagnosisDate DateTime @default(now())
 
+  // Clinical Notes Business Rules - Track diagnosis origin and changes
+  specifiers              String?
+  severity                String? // e.g., 'Mild', 'Moderate', 'Severe'
+  diagnosisNoteId         String?
+  diagnosisNote           ClinicalNote?         @relation("DiagnosisOriginNote", fields: [diagnosisNoteId], references: [id], onDelete: SetNull)
+  createdInNoteType       String? // Note type where diagnosis was created
+  lastUpdatedInNoteType   String? // Note type where diagnosis was last updated
+  lastUpdatedNoteId       String?
+  lastUpdatedNote         ClinicalNote?         @relation("DiagnosisLastUpdatedNote", fields: [lastUpdatedNoteId], references: [id], onDelete: SetNull)
+
+  // Relations
+  history                 DiagnosisHistory[]
+  clinicalNoteDiagnoses   ClinicalNoteDiagnosis[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -973,6 +996,43 @@ model Medication {
   updatedAt DateTime @updatedAt
 
   @@map("medications")
+}
+
+// Diagnosis History - Audit trail for diagnosis changes (Clinical Notes Business Rule #3)
+model DiagnosisHistory {
+  id                String        @id @default(uuid())
+  diagnosisId       String
+  diagnosis         Diagnosis     @relation(fields: [diagnosisId], references: [id], onDelete: Cascade)
+  changedBy         String
+  changedByUser     User          @relation("DiagnosisHistoryUser", fields: [changedBy], references: [id], onDelete: Restrict)
+  changedInNoteId   String?
+  changedInNote     ClinicalNote? @relation(fields: [changedInNoteId], references: [id], onDelete: SetNull)
+  changedInNoteType String? // Note type where change occurred
+  changeType        String // 'CREATED', 'MODIFIED', 'STATUS_CHANGE', 'DELETED'
+  oldValues         Json? // Previous values as JSON
+  newValues         Json? // New values as JSON
+  changeReason      String?
+  changedAt         DateTime      @default(now())
+
+  @@index([diagnosisId])
+  @@index([changedAt])
+  @@map("diagnosis_history")
+}
+
+// Clinical Note Diagnoses - Link diagnoses to notes for billing (Clinical Notes Business Rule #3)
+model ClinicalNoteDiagnosis {
+  id           String       @id @default(uuid())
+  noteId       String
+  note         ClinicalNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  diagnosisId  String
+  diagnosis    Diagnosis    @relation(fields: [diagnosisId], references: [id], onDelete: Cascade)
+  pointerOrder Int          @default(1) // Billing pointer order (1, 2, 3, 4)
+  createdAt    DateTime     @default(now())
+
+  @@unique([noteId, diagnosisId])
+  @@index([noteId])
+  @@index([diagnosisId])
+  @@map("clinical_note_diagnoses")
 }
 
 // ============================================================================

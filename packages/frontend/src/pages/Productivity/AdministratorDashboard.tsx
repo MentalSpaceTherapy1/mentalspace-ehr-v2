@@ -91,7 +91,7 @@ export default function AdministratorDashboard() {
           subtitle="Overall keep visit rate"
           benchmark={85}
           status={practiceKVR >= 85 ? 'success' : practiceKVR >= 70 ? 'warning' : 'danger'}
-          trend={practiceMetrics.KVR?.trend}
+          trend={practiceMetrics?.KVR?.trend}
         />
 
         <MetricCard
@@ -338,10 +338,10 @@ export default function AdministratorDashboard() {
             </thead>
             <tbody>
               {clinicianPerformance.map((clinician: any, index: number) => {
-                const kvr = clinician.metrics.KVR?.value || 0;
-                const utilization = clinician.metrics.UTILIZATION_RATE?.value || 0;
-                const docRate = clinician.metrics.DOCUMENTATION_COMPLETION_RATE?.value || 0;
-                const revenue = clinician.metrics.REVENUE_GENERATED?.value || 0;
+                const kvr = clinician?.metrics?.KVR?.value || 0;
+                const utilization = clinician?.metrics?.UTILIZATION_RATE?.value || 0;
+                const docRate = clinician?.metrics?.DOCUMENTATION_COMPLETION_RATE?.value || 0;
+                const revenue = clinician?.metrics?.REVENUE_GENERATED?.value || 0;
 
                 // Calculate overall score (weighted average)
                 const overallScore =

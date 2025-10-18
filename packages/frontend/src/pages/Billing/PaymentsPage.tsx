@@ -44,7 +44,7 @@ export default function PaymentsPage() {
       const params = new URLSearchParams();
       if (filters.method) params.append('method', filters.method);
       if (filters.search) params.append('search', filters.search);
-      const response = await axios.get(`/api/v1/billing/payments?${params.toString()}`, {
+      const response = await axios.get(`/billing/payments?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data as Payment[];
@@ -55,7 +55,7 @@ export default function PaymentsPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/v1/billing/payments/${id}`, {
+      await axios.delete(`/billing/payments/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
     },
@@ -281,7 +281,7 @@ function CreatePaymentModal({ onClose, onSuccess }: { onClose: () => void; onSuc
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (clientSearch) params.append('search', clientSearch);
-      const response = await axios.get(`/api/v1/clients?${params.toString()}`, {
+      const response = await axios.get(`/clients?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -295,7 +295,7 @@ function CreatePaymentModal({ onClose, onSuccess }: { onClose: () => void; onSuc
     queryFn: async () => {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams({ clientId: formData.clientId, status: 'Pending,Submitted,Partial Payment' });
-      const response = await axios.get(`/api/v1/billing/charges?${params.toString()}`, {
+      const response = await axios.get(`/billing/charges?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -306,7 +306,7 @@ function CreatePaymentModal({ onClose, onSuccess }: { onClose: () => void; onSuc
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/v1/billing/payments', data, {
+      const response = await axios.post('/billing/payments', data, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

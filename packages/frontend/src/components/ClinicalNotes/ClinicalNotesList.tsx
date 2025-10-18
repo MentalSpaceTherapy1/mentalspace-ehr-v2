@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface ClinicalNote {
   id: string;
@@ -56,18 +56,11 @@ export default function ClinicalNotesList({ clientId }: ClinicalNotesListProps) 
   const navigate = useNavigate();
   const [selectedNoteType, setSelectedNoteType] = useState<string>('all');
 
-  const token = localStorage.getItem('token');
-  const apiClient = axios.create({
-    baseURL: 'http://localhost:3000/api/v1',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
 
   const { data: notesData, isLoading: notesLoading } = useQuery({
     queryKey: ['clinical-notes', clientId],
     queryFn: async () => {
-      const response = await apiClient.get(`/clinical-notes/client/${clientId}`);
+      const response = await api.get(`/clinical-notes/client/${clientId}`);
       return response.data;
     },
   });
@@ -75,7 +68,7 @@ export default function ClinicalNotesList({ clientId }: ClinicalNotesListProps) 
   const { data: treatmentPlanStatus } = useQuery({
     queryKey: ['treatment-plan-status', clientId],
     queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: TreatmentPlanStatus }>(
+      const response = await api.get<{ success: boolean; data: TreatmentPlanStatus }>(
         `/clinical-notes/client/${clientId}/treatment-plan-status`
       );
       return response.data.data;

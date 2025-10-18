@@ -5,7 +5,7 @@ import { UnauthorizedError } from './errors';
 export interface JwtPayload {
   userId: string;
   email: string;
-  role: string;
+  roles: string[]; // Support multiple roles
   iat?: number; // Issued at (added by JWT automatically)
   exp?: number; // Expiration (added by JWT automatically)
   lastActivity?: number; // Track last activity for session timeout

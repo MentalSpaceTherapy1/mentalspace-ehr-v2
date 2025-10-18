@@ -24,6 +24,8 @@ import clientFormsRoutes from './clientForms.routes';
 import clientDocumentsRoutes from './clientDocuments.routes';
 import clientAssessmentsRoutes from './clientAssessments.routes';
 import adminRoutes from './admin.routes';
+import reportsRoutes from './reports.routes';
+import diagnosisRoutes from './diagnosis.routes';
 
 const router = Router();
 
@@ -67,8 +69,10 @@ router.use('/clients', clientAssessmentsRoutes);
 // Admin routes (temporary for database seeding)
 router.use('/admin', adminRoutes);
 
-// Future routes will be added here:
-// router.use('/reports', reportRoutes);
-// etc.
+// Reports routes
+router.use('/reports', reportsRoutes);
+
+// Diagnosis routes (Clinical Notes Business Rules)
+router.use('/diagnoses', diagnosisRoutes);
 
 export default router;

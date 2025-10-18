@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import ICD10Autocomplete from '../../components/ClinicalNotes/ICD10Autocomplete';
 import CPTCodeAutocomplete from '../../components/ClinicalNotes/CPTCodeAutocomplete';
 
@@ -42,13 +42,6 @@ export default function ClinicalNoteForm() {
   const queryClient = useQueryClient();
   const isEdit = !!noteId;
 
-  const token = localStorage.getItem('token');
-  const apiClient = axios.create({
-    baseURL: 'http://localhost:3000/api/v1',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
 
   // Form state
   const [noteType, setNoteType] = useState('Progress Note');
@@ -85,7 +78,7 @@ export default function ClinicalNoteForm() {
   const { data: noteData } = useQuery({
     queryKey: ['clinical-note', noteId],
     queryFn: async () => {
-      const response = await apiClient.get(`/clinical-notes/${noteId}`);
+      const response = await api.get(`/clinical-notes/${noteId}`);
       return response.data.data;
     },
     enabled: isEdit,
@@ -95,7 +88,7 @@ export default function ClinicalNoteForm() {
   const { data: diagnosisData } = useQuery({
     queryKey: ['client-diagnosis', clientId],
     queryFn: async () => {
-      const response = await apiClient.get(`/clinical-notes/client/${clientId}/diagnosis`);
+      const response = await api.get(`/clinical-notes/client/${clientId}/diagnosis`);
       return response.data.data;
     },
     enabled: !!clientId,
@@ -148,7 +141,7 @@ export default function ClinicalNoteForm() {
       if (isEdit) {
         return apiClient.patch(`/clinical-notes/${noteId}`, data);
       } else {
-        return apiClient.post('/clinical-notes', data);
+        return api.post('/clinical-notes', data);
       }
     },
     onSuccess: () => {

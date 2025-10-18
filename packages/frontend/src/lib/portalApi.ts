@@ -48,7 +48,7 @@ export interface AssignFormRequest {
  */
 export const getFormLibrary = async (isActive?: boolean): Promise<IntakeForm[]> => {
   const params = isActive !== undefined ? { isActive } : {};
-  const response = await api.get('/api/v1/clients/library', { params });
+  const response = await api.get('/clients/library', { params });
   return response.data.data;
 };
 
@@ -56,7 +56,7 @@ export const getFormLibrary = async (isActive?: boolean): Promise<IntakeForm[]> 
  * Get all form assignments for a specific client
  */
 export const getClientFormAssignments = async (clientId: string): Promise<FormAssignment[]> => {
-  const response = await api.get(`/api/v1/clients/${clientId}/forms`);
+  const response = await api.get(`/clients/${clientId}/forms`);
   return response.data.data;
 };
 
@@ -67,7 +67,7 @@ export const assignFormToClient = async (
   clientId: string,
   data: AssignFormRequest
 ): Promise<FormAssignment> => {
-  const response = await api.post(`/api/v1/clients/${clientId}/forms/assign`, data);
+  const response = await api.post(`/clients/${clientId}/forms/assign`, data);
   return response.data.data;
 };
 
@@ -78,7 +78,7 @@ export const removeFormAssignment = async (
   clientId: string,
   assignmentId: string
 ): Promise<void> => {
-  await api.delete(`/api/v1/clients/${clientId}/forms/${assignmentId}`);
+  await api.delete(`/clients/${clientId}/forms/${assignmentId}`);
 };
 
 /**
@@ -88,7 +88,7 @@ export const sendFormReminder = async (
   clientId: string,
   assignmentId: string
 ): Promise<void> => {
-  await api.post(`/api/v1/clients/${clientId}/forms/${assignmentId}/remind`);
+  await api.post(`/clients/${clientId}/forms/${assignmentId}/remind`);
 };
 
 /**
@@ -98,7 +98,7 @@ export const viewFormSubmission = async (
   clientId: string,
   assignmentId: string
 ): Promise<any> => {
-  const response = await api.get(`/api/v1/clients/${clientId}/forms/${assignmentId}/submission`);
+  const response = await api.get(`/clients/${clientId}/forms/${assignmentId}/submission`);
   return response.data.data;
 };
 
@@ -138,7 +138,7 @@ export interface DocumentAnalytics {
 export const getSharedDocumentsForClient = async (
   clientId: string
 ): Promise<SharedDocument[]> => {
-  const response = await api.get(`/api/v1/clients/${clientId}/documents/shared`);
+  const response = await api.get(`/clients/${clientId}/documents/shared`);
   return response.data.data;
 };
 
@@ -149,7 +149,7 @@ export const shareDocumentWithClient = async (
   clientId: string,
   data: ShareDocumentRequest
 ): Promise<SharedDocument> => {
-  const response = await api.post(`/api/v1/clients/${clientId}/documents/share`, data);
+  const response = await api.post(`/clients/${clientId}/documents/share`, data);
   return response.data.data;
 };
 
@@ -160,7 +160,7 @@ export const revokeDocumentAccess = async (
   clientId: string,
   documentId: string
 ): Promise<void> => {
-  await api.delete(`/api/v1/clients/${clientId}/documents/shared/${documentId}`);
+  await api.delete(`/clients/${clientId}/documents/shared/${documentId}`);
 };
 
 /**
@@ -171,7 +171,7 @@ export const getDocumentAnalytics = async (
   documentId: string
 ): Promise<DocumentAnalytics> => {
   const response = await api.get(
-    `/api/v1/clients/${clientId}/documents/shared/${documentId}/analytics`
+    `/clients/${clientId}/documents/shared/${documentId}/analytics`
   );
   return response.data.data;
 };
@@ -183,7 +183,7 @@ export const uploadDocumentFile = async (file: File): Promise<{ fileUrl: string 
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await api.post('/api/v1/clients/upload', formData, {
+  const response = await api.post('/clients/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },

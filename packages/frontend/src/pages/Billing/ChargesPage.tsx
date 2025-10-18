@@ -38,7 +38,7 @@ export default function ChargesPage() {
       const params = new URLSearchParams();
       if (filters.status) params.append('status', filters.status);
       if (filters.search) params.append('search', filters.search);
-      const response = await axios.get(`/api/v1/billing/charges?${params.toString()}`, {
+      const response = await axios.get(`/billing/charges?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data as Charge[];
@@ -49,7 +49,7 @@ export default function ChargesPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/v1/billing/charges/${id}`, {
+      await axios.delete(`/billing/charges/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
     },
@@ -278,7 +278,7 @@ function CreateChargeModal({ onClose, onSuccess }: { onClose: () => void; onSucc
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (clientSearch) params.append('search', clientSearch);
-      const response = await axios.get(`/api/v1/clients?${params.toString()}`, {
+      const response = await axios.get(`/clients?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -289,7 +289,7 @@ function CreateChargeModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/v1/billing/charges', data, {
+      const response = await axios.post('/billing/charges', data, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

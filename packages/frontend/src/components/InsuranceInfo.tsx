@@ -67,7 +67,7 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
     queryKey: ['insurance', clientId],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/v1/insurance/client/${clientId}`, {
+      const response = await axios.get(`/insurance/client/${clientId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -90,12 +90,12 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
       };
 
       if (editingInsurance) {
-        const response = await axios.patch(`/api/v1/insurance/${editingInsurance.id}`, submitData, {
+        const response = await axios.patch(`/insurance/${editingInsurance.id}`, submitData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
       } else {
-        const response = await axios.post('/api/v1/insurance', submitData, {
+        const response = await axios.post('/insurance', submitData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
@@ -111,7 +111,7 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('token');
-      const response = await axios.delete(`/api/v1/insurance/${id}`, {
+      const response = await axios.delete(`/insurance/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
@@ -125,7 +125,7 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
   const verifyMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`/api/v1/insurance/${id}/verify`, {}, {
+      const response = await axios.post(`/insurance/${id}/verify`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

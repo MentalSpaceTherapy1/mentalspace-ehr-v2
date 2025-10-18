@@ -39,7 +39,7 @@ export default function NewAppointment() {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (clientSearch) params.append('search', clientSearch);
-      const response = await axios.get(`/api/v1/clients?${params.toString()}`, {
+      const response = await axios.get(`/clients?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -52,7 +52,7 @@ export default function NewAppointment() {
     queryKey: ['clinicians'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/users', {
+      const response = await axios.get('/users', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data.filter((user: any) => ['CLINICIAN', 'SUPERVISOR'].includes(user.role));
@@ -64,7 +64,7 @@ export default function NewAppointment() {
     queryKey: ['serviceCodes'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/service-codes', {
+      const response = await axios.get('/service-codes', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data.data;
@@ -87,12 +87,36 @@ export default function NewAppointment() {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/v1/appointments', data, {
+      const response = await axios.post('/appointments', data, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      navigate('/appointments');
+    },
+    onError: (error: any) => {
+      if (error.response?.data?.errors) {
+        const newErrors: Record<string, string> = {};
+        error.response.data.errors.forEach((err: any) => {
+          newErrors[err.path[0]] = err.message;
+        });
+        setErrors(newErrors);
+      }
+    },
+  });
+
+  // Create recurring appointment mutation
+  const createRecurringMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const token = localStorage.getItem('token');
+      const response = await axios.post('/appointments/recurring', data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       navigate('/appointments');
     },
@@ -138,10 +162,36 @@ export default function NewAppointment() {
     // Convert date + time to ISO datetime format for backend
     const appointmentDateTime = new Date(`${formData.appointmentDate}T${formData.startTime}:00`).toISOString();
 
-    createMutation.mutate({
+    // Prepare data for backend
+    const submitData: any = {
       ...formData,
       appointmentDate: appointmentDateTime,
-    });
+      appointmentNotes: formData.notes, // Map notes to appointmentNotes
+    };
+
+    // Remove frontend-only fields
+    delete submitData.notes;
+    delete submitData.isRecurring;
+    delete submitData.recurrenceFrequency;
+    delete submitData.recurrenceDaysOfWeek;
+    delete submitData.recurrenceEndDate;
+    delete submitData.recurrenceCount;
+
+    // Handle recurring appointments vs single appointments
+    if (formData.isRecurring) {
+      createRecurringMutation.mutate({
+        ...submitData,
+        isRecurring: true,
+        recurrencePattern: {
+          frequency: formData.recurrenceFrequency,
+          daysOfWeek: formData.recurrenceDaysOfWeek,
+          endDate: formData.recurrenceEndDate || undefined,
+          count: formData.recurrenceCount || undefined,
+        },
+      });
+    } else {
+      createMutation.mutate(submitData);
+    }
   };
 
   return (
@@ -432,10 +482,12 @@ export default function NewAppointment() {
           </div>
 
           {/* Error Message */}
-          {createMutation.isError && (
+          {(createMutation.isError || createRecurringMutation.isError) && (
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
               <p className="text-red-600 font-semibold">
-                {(createMutation.error as any)?.response?.data?.message || 'Failed to create appointment'}
+                {(createMutation.error as any)?.response?.data?.message ||
+                 (createRecurringMutation.error as any)?.response?.data?.message ||
+                 'Failed to create appointment'}
               </p>
             </div>
           )}
@@ -444,10 +496,10 @@ export default function NewAppointment() {
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
-              disabled={createMutation.isPending}
+              disabled={createMutation.isPending || createRecurringMutation.isPending}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {createMutation.isPending ? 'Creating...' : 'Schedule Appointment'}
+              {(createMutation.isPending || createRecurringMutation.isPending) ? 'Creating...' : 'Schedule Appointment'}
             </button>
             <button
               type="button"

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface ClinicalNote {
   id: string;
@@ -73,25 +73,18 @@ export default function ClinicalNoteDetail() {
   const [showCosignModal, setShowCosignModal] = useState(false);
   const [signature, setSignature] = useState('');
 
-  const token = localStorage.getItem('token');
-  const apiClient = axios.create({
-    baseURL: 'http://localhost:3000/api/v1',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
 
   const { data: noteData, isLoading } = useQuery({
     queryKey: ['clinical-note', noteId],
     queryFn: async () => {
-      const response = await apiClient.get(`/clinical-notes/${noteId}`);
+      const response = await api.get(`/clinical-notes/${noteId}`);
       return response.data.data;
     },
   });
 
   const signMutation = useMutation({
     mutationFn: async () => {
-      return apiClient.post(`/clinical-notes/${noteId}/sign`, { signature });
+      return api.post(`/clinical-notes/${noteId}/sign`, { signature });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
@@ -103,7 +96,7 @@ export default function ClinicalNoteDetail() {
 
   const cosignMutation = useMutation({
     mutationFn: async () => {
-      return apiClient.post(`/clinical-notes/${noteId}/cosign`, { signature });
+      return api.post(`/clinical-notes/${noteId}/cosign`, { signature });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
@@ -115,7 +108,7 @@ export default function ClinicalNoteDetail() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      return apiClient.delete(`/clinical-notes/${noteId}`);
+      return api.delete(`/clinical-notes/${noteId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });

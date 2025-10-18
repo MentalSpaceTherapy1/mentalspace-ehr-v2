@@ -64,6 +64,41 @@ const createRecurringAppointmentSchema = createAppointmentSchema.extend({
   }),
 });
 
+// Get appointments by client ID
+export const getAppointmentsByClientId = async (req: Request, res: Response) => {
+  try {
+    const { clientId } = req.params;
+
+    const appointments = await prisma.appointment.findMany({
+      where: { clientId },
+      include: {
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { appointmentDate: 'desc' },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: appointments,
+    });
+  } catch (error) {
+    console.error('Get client appointments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve client appointments',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
 // Get all appointments (with filters)
 export const getAllAppointments = async (req: Request, res: Response) => {
   try {
