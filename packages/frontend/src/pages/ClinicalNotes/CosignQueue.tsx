@@ -40,7 +40,7 @@ export default function CosignQueue() {
   const { data: notesData, isLoading } = useQuery({
     queryKey: ['cosign-queue'],
     queryFn: async () => {
-      const response = await api.get('/clinical-notes/cosigning');
+      const response = await api.get('/supervision/cosign-queue');
       return response.data;
     },
   });

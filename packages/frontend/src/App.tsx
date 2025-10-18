@@ -5,7 +5,7 @@ import Dashboard from './pages/Dashboard';
 import UserList from './pages/Users/UserList';
 import UserForm from './pages/Users/UserForm';
 import UserDetail from './pages/Users/UserDetail';
-import PracticeSettings from './pages/PracticeSettings';
+import PracticeSettings from './pages/Settings/PracticeSettingsFinal';
 import ClientList from './pages/Clients/ClientList';
 import ClientForm from './pages/Clients/ClientForm';
 import ClientDetail from './pages/Clients/ClientDetail';
@@ -52,17 +52,10 @@ import PortalAppointmentRequest from './pages/Portal/PortalAppointmentRequest';
 import PortalReferrals from './pages/Portal/PortalReferrals';
 import PortalTherapistChange from './pages/Portal/PortalTherapistChange';
 import PortalTherapistProfile from './pages/Portal/PortalTherapistProfile';
-
-
-const SupervisionPage = () => (
-  <div className="p-8">
-    <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-      <div className="text-6xl mb-4">👨‍🏫</div>
-      <h2 className="text-3xl font-bold text-gray-800 mb-2">Supervision Module</h2>
-      <p className="text-gray-600">Coming Soon - Phase 6</p>
-    </div>
-  </div>
-);
+import SupervisionSessionsList from './pages/Supervision/SupervisionSessionsList';
+import SupervisionSessionForm from './pages/Supervision/SupervisionSessionForm';
+import SupervisionHoursDashboard from './pages/Supervision/SupervisionHoursDashboard';
+import UnlockRequestManagement from './pages/UnlockRequests/UnlockRequestManagement';
 
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -396,7 +389,47 @@ function App() {
           path="/supervision"
           element={
             <PrivateRoute>
-              <SupervisionPage />
+              <SupervisionSessionsList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/supervision/sessions"
+          element={
+            <PrivateRoute>
+              <SupervisionSessionsList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/supervision/sessions/new"
+          element={
+            <PrivateRoute>
+              <SupervisionSessionForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/supervision/sessions/:id"
+          element={
+            <PrivateRoute>
+              <SupervisionSessionForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/supervision/hours/:superviseeId"
+          element={
+            <PrivateRoute>
+              <SupervisionHoursDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/unlock-requests"
+          element={
+            <PrivateRoute>
+              <UnlockRequestManagement />
             </PrivateRoute>
           }
         />
@@ -477,6 +510,14 @@ function App() {
           element={
             <PrivateRoute>
               <PracticeSettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/productivity"
+          element={
+            <PrivateRoute>
+              <ClinicianDashboard />
             </PrivateRoute>
           }
         />

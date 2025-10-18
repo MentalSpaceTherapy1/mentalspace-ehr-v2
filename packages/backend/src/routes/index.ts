@@ -26,6 +26,9 @@ import clientAssessmentsRoutes from './clientAssessments.routes';
 import adminRoutes from './admin.routes';
 import reportsRoutes from './reports.routes';
 import diagnosisRoutes from './diagnosis.routes';
+import supervisionRoutes from './supervision.routes';
+import unlockRequestRoutes from './unlockRequest.routes';
+import practiceSettingsRoutes from './practiceSettings.routes';
 
 const router = Router();
 
@@ -74,5 +77,14 @@ router.use('/reports', reportsRoutes);
 
 // Diagnosis routes (Clinical Notes Business Rules)
 router.use('/diagnoses', diagnosisRoutes);
+
+// Supervision routes (Phase 5)
+router.use('/supervision', supervisionRoutes);
+
+// Unlock request routes (Compliance - Sunday Lockout)
+router.use('/unlock-requests', unlockRequestRoutes);
+
+// Practice Settings routes (Admin Configuration)
+router.use('/practice-settings', practiceSettingsRoutes);
 
 export default router;

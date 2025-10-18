@@ -3,6 +3,7 @@ import config from './config';
 import logger from './utils/logger';
 import prisma from './services/database';
 import { startAllProductivityJobs } from './jobs/productivityJobs';
+import { initializeComplianceCronJobs } from './services/compliance.service';
 
 const PORT = config.port;
 
@@ -20,6 +21,9 @@ prisma.$connect()
 
     // Start productivity module scheduled jobs
     startAllProductivityJobs();
+
+    // Start compliance cron jobs (Sunday lockout, reminders)
+    initializeComplianceCronJobs();
   })
   .catch((error) => {
     logger.error('❌ Database connection failed', { error: error.message });

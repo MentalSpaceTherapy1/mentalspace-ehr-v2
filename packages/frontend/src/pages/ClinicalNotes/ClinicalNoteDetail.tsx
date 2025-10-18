@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import UnlockRequestModal from '../../components/UnlockRequestModal';
 
 interface ClinicalNote {
   id: string;
@@ -42,6 +43,16 @@ interface ClinicalNote {
   cosignedDate?: string;
   signedBy?: string;
   cosignedBy?: string;
+  isLocked: boolean;
+  lockedDate?: string;
+  lockReason?: string;
+  unlockRequested: boolean;
+  unlockRequestDate?: string;
+  unlockReason?: string;
+  unlockApprovedBy?: string;
+  unlockApprovalDate?: string;
+  unlockUntil?: string;
+  clientId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,6 +82,7 @@ export default function ClinicalNoteDetail() {
   const queryClient = useQueryClient();
   const [showSignModal, setShowSignModal] = useState(false);
   const [showCosignModal, setShowCosignModal] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [signature, setSignature] = useState('');
 
 
@@ -214,6 +226,19 @@ export default function ClinicalNoteDetail() {
                     Late Completion
                   </span>
                 )}
+                {note.isLocked && (
+                  <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white border border-red-700 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                    LOCKED
+                  </span>
+                )}
+                {note.unlockRequested && (
+                  <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-yellow-600 text-white border border-yellow-700">
+                    Unlock Pending
+                  </span>
+                )}
               </div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                 Clinical Note
@@ -222,6 +247,14 @@ export default function ClinicalNoteDetail() {
             </div>
 
             <div className="flex items-center space-x-3">
+              {note.isLocked && !note.unlockRequested && (
+                <button
+                  onClick={() => setShowUnlockModal(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
+                >
+                  Request Unlock
+                </button>
+              )}
               {canEdit && (
                 <button
                   onClick={() => navigate(`/clients/${clientId}/notes/${noteId}/edit`)}
@@ -550,6 +583,18 @@ export default function ClinicalNoteDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Unlock Request Modal */}
+      {showUnlockModal && note && (
+        <UnlockRequestModal
+          isOpen={showUnlockModal}
+          onClose={() => setShowUnlockModal(false)}
+          noteId={note.id}
+          noteType={note.noteType}
+          clientName={`${note.clinician.firstName} ${note.clinician.lastName}`}
+          sessionDate={note.sessionDate}
+        />
       )}
     </div>
   );

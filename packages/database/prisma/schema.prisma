@@ -147,6 +147,147 @@ model User {
 }
 
 // ============================================================================
+// PRACTICE SETTINGS & CONFIGURATION
+// ============================================================================
+
+model PracticeSettings {
+  id String @id @default(uuid())
+
+  // General Practice Information
+  practiceName        String
+  practiceEmail       String
+  practicePhone       String
+  practiceWebsite     String?
+  practiceLogo        String? // URL to logo image
+  timezone            String  @default("America/New_York")
+  businessHoursStart  String  @default("09:00")
+  businessHoursEnd    String  @default("17:00")
+  businessDays        String[] @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+
+  // Address
+  addressStreet1 String
+  addressStreet2 String?
+  addressCity    String
+  addressState   String
+  addressZipCode String
+
+  // Clinical Documentation Settings
+  defaultNoteDueDays            Int     @default(3) // Days after session to complete note
+  requireCosignForAssociates    Boolean @default(true)
+  enableAutoLockout             Boolean @default(true) // Sunday lockout feature
+  lockoutDay                    String  @default("Sunday")
+  lockoutTime                   String  @default("23:59")
+  enableNoteReminders           Boolean @default(true)
+  noteReminderSchedule          Int[]   @default([2, 1, 0]) // Days before due date
+  allowLateNoteCompletion       Boolean @default(false)
+  requireSignatureForCompletion Boolean @default(true)
+
+  // Scheduling Settings
+  defaultAppointmentDuration   Int     @default(50) // minutes
+  enableOnlineBooking          Boolean @default(false)
+  enableWaitlist               Boolean @default(true)
+  enableRecurringAppointments  Boolean @default(true)
+  cancellationNoticePeriod     Int     @default(24) // hours
+  enableCancellationFees       Boolean @default(false)
+  cancellationFeeAmount        Decimal? @db.Decimal(10, 2)
+  noShowFeeAmount              Decimal? @db.Decimal(10, 2)
+  bufferBetweenAppointments    Int     @default(10) // minutes
+  maxAdvanceBookingDays        Int     @default(90)
+
+  // Billing Settings
+  defaultCurrency              String  @default("USD")
+  taxRate                      Decimal @default(0) @db.Decimal(5, 2)
+  enableInsuranceBilling       Boolean @default(true)
+  enableSelfPayBilling         Boolean @default(true)
+  requirePaymentAtTimeOfService Boolean @default(false)
+  acceptedPaymentMethods       String[] @default(["Cash", "Credit Card", "Check", "Insurance"])
+  lateFeeEnabled               Boolean @default(false)
+  lateFeeAmount                Decimal? @db.Decimal(10, 2)
+  lateFeeDaysAfterDue          Int     @default(30)
+  invoicePrefix                String  @default("INV")
+  invoiceStartingNumber        Int     @default(1000)
+
+  // Compliance Settings
+  hipaaComplianceEnabled       Boolean @default(true)
+  requireTwoFactorAuth         Boolean @default(false)
+  passwordExpirationDays       Int     @default(90)
+  sessionTimeoutMinutes        Int     @default(30)
+  enableAuditLogging           Boolean @default(true)
+  dataRetentionYears           Int     @default(7)
+  enableAutoBackup             Boolean @default(true)
+  backupFrequency              String  @default("Daily") // Daily, Weekly, Monthly
+  requireConsentForms          Boolean @default(true)
+  enableClientPortal           Boolean @default(true)
+
+  // Telehealth Settings
+  enableTelehealth             Boolean @default(true)
+  telehealthPlatform           String  @default("Built-in") // Built-in, Zoom, etc.
+  requireConsentForTelehealth  Boolean @default(true)
+  recordTelehealthSessions     Boolean @default(false)
+  telehealthRecordingDisclosure String?
+
+  // Supervision Settings
+  enableSupervision            Boolean @default(true)
+  requiredSupervisionHours     Int     @default(3000)
+  supervisionSessionFrequency  String  @default("Weekly") // Weekly, Biweekly, Monthly
+  enableGroupSupervision       Boolean @default(true)
+  enableTriadicSupervision     Boolean @default(true)
+
+  // AI Integration Settings
+  enableAIFeatures             Boolean @default(false)
+  aiProvider                   String? // "OpenAI", "Anthropic", "Custom"
+  aiModel                      String? // "gpt-4", "claude-3", etc.
+  aiApiKey                     String? // Encrypted in production
+  enableAINoteGeneration       Boolean @default(false)
+  enableAITreatmentSuggestions Boolean @default(false)
+  enableAIScheduling           Boolean @default(false)
+  enableAIDiagnosisAssistance  Boolean @default(false)
+  aiConfidenceThreshold        Decimal @default(0.8) @db.Decimal(3, 2)
+  requireHumanReview           Boolean @default(true)
+  aiUsageLogging               Boolean @default(true)
+
+  // Email Notification Settings
+  smtpHost                String?
+  smtpPort                Int?
+  smtpSecure              Boolean @default(true)
+  smtpUser                String?
+  smtpPass                String? // Encrypted in production
+  emailFromName           String?
+  emailFromAddress        String?
+  enableAppointmentReminders Boolean @default(true)
+  enableBillingReminders  Boolean @default(true)
+  enableSystemNotifications Boolean @default(true)
+
+  // Client Portal Settings
+  portalRequireEmailVerification Boolean @default(true)
+  portalEnableAppointmentBooking Boolean @default(true)
+  portalEnableBilling            Boolean @default(true)
+  portalEnableMessaging          Boolean @default(true)
+  portalEnableDocuments          Boolean @default(true)
+  portalEnableMoodTracking       Boolean @default(true)
+  portalEnableAssessments        Boolean @default(true)
+
+  // Reporting Settings
+  enableProductivityReports Boolean @default(true)
+  enableFinancialReports    Boolean @default(true)
+  enableComplianceReports   Boolean @default(true)
+  reportDistributionEmail   String?
+  autoGenerateMonthlyReports Boolean @default(false)
+
+  // Feature Flags
+  enableBetaFeatures       Boolean @default(false)
+  enableExperimentalAI     Boolean @default(false)
+  enableAdvancedAnalytics  Boolean @default(false)
+
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lastModifiedBy String
+
+  @@map("practice_settings")
+}
+
+// ============================================================================
 // PHASE 2: CLIENT MANAGEMENT & DEMOGRAPHICS
 // ============================================================================
 
@@ -869,6 +1010,15 @@ model ClinicalNote {
   dueDate         DateTime
   completedOnTime Boolean  @default(false)
   daysToComplete  Int?
+
+  // Sunday Lockout & Unlock Requests
+  isLocked            Boolean   @default(false)
+  unlockRequested     Boolean   @default(false)
+  unlockRequestDate   DateTime?
+  unlockReason        String?
+  unlockApprovedBy    String?
+  unlockApprovalDate  DateTime?
+  unlockUntil         DateTime?
 
   // Billing
   cptCode     String?

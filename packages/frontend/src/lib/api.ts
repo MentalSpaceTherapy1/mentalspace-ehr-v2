@@ -69,4 +69,4 @@ api.interceptors.response.use(
 );
 
 export default api;
-export { API_URL };
+export { api, API_URL };
