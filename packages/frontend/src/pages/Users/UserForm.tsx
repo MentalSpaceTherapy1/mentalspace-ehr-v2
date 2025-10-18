@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import { UserRole } from '@mentalspace/shared';
 
 interface UserFormData {
@@ -10,7 +10,7 @@ interface UserFormData {
   firstName: string;
   lastName: string;
   title: string;
-  role: UserRole;
+  roles: UserRole[]; // Multiple roles support
   npiNumber: string;
   licenseNumber: string;
   licenseState: string;
@@ -24,7 +24,6 @@ export default function UserForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEdit = Boolean(id);
-  const token = localStorage.getItem('token');
 
   const [formData, setFormData] = useState<UserFormData>({
     email: '',
@@ -32,7 +31,7 @@ export default function UserForm() {
     firstName: '',
     lastName: '',
     title: '',
-    role: 'CLINICIAN',
+    roles: ['CLINICIAN'], // Default to single CLINICIAN role
     npiNumber: '',
     licenseNumber: '',
     licenseState: '',
@@ -48,9 +47,7 @@ export default function UserForm() {
     queryKey: ['user', id],
     queryFn: async () => {
       if (!id) return null;
-      const response = await axios.get(`/api/v1/users/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/users/${id}`);
       return response.data.data;
     },
     enabled: isEdit,
@@ -63,7 +60,7 @@ export default function UserForm() {
         firstName: userData.firstName || '',
         lastName: userData.lastName || '',
         title: userData.title || '',
-        role: userData.role || 'CLINICIAN',
+        roles: userData.roles || ['CLINICIAN'], // Handle roles array
         npiNumber: userData.npiNumber || '',
         licenseNumber: userData.licenseNumber || '',
         licenseState: userData.licenseState || '',
@@ -86,9 +83,7 @@ export default function UserForm() {
         delete submitData.licenseExpiration;
       }
 
-      const response = await axios.post('/api/v1/users', submitData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.post('/users', submitData);
       return response.data;
     },
     onSuccess: () => {
@@ -106,9 +101,7 @@ export default function UserForm() {
         ...data,
         licenseExpiration: new Date(data.licenseExpiration).toISOString(),
       } : data;
-      const response = await axios.put(`/api/v1/users/${id}`, submitData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.put(`/users/${id}`, submitData);
       return response.data;
     },
     onSuccess: () => {
@@ -124,6 +117,12 @@ export default function UserForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate at least one role is selected
+    if (formData.roles.length === 0) {
+      setError('Please select at least one role for the user');
+      return;
+    }
 
     if (isEdit) {
       const { password, ...updateData } = formData;
@@ -279,23 +278,46 @@ export default function UserForm() {
               )}
 
               <div>
-                <label htmlFor="role" className="block text-sm font-bold text-gray-700 mb-2">
-                  👑 Role *
+                <label className="block text-sm font-bold text-gray-700 mb-3">
+                  👑 Roles * (Select one or more)
                 </label>
-                <select
-                  id="role"
-                  required
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:ring-4 focus:ring-purple-300 focus:border-purple-400 transition-all duration-200 font-bold"
-                >
-                  <option value="ADMINISTRATOR">🔴 Administrator</option>
-                  <option value="SUPERVISOR">🟣 Supervisor</option>
-                  <option value="CLINICIAN">🔵 Clinician</option>
-                  <option value="BILLING_STAFF">🟢 Billing Staff</option>
-                  <option value="FRONT_DESK">🟡 Front Desk</option>
-                  <option value="ASSOCIATE">🟠 Associate</option>
-                </select>
+                <div className="space-y-2 bg-purple-50 p-4 rounded-xl border-2 border-purple-200">
+                  {[
+                    { value: 'ADMINISTRATOR', label: '🔴 Administrator', color: 'from-rose-500 to-pink-500' },
+                    { value: 'SUPERVISOR', label: '🟣 Supervisor', color: 'from-purple-500 to-indigo-500' },
+                    { value: 'CLINICIAN', label: '🔵 Clinician', color: 'from-blue-500 to-cyan-500' },
+                    { value: 'BILLER', label: '🟢 Biller', color: 'from-green-500 to-emerald-500' },
+                    { value: 'RECEPTIONIST', label: '🟡 Receptionist', color: 'from-amber-500 to-orange-500' },
+                  ].map((roleOption) => (
+                    <div key={roleOption.value} className="flex items-center bg-white p-3 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
+                      <input
+                        type="checkbox"
+                        id={`role-${roleOption.value}`}
+                        checked={formData.roles.includes(roleOption.value as UserRole)}
+                        onChange={(e) => {
+                          const role = roleOption.value as UserRole;
+                          if (e.target.checked) {
+                            setFormData({ ...formData, roles: [...formData.roles, role] });
+                          } else {
+                            setFormData({ ...formData, roles: formData.roles.filter(r => r !== role) });
+                          }
+                        }}
+                        className="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor={`role-${roleOption.value}`} className="ml-3 block text-sm font-bold text-gray-900 cursor-pointer flex-1">
+                        {roleOption.label}
+                      </label>
+                      {formData.roles.includes(roleOption.value as UserRole) && (
+                        <span className={`px-2 py-1 text-xs font-bold rounded-lg bg-gradient-to-r ${roleOption.color} text-white shadow-md`}>
+                          Selected
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {formData.roles.length === 0 && (
+                  <p className="mt-2 text-sm text-red-600 font-semibold">⚠️ Please select at least one role</p>
+                )}
               </div>
             </div>
           </div>

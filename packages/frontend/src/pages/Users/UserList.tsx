@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { UserRole } from '@mentalspace/shared';
 
 interface User {
@@ -10,7 +10,7 @@ interface User {
   firstName: string;
   lastName: string;
   title?: string;
-  role: UserRole;
+  roles: UserRole[]; // Multiple roles support
   isActive: boolean;
   npiNumber?: string;
   licenseNumber?: string;
@@ -36,7 +36,6 @@ export default function UserList() {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
-  const token = localStorage.getItem('token');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['users', search, roleFilter, statusFilter, page, limit],
@@ -52,9 +51,7 @@ export default function UserList() {
         params.append('isActive', statusFilter === 'active' ? 'true' : 'false');
       }
 
-      const response = await axios.get(`/api/v1/users?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/users?${params}`);
 
       return response.data;
     },
@@ -249,7 +246,7 @@ export default function UserList() {
                   <tr key={user.id} className="hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className={`flex-shrink-0 h-12 w-12 ${getAvatarColor(user.role)} rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-all duration-200`}>
+                        <div className={`flex-shrink-0 h-12 w-12 ${getAvatarColor(user.roles[0])} rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-all duration-200`}>
                           <span className="text-white font-bold text-base">
                             {user.firstName.charAt(0)}
                             {user.lastName.charAt(0)}
@@ -272,9 +269,13 @@ export default function UserList() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1.5 inline-flex text-xs leading-5 font-bold rounded-lg ${getRoleBadgeColor(user.role)}`}>
-                        {getRoleLabel(user.role)}
-                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.map((role) => (
+                          <span key={role} className={`px-3 py-1.5 inline-flex text-xs leading-5 font-bold rounded-lg ${getRoleBadgeColor(role)}`}>
+                            {getRoleLabel(role)}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.isActive ? (

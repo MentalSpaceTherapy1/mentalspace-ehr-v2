@@ -76,6 +76,29 @@ export class AuthController {
       message: 'Logout successful',
     });
   });
+
+  /**
+   * Refresh access token
+   * POST /api/v1/auth/refresh
+   */
+  refresh = asyncHandler(async (req: Request, res: Response) => {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refresh token is required',
+      });
+    }
+
+    const result = await authService.refreshToken(refreshToken);
+
+    res.status(200).json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: result,
+    });
+  });
 }
 
 export default new AuthController();

@@ -30,7 +30,7 @@ export class AuthService {
         firstName: data.firstName,
         lastName: data.lastName,
         title: data.title,
-        role: data.role,
+        roles: data.roles || [data.role], // Support both roles array and legacy role field
         licenseNumber: data.licenseNumber,
         licenseState: data.licenseState,
         licenseExpiration: data.licenseExpiration ? new Date(data.licenseExpiration) : null,
@@ -41,7 +41,7 @@ export class AuthService {
         email: true,
         firstName: true,
         lastName: true,
-        role: true,
+        roles: true,
         title: true,
         isActive: true,
         createdAt: true,
@@ -52,14 +52,14 @@ export class AuthService {
     const tokens = generateTokenPair({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      roles: user.roles,
     });
 
     // Log audit event
     auditLogger.info('User registered', {
       userId: user.id,
       email: user.email,
-      role: user.role,
+      roles: user.roles,
       action: 'USER_REGISTERED',
     });
 
@@ -108,7 +108,7 @@ export class AuthService {
     const tokens = generateTokenPair({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      roles: user.roles,
     });
 
     // Log successful login
@@ -125,7 +125,7 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role,
+        roles: user.roles,
         title: user.title,
         isActive: user.isActive,
       },
@@ -145,7 +145,7 @@ export class AuthService {
         firstName: true,
         lastName: true,
         title: true,
-        role: true,
+        roles: true,
         phoneNumber: true,
         licenseNumber: true,
         licenseState: true,
@@ -210,6 +210,67 @@ export class AuthService {
     });
 
     return { message: 'Password changed successfully' };
+  }
+
+  /**
+   * Refresh access token using refresh token
+   */
+  async refreshToken(refreshToken: string) {
+    // Import verifyToken here to avoid circular dependency
+    const { verifyToken } = require('../utils/jwt');
+
+    try {
+      // Verify the refresh token
+      const decoded = verifyToken(refreshToken);
+
+      // Get user to ensure they still exist and are active
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+      });
+
+      if (!user) {
+        throw new UnauthorizedError('User not found');
+      }
+
+      if (!user.isActive) {
+        throw new UnauthorizedError('Account is disabled');
+      }
+
+      // Generate new token pair
+      const tokens = generateTokenPair({
+        userId: user.id,
+        email: user.email,
+        roles: user.roles,
+      });
+
+      // Log audit event
+      auditLogger.info('Token refreshed', {
+        userId: user.id,
+        email: user.email,
+        action: 'TOKEN_REFRESHED',
+      });
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          roles: user.roles,
+          title: user.title,
+          isActive: user.isActive,
+        },
+        tokens,
+      };
+    } catch (error) {
+      // Log failed refresh attempt
+      auditLogger.warn('Token refresh failed', {
+        action: 'TOKEN_REFRESH_FAILED',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
   }
 }
 

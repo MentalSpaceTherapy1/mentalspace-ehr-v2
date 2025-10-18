@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import { UserRole } from '@mentalspace/shared';
 
 interface User {
@@ -9,7 +9,7 @@ interface User {
   firstName: string;
   lastName: string;
   title?: string;
-  role: UserRole;
+  roles: UserRole[]; // Multiple roles support
   isActive: boolean;
   npiNumber?: string;
   licenseNumber?: string;
@@ -24,23 +24,18 @@ export default function UserDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const token = localStorage.getItem('token');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['user', id],
     queryFn: async () => {
-      const response = await axios.get(`/api/v1/users/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/users/${id}`);
       return response.data.data;
     },
   });
 
   const deactivateMutation = useMutation({
     mutationFn: async () => {
-      await axios.delete(`/api/v1/users/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/users/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', id] });
@@ -50,9 +45,7 @@ export default function UserDetail() {
 
   const activateMutation = useMutation({
     mutationFn: async () => {
-      await axios.post(`/api/v1/users/${id}/activate`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.post(`/users/${id}/activate`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', id] });
@@ -137,7 +130,7 @@ export default function UserDetail() {
         <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center space-x-6">
-              <div className={`${getAvatarColor(user.role)} h-24 w-24 rounded-full flex items-center justify-center shadow-2xl`}>
+              <div className={`${getAvatarColor(user.roles[0])} h-24 w-24 rounded-full flex items-center justify-center shadow-2xl`}>
                 <span className="text-white font-bold text-3xl">
                   {user.firstName.charAt(0)}
                   {user.lastName.charAt(0)}
@@ -150,10 +143,12 @@ export default function UserDetail() {
                 {user.title && (
                   <p className="text-xl text-indigo-600 font-semibold mb-2">{user.title}</p>
                 )}
-                <div className="flex items-center space-x-3">
-                  <span className={`px-4 py-2 inline-flex text-sm leading-5 font-bold rounded-lg ${getRoleBadgeColor(user.role)}`}>
-                    {getRoleLabel(user.role)}
-                  </span>
+                <div className="flex items-center flex-wrap gap-2">
+                  {user.roles.map((role) => (
+                    <span key={role} className={`px-4 py-2 inline-flex text-sm leading-5 font-bold rounded-lg ${getRoleBadgeColor(role)}`}>
+                      {getRoleLabel(role)}
+                    </span>
+                  ))}
                   {user.isActive ? (
                     <span className="px-4 py-2 inline-flex items-center text-sm leading-5 font-bold rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-200">
                       <span className="mr-2">●</span> Active

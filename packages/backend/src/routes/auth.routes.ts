@@ -50,4 +50,11 @@ router.post(
  */
 router.post('/logout', authenticate, authController.logout);
 
+/**
+ * @route   POST /api/v1/auth/refresh
+ * @desc    Refresh access token
+ * @access  Public
+ */
+router.post('/refresh', authController.refresh);
+
 export default router;
