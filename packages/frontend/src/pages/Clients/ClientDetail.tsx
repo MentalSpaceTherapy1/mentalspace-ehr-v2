@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import EmergencyContacts from '../../components/EmergencyContacts';
 import InsuranceInfo from '../../components/InsuranceInfo';
 import Guardians from '../../components/Guardians';
@@ -20,10 +20,7 @@ export default function ClientDetail() {
   const { data: clientData, isLoading, error } = useQuery({
     queryKey: ['client', id],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`/clients/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/clients/${id}`);
       return response.data.data;
     },
   });
@@ -33,10 +30,7 @@ export default function ClientDetail() {
   // Deactivate client mutation
   const deactivateMutation = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete(`/clients/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.delete(`/clients/${id}`);
       return response.data;
     },
     onSuccess: () => {

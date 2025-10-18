@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface Client {
   id: string;
@@ -37,7 +37,6 @@ export default function ClientList() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['clients', search, statusFilter, page],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
@@ -45,9 +44,7 @@ export default function ClientList() {
         ...(statusFilter && { status: statusFilter }),
       });
 
-      const response = await axios.get(`/clients?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/clients?${params}`);
       return response.data;
     },
   });

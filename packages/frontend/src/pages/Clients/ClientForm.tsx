@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import {
   PRONOUNS_OPTIONS,
   GENDER_IDENTITY_OPTIONS,
@@ -24,10 +24,7 @@ export default function ClientForm() {
   const { data: clientData, isLoading: clientLoading } = useQuery({
     queryKey: ['client', id],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`/clients/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/clients/${id}`);
       return response.data.data;
     },
     enabled: isEditMode,
@@ -37,10 +34,7 @@ export default function ClientForm() {
   const { data: therapistsData } = useQuery({
     queryKey: ['therapists'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/users?role=CLINICIAN', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/users?role=CLINICIAN');
       return response.data.data;
     },
   });
@@ -178,9 +172,7 @@ export default function ClientForm() {
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
       const url = isEditMode ? `/clients/${id}` : '/clients';
-      const method = isEditMode ? 'patch' : 'post';
 
       // Convert dateOfBirth to ISO string
       const submitData: any = {
@@ -203,9 +195,9 @@ export default function ClientForm() {
         }
       });
 
-      const response = await axios[method](url, submitData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = isEditMode
+        ? await api.patch(url, submitData)
+        : await api.post(url, submitData);
       return response.data;
     },
     onSuccess: () => {
