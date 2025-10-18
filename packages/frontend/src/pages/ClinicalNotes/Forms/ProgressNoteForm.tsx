@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import {
   FormSection,
@@ -11,6 +11,11 @@ import {
   FormActions,
 } from '../../../components/ClinicalNotes/SharedFormComponents';
 import CPTCodeAutocomplete from '../../../components/ClinicalNotes/CPTCodeAutocomplete';
+import SessionInputBox from '../../../components/AI/SessionInputBox';
+import ReviewModal from '../../../components/AI/ReviewModal';
+import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
+import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
+import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
 
 // Constants
 const SESSION_TYPES = ['Individual', 'Couples', 'Family', 'Group'];
@@ -71,7 +76,15 @@ export default function ProgressNoteForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const appointmentId = searchParams.get('appointmentId');
+  const appointmentIdFromURL = searchParams.get('appointmentId') || '';
+
+  // Appointment selection state
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
+  const [appointmentData, setAppointmentData] = useState<any>(null);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const appointmentId = selectedAppointmentId;
 
   // Session Information
   const [sessionDate, setSessionDate] = useState('');
@@ -117,11 +130,91 @@ export default function ProgressNoteForm() {
   const [safetyPlanReviewed, setSafetyPlanReviewed] = useState(false);
   const [safetyPlanUpdated, setSafetyPlanUpdated] = useState(false);
 
+  // Diagnosis (inherited from Intake)
+  const [diagnosisCodes, setDiagnosisCodes] = useState<string[]>([]);
+  const [canSign, setCanSign] = useState(true);
+  const [diagnosisValidationMessage, setDiagnosisValidationMessage] = useState('');
+
   // Billing
   const [cptCode, setCptCode] = useState('');
   const [sessionDurationMinutes, setSessionDurationMinutes] = useState('');
   const [billable, setBillable] = useState(true);
 
+  // AI State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedData, setGeneratedData] = useState<Record<string, any> | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [aiWarnings, setAiWarnings] = useState<string[]>([]);
+  const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  // Fetch eligible appointments
+  const { data: eligibleAppointmentsData } = useQuery({
+    queryKey: ['eligible-appointments', clientId, 'Progress Note'],
+    queryFn: async () => {
+      const response = await api.get(
+        `/clinical-notes/client/${clientId}/eligible-appointments/Progress%20Note`
+      );
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
+  // Fetch inherited diagnoses
+  const { data: inheritedDiagnosesData } = useQuery({
+    queryKey: ['inherited-diagnoses', clientId, 'Progress Note'],
+    queryFn: async () => {
+      const response = await api.get(
+        `/clinical-notes/client/${clientId}/inherited-diagnoses/Progress%20Note`
+      );
+      return response.data.data;
+    },
+    enabled: !!clientId && !!selectedAppointmentId,
+  });
+
+  // Set inherited diagnoses when data arrives
+  useEffect(() => {
+    if (inheritedDiagnosesData) {
+      setDiagnosisCodes(inheritedDiagnosesData.diagnosisCodes || []);
+      setCanSign(inheritedDiagnosesData.canSign || false);
+      setDiagnosisValidationMessage(inheritedDiagnosesData.validationMessage || '');
+    }
+  }, [inheritedDiagnosesData]);
+
+  // Fetch appointment data
+  useEffect(() => {
+    const fetchAppointmentData = async () => {
+      if (selectedAppointmentId && !appointmentData) {
+        try {
+          const response = await api.get(`/appointments/${selectedAppointmentId}`);
+          const apt = response.data.data;
+          setAppointmentData(apt);
+
+          if (apt.appointmentDate) {
+            const date = new Date(apt.appointmentDate);
+            setSessionDate(date.toISOString().split('T')[0]);
+          }
+          if (apt.duration) {
+            setSessionDuration(`${apt.duration} minutes`);
+            setSessionDurationMinutes(apt.duration.toString());
+          }
+        } catch (error) {
+          console.error('Error fetching appointment data:', error);
+        }
+      }
+    };
+    fetchAppointmentData();
+  }, [selectedAppointmentId, appointmentData]);
+
+  const handleAppointmentSelect = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowAppointmentPicker(false);
+  };
+
+  const handleAppointmentCreated = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowCreateModal(false);
+    setShowAppointmentPicker(false);
+  };
 
   // Auto-set due date to 7 days from session date
   useEffect(() => {
@@ -192,6 +285,64 @@ export default function ProgressNoteForm() {
     setGoals(updatedGoals);
   };
 
+  // AI Handler Functions
+  const handleGenerateFromTranscription = async (sessionNotes: string) => {
+    setIsGenerating(true);
+    try {
+      const response = await api.post('/ai/generate-note', {
+        noteType: 'Progress Note',
+        transcript: sessionNotes,
+        clientInfo: {
+          firstName: 'Client',
+          lastName: '',
+          age: undefined,
+          diagnoses: [],
+          presentingProblems: [],
+        },
+      });
+
+      setGeneratedData(response.data.generatedContent);
+      setAiWarnings(response.data.warnings || []);
+      setAiConfidence(response.data.confidence || 0);
+      setShowReviewModal(true);
+    } catch (error) {
+      console.error('AI generation error:', error);
+      alert('Failed to generate note. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleAcceptGenerated = (data: Record<string, any>) => {
+    // Map all fields from generated data to form state
+    if (data.sessionDate) setSessionDate(data.sessionDate);
+    if (data.sessionDuration) setSessionDuration(data.sessionDuration);
+    if (data.sessionType) setSessionType(data.sessionType);
+    if (data.location) setLocation(data.location);
+    if (data.symptoms) setSymptoms(data.symptoms);
+    if (data.goals) setGoals(data.goals);
+    if (data.appearance) setAppearance(data.appearance);
+    if (data.mood) setMood(data.mood);
+    if (data.affect) setAffect(data.affect);
+    if (data.thoughtProcess) setThoughtProcess(data.thoughtProcess);
+    if (data.suicidalIdeation !== undefined) setSuicidalIdeation(data.suicidalIdeation);
+    if (data.homicidalIdeation !== undefined) setHomicidalIdeation(data.homicidalIdeation);
+    if (data.riskLevel) setRiskLevel(data.riskLevel);
+    if (data.interventionsUsed) setInterventionsUsed(data.interventionsUsed);
+    if (data.otherIntervention) setOtherIntervention(data.otherIntervention);
+    if (data.engagementLevel) setEngagementLevel(data.engagementLevel);
+    if (data.responseToInterventions) setResponseToInterventions(data.responseToInterventions);
+    if (data.homeworkCompliance) setHomeworkCompliance(data.homeworkCompliance);
+    if (data.clientResponseNotes) setClientResponseNotes(data.clientResponseNotes);
+    if (data.subjective) setSubjective(data.subjective);
+    if (data.objective) setObjective(data.objective);
+    if (data.assessment) setAssessment(data.assessment);
+    if (data.plan) setPlan(data.plan);
+
+    setShowReviewModal(false);
+    setGeneratedData(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -229,6 +380,7 @@ export default function ProgressNoteForm() {
       objective,
       assessment,
       plan,
+      diagnosisCodes,
       safetyPlanReviewed: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanReviewed : undefined,
       safetyPlanUpdated: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanUpdated : undefined,
       cptCode,
@@ -269,9 +421,86 @@ export default function ProgressNoteForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Session Information */}
-          <FormSection title="Session Information" number={1}>
+        {/* Appointment Selection */}
+        {showAppointmentPicker && (
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <AppointmentPicker
+              clientId={clientId!}
+              noteType="Progress Note"
+              onSelect={handleAppointmentSelect}
+              onCreateNew={() => {
+                setShowAppointmentPicker(false);
+                setShowCreateModal(true);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Create Appointment Modal */}
+        {showCreateModal && eligibleAppointmentsData && (
+          <CreateAppointmentModal
+            isOpen={showCreateModal}
+            onClose={() => {
+              setShowCreateModal(false);
+              setShowAppointmentPicker(true);
+            }}
+            clientId={clientId!}
+            noteType="Progress Note"
+            defaultConfig={eligibleAppointmentsData.defaultConfig}
+            onAppointmentCreated={handleAppointmentCreated}
+          />
+        )}
+
+        {/* Form - only shown after appointment is selected */}
+        {!showAppointmentPicker && selectedAppointmentId && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Schedule Header */}
+            {appointmentData && (
+              <ScheduleHeader
+                appointmentDate={appointmentData.appointmentDate}
+                startTime={appointmentData.startTime}
+                endTime={appointmentData.endTime}
+                duration={appointmentData.duration || 45}
+                serviceCode={appointmentData.serviceCode}
+                location={appointmentData.location}
+                participants={appointmentData.participants}
+                editable={false}
+              />
+            )}
+
+            {/* Diagnosis Display (Inherited from Intake) */}
+            {diagnosisCodes.length > 0 && (
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Active Diagnoses (from Intake Assessment)
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {diagnosisCodes.map((code, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800"
+                    >
+                      {code}
+                    </span>
+                  ))}
+                </div>
+                {!canSign && diagnosisValidationMessage && (
+                  <div className="mt-3 text-sm text-red-600 font-medium">
+                    {diagnosisValidationMessage}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* AI-Powered Note Generation */}
+            <SessionInputBox
+              onGenerate={handleGenerateFromTranscription}
+              isGenerating={isGenerating}
+              noteType="Progress Note"
+            />
+
+            {/* Session Information */}
+            <FormSection title="Session Information" number={1}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <TextField
                 label="Session Date"
@@ -603,14 +832,32 @@ export default function ProgressNoteForm() {
             </div>
           </FormSection>
 
-          {/* Form Actions */}
-          <FormActions
-            onCancel={() => navigate(`/clients/${clientId}/notes`)}
-            onSubmit={handleSubmit}
-            submitLabel="Create Progress Note"
-            isSubmitting={saveMutation.isPending}
+            {/* Form Actions */}
+            <FormActions
+              onCancel={() => navigate(`/clients/${clientId}/notes`)}
+              onSubmit={handleSubmit}
+              submitLabel="Create Progress Note"
+              isSubmitting={saveMutation.isPending}
+            />
+          </form>
+        )}
+
+        {/* Review Generated Content Modal */}
+        {generatedData && (
+          <ReviewModal
+            isOpen={showReviewModal}
+            onClose={() => setShowReviewModal(false)}
+            generatedData={generatedData}
+            onAccept={handleAcceptGenerated}
+            onReject={() => {
+              setShowReviewModal(false);
+              setGeneratedData(null);
+            }}
+            noteType="Progress Note"
+            warnings={aiWarnings}
+            confidence={aiConfidence}
           />
-        </form>
+        )}
       </div>
     </div>
   );

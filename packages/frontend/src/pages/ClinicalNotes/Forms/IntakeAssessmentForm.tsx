@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import {
   FormSection,
@@ -12,6 +12,11 @@ import {
 } from '../../../components/ClinicalNotes/SharedFormComponents';
 import ICD10Autocomplete from '../../../components/ClinicalNotes/ICD10Autocomplete';
 import CPTCodeAutocomplete from '../../../components/ClinicalNotes/CPTCodeAutocomplete';
+import SessionInputBox from '../../../components/AI/SessionInputBox';
+import ReviewModal from '../../../components/AI/ReviewModal';
+import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
+import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
+import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
 
 // Constants for dropdowns
 const RISK_LEVELS = ['None', 'Low', 'Moderate', 'High', 'Imminent'];
@@ -122,6 +127,18 @@ export default function IntakeAssessmentForm() {
   const { clientId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Get appointmentId from URL query parameters
+  const [searchParams] = useSearchParams();
+  const appointmentIdFromURL = searchParams.get('appointmentId') || '';
+
+  // Appointment selection state
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
+  const [appointmentData, setAppointmentData] = useState<any>(null);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const appointmentId = selectedAppointmentId;
 
   const [sessionDate, setSessionDate] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -236,6 +253,46 @@ export default function IntakeAssessmentForm() {
   const [treatmentRecommendations, setTreatmentRecommendations] = useState('');
   const [recommendedFrequency, setRecommendedFrequency] = useState('');
 
+  // AI State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedData, setGeneratedData] = useState<Record<string, any> | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [aiWarnings, setAiWarnings] = useState<string[]>([]);
+  const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  // Fetch appointment data when appointmentId is selected
+  const { data: eligibleAppointmentsData } = useQuery({
+    queryKey: ['eligible-appointments', clientId, 'Intake Assessment'],
+    queryFn: async () => {
+      const response = await api.get(
+        `/clinical-notes/client/${clientId}/eligible-appointments/Intake%20Assessment`
+      );
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
+  // Fetch specific appointment details
+  useEffect(() => {
+    const fetchAppointmentData = async () => {
+      if (selectedAppointmentId && !appointmentData) {
+        try {
+          const response = await api.get(`/appointments/${selectedAppointmentId}`);
+          const apt = response.data.data;
+          setAppointmentData(apt);
+
+          // Auto-populate session date from appointment
+          if (apt.appointmentDate) {
+            const date = new Date(apt.appointmentDate);
+            setSessionDate(date.toISOString().split('T')[0]);
+          }
+        } catch (error) {
+          console.error('Error fetching appointment data:', error);
+        }
+      }
+    };
+    fetchAppointmentData();
+  }, [selectedAppointmentId, appointmentData]);
 
   // Auto-set due date to 7 days from session date
   useEffect(() => {
@@ -245,6 +302,17 @@ export default function IntakeAssessmentForm() {
       setDueDate(date.toISOString().split('T')[0]);
     }
   }, [sessionDate]);
+
+  const handleAppointmentSelect = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowAppointmentPicker(false);
+  };
+
+  const handleAppointmentCreated = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowCreateModal(false);
+    setShowAppointmentPicker(false);
+  };
 
   const addSymptom = (symptom: typeof SYMPTOMS[0]) => {
     if (!selectedSymptoms.find(s => s.id === symptom.id)) {
@@ -291,6 +359,147 @@ export default function IntakeAssessmentForm() {
     },
   });
 
+  // AI Handler Functions
+  const handleGenerateFromTranscription = async (sessionNotes: string) => {
+    setIsGenerating(true);
+    try {
+      const response = await api.post('/ai/generate-note', {
+        noteType: 'Intake Assessment',
+        transcript: sessionNotes,
+        clientInfo: {
+          firstName: 'Client',
+          lastName: '',
+          age: undefined,
+          diagnoses: [],
+          presentingProblems: [],
+        },
+      });
+
+      setGeneratedData(response.data.generatedContent);
+      setAiWarnings(response.data.warnings || []);
+      setAiConfidence(response.data.confidence || 0);
+      setShowReviewModal(true);
+    } catch (error) {
+      console.error('AI generation error:', error);
+      alert('Failed to generate note. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleAcceptGenerated = (data: Record<string, any>) => {
+    // Map all fields from generated data to form state
+    if (data.sessionDate) setSessionDate(data.sessionDate);
+    if (data.chiefComplaint) setChiefComplaint(data.chiefComplaint);
+    if (data.presentingProblem) setPresentingProblem(data.presentingProblem);
+
+    // Handle symptoms - convert from AI format to component format
+    if (data.selectedSymptoms && Array.isArray(data.selectedSymptoms)) {
+      const formattedSymptoms = data.selectedSymptoms.map((symptomLabel: string) => {
+        const symptomDef = SYMPTOMS.find(s => s.label === symptomLabel || s.id === symptomLabel);
+        if (symptomDef) {
+          return {
+            id: symptomDef.id,
+            label: symptomDef.label,
+            severity: 'Moderate',
+            extra: symptomDef.hasExtra ? 'N/A' : undefined
+          };
+        }
+        return null;
+      }).filter(Boolean);
+      setSelectedSymptoms(formattedSymptoms);
+    }
+
+    // History fields
+    if (data.psychiatricHistory) setPsychiatricHistory(data.psychiatricHistory);
+    if (data.medicalHistory) setMedicalHistory(data.medicalHistory);
+    if (data.medications) setMedications(data.medications);
+    if (data.familyHistory) setFamilyHistory(data.familyHistory);
+    if (data.socialHistory) setSocialHistory(data.socialHistory);
+    if (data.substanceUse) {
+      // Parse substance use data
+      const substanceText = String(data.substanceUse);
+      if (substanceText.toLowerCase().includes('alcohol')) setAlcoholUse(substanceText);
+      if (substanceText.toLowerCase().includes('tobacco')) setTobaccoUse(substanceText);
+      if (substanceText.toLowerCase().includes('drug')) setDrugUse(substanceText);
+    }
+
+    // MSE - Appearance
+    if (data.appearance) setGrooming(data.appearance);
+    if (data.behavior) setCooperation(data.behavior);
+    if (data.speech) setSpeechRate(data.speech);
+    if (data.mood) setMood(data.mood);
+    if (data.affect) setAffectRange(data.affect);
+    if (data.thoughtProcess) setThoughtOrganization(data.thoughtProcess);
+    if (data.thoughtContent) setDelusionDetails(data.thoughtContent);
+    if (data.perceptualDisturbances) {
+      setHasHallucinations(data.perceptualDisturbances !== 'None');
+      if (data.perceptualDisturbances === 'Auditory hallucinations') {
+        setHallucinationTypes(['Auditory']);
+      } else if (data.perceptualDisturbances === 'Visual hallucinations') {
+        setHallucinationTypes(['Visual']);
+      }
+    }
+    if (data.cognition) setAttention(data.cognition);
+    if (data.insight) setInsight(data.insight);
+    if (data.judgment) setJudgment(data.judgment);
+
+    // Risk assessment
+    if (data.suicidalIdeation) {
+      const siValue = String(data.suicidalIdeation);
+      setSuicidalIdeation(siValue !== 'None' && siValue !== 'none');
+    }
+    if (data.suicidalHistory) setRiskFactors(data.suicidalHistory);
+    if (data.homicidalIdeation) {
+      const hiValue = String(data.homicidalIdeation);
+      setHomicidalIdeation(hiValue === 'Present' || hiValue === 'present');
+    }
+    if (data.selfHarm) {
+      const shValue = String(data.selfHarm);
+      setSelfHarm(shValue !== 'None' && shValue !== 'none');
+    }
+    if (data.riskLevel) setRiskLevel(data.riskLevel);
+    if (data.safetyPlan) setSafetyPlan(data.safetyPlan);
+
+    // Clinical Assessment (NOT diagnoses - this is clinical impressions)
+    if (data.assessment) {
+      setAssessment(data.assessment);
+    }
+
+    // Diagnosis codes - these should go in the ICD-10 autocomplete field, not assessment
+    // For now, we'll add them to the Plan section as text until we can parse ICD codes
+    if (data.provisionalDiagnoses) {
+      setPlan((prev) => {
+        const diagnoses = 'Provisional Diagnoses:\n' + data.provisionalDiagnoses;
+        return prev ? diagnoses + '\n\n' + prev : diagnoses;
+      });
+    }
+    if (data.differentialDiagnoses) {
+      setPlan((prev) => {
+        const differential = '\n\nDifferential Diagnoses:\n' + data.differentialDiagnoses;
+        return prev ? prev + differential : differential;
+      });
+    }
+
+    // Treatment recommendations and prognosis
+    if (data.treatmentRecommendations) setTreatmentRecommendations(data.treatmentRecommendations);
+    if (data.referrals) {
+      setPlan((prev) => {
+        const referrals = '\n\nReferrals:\n' + data.referrals;
+        return prev ? prev + referrals : referrals;
+      });
+    }
+    if (data.prognosisNote) {
+      setPlan((prev) => {
+        const prognosis = '\n\nPrognosis:\n' + data.prognosisNote;
+        return prev ? prev + prognosis : prognosis;
+      });
+    }
+
+    setShowReviewModal(false);
+    setGeneratedData(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -336,7 +545,7 @@ export default function IntakeAssessmentForm() {
     const data = {
       clientId,
       noteType: 'Intake Assessment',
-      appointmentId: 'temp-appointment-id',
+      appointmentId: appointmentId, // Get from URL query parameter
       sessionDate: new Date(sessionDate).toISOString(),
       subjective: `Chief Complaint: ${chiefComplaint}\n\nPresenting Problem: ${presentingProblem}\n\nCurrent Symptoms:\n${symptomsPresent || 'No significant symptoms reported'}`,
       objective: `Mental Status Examination:\n\nAppearance: ${mseAppearance}\nBehavior: ${mseBehavior}\nSpeech: ${mseSpeech}\nMood: ${mood}\nAffect: ${mseAffect}\nThought Process: ${mseThoughtProcess}\nThought Content: ${mseThoughtContent}\nPerception: ${msePerception}\nCognition: ${mseCognition}\nInsight: ${insight}\nJudgment: ${judgment}\nImpulse Control: ${impulseControl}`,
@@ -352,7 +561,7 @@ export default function IntakeAssessmentForm() {
       cptCode,
       billingCode,
       billable,
-      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : null,
+      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
       dueDate: new Date(dueDate).toISOString(),
     };
 
@@ -388,9 +597,62 @@ export default function IntakeAssessmentForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Session Information */}
-          <FormSection title="Session Information" number={1}>
+        {/* Appointment Selection */}
+        {showAppointmentPicker && (
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <AppointmentPicker
+              clientId={clientId!}
+              noteType="Intake Assessment"
+              onSelect={handleAppointmentSelect}
+              onCreateNew={() => {
+                setShowAppointmentPicker(false);
+                setShowCreateModal(true);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Create Appointment Modal */}
+        {showCreateModal && eligibleAppointmentsData && (
+          <CreateAppointmentModal
+            isOpen={showCreateModal}
+            onClose={() => {
+              setShowCreateModal(false);
+              setShowAppointmentPicker(true);
+            }}
+            clientId={clientId!}
+            noteType="Intake Assessment"
+            defaultConfig={eligibleAppointmentsData.defaultConfig}
+            onAppointmentCreated={handleAppointmentCreated}
+          />
+        )}
+
+        {/* Form - only shown after appointment is selected */}
+        {!showAppointmentPicker && selectedAppointmentId && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Schedule Header */}
+            {appointmentData && (
+              <ScheduleHeader
+                appointmentDate={appointmentData.appointmentDate}
+                startTime={appointmentData.startTime}
+                endTime={appointmentData.endTime}
+                duration={appointmentData.duration || 60}
+                serviceCode={appointmentData.serviceCode}
+                location={appointmentData.location}
+                participants={appointmentData.participants}
+                editable={false}
+              />
+            )}
+
+            {/* AI-Powered Note Generation */}
+            <SessionInputBox
+              onGenerate={handleGenerateFromTranscription}
+              isGenerating={isGenerating}
+              noteType="Intake Assessment"
+            />
+
+            {/* Session Information */}
+            <FormSection title="Session Information" number={1}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <TextField
                 label="Session Date"
@@ -1187,14 +1449,32 @@ export default function IntakeAssessmentForm() {
             </div>
           </FormSection>
 
-          {/* Form Actions */}
-          <FormActions
-            onCancel={() => navigate(`/clients/${clientId}/notes`)}
-            onSubmit={handleSubmit}
-            submitLabel="Create Intake Assessment"
-            isSubmitting={saveMutation.isPending}
+            {/* Form Actions */}
+            <FormActions
+              onCancel={() => navigate(`/clients/${clientId}/notes`)}
+              onSubmit={handleSubmit}
+              submitLabel="Create Intake Assessment"
+              isSubmitting={saveMutation.isPending}
+            />
+          </form>
+        )}
+
+        {/* Review Generated Content Modal */}
+        {generatedData && (
+          <ReviewModal
+            isOpen={showReviewModal}
+            onClose={() => setShowReviewModal(false)}
+            generatedData={generatedData}
+            onAccept={handleAcceptGenerated}
+            onReject={() => {
+              setShowReviewModal(false);
+              setGeneratedData(null);
+            }}
+            noteType="Intake Assessment"
+            warnings={aiWarnings}
+            confidence={aiConfidence}
           />
-        </form>
+        )}
       </div>
     </div>
   );

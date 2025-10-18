@@ -1,0 +1,274 @@
+import prisma from '../lib/prisma';
+
+/**
+ * Service to determine which appointments are eligible for creating clinical notes
+ */
+
+export interface EligibleAppointment {
+  id: string;
+  appointmentDate: Date;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  serviceCode: string;
+  location: string;
+  status: string;
+  appointmentType: string;
+  hasNote: boolean;
+}
+
+// Mapping of note types to eligible appointment types/service codes
+const NOTE_TYPE_MAPPINGS = {
+  'Intake Assessment': {
+    appointmentTypes: ['Intake', 'Initial Evaluation'],
+    serviceCodes: ['90791'], // Diagnostic Evaluation
+    allowMultipleNotes: false,
+  },
+  'Progress Note': {
+    appointmentTypes: ['Therapy', 'Follow-up', 'Individual Therapy'],
+    serviceCodes: ['90832', '90834', '90837', '90846', '90847'], // Therapy codes
+    allowMultipleNotes: false,
+  },
+  'Treatment Plan': {
+    appointmentTypes: ['Treatment Planning', 'Therapy', 'Follow-up'],
+    serviceCodes: ['90791', '90832', '90834', '90837'], // Can be any therapy session
+    allowMultipleNotes: false,
+  },
+  'Contact Note': {
+    appointmentTypes: ['Phone Contact', 'Collateral Contact'],
+    serviceCodes: ['99441', '99442', '99443'], // Telephone services
+    allowMultipleNotes: false,
+  },
+  'Consultation Note': {
+    appointmentTypes: ['Consultation'],
+    serviceCodes: ['99241', '99242', '99243', '99244', '99245'],
+    allowMultipleNotes: false,
+  },
+  'Termination Note': {
+    appointmentTypes: ['Termination', 'Discharge'],
+    serviceCodes: [],
+    allowMultipleNotes: false,
+  },
+  'Cancellation Note': {
+    appointmentTypes: ['Cancelled'],
+    serviceCodes: [],
+    allowMultipleNotes: true, // Can document multiple cancellations
+  },
+  'Miscellaneous Note': {
+    appointmentTypes: [], // Any appointment type
+    serviceCodes: [],
+    allowMultipleNotes: true,
+  },
+};
+
+export class AppointmentEligibilityService {
+  /**
+   * Get eligible appointments for a specific note type and client
+   */
+  static async getEligibleAppointments(
+    clientId: string,
+    noteType: string
+  ): Promise<EligibleAppointment[]> {
+    const mapping = NOTE_TYPE_MAPPINGS[noteType as keyof typeof NOTE_TYPE_MAPPINGS];
+
+    if (!mapping) {
+      throw new Error(`Unknown note type: ${noteType}`);
+    }
+
+    const now = new Date();
+
+    // Build the where clause based on eligibility criteria
+    const where: any = {
+      clientId,
+      status: {
+        in: ['Scheduled', 'Completed'],
+      },
+      // Only past and current appointments (not future)
+      appointmentDate: {
+        lte: now,
+      },
+      // Exclude cancelled/deleted
+      NOT: {
+        status: {
+          in: ['Cancelled', 'Deleted', 'No-show'],
+        },
+      },
+    };
+
+    // Add appointment type filter if specified
+    if (mapping.appointmentTypes.length > 0) {
+      where.appointmentType = {
+        in: mapping.appointmentTypes,
+      };
+    }
+
+    // Add service code filter if specified
+    if (mapping.serviceCodes.length > 0) {
+      where.serviceCode = {
+        in: mapping.serviceCodes,
+      };
+    }
+
+    // Fetch appointments with their notes
+    const appointments = await prisma.appointment.findMany({
+      where,
+      include: {
+        clinicalNotes: {
+          where: {
+            noteType,
+          },
+          select: {
+            id: true,
+            noteType: true,
+          },
+        },
+      },
+      orderBy: {
+        appointmentDate: 'desc',
+      },
+    });
+
+    // Filter based on whether notes already exist
+    const eligible = appointments
+      .filter((apt) => {
+        // If multiple notes allowed, always include
+        if (mapping.allowMultipleNotes) {
+          return true;
+        }
+        // Otherwise, only include if no note of this type exists
+        return apt.clinicalNotes.length === 0;
+      })
+      .map((apt) => ({
+        id: apt.id,
+        appointmentDate: apt.appointmentDate,
+        startTime: apt.startTime,
+        endTime: apt.endTime,
+        duration: apt.duration || 0,
+        serviceCode: apt.serviceCode || '',
+        location: apt.location || '',
+        status: apt.status,
+        appointmentType: apt.appointmentType || '',
+        hasNote: apt.clinicalNotes.length > 0,
+      }));
+
+    return eligible;
+  }
+
+  /**
+   * Check if an appointment is eligible for a specific note type
+   */
+  static async isAppointmentEligible(
+    appointmentId: string,
+    noteType: string
+  ): Promise<boolean> {
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        clinicalNotes: {
+          where: { noteType },
+        },
+      },
+    });
+
+    if (!appointment) {
+      return false;
+    }
+
+    const mapping = NOTE_TYPE_MAPPINGS[noteType as keyof typeof NOTE_TYPE_MAPPINGS];
+    if (!mapping) {
+      return false;
+    }
+
+    // Check status
+    if (!['Scheduled', 'Completed'].includes(appointment.status)) {
+      return false;
+    }
+
+    // Check if appointment is in the past or present
+    const now = new Date();
+    if (appointment.appointmentDate > now) {
+      return false;
+    }
+
+    // Check appointment type if specified
+    if (
+      mapping.appointmentTypes.length > 0 &&
+      !mapping.appointmentTypes.includes(appointment.appointmentType || '')
+    ) {
+      return false;
+    }
+
+    // Check service code if specified
+    if (
+      mapping.serviceCodes.length > 0 &&
+      !mapping.serviceCodes.includes(appointment.serviceCode || '')
+    ) {
+      return false;
+    }
+
+    // Check if note already exists (unless multiple allowed)
+    if (!mapping.allowMultipleNotes && appointment.clinicalNotes.length > 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Get the default appointment type and service code for a note type
+   */
+  static getDefaultAppointmentConfig(noteType: string): {
+    appointmentType: string;
+    serviceCode: string;
+    duration: number;
+  } {
+    const defaults: Record<string, { appointmentType: string; serviceCode: string; duration: number }> = {
+      'Intake Assessment': {
+        appointmentType: 'Intake',
+        serviceCode: '90791',
+        duration: 60,
+      },
+      'Progress Note': {
+        appointmentType: 'Individual Therapy',
+        serviceCode: '90834',
+        duration: 45,
+      },
+      'Treatment Plan': {
+        appointmentType: 'Treatment Planning',
+        serviceCode: '90832',
+        duration: 30,
+      },
+      'Contact Note': {
+        appointmentType: 'Phone Contact',
+        serviceCode: '99441',
+        duration: 15,
+      },
+      'Consultation Note': {
+        appointmentType: 'Consultation',
+        serviceCode: '99241',
+        duration: 30,
+      },
+      'Termination Note': {
+        appointmentType: 'Termination',
+        serviceCode: '',
+        duration: 30,
+      },
+      'Cancellation Note': {
+        appointmentType: 'Cancelled',
+        serviceCode: '',
+        duration: 0,
+      },
+      'Miscellaneous Note': {
+        appointmentType: 'Administrative',
+        serviceCode: '',
+        duration: 15,
+      },
+    };
+
+    return defaults[noteType] || {
+      appointmentType: 'Therapy',
+      serviceCode: '',
+      duration: 45,
+    };
+  }
+}

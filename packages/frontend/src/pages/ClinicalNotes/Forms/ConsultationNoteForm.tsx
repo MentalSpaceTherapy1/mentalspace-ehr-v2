@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import {
   FormSection,
@@ -10,11 +10,28 @@ import {
   FormActions,
 } from '../../../components/ClinicalNotes/SharedFormComponents';
 import CPTCodeAutocomplete from '../../../components/ClinicalNotes/CPTCodeAutocomplete';
+import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
+import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
+import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
+import SessionInputBox from '../../../components/AI/SessionInputBox';
+import ReviewModal from '../../../components/AI/ReviewModal';
 
 export default function ConsultationNoteForm() {
   const { clientId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Get appointmentId from URL query parameters
+  const [searchParams] = useSearchParams();
+  const appointmentIdFromURL = searchParams.get('appointmentId') || '';
+
+  // Appointment selection state
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
+  const [appointmentData, setAppointmentData] = useState<any>(null);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const appointmentId = selectedAppointmentId;
 
   const [sessionDate, setSessionDate] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -34,6 +51,12 @@ export default function ConsultationNoteForm() {
 
   const [nextSessionDate, setNextSessionDate] = useState('');
 
+  // AI State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedData, setGeneratedData] = useState<Record<string, any> | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [aiWarnings, setAiWarnings] = useState<string[]>([]);
+  const [aiConfidence, setAiConfidence] = useState<number>(0);
 
   // Auto-set due date to 7 days from session date
   useEffect(() => {
@@ -43,6 +66,45 @@ export default function ConsultationNoteForm() {
       setDueDate(date.toISOString().split('T')[0]);
     }
   }, [sessionDate]);
+
+  
+  // Fetch eligible appointments
+  const { data: eligibleAppointmentsData } = useQuery({
+    queryKey: ['eligible-appointments', clientId, 'Consultation Note'],
+    queryFn: async () => {
+      const response = await api.get(
+        `/clinical-notes/client/${clientId}/eligible-appointments/Consultation%20Note`
+      );
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
+  // Fetch appointment data
+  useEffect(() => {
+    const fetchAppointmentData = async () => {
+      if (selectedAppointmentId && !appointmentData) {
+        try {
+          const response = await api.get(`/appointments/${selectedAppointmentId}`);
+          setAppointmentData(response.data.data);
+        } catch (error) {
+          console.error('Error fetching appointment data:', error);
+        }
+      }
+    };
+    fetchAppointmentData();
+  }, [selectedAppointmentId, appointmentData]);
+
+  const handleAppointmentSelect = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowAppointmentPicker(false);
+  };
+
+  const handleAppointmentCreated = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowCreateModal(false);
+    setShowAppointmentPicker(false);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -54,13 +116,74 @@ export default function ConsultationNoteForm() {
     },
   });
 
+  // AI Handler Functions
+  const handleGenerateFromTranscription = async (sessionNotes: string) => {
+    setIsGenerating(true);
+    try {
+      const response = await api.post('/ai/generate-note', {
+        noteType: 'Consultation Note',
+        transcript: sessionNotes,
+        clientInfo: {
+          firstName: 'Client',
+          lastName: '',
+          age: undefined,
+          diagnoses: [],
+          presentingProblems: [],
+        },
+      });
+
+      setGeneratedData(response.data.generatedContent);
+      setAiWarnings(response.data.warnings || []);
+      setAiConfidence(response.data.confidence || 0);
+      setShowReviewModal(true);
+    } catch (error) {
+      console.error('AI generation error:', error);
+      alert('Failed to generate note. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleAcceptGenerated = (data: Record<string, any>) => {
+    // Map all fields from generated data to form state
+    if (data.sessionDate) setSessionDate(data.sessionDate);
+    if (data.consultedPerson) setConsultedPerson(data.consultedPerson);
+    if (data.consultedRole) {
+      // Handle consulted role if needed
+    }
+    if (data.organization) setOrganization(data.organization);
+    if (data.consultationMethod) {
+      // Handle consultation method if needed
+    }
+    if (data.reasonForConsultation) setReasonForConsultation(data.reasonForConsultation);
+    if (data.consentObtained !== undefined) {
+      // Handle consent obtained if needed
+    }
+    if (data.informationShared) setInformationShared(data.informationShared);
+    if (data.informationReceived) {
+      // Handle information received if needed
+    }
+    if (data.recommendationsReceived) setRecommendationsReceived(data.recommendationsReceived);
+    if (data.followUpActions) setFollowUpActions(data.followUpActions);
+    if (data.impactOnTreatment) {
+      // Handle impact on treatment if needed
+    }
+    if (data.billable !== undefined) setBillable(data.billable);
+    if (data.duration) {
+      // Handle duration if needed
+    }
+
+    setShowReviewModal(false);
+    setGeneratedData(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const data = {
       clientId,
       noteType: 'Consultation Note',
-      appointmentId: 'temp-appointment-id',
+      appointmentId: appointmentId,
       sessionDate: new Date(sessionDate).toISOString(),
       subjective: `Consultation with: ${consultedPerson}\nOrganization: ${organization}\n\nReason: ${reasonForConsultation}`,
       objective: `Information Shared: ${informationShared}`,
@@ -75,7 +198,7 @@ export default function ConsultationNoteForm() {
       cptCode,
       billingCode,
       billable,
-      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : null,
+      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
       dueDate: new Date(dueDate).toISOString(),
     };
 
@@ -111,7 +234,61 @@ export default function ConsultationNoteForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* Appointment Selection */}
+        {showAppointmentPicker && (
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <AppointmentPicker
+              clientId={clientId!}
+              noteType="Consultation Note"
+              onSelect={handleAppointmentSelect}
+              onCreateNew={() => {
+                setShowAppointmentPicker(false);
+                setShowCreateModal(true);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Create Appointment Modal */}
+        {showCreateModal && eligibleAppointmentsData && (
+          <CreateAppointmentModal
+            isOpen={showCreateModal}
+            onClose={() => {
+              setShowCreateModal(false);
+              setShowAppointmentPicker(true);
+            }}
+            clientId={clientId!}
+            noteType="Consultation Note"
+            defaultConfig={eligibleAppointmentsData.defaultConfig}
+            onAppointmentCreated={handleAppointmentCreated}
+          />
+        )}
+
+        {/* Form - only shown after appointment is selected */}
+        {!showAppointmentPicker && selectedAppointmentId && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* AI-Powered Note Generation */}
+          {/* Schedule Header */}
+            {appointmentData && (
+              <ScheduleHeader
+                appointmentDate={appointmentData.appointmentDate}
+                startTime={appointmentData.startTime}
+                endTime={appointmentData.endTime}
+                duration={appointmentData.duration || 45}
+                serviceCode={appointmentData.serviceCode}
+                location={appointmentData.location}
+                participants={appointmentData.participants}
+                editable={false}
+              />
+            )}
+
+            <SessionInputBox
+            onGenerate={handleGenerateFromTranscription}
+            isGenerating={isGenerating}
+            noteType="Consultation Note"
+          />
+
           {/* Basic Information */}
           <FormSection title="Session Information" number={1}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -229,6 +406,24 @@ export default function ConsultationNoteForm() {
             isSubmitting={saveMutation.isPending}
           />
         </form>
+        )}
+
+        {/* Review Generated Content Modal */}
+        {generatedData && (
+          <ReviewModal
+            isOpen={showReviewModal}
+            onClose={() => setShowReviewModal(false)}
+            generatedData={generatedData}
+            onAccept={handleAcceptGenerated}
+            onReject={() => {
+              setShowReviewModal(false);
+              setGeneratedData(null);
+            }}
+            noteType="Consultation Note"
+            warnings={aiWarnings}
+            confidence={aiConfidence}
+          />
+        )}
       </div>
     </div>
   );

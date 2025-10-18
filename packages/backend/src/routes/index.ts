@@ -29,6 +29,7 @@ import diagnosisRoutes from './diagnosis.routes';
 import supervisionRoutes from './supervision.routes';
 import unlockRequestRoutes from './unlockRequest.routes';
 import practiceSettingsRoutes from './practiceSettings.routes';
+import aiRoutes from './ai.routes';
 
 const router = Router();
 
@@ -86,5 +87,8 @@ router.use('/unlock-requests', unlockRequestRoutes);
 
 // Practice Settings routes (Admin Configuration)
 router.use('/practice-settings', practiceSettingsRoutes);
+
+// AI routes (AI-powered clinical features)
+router.use('/ai', aiRoutes);
 
 export default router;

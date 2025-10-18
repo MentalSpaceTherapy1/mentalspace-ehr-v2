@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import {
   FormSection,
@@ -12,6 +12,11 @@ import {
 } from '../../../components/ClinicalNotes/SharedFormComponents';
 import ICD10Autocomplete from '../../../components/ClinicalNotes/ICD10Autocomplete';
 import CPTCodeAutocomplete from '../../../components/ClinicalNotes/CPTCodeAutocomplete';
+import SessionInputBox from '../../../components/AI/SessionInputBox';
+import ReviewModal from '../../../components/AI/ReviewModal';
+import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
+import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
+import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
 
 interface TreatmentGoal {
   goal: string;
@@ -24,6 +29,20 @@ export default function TreatmentPlanForm() {
   const { clientId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Get appointmentId from URL query parameters
+  const [searchParams] = useSearchParams();
+  const appointmentIdFromURL = searchParams.get('appointmentId') || '';
+
+  // Appointment selection state
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
+  const [appointmentData, setAppointmentData] = useState<any>(null);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [canSign, setCanSign] = useState(true);
+  const [diagnosisValidationMessage, setDiagnosisValidationMessage] = useState('');
+
+  const appointmentId = selectedAppointmentId;
 
   const [sessionDate, setSessionDate] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -49,6 +68,77 @@ export default function TreatmentPlanForm() {
 
   const [nextSessionDate, setNextSessionDate] = useState('');
 
+  // AI State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedData, setGeneratedData] = useState<Record<string, any> | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [aiWarnings, setAiWarnings] = useState<string[]>([]);
+  const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  // Fetch eligible appointments
+  const { data: eligibleAppointmentsData } = useQuery({
+    queryKey: ['eligible-appointments', clientId, 'Treatment Plan'],
+    queryFn: async () => {
+      const response = await api.get(
+        `/clinical-notes/client/${clientId}/eligible-appointments/Treatment%20Plan`
+      );
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
+  // Fetch inherited diagnoses
+  const { data: inheritedDiagnosesData } = useQuery({
+    queryKey: ['inherited-diagnoses', clientId, 'Treatment Plan'],
+    queryFn: async () => {
+      const response = await api.get(
+        `/clinical-notes/client/${clientId}/inherited-diagnoses/Treatment%20Plan`
+      );
+      return response.data.data;
+    },
+    enabled: !!clientId && !!selectedAppointmentId,
+  });
+
+  // Set inherited diagnoses when data arrives
+  useEffect(() => {
+    if (inheritedDiagnosesData) {
+      setDiagnosisCodes(inheritedDiagnosesData.diagnosisCodes || []);
+      setCanSign(inheritedDiagnosesData.canSign || false);
+      setDiagnosisValidationMessage(inheritedDiagnosesData.validationMessage || '');
+    }
+  }, [inheritedDiagnosesData]);
+
+  // Fetch appointment data
+  useEffect(() => {
+    const fetchAppointmentData = async () => {
+      if (selectedAppointmentId && !appointmentData) {
+        try {
+          const response = await api.get(`/appointments/${selectedAppointmentId}`);
+          const apt = response.data.data;
+          setAppointmentData(apt);
+
+          if (apt.appointmentDate) {
+            const date = new Date(apt.appointmentDate);
+            setSessionDate(date.toISOString().split('T')[0]);
+          }
+        } catch (error) {
+          console.error('Error fetching appointment data:', error);
+        }
+      }
+    };
+    fetchAppointmentData();
+  }, [selectedAppointmentId, appointmentData]);
+
+  const handleAppointmentSelect = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowAppointmentPicker(false);
+  };
+
+  const handleAppointmentCreated = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowCreateModal(false);
+    setShowAppointmentPicker(false);
+  };
 
   // Auto-set due date to 7 days from session date
   useEffect(() => {
@@ -115,6 +205,70 @@ export default function TreatmentPlanForm() {
     },
   });
 
+  // AI Handler Functions
+  const handleGenerateFromTranscription = async (sessionNotes: string) => {
+    setIsGenerating(true);
+    try {
+      const response = await api.post('/ai/generate-note', {
+        noteType: 'Treatment Plan',
+        transcript: sessionNotes,
+        clientInfo: {
+          firstName: 'Client',
+          lastName: '',
+          age: undefined,
+          diagnoses: [],
+          presentingProblems: [],
+        },
+      });
+
+      setGeneratedData(response.data.generatedContent);
+      setAiWarnings(response.data.warnings || []);
+      setAiConfidence(response.data.confidence || 0);
+      setShowReviewModal(true);
+    } catch (error) {
+      console.error('AI generation error:', error);
+      alert('Failed to generate note. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleAcceptGenerated = (data: Record<string, any>) => {
+    // Map all fields from generated data to form state
+    if (data.planDate) setSessionDate(data.planDate);
+    if (data.reviewDate) setNextSessionDate(data.reviewDate);
+    if (data.diagnoses) setDiagnosisCodes([data.diagnoses]);
+    if (data.presentingProblems) {
+      // Parse presenting problems if provided
+    }
+    if (data.goals) {
+      // Parse goals if provided as string or array
+    }
+    if (data.objectives) {
+      // Parse objectives if provided
+    }
+    if (data.treatmentModality && Array.isArray(data.treatmentModality)) {
+      setTreatmentModality(data.treatmentModality);
+    }
+    if (data.interventions) {
+      // Parse interventions if provided
+    }
+    if (data.sessionFrequency) setFrequency(data.sessionFrequency);
+    if (data.sessionDuration) setSessionDuration(data.sessionDuration);
+    if (data.treatmentSetting) setTreatmentSetting(data.treatmentSetting);
+    if (data.estimatedDuration) setEstimatedDuration(data.estimatedDuration);
+    if (data.dischargeCriteria) setDischargeCriteria(data.dischargeCriteria);
+    if (data.clientStrengths) {
+      // Parse client strengths if provided
+    }
+    if (data.barriers) {
+      // Parse barriers if provided
+    }
+
+    setShowReviewModal(false);
+    setGeneratedData(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -131,7 +285,7 @@ export default function TreatmentPlanForm() {
     const data = {
       clientId,
       noteType: 'Treatment Plan',
-      appointmentId: 'temp-appointment-id',
+      appointmentId: appointmentId,
       sessionDate: new Date(sessionDate).toISOString(),
       subjective: goalsText,
       objective: `Treatment Modalities: ${modalityText}\nSession Duration: ${sessionDuration}\nFrequency: ${frequency}\nTreatment Setting: ${treatmentSetting}\nEstimated Duration: ${estimatedDuration}`,
@@ -144,7 +298,7 @@ export default function TreatmentPlanForm() {
       cptCode,
       billingCode,
       billable,
-      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : null,
+      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
       dueDate: new Date(dueDate).toISOString(),
     };
 
@@ -180,9 +334,86 @@ export default function TreatmentPlanForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <FormSection title="Session Information" number={1}>
+        {/* Appointment Selection */}
+        {showAppointmentPicker && (
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <AppointmentPicker
+              clientId={clientId!}
+              noteType="Treatment Plan"
+              onSelect={handleAppointmentSelect}
+              onCreateNew={() => {
+                setShowAppointmentPicker(false);
+                setShowCreateModal(true);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Create Appointment Modal */}
+        {showCreateModal && eligibleAppointmentsData && (
+          <CreateAppointmentModal
+            isOpen={showCreateModal}
+            onClose={() => {
+              setShowCreateModal(false);
+              setShowAppointmentPicker(true);
+            }}
+            clientId={clientId!}
+            noteType="Treatment Plan"
+            defaultConfig={eligibleAppointmentsData.defaultConfig}
+            onAppointmentCreated={handleAppointmentCreated}
+          />
+        )}
+
+        {/* Form - only shown after appointment is selected */}
+        {!showAppointmentPicker && selectedAppointmentId && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Schedule Header */}
+            {appointmentData && (
+              <ScheduleHeader
+                appointmentDate={appointmentData.appointmentDate}
+                startTime={appointmentData.startTime}
+                endTime={appointmentData.endTime}
+                duration={appointmentData.duration || 60}
+                serviceCode={appointmentData.serviceCode}
+                location={appointmentData.location}
+                participants={appointmentData.participants}
+                editable={false}
+              />
+            )}
+
+            {/* Diagnosis Display (Inherited from Intake) */}
+            {diagnosisCodes.length > 0 && (
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Active Diagnoses (from Intake Assessment)
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {diagnosisCodes.map((code, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800"
+                    >
+                      {code}
+                    </span>
+                  ))}
+                </div>
+                {!canSign && diagnosisValidationMessage && (
+                  <div className="mt-3 text-sm text-red-600 font-medium">
+                    {diagnosisValidationMessage}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* AI-Powered Note Generation */}
+            <SessionInputBox
+              onGenerate={handleGenerateFromTranscription}
+              isGenerating={isGenerating}
+              noteType="Treatment Plan"
+            />
+
+            {/* Basic Information */}
+            <FormSection title="Session Information" number={1}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <TextField
                 label="Session Date"
@@ -465,14 +696,32 @@ export default function TreatmentPlanForm() {
             </div>
           </FormSection>
 
-          {/* Form Actions */}
-          <FormActions
-            onCancel={() => navigate(`/clients/${clientId}/notes`)}
-            onSubmit={handleSubmit}
-            submitLabel="Create Treatment Plan"
-            isSubmitting={saveMutation.isPending}
+            {/* Form Actions */}
+            <FormActions
+              onCancel={() => navigate(`/clients/${clientId}/notes`)}
+              onSubmit={handleSubmit}
+              submitLabel="Create Treatment Plan"
+              isSubmitting={saveMutation.isPending}
+            />
+          </form>
+        )}
+
+        {/* Review Generated Content Modal */}
+        {generatedData && (
+          <ReviewModal
+            isOpen={showReviewModal}
+            onClose={() => setShowReviewModal(false)}
+            generatedData={generatedData}
+            onAccept={handleAcceptGenerated}
+            onReject={() => {
+              setShowReviewModal(false);
+              setGeneratedData(null);
+            }}
+            noteType="Treatment Plan"
+            warnings={aiWarnings}
+            confidence={aiConfidence}
           />
-        </form>
+        )}
       </div>
     </div>
   );

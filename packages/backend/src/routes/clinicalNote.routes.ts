@@ -11,6 +11,8 @@ import {
   getNotesForCosigning,
   getClientDiagnosis,
   getTreatmentPlanStatus,
+  getEligibleAppointments,
+  getInheritedDiagnoses,
 } from '../controllers/clinicalNote.controller';
 
 const router = Router();
@@ -26,6 +28,12 @@ router.get('/client/:clientId/diagnosis', getClientDiagnosis);
 
 // Get treatment plan status for client
 router.get('/client/:clientId/treatment-plan-status', getTreatmentPlanStatus);
+
+// Get eligible appointments for a note type
+router.get('/client/:clientId/eligible-appointments/:noteType', getEligibleAppointments);
+
+// Get inherited diagnoses for a note type
+router.get('/client/:clientId/inherited-diagnoses/:noteType', getInheritedDiagnoses);
 
 // Get all notes for a client
 router.get('/client/:clientId', getClientNotes);

@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import {
   FormSection,
@@ -12,6 +12,11 @@ import {
 } from '../../../components/ClinicalNotes/SharedFormComponents';
 import ICD10Autocomplete from '../../../components/ClinicalNotes/ICD10Autocomplete';
 import CPTCodeAutocomplete from '../../../components/ClinicalNotes/CPTCodeAutocomplete';
+import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
+import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
+import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
+import SessionInputBox from '../../../components/AI/SessionInputBox';
+import ReviewModal from '../../../components/AI/ReviewModal';
 
 const TERMINATION_REASON_OPTIONS = [
   { value: 'Treatment completed', label: 'Treatment completed' },
@@ -29,6 +34,18 @@ export default function TerminationNoteForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Get appointmentId from URL query parameters
+  const [searchParams] = useSearchParams();
+  const appointmentIdFromURL = searchParams.get('appointmentId') || '';
+
+  // Appointment selection state
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
+  const [appointmentData, setAppointmentData] = useState<any>(null);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const appointmentId = selectedAppointmentId;
+
   const [terminationDate, setTerminationDate] = useState('');
 
   // Termination Details
@@ -45,6 +62,52 @@ export default function TerminationNoteForm() {
   const [billingCode, setBillingCode] = useState('');
   const [billable, setBillable] = useState(true);
 
+  // AI State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedData, setGeneratedData] = useState<Record<string, any> | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [aiWarnings, setAiWarnings] = useState<string[]>([]);
+  const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+
+  
+  // Fetch eligible appointments
+  const { data: eligibleAppointmentsData } = useQuery({
+    queryKey: ['eligible-appointments', clientId, 'Termination Note'],
+    queryFn: async () => {
+      const response = await api.get(
+        `/clinical-notes/client/${clientId}/eligible-appointments/Termination%20Note`
+      );
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
+  // Fetch appointment data
+  useEffect(() => {
+    const fetchAppointmentData = async () => {
+      if (selectedAppointmentId && !appointmentData) {
+        try {
+          const response = await api.get(`/appointments/${selectedAppointmentId}`);
+          setAppointmentData(response.data.data);
+        } catch (error) {
+          console.error('Error fetching appointment data:', error);
+        }
+      }
+    };
+    fetchAppointmentData();
+  }, [selectedAppointmentId, appointmentData]);
+
+  const handleAppointmentSelect = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowAppointmentPicker(false);
+  };
+
+  const handleAppointmentCreated = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowCreateModal(false);
+    setShowAppointmentPicker(false);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -56,13 +119,84 @@ export default function TerminationNoteForm() {
     },
   });
 
+  // AI Handler Functions
+  const handleGenerateFromTranscription = async (sessionNotes: string) => {
+    setIsGenerating(true);
+    try {
+      const response = await api.post('/ai/generate-note', {
+        noteType: 'Termination Note',
+        transcript: sessionNotes,
+        clientInfo: {
+          firstName: 'Client',
+          lastName: '',
+          age: undefined,
+          diagnoses: [],
+          presentingProblems: [],
+        },
+      });
+
+      setGeneratedData(response.data.generatedContent);
+      setAiWarnings(response.data.warnings || []);
+      setAiConfidence(response.data.confidence || 0);
+      setShowReviewModal(true);
+    } catch (error) {
+      console.error('AI generation error:', error);
+      alert('Failed to generate note. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleAcceptGenerated = (data: Record<string, any>) => {
+    // Map all fields from generated data to form state
+    if (data.terminationDate) setTerminationDate(data.terminationDate);
+    if (data.terminationReason) setTerminationReason(data.terminationReason);
+    if (data.treatmentStartDate) {
+      // Handle treatment start date if needed
+    }
+    if (data.totalSessions) {
+      // Handle total sessions if needed
+    }
+    if (data.treatmentSummary) {
+      // Handle treatment summary if needed
+    }
+    if (data.progressAchieved) setProgressAchieved(data.progressAchieved);
+    if (data.goalsStatus) {
+      // Handle goals status if needed
+    }
+    if (data.currentFunctioning) setCurrentStatus(data.currentFunctioning);
+    if (data.finalDiagnosis) {
+      if (Array.isArray(data.finalDiagnosis)) {
+        setFinalDiagnosis(data.finalDiagnosis);
+      } else {
+        setFinalDiagnosis([data.finalDiagnosis]);
+      }
+    }
+    if (data.currentStatus) setCurrentStatus(data.currentStatus);
+    if (data.aftercareRecommendations) setAftercareRecommendations(data.aftercareRecommendations);
+    if (data.referralsMade) setReferralsMade(data.referralsMade);
+    if (data.crisisResources) {
+      // Handle crisis resources if needed
+    }
+    if (data.emergencyPlan) setEmergencyPlan(data.emergencyPlan);
+    if (data.clientReadiness) {
+      // Handle client readiness if needed
+    }
+    if (data.prognosis) {
+      // Handle prognosis if needed
+    }
+
+    setShowReviewModal(false);
+    setGeneratedData(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const data = {
       clientId,
       noteType: 'Termination Note',
-      appointmentId: 'temp-appointment-id',
+      appointmentId: appointmentId,
       sessionDate: new Date(terminationDate).toISOString(),
       subjective: `Termination Reason: ${terminationReason}\n\nProgress Achieved:\n${progressAchieved}`,
       objective: `Current Status and Functioning:\n${currentStatus}`,
@@ -114,7 +248,61 @@ export default function TerminationNoteForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* Appointment Selection */}
+        {showAppointmentPicker && (
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <AppointmentPicker
+              clientId={clientId!}
+              noteType="Termination Note"
+              onSelect={handleAppointmentSelect}
+              onCreateNew={() => {
+                setShowAppointmentPicker(false);
+                setShowCreateModal(true);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Create Appointment Modal */}
+        {showCreateModal && eligibleAppointmentsData && (
+          <CreateAppointmentModal
+            isOpen={showCreateModal}
+            onClose={() => {
+              setShowCreateModal(false);
+              setShowAppointmentPicker(true);
+            }}
+            clientId={clientId!}
+            noteType="Termination Note"
+            defaultConfig={eligibleAppointmentsData.defaultConfig}
+            onAppointmentCreated={handleAppointmentCreated}
+          />
+        )}
+
+        {/* Form - only shown after appointment is selected */}
+        {!showAppointmentPicker && selectedAppointmentId && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* AI-Powered Note Generation */}
+          {/* Schedule Header */}
+            {appointmentData && (
+              <ScheduleHeader
+                appointmentDate={appointmentData.appointmentDate}
+                startTime={appointmentData.startTime}
+                endTime={appointmentData.endTime}
+                duration={appointmentData.duration || 45}
+                serviceCode={appointmentData.serviceCode}
+                location={appointmentData.location}
+                participants={appointmentData.participants}
+                editable={false}
+              />
+            )}
+
+            <SessionInputBox
+            onGenerate={handleGenerateFromTranscription}
+            isGenerating={isGenerating}
+            noteType="Termination Note"
+          />
+
           {/* Basic Information */}
           <FormSection title="Termination Information" number={1}>
             <div className="space-y-6">
@@ -240,6 +428,24 @@ export default function TerminationNoteForm() {
             isSubmitting={saveMutation.isPending}
           />
         </form>
+        )}
+
+        {/* Review Generated Content Modal */}
+        {generatedData && (
+          <ReviewModal
+            isOpen={showReviewModal}
+            onClose={() => setShowReviewModal(false)}
+            generatedData={generatedData}
+            onAccept={handleAcceptGenerated}
+            onReject={() => {
+              setShowReviewModal(false);
+              setGeneratedData(null);
+            }}
+            noteType="Termination Note"
+            warnings={aiWarnings}
+            confidence={aiConfidence}
+          />
+        )}
       </div>
     </div>
   );

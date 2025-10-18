@@ -1042,6 +1042,8 @@ model ClinicalNote {
   diagnosisHistoryEntries    DiagnosisHistory[]
   clinicalNoteDiagnoses      ClinicalNoteDiagnosis[]
 
+  // Unique constraint: One note per appointment per note type
+  @@unique([appointmentId, noteType])
   @@map("clinical_notes")
 }
 

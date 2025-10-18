@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { ClinicalNotesValidationService } from '../services/clinical-notes-validation.service';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
+import { AppointmentEligibilityService } from '../services/appointment-eligibility.service';
+import { DiagnosisInheritanceService } from '../services/diagnosis-inheritance.service';
 
 // Note types enum
 export const NOTE_TYPES = {
@@ -740,6 +740,73 @@ export const getTreatmentPlanStatus = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to check treatment plan status',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get eligible appointments for creating a specific note type
+ */
+export const getEligibleAppointments = async (req: Request, res: Response) => {
+  try {
+    const { clientId, noteType } = req.params;
+
+    const appointments = await AppointmentEligibilityService.getEligibleAppointments(
+      clientId,
+      noteType
+    );
+
+    const defaultConfig = AppointmentEligibilityService.getDefaultAppointmentConfig(noteType);
+
+    return res.json({
+      success: true,
+      data: {
+        appointments,
+        defaultConfig,
+        hasEligible: appointments.length > 0,
+      },
+    });
+  } catch (error: any) {
+    console.error('Get eligible appointments error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve eligible appointments',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get inherited diagnoses for a new note (for Progress Notes and Treatment Plans)
+ */
+export const getInheritedDiagnoses = async (req: Request, res: Response) => {
+  try {
+    const { clientId, noteType } = req.params;
+
+    const diagnoses = await DiagnosisInheritanceService.getInheritedDiagnosesForNote(
+      clientId,
+      noteType
+    );
+
+    const validation = await DiagnosisInheritanceService.validateDiagnosesForNoteType(
+      clientId,
+      noteType
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        diagnosisCodes: diagnoses,
+        canSign: validation.valid,
+        validationMessage: validation.message,
+      },
+    });
+  } catch (error: any) {
+    console.error('Get inherited diagnoses error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve inherited diagnoses',
       error: error.message,
     });
   }

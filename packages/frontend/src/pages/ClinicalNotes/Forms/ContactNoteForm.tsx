@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import {
   FormSection,
@@ -11,6 +11,11 @@ import {
   FormActions,
 } from '../../../components/ClinicalNotes/SharedFormComponents';
 import CPTCodeAutocomplete from '../../../components/ClinicalNotes/CPTCodeAutocomplete';
+import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
+import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
+import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
+import SessionInputBox from '../../../components/AI/SessionInputBox';
+import ReviewModal from '../../../components/AI/ReviewModal';
 
 const CONTACT_TYPE_OPTIONS = [
   { value: 'Phone', label: 'Phone' },
@@ -24,6 +29,18 @@ export default function ContactNoteForm() {
   const { clientId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Get appointmentId from URL query parameters
+  const [searchParams] = useSearchParams();
+  const appointmentIdFromURL = searchParams.get('appointmentId') || '';
+
+  // Appointment selection state
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
+  const [appointmentData, setAppointmentData] = useState<any>(null);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const appointmentId = selectedAppointmentId;
 
   const [contactDate, setContactDate] = useState('');
   const [contactTime, setContactTime] = useState('');
@@ -40,6 +57,51 @@ export default function ContactNoteForm() {
   const [billingCode, setBillingCode] = useState('');
   const [billable, setBillable] = useState(false);
 
+  // AI State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedData, setGeneratedData] = useState<Record<string, any> | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [aiWarnings, setAiWarnings] = useState<string[]>([]);
+  const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  
+  // Fetch eligible appointments
+  const { data: eligibleAppointmentsData } = useQuery({
+    queryKey: ['eligible-appointments', clientId, 'Contact Note'],
+    queryFn: async () => {
+      const response = await api.get(
+        `/clinical-notes/client/${clientId}/eligible-appointments/Contact%20Note`
+      );
+      return response.data.data;
+    },
+    enabled: !!clientId,
+  });
+
+  // Fetch appointment data
+  useEffect(() => {
+    const fetchAppointmentData = async () => {
+      if (selectedAppointmentId && !appointmentData) {
+        try {
+          const response = await api.get(`/appointments/${selectedAppointmentId}`);
+          setAppointmentData(response.data.data);
+        } catch (error) {
+          console.error('Error fetching appointment data:', error);
+        }
+      }
+    };
+    fetchAppointmentData();
+  }, [selectedAppointmentId, appointmentData]);
+
+  const handleAppointmentSelect = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowAppointmentPicker(false);
+  };
+
+  const handleAppointmentCreated = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowCreateModal(false);
+    setShowAppointmentPicker(false);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -51,6 +113,64 @@ export default function ContactNoteForm() {
     },
   });
 
+  // AI Handler Functions
+  const handleGenerateFromTranscription = async (sessionNotes: string) => {
+    setIsGenerating(true);
+    try {
+      const response = await api.post('/ai/generate-note', {
+        noteType: 'Contact Note',
+        transcript: sessionNotes,
+        clientInfo: {
+          firstName: 'Client',
+          lastName: '',
+          age: undefined,
+          diagnoses: [],
+          presentingProblems: [],
+        },
+      });
+
+      setGeneratedData(response.data.generatedContent);
+      setAiWarnings(response.data.warnings || []);
+      setAiConfidence(response.data.confidence || 0);
+      setShowReviewModal(true);
+    } catch (error) {
+      console.error('AI generation error:', error);
+      alert('Failed to generate note. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleAcceptGenerated = (data: Record<string, any>) => {
+    // Map all fields from generated data to form state
+    if (data.contactDate) setContactDate(data.contactDate);
+    if (data.contactTime) setContactTime(data.contactTime);
+    if (data.contactType) setContactType(data.contactType);
+    if (data.initiatedBy) {
+      // Handle initiated by if needed
+    }
+    if (data.duration) setDuration(String(data.duration));
+    if (data.purpose) setPurpose(data.purpose);
+    if (data.summary) setSummary(data.summary);
+    if (data.clientStatus) {
+      // Handle client status if needed
+    }
+    if (data.riskAssessment) {
+      // Handle risk assessment if needed
+    }
+    if (data.actionTaken) {
+      // Handle action taken if needed
+    }
+    if (data.followUpNeeded !== undefined) setFollowUpNeeded(data.followUpNeeded);
+    if (data.followUpPlan) {
+      // Handle follow up plan if needed
+    }
+    if (data.billable !== undefined) setBillable(data.billable);
+
+    setShowReviewModal(false);
+    setGeneratedData(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -59,7 +179,7 @@ export default function ContactNoteForm() {
     const data = {
       clientId,
       noteType: 'Contact Note',
-      appointmentId: 'temp-appointment-id',
+      appointmentId: appointmentId,
       sessionDate: contactDateTime.toISOString(),
       subjective: `Type: ${contactType}\nDuration: ${duration}\n\nPurpose: ${purpose}`,
       objective: summary,
@@ -108,7 +228,61 @@ export default function ContactNoteForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* Appointment Selection */}
+        {showAppointmentPicker && (
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <AppointmentPicker
+              clientId={clientId!}
+              noteType="Contact Note"
+              onSelect={handleAppointmentSelect}
+              onCreateNew={() => {
+                setShowAppointmentPicker(false);
+                setShowCreateModal(true);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Create Appointment Modal */}
+        {showCreateModal && eligibleAppointmentsData && (
+          <CreateAppointmentModal
+            isOpen={showCreateModal}
+            onClose={() => {
+              setShowCreateModal(false);
+              setShowAppointmentPicker(true);
+            }}
+            clientId={clientId!}
+            noteType="Contact Note"
+            defaultConfig={eligibleAppointmentsData.defaultConfig}
+            onAppointmentCreated={handleAppointmentCreated}
+          />
+        )}
+
+        {/* Form - only shown after appointment is selected */}
+        {!showAppointmentPicker && selectedAppointmentId && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* AI-Powered Note Generation */}
+          {/* Schedule Header */}
+            {appointmentData && (
+              <ScheduleHeader
+                appointmentDate={appointmentData.appointmentDate}
+                startTime={appointmentData.startTime}
+                endTime={appointmentData.endTime}
+                duration={appointmentData.duration || 45}
+                serviceCode={appointmentData.serviceCode}
+                location={appointmentData.location}
+                participants={appointmentData.participants}
+                editable={false}
+              />
+            )}
+
+            <SessionInputBox
+            onGenerate={handleGenerateFromTranscription}
+            isGenerating={isGenerating}
+            noteType="Contact Note"
+          />
+
           {/* Contact Information */}
           <FormSection title="Contact Information" number={1}>
             <div className="space-y-6">
@@ -215,6 +389,24 @@ export default function ContactNoteForm() {
             isSubmitting={saveMutation.isPending}
           />
         </form>
+        )}
+
+        {/* Review Generated Content Modal */}
+        {generatedData && (
+          <ReviewModal
+            isOpen={showReviewModal}
+            onClose={() => setShowReviewModal(false)}
+            generatedData={generatedData}
+            onAccept={handleAcceptGenerated}
+            onReject={() => {
+              setShowReviewModal(false);
+              setGeneratedData(null);
+            }}
+            noteType="Contact Note"
+            warnings={aiWarnings}
+            confidence={aiConfidence}
+          />
+        )}
       </div>
     </div>
   );
