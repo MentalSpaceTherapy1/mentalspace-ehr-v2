@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import api from '../lib/api';
 
 interface User {
   id: string;
@@ -16,20 +17,12 @@ export function useAuth() {
       if (!token) return null;
 
       try {
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          localStorage.removeItem('token');
-          return null;
-        }
-
-        return response.json();
+        const response = await api.get('/auth/me');
+        return response.data.data;
       } catch (error) {
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
         return null;
       }
     },
