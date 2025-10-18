@@ -377,10 +377,10 @@ export default function IntakeAssessmentForm() {
         noteType: 'Intake Assessment',
         transcript: sessionNotes,
         clientInfo: {
-          firstName: 'Client',
-          lastName: '',
-          age: undefined,
-          diagnoses: [],
+          firstName: clientData?.firstName || 'Client',
+          lastName: clientData?.lastName || '',
+          age: clientData?.dateOfBirth ? new Date().getFullYear() - new Date(clientData.dateOfBirth).getFullYear() : undefined,
+          diagnoses: diagnosisCodes || [],
           presentingProblems: [],
         },
       });
@@ -391,7 +391,7 @@ export default function IntakeAssessmentForm() {
       setShowReviewModal(true);
     } catch (error) {
       console.error('AI generation error:', error);
-      alert('Failed to generate note. Please try again.');
+      setAiWarnings(['Failed to generate note. Please try again.']);
     } finally {
       setIsGenerating(false);
     }
@@ -513,16 +513,39 @@ export default function IntakeAssessmentForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate required fields
+    if (!chiefComplaint || !presentingProblem) {
+      setAiWarnings(['Please fill in Chief Complaint and Presenting Problem before submitting.']);
+      return;
+    }
+
+    if (!assessment || !plan) {
+      setAiWarnings(['Please fill in Clinical Assessment and Plan sections before submitting.']);
+      return;
+    }
+
+    if (!Array.isArray(diagnosisCodes) || diagnosisCodes.length === 0) {
+      setAiWarnings(['Please add at least one diagnosis code (ICD-10) before submitting.']);
+      return;
+    }
+
+    if (!treatmentRecommendations) {
+      setAiWarnings(['Please fill in Treatment Recommendations before submitting.']);
+      return;
+    }
+
     // Build symptoms summary
-    const symptomsPresent = selectedSymptoms
-      .map((symptom) => {
-        let text = `${symptom.label}: ${symptom.severity}`;
-        if (symptom.extra && symptom.extra !== 'N/A') {
-          text += ` (${symptom.extra})`;
-        }
-        return text;
-      })
-      .join('\n');
+    const symptomsPresent = Array.isArray(selectedSymptoms)
+      ? selectedSymptoms
+        .map((symptom) => {
+          let text = `${symptom.label}: ${symptom.severity}`;
+          if (symptom.extra && symptom.extra !== 'N/A') {
+            text += ` (${symptom.extra})`;
+          }
+          return text;
+        })
+        .join('\n')
+      : '';
 
     // Build MSE summary
     const mseAppearance = `Grooming: ${grooming}, Hygiene: ${hygiene}, Dress: ${dress}`;
@@ -598,12 +621,45 @@ export default function IntakeAssessmentForm() {
           <p className="text-gray-600 mt-2">Comprehensive initial evaluation with V1 PRD specifications</p>
         </div>
 
-        {/* Error Display */}
+        {/* Client ID Validation */}
+        {!clientId && (
+          <div className="mb-6 bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-red-700">Error: No client ID found. Please select a client first.</p>
+            </div>
+          </div>
+        )}
+
+        {/* AI Warnings */}
+        {aiWarnings.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                {aiWarnings.map((warning, index) => (
+                  <p key={index} className="text-sm text-yellow-700">{warning}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save Mutation Error */}
         {saveMutation.isError && (
           <div className="mb-6 bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-red-700">
-              {(saveMutation.error as any)?.response?.data?.message || 'Failed to save intake assessment'}
-            </p>
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-red-700">
+                {(saveMutation.error as any)?.response?.data?.message || 'Failed to save intake assessment'}
+              </p>
+            </div>
           </div>
         )}
 

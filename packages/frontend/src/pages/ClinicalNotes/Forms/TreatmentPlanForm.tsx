@@ -223,10 +223,10 @@ export default function TreatmentPlanForm() {
         noteType: 'Treatment Plan',
         transcript: sessionNotes,
         clientInfo: {
-          firstName: 'Client',
-          lastName: '',
-          age: undefined,
-          diagnoses: [],
+          firstName: clientData?.firstName || 'Client',
+          lastName: clientData?.lastName || '',
+          age: clientData?.dateOfBirth ? new Date().getFullYear() - new Date(clientData.dateOfBirth).getFullYear() : undefined,
+          diagnoses: diagnosisCodes || [],
           presentingProblems: [],
         },
       });
@@ -237,7 +237,7 @@ export default function TreatmentPlanForm() {
       setShowReviewModal(true);
     } catch (error) {
       console.error('AI generation error:', error);
-      alert('Failed to generate note. Please try again.');
+      setAiWarnings(['Failed to generate note. Please try again.']);
     } finally {
       setIsGenerating(false);
     }
@@ -282,15 +282,47 @@ export default function TreatmentPlanForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const goalsText = goals
-      .filter(g => g.goal.trim())
-      .map((g, i) => {
-        const objectivesText = g.objectives.filter(o => o.trim()).map((o, idx) => `  Objective ${idx + 1}: ${o}`).join('\n');
-        return `Goal ${i + 1}: ${g.goal}\nProgress: ${g.progress}\nTarget Date: ${g.targetDate || 'Not specified'}\nObjectives:\n${objectivesText}`;
-      })
-      .join('\n\n');
+    // Validate required fields
+    if (!Array.isArray(goals) || goals.length === 0 || !goals[0].goal.trim()) {
+      setAiWarnings(['Please add at least one treatment goal before submitting.']);
+      return;
+    }
 
-    const modalityText = treatmentModality.length > 0 ? treatmentModality.join(', ') : 'Not specified';
+    if (!Array.isArray(treatmentModality) || treatmentModality.length === 0) {
+      setAiWarnings(['Please select at least one treatment modality before submitting.']);
+      return;
+    }
+
+    if (!sessionDuration || !frequency || !treatmentSetting || !estimatedDuration) {
+      setAiWarnings(['Please fill in all treatment details (Duration, Frequency, Setting, Estimated Duration) before submitting.']);
+      return;
+    }
+
+    if (!dischargeCriteria) {
+      setAiWarnings(['Please specify discharge criteria before submitting.']);
+      return;
+    }
+
+    if (!Array.isArray(diagnosisCodes) || diagnosisCodes.length === 0) {
+      setAiWarnings(['Please add at least one diagnosis code (ICD-10) before submitting.']);
+      return;
+    }
+
+    const goalsText = Array.isArray(goals)
+      ? goals
+        .filter(g => g.goal.trim())
+        .map((g, i) => {
+          const objectivesText = Array.isArray(g.objectives)
+            ? g.objectives.filter(o => o.trim()).map((o, idx) => `  Objective ${idx + 1}: ${o}`).join('\n')
+            : '';
+          return `Goal ${i + 1}: ${g.goal}\nProgress: ${g.progress}\nTarget Date: ${g.targetDate || 'Not specified'}\nObjectives:\n${objectivesText}`;
+        })
+        .join('\n\n')
+      : '';
+
+    const modalityText = Array.isArray(treatmentModality) && treatmentModality.length > 0
+      ? treatmentModality.join(', ')
+      : 'Not specified';
 
     const data = {
       clientId,
@@ -335,12 +367,69 @@ export default function TreatmentPlanForm() {
           <p className="text-gray-600 mt-2">Formal treatment planning and goal setting</p>
         </div>
 
-        {/* Error Display */}
+        {/* Client ID Validation */}
+        {!clientId && (
+          <div className="mb-6 bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-red-700">Error: No client ID found. Please select a client first.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Diagnosis Validation Error */}
+        {diagnosisValidationMessage && (
+          <div className="mb-6 bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-red-700">{diagnosisValidationMessage}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Cannot Sign Warning */}
+        {!canSign && (
+          <div className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-yellow-700">Warning: This note cannot be signed until diagnosis validation requirements are met.</p>
+            </div>
+          </div>
+        )}
+
+        {/* AI Warnings */}
+        {aiWarnings.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                {aiWarnings.map((warning, index) => (
+                  <p key={index} className="text-sm text-yellow-700">{warning}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save Mutation Error */}
         {saveMutation.isError && (
           <div className="mb-6 bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-red-700">
-              {(saveMutation.error as any)?.response?.data?.message || 'Failed to save treatment plan'}
-            </p>
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-red-700">
+                {(saveMutation.error as any)?.response?.data?.message || 'Failed to save treatment plan'}
+              </p>
+            </div>
           </div>
         )}
 

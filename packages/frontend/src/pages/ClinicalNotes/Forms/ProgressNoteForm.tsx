@@ -303,10 +303,10 @@ export default function ProgressNoteForm() {
         noteType: 'Progress Note',
         transcript: sessionNotes,
         clientInfo: {
-          firstName: 'Client',
-          lastName: '',
-          age: undefined,
-          diagnoses: [],
+          firstName: clientData?.firstName || 'Client',
+          lastName: clientData?.lastName || '',
+          age: clientData?.dateOfBirth ? new Date().getFullYear() - new Date(clientData.dateOfBirth).getFullYear() : undefined,
+          diagnoses: diagnosisCodes || [],
           presentingProblems: [],
         },
       });
@@ -317,7 +317,7 @@ export default function ProgressNoteForm() {
       setShowReviewModal(true);
     } catch (error) {
       console.error('AI generation error:', error);
-      alert('Failed to generate note. Please try again.');
+      setAiWarnings(['Failed to generate note. Please try again.']);
     } finally {
       setIsGenerating(false);
     }
@@ -366,6 +366,22 @@ export default function ProgressNoteForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate required fields
+    if (!subjective || !objective || !assessment || !plan) {
+      setAiWarnings(['Please fill in all required SOAP fields (Subjective, Objective, Assessment, Plan) before submitting.']);
+      return;
+    }
+
+    if (!engagementLevel || !responseToInterventions) {
+      setAiWarnings(['Please fill in all required Client Response fields before submitting.']);
+      return;
+    }
+
+    if (!cptCode) {
+      setAiWarnings(['Please select a CPT Code before submitting.']);
+      return;
+    }
+
     const selectedInterventions = Object.entries(interventionsUsed)
       .filter(([_, checked]) => checked)
       .map(([intervention]) => intervention);
@@ -383,7 +399,7 @@ export default function ProgressNoteForm() {
       sessionType,
       location,
       symptoms,
-      goals,
+      goals: Array.isArray(goals) ? goals : [],
       appearance,
       mood,
       affect,
@@ -400,7 +416,7 @@ export default function ProgressNoteForm() {
       objective,
       assessment,
       plan,
-      diagnosisCodes,
+      diagnosisCodes: Array.isArray(diagnosisCodes) ? diagnosisCodes : [],
       safetyPlanReviewed: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanReviewed : undefined,
       safetyPlanUpdated: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanUpdated : undefined,
       cptCode,
@@ -432,12 +448,69 @@ export default function ProgressNoteForm() {
           <p className="text-gray-600 mt-2">Session progress and treatment updates</p>
         </div>
 
-        {/* Error Display */}
+        {/* Client ID Validation */}
+        {!clientId && (
+          <div className="mb-6 bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-red-700">Error: No client ID found. Please select a client first.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Diagnosis Validation Error */}
+        {diagnosisValidationMessage && (
+          <div className="mb-6 bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-red-700">{diagnosisValidationMessage}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Cannot Sign Warning */}
+        {!canSign && (
+          <div className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-yellow-700">Warning: This note cannot be signed until diagnosis validation requirements are met.</p>
+            </div>
+          </div>
+        )}
+
+        {/* AI Warnings */}
+        {aiWarnings.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                {aiWarnings.map((warning, index) => (
+                  <p key={index} className="text-sm text-yellow-700">{warning}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save Mutation Error */}
         {saveMutation.isError && (
           <div className="mb-6 bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-red-700">
-              {(saveMutation.error as any)?.response?.data?.message || 'Failed to save progress note'}
-            </p>
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-semibold text-red-700">
+                {(saveMutation.error as any)?.response?.data?.message || 'Failed to save progress note'}
+              </p>
+            </div>
           </div>
         )}
 
@@ -523,7 +596,7 @@ export default function ProgressNoteForm() {
           {/* Progress Toward Goals */}
           <FormSection title="Progress Toward Goals" number={2}>
             <div className="space-y-6">
-              {goals.map((goal, index) => (
+              {Array.isArray(goals) && goals.map((goal, index) => (
                 <div key={index} className="p-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-gray-800">Goal {index + 1}</h3>
@@ -732,18 +805,14 @@ export default function ProgressNoteForm() {
           </FormSection>
 
           {/* Safety & Risk */}
-          <FormSection title="Safety & Risk" number={7}>
+          <FormSection title="Safety & Risk Management" number={7}>
             <div className="space-y-6">
-              <SelectField
-                label="Risk Level"
-                value={riskLevel}
-                onChange={setRiskLevel}
-                options={RISK_LEVELS.map(level => ({ value: level, label: level }))}
-                required
-              />
+              <p className="text-sm text-gray-600 mb-2">
+                Note: Risk Level already assessed in Mental Status section above. Use this section for safety planning if moderate/high risk was identified.
+              </p>
               {(riskLevel === 'Moderate' || riskLevel === 'High') && (
                 <div className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-xl">
-                  <p className="text-sm font-semibold text-gray-700 mb-4">Safety Plan Management</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-4">Safety Plan Management Required</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <CheckboxField
                       label="Safety Plan Reviewed"
@@ -756,6 +825,11 @@ export default function ProgressNoteForm() {
                       onChange={setSafetyPlanUpdated}
                     />
                   </div>
+                </div>
+              )}
+              {riskLevel !== 'Moderate' && riskLevel !== 'High' && (
+                <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-xl">
+                  <p className="text-sm text-green-700">No immediate safety concerns identified based on current risk level assessment.</p>
                 </div>
               )}
             </div>
