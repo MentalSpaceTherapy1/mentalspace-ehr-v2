@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 import TimePicker from '../../components/TimePicker';
 
@@ -69,10 +69,7 @@ export default function ClinicianSchedule() {
   const { data: clinicians } = useQuery({
     queryKey: ['clinicians'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/users?role=CLINICIAN', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/users?role=CLINICIAN');
       return response.data.data;
     },
   });
@@ -82,10 +79,7 @@ export default function ClinicianSchedule() {
     queryKey: ['clinicianSchedule', selectedClinicianId],
     enabled: !!selectedClinicianId,
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`/clinician-schedules/${selectedClinicianId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/clinician-schedules/${selectedClinicianId}`);
       return response.data.data;
     },
     onSuccess: (data) => {
@@ -108,10 +102,7 @@ export default function ClinicianSchedule() {
   // Save schedule mutation
   const saveScheduleMutation = useMutation({
     mutationFn: async (data: ScheduleData) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/clinician-schedules', data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.post('/clinician-schedules', data);
       return response.data;
     },
     onSuccess: () => {

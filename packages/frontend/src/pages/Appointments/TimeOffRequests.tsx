@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface ScheduleException {
@@ -42,10 +42,7 @@ export default function TimeOffRequests() {
   const { data: clinicians } = useQuery({
     queryKey: ['clinicians'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/users?role=CLINICIAN', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/users?role=CLINICIAN');
       return response.data.data;
     },
   });
@@ -55,13 +52,7 @@ export default function TimeOffRequests() {
     queryKey: ['scheduleExceptions', selectedClinicianId],
     enabled: !!selectedClinicianId,
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `/clinician-schedules/${selectedClinicianId}/exceptions`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.get(`/clinician-schedules/${selectedClinicianId}/exceptions`);
       return response.data.data;
     },
   });
@@ -69,10 +60,7 @@ export default function TimeOffRequests() {
   // Create exception mutation
   const createExceptionMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/clinician-schedules/exceptions', data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.post('/clinician-schedules/exceptions', data);
       return response.data;
     },
     onSuccess: () => {
@@ -89,14 +77,7 @@ export default function TimeOffRequests() {
   // Approve exception mutation
   const approveExceptionMutation = useMutation({
     mutationFn: async (exceptionId: string) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `/clinician-schedules/exceptions/${exceptionId}/approve`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.post(`/clinician-schedules/exceptions/${exceptionId}/approve`, {});
       return response.data;
     },
     onSuccess: () => {
@@ -111,14 +92,7 @@ export default function TimeOffRequests() {
   // Deny exception mutation
   const denyExceptionMutation = useMutation({
     mutationFn: async ({ exceptionId, denialReason }: { exceptionId: string; denialReason: string }) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `/clinician-schedules/exceptions/${exceptionId}/deny`,
-        { denialReason },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.post(`/clinician-schedules/exceptions/${exceptionId}/deny`, { denialReason });
       return response.data;
     },
     onSuccess: () => {
@@ -133,13 +107,7 @@ export default function TimeOffRequests() {
   // Delete exception mutation
   const deleteExceptionMutation = useMutation({
     mutationFn: async (exceptionId: string) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete(
-        `/clinician-schedules/exceptions/${exceptionId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.delete(`/clinician-schedules/exceptions/${exceptionId}`);
       return response.data;
     },
     onSuccess: () => {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -50,14 +50,11 @@ export default function Waitlist() {
   const { data: waitlistData, isLoading } = useQuery({
     queryKey: ['waitlist', filterStatus, filterPriority],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (filterStatus) params.append('status', filterStatus);
       if (filterPriority) params.append('priority', filterPriority);
 
-      const response = await axios.get(`/waitlist?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/waitlist?${params.toString()}`);
       return response.data.data;
     },
   });
@@ -66,10 +63,7 @@ export default function Waitlist() {
   const { data: clients } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/clients', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/clients');
       return response.data.data;
     },
   });
@@ -78,10 +72,7 @@ export default function Waitlist() {
   const { data: clinicians } = useQuery({
     queryKey: ['clinicians'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/users?role=CLINICIAN', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/users?role=CLINICIAN');
       return response.data.data;
     },
   });
@@ -89,13 +80,7 @@ export default function Waitlist() {
   // Find available slots mutation
   const findSlotsMutation = useMutation({
     mutationFn: async (entryId: string) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `/waitlist/${entryId}/available-slots?daysAhead=14`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.get(`/waitlist/${entryId}/available-slots?daysAhead=14`);
       return response.data.data;
     },
     onSuccess: (data) => {
@@ -110,8 +95,7 @@ export default function Waitlist() {
   // Book appointment mutation
   const bookMutation = useMutation({
     mutationFn: async ({ entryId, slot }: { entryId: string; slot: AvailableSlot }) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
+      const response = await api.post(
         `/waitlist/${entryId}/book`,
         {
           clinicianId: slot.clinicianId,
@@ -122,9 +106,6 @@ export default function Waitlist() {
           serviceLocation: 'Office',
           serviceCodeId: 'placeholder-uuid', // TODO: Select from service codes
           timezone: 'America/New_York',
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
       return response.data;
@@ -143,14 +124,7 @@ export default function Waitlist() {
   // Update priority mutation
   const updatePriorityMutation = useMutation({
     mutationFn: async ({ entryId, priority }: { entryId: string; priority: string }) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.patch(
-        `/waitlist/${entryId}/priority`,
-        { priority },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.patch(`/waitlist/${entryId}/priority`, { priority });
       return response.data;
     },
     onSuccess: () => {
@@ -165,9 +139,7 @@ export default function Waitlist() {
   // Remove from waitlist mutation
   const removeMutation = useMutation({
     mutationFn: async ({ entryId, reason }: { entryId: string; reason: string }) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete(`/waitlist/${entryId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.delete(`/waitlist/${entryId}`, {
         data: { reason },
       });
       return response.data;

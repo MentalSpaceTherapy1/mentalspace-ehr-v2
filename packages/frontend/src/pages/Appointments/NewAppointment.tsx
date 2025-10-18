@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import TimePicker from '../../components/TimePicker';
 
 export default function NewAppointment() {
@@ -36,12 +36,9 @@ export default function NewAppointment() {
   const { data: clients } = useQuery({
     queryKey: ['clients', clientSearch],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (clientSearch) params.append('search', clientSearch);
-      const response = await axios.get(`/clients?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/clients?${params.toString()}`);
       return response.data.data;
     },
     enabled: clientSearch.length > 2,
@@ -51,10 +48,7 @@ export default function NewAppointment() {
   const { data: clinicians } = useQuery({
     queryKey: ['clinicians'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/users');
       return response.data.data.filter((user: any) => ['CLINICIAN', 'SUPERVISOR'].includes(user.role));
     },
   });
@@ -63,10 +57,7 @@ export default function NewAppointment() {
   const { data: serviceCodes } = useQuery({
     queryKey: ['serviceCodes'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/service-codes', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/service-codes');
       return response.data.data;
     },
   });
@@ -86,10 +77,7 @@ export default function NewAppointment() {
   // Create appointment mutation
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/appointments', data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.post('/appointments', data);
       return response.data;
     },
     onSuccess: () => {
@@ -110,10 +98,7 @@ export default function NewAppointment() {
   // Create recurring appointment mutation
   const createRecurringMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/appointments/recurring', data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.post('/appointments/recurring', data);
       return response.data;
     },
     onSuccess: (data) => {

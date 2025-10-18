@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -60,15 +60,12 @@ export default function AppointmentsCalendar() {
   const { data: appointments, isLoading } = useQuery({
     queryKey: ['appointments', filters],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (filters.clinicianId) params.append('clinicianId', filters.clinicianId);
       if (filters.status) params.append('status', filters.status);
       if (filters.appointmentType) params.append('appointmentType', filters.appointmentType);
 
-      const response = await axios.get(`/appointments?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/appointments?${params.toString()}`);
       return response.data.data;
     },
   });
@@ -77,10 +74,7 @@ export default function AppointmentsCalendar() {
   const { data: clinicians } = useQuery({
     queryKey: ['clinicians'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/users?role=CLINICIAN', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/users?role=CLINICIAN');
       return response.data.data;
     },
   });
@@ -113,10 +107,29 @@ export default function AppointmentsCalendar() {
   // Mutation for updating appointment status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const token = localStorage.getItem('token');
-      await axios.put(`/appointments/${id}`, { status }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.put(`/appointments/${id}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      setIsDetailModalOpen(false);
+    },
+  });
+
+  // Check-in mutation
+  const checkInMutation = useMutation({
+    mutationFn: async ({ id, checkedInTime }: { id: string; checkedInTime: string }) => {
+      await api.post(`/appointments/${id}/check-in`, { checkedInTime });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      setIsDetailModalOpen(false);
+    },
+  });
+
+  // Check-out mutation
+  const checkOutMutation = useMutation({
+    mutationFn: async ({ id, checkedOutTime }: { id: string; checkedOutTime: string }) => {
+      await api.post(`/appointments/${id}/check-out`, { checkedOutTime });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
@@ -129,15 +142,7 @@ export default function AppointmentsCalendar() {
     if (selectedAppointment) {
       const now = new Date();
       const checkedInTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-      axios.post(`/appointments/${selectedAppointment.id}/check-in`, {
-        checkedInTime,
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      }).then(() => {
-        queryClient.invalidateQueries({ queryKey: ['appointments'] });
-        setIsDetailModalOpen(false);
-      });
+      checkInMutation.mutate({ id: selectedAppointment.id, checkedInTime });
     }
   };
 
@@ -145,15 +150,7 @@ export default function AppointmentsCalendar() {
     if (selectedAppointment) {
       const now = new Date();
       const checkedOutTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-      axios.post(`/appointments/${selectedAppointment.id}/check-out`, {
-        checkedOutTime,
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      }).then(() => {
-        queryClient.invalidateQueries({ queryKey: ['appointments'] });
-        setIsDetailModalOpen(false);
-      });
+      checkOutMutation.mutate({ id: selectedAppointment.id, checkedOutTime });
     }
   };
 
