@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface Message {
@@ -43,8 +43,7 @@ export default function PortalMessages() {
   const fetchMessages = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/messages', {
+      const response = await api.get('/portal/messages'
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -68,8 +67,7 @@ export default function PortalMessages() {
 
   const fetchThreadMessages = async (threadId: string) => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get(`/portal/messages/thread/${threadId}`, {
+      const response = await api.get(`/portal/messages/thread/${threadId}`
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -89,14 +87,12 @@ export default function PortalMessages() {
 
     try {
       setIsSending(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/messages',
         {
           subject: newSubject,
           message: newMessage,
           priority: newPriority,
-        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -123,13 +119,12 @@ export default function PortalMessages() {
 
     try {
       setIsSending(true);
-      const token = localStorage.getItem('portalToken');
 
       // Find the original message in the thread
       const originalMessage = threadMessages[0];
       if (!originalMessage) return;
 
-      const response = await axios.post(
+      const response = await api.post(
         `/portal/messages/${originalMessage.id}/reply`,
         { message: replyText },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -150,8 +145,7 @@ export default function PortalMessages() {
 
   const handleMarkAsRead = async (messageId: string) => {
     try {
-      const token = localStorage.getItem('portalToken');
-      await axios.post(
+      await api.post(
         `/portal/messages/${messageId}/read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
@@ -177,7 +171,7 @@ export default function PortalMessages() {
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-      return date.toLocaleTimeString('en-US', {
+      return date.toLocaleTimeString('en-US'
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
@@ -185,7 +179,7 @@ export default function PortalMessages() {
     } else if (diffInHours < 48) {
       return 'Yesterday';
     } else {
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString('en-US'
         month: 'short',
         day: 'numeric',
       });
@@ -388,7 +382,7 @@ export default function PortalMessages() {
                             msg.sentByClient ? 'text-white/70' : 'text-gray-500'
                           }`}
                         >
-                          {new Date(msg.createdAt).toLocaleString('en-US', {
+                          {new Date(msg.createdAt).toLocaleString('en-US'
                             month: 'short',
                             day: 'numeric',
                             hour: 'numeric',

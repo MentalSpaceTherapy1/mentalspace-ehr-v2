@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface BalanceInfo {
@@ -52,8 +52,7 @@ export default function PortalBilling() {
 
   const fetchBalanceInfo = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/billing/balance', {
+      const response = await api.get('/portal/billing/balance'
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -76,8 +75,7 @@ export default function PortalBilling() {
   const fetchCharges = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/billing/charges', {
+      const response = await api.get('/portal/billing/charges'
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -93,8 +91,7 @@ export default function PortalBilling() {
 
   const fetchPayments = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/billing/payments', {
+      const response = await api.get('/portal/billing/payments'
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -120,13 +117,11 @@ export default function PortalBilling() {
 
     try {
       setIsProcessing(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/billing/payments',
         {
           amount,
           paymentMethod,
-        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -158,14 +153,14 @@ export default function PortalBilling() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-US'
       style: 'currency',
       currency: 'USD',
     }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US'
       month: 'short',
       day: 'numeric',
       year: 'numeric',

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface AppointmentType {
@@ -62,8 +62,7 @@ export default function PortalAppointmentRequest() {
 
   const fetchAppointmentTypes = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/appointments/types', {
+      const response = await api.get('/portal/appointments/types'
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -79,8 +78,7 @@ export default function PortalAppointmentRequest() {
 
   const fetchRequestedAppointments = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/appointments/requested', {
+      const response = await api.get('/portal/appointments/requested'
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -95,17 +93,15 @@ export default function PortalAppointmentRequest() {
     if (!selectedDate) return;
 
     try {
-      const token = localStorage.getItem('portalToken');
       const startDate = new Date(selectedDate);
       startDate.setHours(0, 0, 0, 0);
       const endDate = new Date(selectedDate);
       endDate.setHours(23, 59, 59, 999);
 
-      const response = await axios.get('/portal/appointments/availability', {
+      const response = await api.get('/portal/appointments/availability'
         params: {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
-        },
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -175,12 +171,11 @@ export default function PortalAppointmentRequest() {
 
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
 
       const selectedTypeObj = appointmentTypes.find((t) => t.value === selectedType);
       const duration = selectedTypeObj?.duration || 60;
 
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/appointments/request',
         {
           appointmentDate: selectedDate.toISOString().split('T')[0],
@@ -189,7 +184,6 @@ export default function PortalAppointmentRequest() {
           appointmentType: selectedType,
           appointmentNotes: notes,
           preferredModality: 'TELEHEALTH',
-        },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -216,8 +210,7 @@ export default function PortalAppointmentRequest() {
 
   const handleCancelRequest = async (appointmentId: string) => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.delete(
+      const response = await api.delete(
         `/portal/appointments/request/${appointmentId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -258,7 +251,7 @@ export default function PortalAppointmentRequest() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-US'
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -291,7 +284,7 @@ export default function PortalAppointmentRequest() {
   };
 
   const days = getDaysInMonth(currentMonth);
-  const monthYear = currentMonth.toLocaleDateString('en-US', {
+  const monthYear = currentMonth.toLocaleDateString('en-US'
     month: 'long',
     year: 'numeric',
   });
@@ -338,7 +331,7 @@ export default function PortalAppointmentRequest() {
               <div key={apt.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div>
                   <p className="font-medium text-gray-900">
-                    {new Date(apt.appointmentDate).toLocaleDateString('en-US', {
+                    {new Date(apt.appointmentDate).toLocaleDateString('en-US'
                       weekday: 'short',
                       month: 'short',
                       day: 'numeric',

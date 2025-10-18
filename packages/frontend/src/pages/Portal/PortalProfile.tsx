@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface ClientProfile {
@@ -69,8 +69,7 @@ export default function PortalProfile() {
   const fetchProfile = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/profile', {
+      const response = await api.get('/portal/profile'
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -107,8 +106,7 @@ export default function PortalProfile() {
 
   const fetchAccountSettings = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/account/settings', {
+      const response = await api.get('/portal/account/settings'
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -133,8 +131,7 @@ export default function PortalProfile() {
 
     try {
       setIsSaving(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.put(
+      const response = await api.put(
         '/portal/profile',
         {
           firstName,
@@ -148,7 +145,6 @@ export default function PortalProfile() {
           emergencyContactName,
           emergencyContactPhone,
           emergencyContactRelationship,
-        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -175,15 +171,13 @@ export default function PortalProfile() {
   const handleUpdateNotifications = async () => {
     try {
       setIsSaving(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.put(
+      const response = await api.put(
         '/portal/account/notifications',
         {
           emailNotifications,
           smsNotifications,
           appointmentReminders,
           sessionSummaries,
-        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -216,13 +210,11 @@ export default function PortalProfile() {
 
     try {
       setIsSaving(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/account/change-password',
         {
           currentPassword,
           newPassword,
-        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

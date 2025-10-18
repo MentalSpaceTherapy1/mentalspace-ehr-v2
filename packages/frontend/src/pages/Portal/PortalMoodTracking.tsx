@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface MoodEntry {
@@ -52,7 +52,6 @@ export default function PortalMoodTracking() {
   const fetchMoodEntries = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
       const params = new URLSearchParams();
 
       if (selectedPeriod === 'week') {
@@ -61,7 +60,7 @@ export default function PortalMoodTracking() {
         params.append('days', '30');
       }
 
-      const response = await axios.get(`/portal/mood-entries?${params.toString()}`, {
+      const response = await api.get(`/portal/mood-entries?${params.toString()}`
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -91,8 +90,7 @@ export default function PortalMoodTracking() {
 
     try {
       setIsSaving(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/mood-entries',
         {
           moodScore,
@@ -101,7 +99,6 @@ export default function PortalMoodTracking() {
           activities,
           sleepHours,
           stressLevel,
-        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -175,7 +172,7 @@ export default function PortalMoodTracking() {
     } else if (diffInHours < 48) {
       return 'Yesterday';
     } else {
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString('en-US'
         month: 'short',
         day: 'numeric',
         year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
@@ -322,7 +319,7 @@ export default function PortalMoodTracking() {
                         <span className="text-sm text-gray-500">{entry.timeOfDay}</span>
                       </div>
                       <p className="text-sm text-gray-600">
-                        {formatDate(entry.entryDate)} at {new Date(entry.entryDate).toLocaleTimeString('en-US', {
+                        {formatDate(entry.entryDate)} at {new Date(entry.entryDate).toLocaleTimeString('en-US'
                           hour: 'numeric',
                           minute: '2-digit',
                           hour12: true,

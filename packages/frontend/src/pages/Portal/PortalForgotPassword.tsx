@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 export default function PortalForgotPassword() {
@@ -13,7 +13,7 @@ export default function PortalForgotPassword() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/portal-auth/forgot-password', {
+      const response = await api.post('/portal-auth/forgot-password'
         email,
       });
 

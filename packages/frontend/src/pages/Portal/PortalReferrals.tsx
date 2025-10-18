@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface Referral {
@@ -49,8 +49,7 @@ export default function PortalReferrals() {
   const fetchReferrals = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/referrals', {
+      const response = await api.get('/portal/referrals'
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -65,8 +64,7 @@ export default function PortalReferrals() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/referrals/stats', {
+      const response = await api.get('/portal/referrals/stats'
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
@@ -87,9 +85,8 @@ export default function PortalReferrals() {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem('portalToken');
 
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/referrals',
         {
           referredPersonName,
@@ -98,7 +95,6 @@ export default function PortalReferrals() {
           relationship: relationship || undefined,
           referralReason: referralReason || undefined,
           additionalNotes: additionalNotes || undefined,
-        },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -148,7 +144,7 @@ export default function PortalReferrals() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US'
       month: 'short',
       day: 'numeric',
       year: 'numeric',
