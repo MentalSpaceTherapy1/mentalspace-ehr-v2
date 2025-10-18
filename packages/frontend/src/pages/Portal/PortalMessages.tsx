@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface Message {
@@ -43,9 +43,7 @@ export default function PortalMessages() {
   const fetchMessages = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/messages', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/portal/messages', {
       });
 
       if (response.data.success) {
@@ -68,9 +66,7 @@ export default function PortalMessages() {
 
   const fetchThreadMessages = async (threadId: string) => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get(`/portal/messages/thread/${threadId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/portal/messages/thread/${threadId}`, {
       });
 
       if (response.data.success) {
@@ -89,15 +85,13 @@ export default function PortalMessages() {
 
     try {
       setIsSending(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/messages',
         {
           subject: newSubject,
           message: newMessage,
           priority: newPriority,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {
@@ -123,16 +117,14 @@ export default function PortalMessages() {
 
     try {
       setIsSending(true);
-      const token = localStorage.getItem('portalToken');
 
       // Find the original message in the thread
       const originalMessage = threadMessages[0];
       if (!originalMessage) return;
 
-      const response = await axios.post(
+      const response = await api.post(
         `/portal/messages/${originalMessage.id}/reply`,
         { message: replyText },
-        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {
@@ -150,11 +142,9 @@ export default function PortalMessages() {
 
   const handleMarkAsRead = async (messageId: string) => {
     try {
-      const token = localStorage.getItem('portalToken');
-      await axios.post(
+      await api.post(
         `/portal/messages/${messageId}/read`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchMessages();
     } catch (error: any) {

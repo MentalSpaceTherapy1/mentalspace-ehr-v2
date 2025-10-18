@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface MoodEntry {
@@ -52,7 +52,6 @@ export default function PortalMoodTracking() {
   const fetchMoodEntries = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
       const params = new URLSearchParams();
 
       if (selectedPeriod === 'week') {
@@ -61,8 +60,7 @@ export default function PortalMoodTracking() {
         params.append('days', '30');
       }
 
-      const response = await axios.get(`/portal/mood-entries?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/portal/mood-entries?${params.toString()}`, {
       });
 
       if (response.data.success) {
@@ -91,8 +89,7 @@ export default function PortalMoodTracking() {
 
     try {
       setIsSaving(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/mood-entries',
         {
           moodScore,
@@ -102,7 +99,6 @@ export default function PortalMoodTracking() {
           sleepHours,
           stressLevel,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {

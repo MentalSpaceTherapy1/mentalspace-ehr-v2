@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface Referral {
@@ -49,9 +49,7 @@ export default function PortalReferrals() {
   const fetchReferrals = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/referrals', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/portal/referrals', {
       });
       if (response.data.success) {
         setReferrals(response.data.data);
@@ -65,9 +63,7 @@ export default function PortalReferrals() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/referrals/stats', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/portal/referrals/stats', {
       });
       if (response.data.success) {
         setStats(response.data.data);
@@ -87,9 +83,8 @@ export default function PortalReferrals() {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem('portalToken');
 
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/referrals',
         {
           referredPersonName,
@@ -100,7 +95,6 @@ export default function PortalReferrals() {
           additionalNotes: additionalNotes || undefined,
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 

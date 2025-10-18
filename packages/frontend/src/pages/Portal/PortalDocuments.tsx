@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface FormAssignment {
@@ -43,18 +43,15 @@ export default function PortalDocuments() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
 
       if (activeTab === 'forms') {
-        const response = await axios.get('/portal/forms/assignments', {
-          headers: { Authorization: `Bearer ${token}` },
+        const response = await api.get('/portal/forms/assignments', {
         });
         if (response.data.success) {
           setFormAssignments(response.data.data);
         }
       } else {
-        const response = await axios.get('/portal/documents/shared', {
-          headers: { Authorization: `Bearer ${token}` },
+        const response = await api.get('/portal/documents/shared', {
         });
         if (response.data.success) {
           setSharedDocuments(response.data.data);
@@ -78,9 +75,7 @@ export default function PortalDocuments() {
 
   const handleDocumentView = async (document: SharedDocument) => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get(`/portal/documents/${document.id}/download`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/portal/documents/${document.id}/download`, {
         responseType: 'blob',
       });
 
@@ -107,13 +102,12 @@ export default function PortalDocuments() {
 
     try {
       setUploadingFile(true);
-      const token = localStorage.getItem('portalToken');
       const formData = new FormData();
       formData.append('file', file);
       formData.append('documentType', 'CLIENT_UPLOAD');
       formData.append('documentName', file.name);
 
-      await axios.post('/portal/documents/upload', formData, {
+      await api.post('/portal/documents/upload', formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',

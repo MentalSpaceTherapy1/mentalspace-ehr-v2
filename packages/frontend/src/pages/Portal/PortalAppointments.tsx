@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface Appointment {
@@ -44,18 +44,15 @@ export default function PortalAppointments() {
   const fetchAppointments = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
 
       if (activeTab === 'upcoming') {
-        const response = await axios.get('/portal/appointments/upcoming?limit=20', {
-          headers: { Authorization: `Bearer ${token}` },
+        const response = await api.get('/portal/appointments/upcoming?limit=20', {
         });
         if (response.data.success) {
           setUpcomingAppointments(response.data.data);
         }
       } else {
-        const response = await axios.get('/portal/appointments/past?limit=20', {
-          headers: { Authorization: `Bearer ${token}` },
+        const response = await api.get('/portal/appointments/past?limit=20', {
         });
         if (response.data.success) {
           setPastAppointments(response.data.data);
@@ -88,11 +85,9 @@ export default function PortalAppointments() {
 
     try {
       setIsCanceling(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.post(
+      const response = await api.post(
         `/portal/appointments/${selectedAppointment.id}/cancel`,
         { reason: cancelReason },
-        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {

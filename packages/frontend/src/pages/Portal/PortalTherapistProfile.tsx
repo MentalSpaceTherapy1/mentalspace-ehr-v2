@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface TherapistProfile {
@@ -34,9 +34,7 @@ export default function PortalTherapistProfile() {
   const fetchTherapistProfile = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/therapist/profile', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/portal/therapist/profile', {
       });
       if (response.data.success) {
         setTherapist(response.data.data);

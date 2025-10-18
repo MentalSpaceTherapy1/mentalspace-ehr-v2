@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface Assessment {
@@ -32,12 +32,12 @@ export default function PortalAssessments() {
       setIsLoading(true);
 
       if (activeTab === 'pending') {
-        const response = await axios.get('/portal/assessments/pending');
+        const response = await api.get('/portal/assessments/pending');
         if (response.data.success) {
           setPendingAssessments(response.data.data);
         }
       } else {
-        const response = await axios.get('/portal/assessments/completed');
+        const response = await api.get('/portal/assessments/completed');
         if (response.data.success) {
           setCompletedAssessments(response.data.data);
         }

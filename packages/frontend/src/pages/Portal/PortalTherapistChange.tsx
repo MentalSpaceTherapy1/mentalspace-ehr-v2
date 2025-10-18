@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface Therapist {
@@ -45,9 +45,7 @@ export default function PortalTherapistChange() {
   const fetchAvailableTherapists = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/therapist/available', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/portal/therapist/available', {
       });
       if (response.data.success) {
         setAvailableTherapists(response.data.data);
@@ -61,9 +59,7 @@ export default function PortalTherapistChange() {
 
   const fetchExistingRequests = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/therapist-change-requests', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/portal/therapist-change-requests', {
       });
       if (response.data.success) {
         setExistingRequests(response.data.data);
@@ -81,9 +77,8 @@ export default function PortalTherapistChange() {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem('portalToken');
 
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/therapist-change-requests',
         {
           requestReason,
@@ -91,7 +86,6 @@ export default function PortalTherapistChange() {
           preferredNewClinicianId: selectedTherapist.id,
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -112,11 +106,9 @@ export default function PortalTherapistChange() {
 
   const handleCancelRequest = async (requestId: string) => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.delete(
+      const response = await api.delete(
         `/portal/therapist-change-requests/${requestId}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 

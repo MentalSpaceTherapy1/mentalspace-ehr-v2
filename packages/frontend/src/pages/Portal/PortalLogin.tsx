@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 export default function PortalLogin() {
@@ -14,7 +14,7 @@ export default function PortalLogin() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/portal-auth/login', {
+      const response = await api.post('/portal-auth/login', {
         email,
         password,
       });

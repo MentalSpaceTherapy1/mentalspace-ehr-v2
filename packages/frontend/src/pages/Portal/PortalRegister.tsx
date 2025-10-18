@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 export default function PortalRegister() {
@@ -31,7 +31,7 @@ export default function PortalRegister() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('/portal-auth/register', {
+      const response = await api.post('/portal-auth/register', {
         email: formData.email,
         password: formData.password,
         clientId: formData.clientId,

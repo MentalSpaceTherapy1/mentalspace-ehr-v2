@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 interface AppointmentType {
@@ -62,9 +62,7 @@ export default function PortalAppointmentRequest() {
 
   const fetchAppointmentTypes = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/appointments/types', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/portal/appointments/types', {
       });
       if (response.data.success) {
         setAppointmentTypes(response.data.data);
@@ -79,9 +77,7 @@ export default function PortalAppointmentRequest() {
 
   const fetchRequestedAppointments = async () => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.get('/portal/appointments/requested', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/portal/appointments/requested', {
       });
       if (response.data.success) {
         setRequestedAppointments(response.data.data);
@@ -95,18 +91,16 @@ export default function PortalAppointmentRequest() {
     if (!selectedDate) return;
 
     try {
-      const token = localStorage.getItem('portalToken');
       const startDate = new Date(selectedDate);
       startDate.setHours(0, 0, 0, 0);
       const endDate = new Date(selectedDate);
       endDate.setHours(23, 59, 59, 999);
 
-      const response = await axios.get('/portal/appointments/availability', {
+      const response = await api.get('/portal/appointments/availability', {
         params: {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
         },
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.data.success) {
@@ -175,12 +169,11 @@ export default function PortalAppointmentRequest() {
 
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('portalToken');
 
       const selectedTypeObj = appointmentTypes.find((t) => t.value === selectedType);
       const duration = selectedTypeObj?.duration || 60;
 
-      const response = await axios.post(
+      const response = await api.post(
         '/portal/appointments/request',
         {
           appointmentDate: selectedDate.toISOString().split('T')[0],
@@ -191,7 +184,6 @@ export default function PortalAppointmentRequest() {
           preferredModality: 'TELEHEALTH',
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -216,11 +208,9 @@ export default function PortalAppointmentRequest() {
 
   const handleCancelRequest = async (appointmentId: string) => {
     try {
-      const token = localStorage.getItem('portalToken');
-      const response = await axios.delete(
+      const response = await api.delete(
         `/portal/appointments/request/${appointmentId}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
