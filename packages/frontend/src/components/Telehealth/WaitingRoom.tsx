@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Clock, Video, Mic, Volume2 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface WaitingRoomProps {
   appointmentId: string;
@@ -19,13 +19,7 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(
-          `/telehealth/sessions/${appointmentId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const response = await api.get(`/telehealth/sessions/${appointmentId}`);
 
         // If clinician joined, session starts
         if (response.data.data.status === 'IN_PROGRESS') {

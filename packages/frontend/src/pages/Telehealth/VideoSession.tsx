@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 import Video, { Room, LocalVideoTrack, LocalAudioTrack, RemoteParticipant, RemoteTrack, RemoteTrackPublication } from 'twilio-video';
 
@@ -61,21 +61,14 @@ export default function VideoSession() {
   const { data: sessionData, isLoading, refetch } = useQuery({
     queryKey: ['telehealth-session', appointmentId],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       try {
-        const response = await axios.get(`/telehealth/sessions/${appointmentId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.get(`/telehealth/sessions/${appointmentId}`);
         return response.data.data as TelehealthSession;
       } catch (error: any) {
         // If session doesn't exist (404), create it automatically
         if (error.response?.status === 404) {
           console.log('Session not found, creating new session...');
-          const createResponse = await axios.post(
-            '/telehealth/sessions',
-            { appointmentId },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          const createResponse = await api.post('/telehealth/sessions', { appointmentId });
           return createResponse.data.data as TelehealthSession;
         }
         throw error;
@@ -88,17 +81,10 @@ export default function VideoSession() {
   // Join session mutation
   const joinMutation = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        '/telehealth/sessions/join',
-        {
-          appointmentId,
-          userRole,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.post('/telehealth/sessions/join', {
+        appointmentId,
+        userRole,
+      });
       return response.data.data;
     },
     onSuccess: async (data) => {
@@ -114,18 +100,11 @@ export default function VideoSession() {
   // End session mutation
   const endMutation = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem('token');
       if (sessionData?.id) {
-        await axios.post(
-          '/telehealth/sessions/end',
-          {
-            sessionId: sessionData.id,
-            endReason: 'Normal',
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        await api.post('/telehealth/sessions/end', {
+          sessionId: sessionData.id,
+          endReason: 'Normal',
+        });
       }
     },
     onSuccess: () => {
