@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 
 interface Charge {
@@ -34,13 +34,10 @@ export default function ChargesPage() {
   const { data: charges, isLoading } = useQuery({
     queryKey: ['charges', filters],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (filters.status) params.append('status', filters.status);
       if (filters.search) params.append('search', filters.search);
-      const response = await axios.get(`/billing/charges?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/billing/charges?${params.toString()}`);
       return response.data.data as Charge[];
     },
   });
@@ -48,10 +45,7 @@ export default function ChargesPage() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem('token');
-      await axios.delete(`/billing/charges/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/billing/charges/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['charges'] });
@@ -275,12 +269,9 @@ function CreateChargeModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   const { data: clients } = useQuery({
     queryKey: ['clients', clientSearch],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (clientSearch) params.append('search', clientSearch);
-      const response = await axios.get(`/clients?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/clients?${params.toString()}`);
       return response.data.data;
     },
     enabled: clientSearch.length > 2,
@@ -288,10 +279,7 @@ function CreateChargeModal({ onClose, onSuccess }: { onClose: () => void; onSucc
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/billing/charges', data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.post('/billing/charges', data);
       return response.data;
     },
     onSuccess: () => {
