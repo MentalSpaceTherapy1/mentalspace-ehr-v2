@@ -1,0 +1,84 @@
+{
+  "family": "mentalspace-backend-prod",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::706704660887:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::706704660887:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "mentalspace-backend",
+      "image": "706704660887.dkr.ecr.us-east-1.amazonaws.com/mentalspace-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3001,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "PORT",
+          "value": "3001"
+        },
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql://mentalspace_admin:MentalSpace2024!SecurePwd@mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432/mentalspace_ehr"
+        },
+        {
+          "name": "CORS_ORIGINS",
+          "value": "https://mentalspaceehr.com,https://www.mentalspaceehr.com"
+        },
+        {
+          "name": "JWT_SECRET",
+          "value": "121c60141ca7064a2b699d42de02b506ddd51673b8bfab6a0ed8a00beaf3b999e11c46a0304524384952ba21a1dda44432a3b2127a7d2c62e4c7c415992dcd50"
+        },
+        {
+          "name": "JWT_REFRESH_SECRET",
+          "value": "deb9ff8f7ad6747729816bade660edb03d1aedb7ca7dd5d7cf11ffb2f699f2459754ac430f748a9b49be4932239e9607954d20bbb050aad6f513db1360867679"
+        },
+        {
+          "name": "SESSION_SECRET",
+          "value": "7722efe63af3369e7d27a0f07e1845d2733cbc26b3b106c7d700dcf3c9f67cd645b4f6439a2d5bbf29520a378a815dff9c4fdfa72019ca940dbaa690ed558909"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "AWS_S3_BUCKET_FILES",
+          "value": "mentalspace-ehr-files-706704660887"
+        },
+        {
+          "name": "AWS_S3_BUCKET_VIDEOS",
+          "value": "mentalspace-ehr-videos-706704660887"
+        },
+        {
+          "name": "CLOUDFRONT_DOMAIN_VIDEOS",
+          "value": "d33wpxg6ve4byx.cloudfront.net"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/mentalspace-backend-prod",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:3001/api/v1/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

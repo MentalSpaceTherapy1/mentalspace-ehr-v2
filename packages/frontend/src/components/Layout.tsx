@@ -30,7 +30,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const navItems = [
-    { path: '/', icon: '🏠', label: 'Dashboard', color: 'from-blue-500 to-cyan-500' },
+    { path: '/dashboard', icon: '🏠', label: 'Dashboard', color: 'from-blue-500 to-cyan-500' },
     { path: '/clients', icon: '🧑‍⚕️', label: 'Clients', color: 'from-purple-500 to-pink-500' },
     { path: '/appointments', icon: '📅', label: 'Appointments', color: 'from-green-500 to-emerald-500' },
     {
@@ -55,7 +55,7 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
+    if (path === '/dashboard') return location.pathname === '/dashboard';
     // For productivity paths, check if current path starts with /productivity
     if (path.startsWith('/productivity')) {
       return location.pathname.startsWith('/productivity');

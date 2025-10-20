@@ -15,11 +15,18 @@ export default defineConfig({
   },
   server: {
     port: 5175,
+    host: '0.0.0.0', // Allow all external access
+    strictPort: false,
+    cors: true,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+    },
+    hmr: {
+      clientPort: 443, // Use HTTPS port for ngrok
+      host: 'mentalspaceehr.ngrok.app',
     },
   },
 });
