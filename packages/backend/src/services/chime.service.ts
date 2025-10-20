@@ -6,7 +6,7 @@ import {
   GetMeetingCommand,
 } from '@aws-sdk/client-chime-sdk-meetings';
 import config from '../config';
-import logger from '../utils/logger';
+import logger, { logControllerError } from '../utils/logger';
 
 // Initialize Chime SDK client
 // If credentials are provided in config, use them; otherwise use default AWS credential chain

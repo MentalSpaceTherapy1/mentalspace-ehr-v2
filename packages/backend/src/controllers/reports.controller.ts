@@ -1,7 +1,6 @@
+import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
 
 /**
  * Revenue Reports Controller
@@ -45,7 +44,7 @@ export async function getRevenueByClinicianReport(req: Request, res: Response) {
         id: true,
         firstName: true,
         lastName: true,
-        role: true,
+        roles: true,
       },
     });
 
@@ -54,8 +53,8 @@ export async function getRevenueByClinicianReport(req: Request, res: Response) {
       return {
         clinicianId: charge.providerId,
         clinicianName: clinician ? `${clinician.firstName} ${clinician.lastName}` : 'Unknown',
-        role: clinician?.role || 'Unknown',
-        totalRevenue: charge._sum.chargeAmount || 0,
+        roles: clinician?.roles || [],
+        totalRevenue: Number(charge._sum.chargeAmount || 0),
         sessionCount: charge._count.id,
         averagePerSession: charge._sum.chargeAmount && charge._count.id > 0
           ? Number(charge._sum.chargeAmount) / charge._count.id
@@ -73,7 +72,7 @@ export async function getRevenueByClinicianReport(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error generating revenue by clinician report:', error);
+    logger.error('Error generating revenue by clinician report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate revenue by clinician report',
@@ -121,7 +120,7 @@ export async function getRevenueByCPTReport(req: Request, res: Response) {
       return {
         cptCode: charge.cptCode,
         description: code?.description || 'Unknown Service',
-        totalRevenue: charge._sum.chargeAmount || 0,
+        totalRevenue: Number(charge._sum.chargeAmount || 0),
         sessionCount: charge._count.id,
         averageCharge: charge._sum.chargeAmount && charge._count.id > 0
           ? Number(charge._sum.chargeAmount) / charge._count.id
@@ -138,7 +137,7 @@ export async function getRevenueByCPTReport(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error generating revenue by CPT report:', error);
+    logger.error('Error generating revenue by CPT report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate revenue by CPT report',
@@ -213,7 +212,7 @@ export async function getRevenueByPayerReport(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error generating revenue by payer report:', error);
+    logger.error('Error generating revenue by payer report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate revenue by payer report',
@@ -262,7 +261,7 @@ export async function getPaymentCollectionReport(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error generating payment collection report:', error);
+    logger.error('Error generating payment collection report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate payment collection report',
@@ -286,7 +285,7 @@ export async function getKVRAnalysisReport(req: Request, res: Response) {
     // Get all clinicians
     const clinicians = await prisma.user.findMany({
       where: {
-        role: { in: ['CLINICIAN', 'SUPERVISOR', 'LPC', 'LPC_ASSOCIATE'] },
+        roles: { hasSome: ['CLINICIAN', 'SUPERVISOR', 'ASSOCIATE'] },
       },
     });
 
@@ -328,7 +327,7 @@ export async function getKVRAnalysisReport(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error generating KVR analysis report:', error);
+    logger.error('Error generating KVR analysis report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate KVR analysis report',
@@ -382,7 +381,7 @@ export async function getSessionsPerDayReport(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error generating sessions per day report:', error);
+    logger.error('Error generating sessions per day report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate sessions per day report',
@@ -442,7 +441,7 @@ export async function getUnsignedNotesReport(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error generating unsigned notes report:', error);
+    logger.error('Error generating unsigned notes report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate unsigned notes report',
@@ -499,7 +498,7 @@ export async function getMissingTreatmentPlansReport(req: Request, res: Response
       },
     });
   } catch (error) {
-    console.error('Error generating missing treatment plans report:', error);
+    logger.error('Error generating missing treatment plans report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate missing treatment plans report',
@@ -549,7 +548,7 @@ export async function getClientDemographicsReport(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error generating client demographics report:', error);
+    logger.error('Error generating client demographics report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate client demographics report',
@@ -604,7 +603,7 @@ export async function getReportQuickStats(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error('Error fetching quick stats:', error);
+    logger.error('Error fetching quick stats:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch quick stats',

@@ -36,7 +36,8 @@ export const getOrCreateConsent = async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
 
     const consent = await telehealthConsentService.getOrCreateTelehealthConsent({
-      ...validatedData,
+      clientId: validatedData.clientId,
+      consentType: validatedData.consentType,
       createdBy: userId,
     });
 
@@ -67,7 +68,7 @@ export const signConsent = async (req: Request, res: Response) => {
 
     const consent = await telehealthConsentService.signTelehealthConsent(
       consentId,
-      consentData,
+      consentData as any,
       userId
     );
 

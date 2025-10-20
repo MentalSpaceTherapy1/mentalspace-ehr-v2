@@ -1,11 +1,35 @@
-import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+﻿import { Request, Response } from 'express';
+import logger, { logControllerError } from '../utils/logger';
 import { z } from 'zod';
 import { auditLogger } from '../utils/logger';
 import * as recurringService from '../services/recurringAppointment.service';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
+import { Prisma } from '@mentalspace/database';
+import { applyAppointmentScope, assertCanAccessClient } from '../services/accessControl.service';
 // Fixed phoneNumber -> primaryPhone field name
+
+const ensureAppointmentAccess = async (
+  req: Request,
+  appointmentId: string,
+  options: { allowBillingView?: boolean } = {}
+) => {
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    select: { id: true, clientId: true },
+  });
+
+  if (!appointment) {
+    return null;
+  }
+
+  await assertCanAccessClient(req.user, {
+    clientId: appointment.clientId,
+    allowBillingView: options.allowBillingView,
+  });
+
+  return appointment;
+};
+
 
 // Appointment validation schemas
 const createAppointmentSchema = z.object({
@@ -52,22 +76,26 @@ const rescheduleAppointmentSchema = z.object({
   appointmentNotes: z.string().optional(), // Field for reschedule notes
 });
 
+const recurrencePatternSchema = z.object({
+  frequency: z.enum(['twice_weekly', 'weekly', 'bi_weekly', 'monthly', 'custom']),
+  daysOfWeek: z.array(z.string()).optional(),
+  endDate: z.string().optional(),
+  count: z.number().int().min(2).max(52).optional(),
+}).refine((data) => data.endDate || data.count, {
+  message: 'Either endDate or count must be provided',
+});
+
 const createRecurringAppointmentSchema = createAppointmentSchema.extend({
   isRecurring: z.literal(true),
-  recurrencePattern: z.object({
-    frequency: z.enum(['twice_weekly', 'weekly', 'bi_weekly', 'monthly', 'custom']),
-    daysOfWeek: z.array(z.string()).optional(),
-    endDate: z.string().optional(),
-    count: z.number().int().min(2).max(52).optional(),
-  }).refine((data) => data.endDate || data.count, {
-    message: 'Either endDate or count must be provided',
-  }),
+  recurrencePattern: recurrencePatternSchema,
 });
 
 // Get appointments by client ID
 export const getAppointmentsByClientId = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
+
+    await assertCanAccessClient(req.user, { clientId, allowBillingView: true });
 
     const appointments = await prisma.appointment.findMany({
       where: { clientId },
@@ -90,7 +118,7 @@ export const getAppointmentsByClientId = async (req: Request, res: Response) => 
       data: appointments,
     });
   } catch (error) {
-    console.error('Get client appointments error:', error);
+    logger.error('Get client appointments error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve client appointments',
@@ -117,23 +145,29 @@ export const getAllAppointments = async (req: Request, res: Response) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Build where clause
-    const where: any = {};
+    const baseWhere: Record<string, unknown> = {};
 
-    if (clientId) where.clientId = clientId as string;
-    if (clinicianId) where.clinicianId = clinicianId as string;
-    if (status) where.status = status as string;
-    if (appointmentType) where.appointmentType = appointmentType as string;
+    if (clientId) baseWhere.clientId = clientId as string;
+    if (clinicianId) baseWhere.clinicianId = clinicianId as string;
+    if (status) baseWhere.status = status as string;
+    if (appointmentType) baseWhere.appointmentType = appointmentType as string;
 
     if (startDate || endDate) {
-      where.appointmentDate = {};
-      if (startDate) where.appointmentDate.gte = new Date(startDate as string);
-      if (endDate) where.appointmentDate.lte = new Date(endDate as string);
+      const dateRange: Record<string, Date> = {};
+      if (startDate) {
+        dateRange.gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        dateRange.lte = new Date(endDate as string);
+      }
+      baseWhere.appointmentDate = dateRange;
     }
+
+    const scopedWhere = applyAppointmentScope(req.user, baseWhere, { allowBillingView: true });
 
     const [appointments, total] = await Promise.all([
       prisma.appointment.findMany({
-        where,
+        where: scopedWhere,
         include: {
           client: {
             select: {
@@ -158,7 +192,7 @@ export const getAllAppointments = async (req: Request, res: Response) => {
         skip,
         take: limitNum,
       }),
-      prisma.appointment.count({ where }),
+      prisma.appointment.count({ where: scopedWhere }),
     ]);
 
     res.status(200).json({
@@ -172,7 +206,7 @@ export const getAllAppointments = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get appointments error:', error);
+    logger.error('Get appointments error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve appointments',
@@ -180,7 +214,6 @@ export const getAllAppointments = async (req: Request, res: Response) => {
     });
   }
 };
-
 // Get single appointment by ID
 export const getAppointmentById = async (req: Request, res: Response) => {
   try {
@@ -219,12 +252,17 @@ export const getAppointmentById = async (req: Request, res: Response) => {
       });
     }
 
+    await assertCanAccessClient(req.user, {
+      clientId: appointment.clientId,
+      allowBillingView: true,
+    });
+
     res.status(200).json({
       success: true,
       data: appointment,
     });
   } catch (error) {
-    console.error('Get appointment error:', error);
+    logger.error('Get appointment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve appointment',
@@ -238,6 +276,8 @@ export const createAppointment = async (req: Request, res: Response) => {
   try {
     const validatedData = createAppointmentSchema.parse(req.body);
     const userId = (req as any).user?.userId;
+
+    await assertCanAccessClient(req.user, { clientId: validatedData.clientId });
 
     // Check for scheduling conflicts
     const conflicts = await prisma.appointment.findMany({
@@ -272,15 +312,28 @@ export const createAppointment = async (req: Request, res: Response) => {
       });
     }
 
+
+    const appointmentData: Prisma.AppointmentUncheckedCreateInput = {
+      clientId: validatedData.clientId,
+      clinicianId: validatedData.clinicianId,
+      appointmentDate: new Date(validatedData.appointmentDate),
+      startTime: validatedData.startTime,
+      endTime: validatedData.endTime,
+      duration: validatedData.duration,
+      appointmentType: validatedData.appointmentType,
+      serviceLocation: validatedData.serviceLocation,
+      timezone: validatedData.timezone,
+      status: 'SCHEDULED',
+      statusUpdatedBy: userId,
+      createdBy: userId,
+      lastModifiedBy: userId,
+      icdCodes: validatedData.icdCodes || [],
+      cptCode: validatedData.cptCode || null,
+      appointmentNotes: validatedData.appointmentNotes,
+    };
+
     const appointment = await prisma.appointment.create({
-      data: {
-        ...validatedData,
-        appointmentDate: new Date(validatedData.appointmentDate),
-        statusUpdatedBy: userId,
-        createdBy: userId,
-        lastModifiedBy: userId,
-        icdCodes: validatedData.icdCodes || [],
-      },
+      data: appointmentData,
       include: {
         client: {
           select: {
@@ -315,7 +368,7 @@ export const createAppointment = async (req: Request, res: Response) => {
       data: appointment,
     });
   } catch (error) {
-    console.error('Create appointment error:', error);
+    logger.error('Create appointment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -339,6 +392,8 @@ export const createRecurringAppointments = async (req: Request, res: Response) =
     const validatedData = createRecurringAppointmentSchema.parse(req.body);
     const userId = (req as any).user?.userId;
 
+    await assertCanAccessClient(req.user, { clientId: validatedData.clientId });
+
     // Generate appointments from recurrence pattern
     const baseData = {
       clientId: validatedData.clientId,
@@ -351,17 +406,19 @@ export const createRecurringAppointments = async (req: Request, res: Response) =
       serviceLocation: validatedData.serviceLocation,
       cptCode: validatedData.cptCode,
       timezone: validatedData.timezone,
+      icdCodes: validatedData.icdCodes || [],
       appointmentNotes: validatedData.appointmentNotes,
       createdBy: userId,
+      statusUpdatedBy: userId,
     };
 
     const appointments = await recurringService.generateRecurringAppointments(
       baseData,
-      validatedData.recurrencePattern
+      validatedData.recurrencePattern as any
     );
 
     // Check for conflicts across all generated appointments
-    const dates = appointments.map((apt: any) => new Date(apt.appointmentDate));
+    const dates = appointments.map((apt) => (apt.appointmentDate instanceof Date ? apt.appointmentDate : new Date(apt.appointmentDate as string)));
     const conflictCheck = await recurringService.checkSeriesConflicts(
       validatedData.clinicianId,
       dates,
@@ -379,14 +436,9 @@ export const createRecurringAppointments = async (req: Request, res: Response) =
 
     // Create all appointments
     const createdAppointments = await prisma.$transaction(
-      appointments.map((apt: any) =>
+      appointments.map((appointmentData) =>
         prisma.appointment.create({
-          data: {
-            ...apt,
-            appointmentDate: new Date(apt.appointmentDate),
-            statusUpdatedBy: userId,
-            lastModifiedBy: userId,
-          },
+          data: appointmentData,
         })
       )
     );
@@ -409,7 +461,7 @@ export const createRecurringAppointments = async (req: Request, res: Response) =
       },
     });
   } catch (error) {
-    console.error('Create recurring appointments error:', error);
+    logger.error('Create recurring appointments error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -445,6 +497,8 @@ export const updateAppointment = async (req: Request, res: Response) => {
         message: 'Appointment not found',
       });
     }
+    await assertCanAccessClient(req.user, { clientId: existingAppointment.clientId });
+
 
     // Check for scheduling conflicts if time/date is being changed
     if (validatedData.appointmentDate || validatedData.startTime || validatedData.endTime) {
@@ -534,7 +588,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
       data: appointment,
     });
   } catch (error) {
-    console.error('Update appointment error:', error);
+    logger.error('Update appointment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -556,6 +610,13 @@ export const updateAppointment = async (req: Request, res: Response) => {
 export const checkInAppointment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!(await ensureAppointmentAccess(req, id))) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
     const validatedData = checkInSchema.parse(req.body);
     const userId = (req as any).user?.userId;
 
@@ -586,7 +647,7 @@ export const checkInAppointment = async (req: Request, res: Response) => {
       data: appointment,
     });
   } catch (error) {
-    console.error('Check-in error:', error);
+    logger.error('Check-in error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -608,6 +669,13 @@ export const checkInAppointment = async (req: Request, res: Response) => {
 export const checkOutAppointment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!(await ensureAppointmentAccess(req, id))) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
     const validatedData = checkOutSchema.parse(req.body);
     const userId = (req as any).user?.userId;
 
@@ -639,7 +707,7 @@ export const checkOutAppointment = async (req: Request, res: Response) => {
       data: appointment,
     });
   } catch (error) {
-    console.error('Check-out error:', error);
+    logger.error('Check-out error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -661,6 +729,13 @@ export const checkOutAppointment = async (req: Request, res: Response) => {
 export const cancelAppointment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!(await ensureAppointmentAccess(req, id))) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
     const validatedData = cancelAppointmentSchema.parse(req.body);
     const userId = (req as any).user?.userId;
 
@@ -695,7 +770,7 @@ export const cancelAppointment = async (req: Request, res: Response) => {
       data: appointment,
     });
   } catch (error) {
-    console.error('Cancel appointment error:', error);
+    logger.error('Cancel appointment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -717,6 +792,13 @@ export const cancelAppointment = async (req: Request, res: Response) => {
 export const rescheduleAppointment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!(await ensureAppointmentAccess(req, id))) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
     const validatedData = rescheduleAppointmentSchema.parse(req.body);
     const userId = (req as any).user?.userId;
 
@@ -794,7 +876,7 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
       data: appointment,
     });
   } catch (error) {
-    console.error('Reschedule appointment error:', error);
+    logger.error('Reschedule appointment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -816,6 +898,13 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
 export const markNoShow = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!(await ensureAppointmentAccess(req, id))) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
     const { noShowFeeApplied, noShowNotes } = req.body;
     const userId = (req as any).user?.userId;
 
@@ -847,7 +936,7 @@ export const markNoShow = async (req: Request, res: Response) => {
       data: appointment,
     });
   } catch (error) {
-    console.error('Mark no-show error:', error);
+    logger.error('Mark no-show error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to mark appointment as no-show',
@@ -860,6 +949,13 @@ export const markNoShow = async (req: Request, res: Response) => {
 export const deleteAppointment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!(await ensureAppointmentAccess(req, id))) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
     const userId = (req as any).user?.userId;
 
     await prisma.appointment.delete({
@@ -877,7 +973,7 @@ export const deleteAppointment = async (req: Request, res: Response) => {
       message: 'Appointment deleted successfully',
     });
   } catch (error) {
-    console.error('Delete appointment error:', error);
+    logger.error('Delete appointment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to delete appointment',

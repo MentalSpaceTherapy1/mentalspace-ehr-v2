@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 import { ValidationError } from '../utils/errors';
-import fs from 'fs';
-import path from 'path';
+import logger from '../utils/logger';
 
 /**
  * Middleware to validate request body against Zod schema
@@ -21,20 +20,12 @@ export const validateBody = (schema: ZodSchema) => {
           received: e.message.includes('Required') ? 'undefined/empty' : 'invalid format',
         }));
 
-        // Write to file for debugging
-        const debugLog = {
-          timestamp: new Date().toISOString(),
-          errors: errors,
-          requestBody: req.body,
-        };
-
-        const logPath = path.join(__dirname, '../../validation-errors.json');
-        fs.writeFileSync(logPath, JSON.stringify(debugLog, null, 2));
-
-        console.log('=== VALIDATION FAILED ===');
-        console.log('Errors:', JSON.stringify(errors, null, 2));
-        console.log('Request body:', JSON.stringify(req.body, null, 2));
-        console.log('Full log written to:', logPath);
+        logger.warn('Validation failed', {
+          path: req.originalUrl,
+          method: req.method,
+          errors,
+          userId: (req as any).user?.userId,
+        });
 
         const err = new ValidationError('Validation failed');
         (err as any).errors = errors;
@@ -61,6 +52,13 @@ export const validateQuery = (schema: ZodSchema) => {
           message: e.message,
         }));
 
+        logger.warn('Query validation failed', {
+          path: req.originalUrl,
+          method: req.method,
+          errors,
+          userId: (req as any).user?.userId,
+        });
+
         const err = new ValidationError('Query validation failed');
         (err as any).errors = errors;
         next(err);
@@ -85,6 +83,13 @@ export const validateParams = (schema: ZodSchema) => {
           path: e.path.join('.'),
           message: e.message,
         }));
+
+        logger.warn('Parameter validation failed', {
+          path: req.originalUrl,
+          method: req.method,
+          errors,
+          userId: (req as any).user?.userId,
+        });
 
         const err = new ValidationError('Parameter validation failed');
         (err as any).errors = errors;

@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import logger from '../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
+import { assertCanAccessClient } from '../services/accessControl.service';
 
 /**
  * EHR-side controller for managing client form assignments
@@ -14,9 +13,10 @@ const prisma = new PrismaClient();
 const assignFormSchema = z.object({
   clientId: z.string().uuid(),
   formId: z.string().uuid(),
-  dueDate: z.string().datetime().optional(),
+  dueDate: z.string().optional().nullable(),
   isRequired: z.boolean().default(false),
   assignmentNotes: z.string().optional(),
+  clientMessage: z.string().optional(), // Custom message to send to client
 });
 
 /**
@@ -68,6 +68,7 @@ export const getFormLibrary = async (req: Request, res: Response) => {
 export const getClientFormAssignments = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
+    await assertCanAccessClient(req.user, { clientId });
     const { status } = req.query;
 
     const where: any = { clientId };
@@ -89,8 +90,8 @@ export const getClientFormAssignments = async (req: Request, res: Response) => {
         submission: {
           select: {
             id: true,
-            submittedAt: true,
-            reviewedAt: true,
+            submittedDate: true,
+            reviewedDate: true,
             reviewedBy: true,
             reviewerNotes: true,
           },
@@ -163,6 +164,7 @@ export const assignFormToClient = async (req: Request, res: Response) => {
         dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
         isRequired: validatedData.isRequired,
         assignmentNotes: validatedData.assignmentNotes,
+        clientMessage: validatedData.clientMessage,
         status: 'PENDING',
       },
       include: {
@@ -345,3 +347,5 @@ export const viewFormSubmission = async (req: Request, res: Response) => {
     });
   }
 };
+
+

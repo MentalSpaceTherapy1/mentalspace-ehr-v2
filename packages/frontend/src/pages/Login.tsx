@@ -26,7 +26,7 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
 
       // Redirect to dashboard
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
@@ -34,13 +34,9 @@ export default function Login() {
     }
   };
 
-  const quickLogin = (userEmail: string) => {
-    setEmail(userEmail);
-    setPassword('SecurePass123!');
-  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <img
@@ -76,7 +72,7 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
                 placeholder="you@example.com"
               />
             </div>
@@ -92,7 +88,7 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
                 placeholder="••••••••"
               />
             </div>
@@ -107,53 +103,12 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-cyan-500 to-green-500 hover:from-cyan-600 hover:to-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Quick Login (Demo)</span>
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <button
-                onClick={() => quickLogin('admin@mentalspace.com')}
-                className="text-xs px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Admin
-              </button>
-              <button
-                onClick={() => quickLogin('supervisor@mentalspace.com')}
-                className="text-xs px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Supervisor
-              </button>
-              <button
-                onClick={() => quickLogin('clinician1@mentalspace.com')}
-                className="text-xs px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Clinician 1
-              </button>
-              <button
-                onClick={() => quickLogin('billing@mentalspace.com')}
-                className="text-xs px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Billing
-              </button>
-            </div>
-            <p className="mt-2 text-xs text-center text-gray-500">
-              Password: SecurePass123!
-            </p>
-          </div>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import prisma from './database';
 /**
  * Diagnosis Service
  *
@@ -7,11 +8,8 @@
  * - Provides read-only access for other note types
  */
 
-import { PrismaClient } from '@mentalspace/database';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 import { createDiagnosisHistory } from './clinical-notes-validation.service';
-
-const prisma = new PrismaClient();
 
 export interface CreateDiagnosisDto {
   clientId: string;

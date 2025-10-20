@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../../utils/logger';
 import anthropicService from './anthropic.service';
 
 /**
@@ -77,7 +78,7 @@ class TreatmentSuggestionsService {
 
       return this.parseResponse(response);
     } catch (error: any) {
-      console.error('Treatment Suggestions Error:', error);
+      logger.error('Treatment Suggestions Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`Failed to generate treatment suggestions: ${error.message}`);
     }
   }
@@ -124,7 +125,7 @@ Provide 3-5 specific interventions that would be appropriate for this session. R
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed.interventions || [];
     } catch (error) {
-      console.error('Intervention suggestion error:', error);
+      logger.error('Intervention suggestion error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return [];
     }
   }
@@ -173,7 +174,7 @@ Return 3-5 goals in JSON format:
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed.goals || [];
     } catch (error) {
-      console.error('Goal generation error:', error);
+      logger.error('Goal generation error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return [];
     }
   }
@@ -214,7 +215,7 @@ Suggest 2-3 specific homework assignments. Return as JSON:
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed.assignments || [];
     } catch (error) {
-      console.error('Homework suggestion error:', error);
+      logger.error('Homework suggestion error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return [];
     }
   }
@@ -339,7 +340,7 @@ IMPORTANT:
         confidence: parsed.confidence || 0.7,
       };
     } catch (error) {
-      console.error('Failed to parse treatment suggestions:', error);
+      logger.error('Failed to parse treatment suggestions:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return {
         recommendations: [],
         interventions: [],

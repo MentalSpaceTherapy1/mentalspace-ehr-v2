@@ -1,11 +1,9 @@
-import { PrismaClient } from '@mentalspace/database';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import config from '../../config';
-
-const prisma = new PrismaClient();
+import prisma from '../database';
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -212,11 +210,14 @@ async function updateEHRInsuranceInfo(data: {
   groupNumber?: string;
 }) {
   try {
+    // Map insurance type to rank
+    const rank = data.insuranceType === 'PRIMARY' ? 'Primary' : 'Secondary';
+
     // Check if insurance info already exists
     const existing = await prisma.insuranceInformation.findFirst({
       where: {
         clientId: data.clientId,
-        insuranceType: data.insuranceType,
+        rank: rank,
       },
     });
 
@@ -226,7 +227,7 @@ async function updateEHRInsuranceInfo(data: {
         where: { id: existing.id },
         data: {
           insuranceCompany: data.insuranceName || existing.insuranceCompany,
-          policyNumber: data.policyNumber || existing.policyNumber,
+          memberId: data.policyNumber || existing.memberId,
           groupNumber: data.groupNumber || existing.groupNumber,
         },
       });
@@ -235,14 +236,13 @@ async function updateEHRInsuranceInfo(data: {
       await prisma.insuranceInformation.create({
         data: {
           clientId: data.clientId,
-          insuranceType: data.insuranceType,
+          rank: rank,
           insuranceCompany: data.insuranceName,
-          policyNumber: data.policyNumber,
+          planName: data.insuranceName, // Use company name as plan name placeholder
+          planType: 'Unknown', // Placeholder
+          memberId: data.policyNumber,
           groupNumber: data.groupNumber || '',
-          policyHolderName: '', // Client can fill this in later
-          policyHolderDOB: new Date(), // Placeholder
-          relationshipToInsured: 'SELF',
-          isActive: true,
+          effectiveDate: new Date(),
         },
       });
     }

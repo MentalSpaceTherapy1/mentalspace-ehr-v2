@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
+import prisma from '../services/database';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // ============================================================================
 // SUPERVISION SESSIONS

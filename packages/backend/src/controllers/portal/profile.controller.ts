@@ -1,16 +1,14 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
+
 import logger from '../../utils/logger';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
+import prisma from '../../services/database';
 
 /**
  * Get client profile
  * GET /api/v1/portal/profile
  */
-export const getProfile = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getProfile = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -71,7 +69,7 @@ export const getProfile = async (req: AuthenticatedPortalRequest, res: Response)
  * Update client profile
  * PUT /api/v1/portal/profile
  */
-export const updateProfile = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const updateProfile = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const {
@@ -167,7 +165,7 @@ export const updateProfile = async (req: AuthenticatedPortalRequest, res: Respon
  * Get account settings (notification preferences)
  * GET /api/v1/portal/account/settings
  */
-export const getAccountSettings = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getAccountSettings = async (req: Request, res: Response) => {
   try {
     const portalAccountId = (req as any).portalAccount?.id;
     const clientId = (req as any).portalAccount?.clientId;
@@ -209,7 +207,7 @@ export const getAccountSettings = async (req: AuthenticatedPortalRequest, res: R
  * Update notification preferences
  * PUT /api/v1/portal/account/notifications
  */
-export const updateNotificationPreferences = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const updateNotificationPreferences = async (req: Request, res: Response) => {
   try {
     const portalAccountId = (req as any).portalAccount?.id;
     const {
@@ -258,7 +256,7 @@ export const updateNotificationPreferences = async (req: AuthenticatedPortalRequ
  * Change password
  * POST /api/v1/portal/account/change-password
  */
-export const changePassword = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const changePassword = async (req: Request, res: Response) => {
   try {
     const portalAccountId = (req as any).portalAccount?.id;
     const { currentPassword, newPassword } = req.body;

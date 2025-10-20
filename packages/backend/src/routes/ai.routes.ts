@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { authenticate } from '../middleware/auth';
 import clinicalNoteGenerationService from '../services/ai/clinicalNoteGeneration.service';
 import treatmentSuggestionsService from '../services/ai/treatmentSuggestions.service';
 import diagnosisAssistanceService from '../services/ai/diagnosisAssistance.service';
@@ -6,6 +7,9 @@ import billingIntelligenceService from '../services/ai/billingIntelligence.servi
 import anthropicService from '../services/ai/anthropic.service';
 
 const router = Router();
+
+// All AI routes require authentication
+router.use(authenticate);
 
 /**
  * AI SERVICE ROUTES

@@ -143,7 +143,8 @@ export async function requestCancellation(appointmentId: string, clientId: strin
       where: { id: appointmentId },
       data: {
         status: 'CANCELLED',
-        notes: reason ? `Client cancellation reason: ${reason}` : 'Cancelled by client via portal',
+        cancellationNotes: reason ? `Client cancellation reason: ${reason}` : 'Cancelled by client via portal',
+        cancellationDate: new Date(),
       },
     });
 

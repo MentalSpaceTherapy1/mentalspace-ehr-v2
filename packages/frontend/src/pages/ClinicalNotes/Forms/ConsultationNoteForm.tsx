@@ -17,7 +17,8 @@ import SessionInputBox from '../../../components/AI/SessionInputBox';
 import ReviewModal from '../../../components/AI/ReviewModal';
 
 export default function ConsultationNoteForm() {
-  const { clientId } = useParams();
+  const { clientId, noteId } = useParams();
+  const isEditMode = !!noteId;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -28,7 +29,7 @@ export default function ConsultationNoteForm() {
   // Appointment selection state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
   const [appointmentData, setAppointmentData] = useState<any>(null);
-  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const appointmentId = selectedAppointmentId;
@@ -68,6 +69,16 @@ export default function ConsultationNoteForm() {
     enabled: !!clientId,
   });
 
+  // Fetch existing note data if in edit mode
+  const { data: existingNoteData, isLoading: isLoadingNote } = useQuery({
+    queryKey: ['clinical-note', noteId],
+    queryFn: async () => {
+      const response = await api.get(`/clinical-notes/${noteId}`);
+      return response.data.data;
+    },
+    enabled: isEditMode && !!noteId,
+  });
+
   // Auto-set due date to 7 days from session date
   useEffect(() => {
     if (sessionDate && !dueDate) {
@@ -76,6 +87,43 @@ export default function ConsultationNoteForm() {
       setDueDate(date.toISOString().split('T')[0]);
     }
   }, [sessionDate]);
+
+  // Populate form fields from existingNoteData when in edit mode
+  useEffect(() => {
+    if (existingNoteData && isEditMode) {
+      // Set appointment ID from existing note
+      if (existingNoteData.appointmentId) {
+        setSelectedAppointmentId(existingNoteData.appointmentId);
+      }
+
+      // Session details
+      if (existingNoteData.sessionDate) {
+        const date = new Date(existingNoteData.sessionDate);
+        setSessionDate(date.toISOString().split('T')[0]);
+      }
+      if (existingNoteData.dueDate) {
+        const date = new Date(existingNoteData.dueDate);
+        setDueDate(date.toISOString().split('T')[0]);
+      }
+      if (existingNoteData.nextSessionDate) {
+        const date = new Date(existingNoteData.nextSessionDate);
+        setNextSessionDate(date.toISOString().split('T')[0]);
+      }
+
+      // Consultation details
+      if (existingNoteData.consultedPerson) setConsultedPerson(existingNoteData.consultedPerson);
+      if (existingNoteData.organization) setOrganization(existingNoteData.organization);
+      if (existingNoteData.reasonForConsultation) setReasonForConsultation(existingNoteData.reasonForConsultation);
+      if (existingNoteData.informationShared) setInformationShared(existingNoteData.informationShared);
+      if (existingNoteData.recommendationsReceived) setRecommendationsReceived(existingNoteData.recommendationsReceived);
+      if (existingNoteData.followUpActions) setFollowUpActions(existingNoteData.followUpActions);
+
+      // Billing
+      if (existingNoteData.cptCode) setCptCode(existingNoteData.cptCode);
+      if (existingNoteData.billingCode) setBillingCode(existingNoteData.billingCode);
+      if (existingNoteData.billable !== undefined) setBillable(existingNoteData.billable);
+    }
+  }, [existingNoteData, isEditMode]);
 
   
   // Fetch eligible appointments
@@ -118,6 +166,22 @@ export default function ConsultationNoteForm() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
+      return api.post('/clinical-notes', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      navigate(`/clients/${clientId}/notes`);
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
@@ -185,6 +249,35 @@ export default function ConsultationNoteForm() {
 
     setShowReviewModal(false);
     setGeneratedData(null);
+  };
+
+  const handleSaveDraft = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const data = {
+      clientId,
+      noteType: 'Consultation Note',
+      appointmentId: appointmentId,
+      sessionDate: sessionDate ? new Date(sessionDate).toISOString() : undefined,
+      subjective: `Consultation with: ${consultedPerson}\nOrganization: ${organization}\n\nReason: ${reasonForConsultation}`,
+      objective: `Information Shared: ${informationShared}`,
+      assessment: `Recommendations Received: ${recommendationsReceived}`,
+      plan: `Follow-up Actions: ${followUpActions}`,
+      consultedPerson,
+      organization,
+      reasonForConsultation,
+      informationShared,
+      recommendationsReceived,
+      followUpActions,
+      cptCode,
+      billingCode,
+      billable,
+      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+      status: 'DRAFT',
+    };
+
+    saveDraftMutation.mutate(data);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -310,7 +403,7 @@ export default function ConsultationNoteForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
           {/* AI-Powered Note Generation */}
           {/* Schedule Header */}
             {appointmentData && (
@@ -420,9 +513,11 @@ export default function ConsultationNoteForm() {
           {/* Form Actions */}
           <FormActions
             onCancel={() => navigate(`/clients/${clientId}/notes`)}
-            onSubmit={handleSubmit}
-            submitLabel="Create Consultation Note"
+            onSubmit={() => handleSubmit({} as React.FormEvent)}
+            submitLabel={isEditMode ? "Update Consultation Note" : "Create Consultation Note"}
             isSubmitting={saveMutation.isPending}
+            onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+            isSavingDraft={saveDraftMutation.isPending}
           />
         </form>
         )}

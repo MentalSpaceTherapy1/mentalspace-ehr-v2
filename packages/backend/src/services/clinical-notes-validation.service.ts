@@ -1,3 +1,4 @@
+import prisma from './database';
 /**
  * Clinical Notes Business Rules Validation Service
  *
@@ -9,8 +10,6 @@
 
 import { PrismaClient, AppointmentStatus, NoteStatus } from '@mentalspace/database';
 import { BadRequestError } from '../utils/errors';
-
-const prisma = new PrismaClient();
 
 // Note types that require appointments (Business Rule #1)
 const APPOINTMENT_REQUIRED_NOTE_TYPES = [

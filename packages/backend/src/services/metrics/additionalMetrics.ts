@@ -1,10 +1,8 @@
+import prisma from '../database';
 // Additional Metrics (Schedule, Supervision, Practice Efficiency, Financial Health)
 // Phase 6 - Week 19 - Remaining Metrics
 
-import { PrismaClient } from '@prisma/client';
 import { MetricCalculator, MetricResult } from './types';
-
-const prisma = new PrismaClient();
 
 // ============================================================================
 // SCHEDULE OPTIMIZATION METRICS

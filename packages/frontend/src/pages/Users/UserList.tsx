@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
@@ -60,43 +60,46 @@ export default function UserList() {
   const users: User[] = data?.data || [];
   const pagination: Pagination = data?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
 
-  const getRoleBadgeColor = (role: UserRole) => {
-    switch (role) {
-      case 'ADMINISTRATOR':
-        return 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-200';
-      case 'SUPERVISOR':
-        return 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-200';
-      case 'CLINICIAN':
-        return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-200';
-      case 'BILLER':
-        return 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-200';
-      case 'RECEPTIONIST':
-        return 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-200';
-      default:
-        return 'bg-gradient-to-r from-gray-500 to-slate-500 text-white shadow-lg shadow-gray-200';
-    }
-  };
+  const roleStyles = {
+    ADMINISTRATOR: {
+      badge: 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-200',
+      avatar: 'bg-gradient-to-br from-rose-400 to-pink-600',
+      label: 'Administrator',
+    },
+    SUPERVISOR: {
+      badge: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-200',
+      avatar: 'bg-gradient-to-br from-purple-400 to-indigo-600',
+      label: 'Supervisor',
+    },
+    CLINICIAN: {
+      badge: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-200',
+      avatar: 'bg-gradient-to-br from-blue-400 to-cyan-600',
+      label: 'Clinician',
+    },
+    BILLING_STAFF: {
+      badge: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-200',
+      avatar: 'bg-gradient-to-br from-green-400 to-emerald-600',
+      label: 'Billing Staff',
+    },
+    FRONT_DESK: {
+      badge: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-200',
+      avatar: 'bg-gradient-to-br from-amber-400 to-orange-600',
+      label: 'Front Desk',
+    },
+    ASSOCIATE: {
+      badge: 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-lg shadow-sky-200',
+      avatar: 'bg-gradient-to-br from-sky-400 to-cyan-600',
+      label: 'Associate',
+    },
+  } as Record<string, { badge: string; avatar: string; label: string }>;
 
-  const getAvatarColor = (role: UserRole) => {
-    switch (role) {
-      case 'ADMINISTRATOR':
-        return 'bg-gradient-to-br from-rose-400 to-pink-600';
-      case 'SUPERVISOR':
-        return 'bg-gradient-to-br from-purple-400 to-indigo-600';
-      case 'CLINICIAN':
-        return 'bg-gradient-to-br from-blue-400 to-cyan-600';
-      case 'BILLER':
-        return 'bg-gradient-to-br from-green-400 to-emerald-600';
-      case 'RECEPTIONIST':
-        return 'bg-gradient-to-br from-amber-400 to-orange-600';
-      default:
-        return 'bg-gradient-to-br from-gray-400 to-slate-600';
-    }
-  };
+  const getRoleBadgeColor = (role: UserRole) =>
+    roleStyles[role]?.badge ?? 'bg-gradient-to-r from-gray-500 to-slate-500 text-white shadow-lg shadow-gray-200';
 
-  const getRoleLabel = (role: UserRole) => {
-    return role.charAt(0) + role.slice(1).toLowerCase();
-  };
+  const getAvatarColor = (role: UserRole) =>
+    roleStyles[role]?.avatar ?? 'bg-gradient-to-br from-gray-400 to-slate-600';
+
+  const getRoleLabel = (role: UserRole) => roleStyles[role]?.label ?? 'Unknown';
 
   if (isLoading) {
     return (
@@ -181,8 +184,9 @@ export default function UserList() {
                 <option value="ADMINISTRATOR">Administrator</option>
                 <option value="SUPERVISOR">Supervisor</option>
                 <option value="CLINICIAN">Clinician</option>
-                <option value="BILLER">Biller</option>
-                <option value="RECEPTIONIST">Receptionist</option>
+                <option value="BILLING_STAFF">Billing Staff</option>
+                <option value="FRONT_DESK">Front Desk</option>
+                <option value="ASSOCIATE">Associate</option>
               </select>
             </div>
 

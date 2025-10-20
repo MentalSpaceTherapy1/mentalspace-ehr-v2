@@ -1,10 +1,8 @@
+import prisma from '../database';
 // Clinical Productivity Metrics (#2-5)
 // Phase 6 - Week 18 - Clinical Productivity Metrics
 
-import { PrismaClient } from '@prisma/client';
 import { MetricCalculator, MetricResult } from './types';
-
-const prisma = new PrismaClient();
 
 // No-Show Rate Calculator
 export class NoShowRateCalculator implements MetricCalculator {

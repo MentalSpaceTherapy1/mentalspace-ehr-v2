@@ -11,7 +11,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'ADMINISTRATOR' | 'SUPERVISOR' | 'CLINICIAN' | 'BILLING_STAFF' | 'SUPPORT_STAFF';
+  role: 'ADMINISTRATOR' | 'SUPERVISOR' | 'CLINICIAN' | 'BILLING_STAFF' | 'FRONT_DESK' | 'ASSOCIATE';
   licenseNumber?: string;
   licenseState?: string;
   licenseExpiration?: string;

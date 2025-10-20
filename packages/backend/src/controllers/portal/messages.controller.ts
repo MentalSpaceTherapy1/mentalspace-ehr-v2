@@ -1,16 +1,14 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
+
 import logger from '../../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
-
-const prisma = new PrismaClient();
+import prisma from '../../services/database';
 
 /**
  * Get all messages for client (grouped by thread)
  * GET /api/v1/portal/messages
  */
-export const getMessages = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getMessages = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -58,7 +56,7 @@ export const getMessages = async (req: AuthenticatedPortalRequest, res: Response
  * Get messages in a specific thread
  * GET /api/v1/portal/messages/thread/:threadId
  */
-export const getMessageThread = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getMessageThread = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { threadId } = req.params;
@@ -110,7 +108,7 @@ export const getMessageThread = async (req: AuthenticatedPortalRequest, res: Res
  * Send a new message (start new thread)
  * POST /api/v1/portal/messages
  */
-export const sendMessage = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const sendMessage = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { subject, message, priority } = req.body;
@@ -142,6 +140,7 @@ export const sendMessage = async (req: AuthenticatedPortalRequest, res: Response
         message: message.trim(),
         priority: priority || 'Normal',
         sentByClient: true,
+        sentBy: clientId,
         isRead: true, // Client's own messages are marked as read
       },
     });
@@ -175,7 +174,7 @@ export const sendMessage = async (req: AuthenticatedPortalRequest, res: Response
  * Reply to a message in an existing thread
  * POST /api/v1/portal/messages/:messageId/reply
  */
-export const replyToMessage = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const replyToMessage = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { messageId } = req.params;
@@ -225,6 +224,7 @@ export const replyToMessage = async (req: AuthenticatedPortalRequest, res: Respo
         message: message.trim(),
         priority: originalMessage.priority,
         sentByClient: true,
+        sentBy: clientId,
         isRead: true, // Client's own messages are marked as read
         parentMessageId: messageId,
       },
@@ -257,7 +257,7 @@ export const replyToMessage = async (req: AuthenticatedPortalRequest, res: Respo
  * Mark a message as read
  * POST /api/v1/portal/messages/:messageId/read
  */
-export const markMessageAsRead = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const markMessageAsRead = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { messageId } = req.params;
@@ -314,7 +314,7 @@ export const markMessageAsRead = async (req: AuthenticatedPortalRequest, res: Re
  * Get unread message count
  * GET /api/v1/portal/messages/unread-count
  */
-export const getUnreadCount = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getUnreadCount = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 

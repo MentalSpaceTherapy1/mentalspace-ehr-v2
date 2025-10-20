@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@mentalspace/database';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
 
 /**
  * Get all service codes

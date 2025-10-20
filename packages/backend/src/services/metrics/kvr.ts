@@ -1,10 +1,8 @@
+import prisma from '../database';
 // KVR (Kept Visit Rate) Calculator
 // Phase 6 - Week 18 - Clinical Productivity Metric #1
 
-import { PrismaClient } from '@prisma/client';
 import { MetricCalculator, MetricResult } from './types';
-
-const prisma = new PrismaClient();
 
 export class KVRCalculator implements MetricCalculator {
   metricType = 'KVR';

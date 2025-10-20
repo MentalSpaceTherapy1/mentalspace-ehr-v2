@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../../utils/logger';
 import Anthropic from '@anthropic-ai/sdk';
 
 /**
@@ -64,7 +65,7 @@ class AnthropicService {
 
       return textContent.text;
     } catch (error: any) {
-      console.error('Anthropic API Error:', error);
+      logger.error('Anthropic API Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`AI Service Error: ${error.message}`);
     }
   }
@@ -105,7 +106,7 @@ class AnthropicService {
         }
       }
     } catch (error: any) {
-      console.error('Anthropic Streaming Error:', error);
+      logger.error('Anthropic Streaming Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`AI Streaming Error: ${error.message}`);
     }
   }

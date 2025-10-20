@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import logger from '../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
 
 /**
  * EHR-side controller for managing client documents
@@ -13,11 +11,10 @@ const prisma = new PrismaClient();
 // Validation schemas
 const shareDocumentSchema = z.object({
   clientId: z.string().uuid(),
-  documentTitle: z.string().min(1),
+  documentName: z.string().min(1),
   documentType: z.string().min(1),
-  fileUrl: z.string().optional(), // S3 URL after upload
+  documentS3Key: z.string().min(1), // S3 key for the document
   expiresAt: z.string().datetime().optional(),
-  sharedNotes: z.string().optional(),
 });
 
 /**
@@ -62,14 +59,11 @@ export const shareDocumentWithClient = async (req: Request, res: Response) => {
     const sharedDocument = await prisma.sharedDocument.create({
       data: {
         clientId,
-        documentTitle: validatedData.documentTitle,
+        documentName: validatedData.documentName,
         documentType: validatedData.documentType,
-        fileUrl: validatedData.fileUrl,
+        documentS3Key: validatedData.documentS3Key,
         sharedBy: userId,
-        sharedAt: new Date(),
         expiresAt: validatedData.expiresAt ? new Date(validatedData.expiresAt) : null,
-        sharedNotes: validatedData.sharedNotes,
-        viewCount: 0,
       },
     });
 

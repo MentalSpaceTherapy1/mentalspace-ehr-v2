@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../../utils/logger';
 import anthropicService from './anthropic.service';
 
 /**
@@ -72,7 +73,7 @@ class DiagnosisAssistanceService {
 
       return this.parseResponse(response);
     } catch (error: any) {
-      console.error('Diagnosis Assistance Error:', error);
+      logger.error('Diagnosis Assistance Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`Failed to generate diagnosis assistance: ${error.message}`);
     }
   }
@@ -126,7 +127,7 @@ Map these symptoms to DSM-5 criteria for ${suspectedDiagnosis}. Return as JSON:
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed;
     } catch (error) {
-      console.error('DSM-5 mapping error:', error);
+      logger.error('DSM-5 mapping error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw error;
     }
   }
@@ -176,7 +177,7 @@ Generate differential diagnosis (top 5 most likely). Return as JSON:
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed.differentials || [];
     } catch (error) {
-      console.error('Differential diagnosis error:', error);
+      logger.error('Differential diagnosis error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return [];
     }
   }
@@ -213,7 +214,7 @@ Suggest 5-7 specific questions to ask the client. Return as JSON:
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed.questions || [];
     } catch (error) {
-      console.error('Clarifying questions error:', error);
+      logger.error('Clarifying questions error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return [];
     }
   }
@@ -253,7 +254,7 @@ Provide the most specific ICD-10 code. Return as JSON:
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed;
     } catch (error) {
-      console.error('ICD-10 code error:', error);
+      logger.error('ICD-10 code error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return { code: '', description: '' };
     }
   }
@@ -394,7 +395,7 @@ NEVER:
         warnings: parsed.warnings || [],
       };
     } catch (error) {
-      console.error('Failed to parse diagnosis assistance:', error);
+      logger.error('Failed to parse diagnosis assistance:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return {
         dsm5Mappings: [],
         differentialDiagnoses: [],

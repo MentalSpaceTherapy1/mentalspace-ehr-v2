@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface MetricResult {
   value: number;
@@ -7,6 +7,10 @@ interface MetricResult {
     numerator?: number;
     denominator?: number;
     [key: string]: any;
+  };
+  trend?: {
+    value: number;
+    direction: 'up' | 'down' | 'stable';
   };
 }
 
@@ -21,12 +25,8 @@ export function useClinicianDashboard(userId: string) {
   return useQuery({
     queryKey: ['clinicianDashboard', userId],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get<{ success: boolean; data: DashboardData }>(
-        `/productivity/dashboard/clinician/${userId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await api.get<{ success: boolean; data: DashboardData }>(
+        `/productivity/dashboard/clinician/${userId}`
       );
       return response.data.data;
     },
@@ -38,12 +38,8 @@ export function useSupervisorDashboard(supervisorId: string) {
   return useQuery({
     queryKey: ['supervisorDashboard', supervisorId],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `/productivity/dashboard/supervisor/${supervisorId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await api.get(
+        `/productivity/dashboard/supervisor/${supervisorId}`
       );
       return response.data.data;
     },
@@ -55,12 +51,8 @@ export function useAdministratorDashboard() {
   return useQuery({
     queryKey: ['administratorDashboard'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `/productivity/dashboard/administrator`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await api.get(
+        `/productivity/dashboard/administrator`
       );
       return response.data.data;
     },
@@ -72,15 +64,11 @@ export function useMetricsHistory(userId: string, metricType?: string) {
   return useQuery({
     queryKey: ['metricsHistory', userId, metricType],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (metricType) params.append('metricType', metricType);
 
-      const response = await axios.get(
-        `/productivity/metrics/${userId}/history?${params}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await api.get(
+        `/productivity/metrics/${userId}/history?${params}`
       );
       return response.data.data;
     },

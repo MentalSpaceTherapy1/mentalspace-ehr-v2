@@ -154,9 +154,18 @@ interface FormActionsProps {
   onSubmit: () => void;
   submitLabel?: string;
   isSubmitting?: boolean;
+  onSaveDraft?: () => void;
+  isSavingDraft?: boolean;
 }
 
-export function FormActions({ onCancel, onSubmit, submitLabel = 'Create Note', isSubmitting }: FormActionsProps) {
+export function FormActions({
+  onCancel,
+  onSubmit,
+  submitLabel = 'Create Note',
+  isSubmitting,
+  onSaveDraft,
+  isSavingDraft
+}: FormActionsProps) {
   return (
     <div className="flex items-center justify-end gap-4 mt-8">
       <button
@@ -166,6 +175,16 @@ export function FormActions({ onCancel, onSubmit, submitLabel = 'Create Note', i
       >
         Cancel
       </button>
+      {onSaveDraft && (
+        <button
+          type="button"
+          onClick={onSaveDraft}
+          disabled={isSavingDraft}
+          className="px-8 py-4 bg-gradient-to-r from-gray-400 to-gray-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSavingDraft ? 'Saving Draft...' : 'Save Draft'}
+        </button>
+      )}
       <button
         type="submit"
         onClick={onSubmit}

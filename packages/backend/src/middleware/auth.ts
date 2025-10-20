@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, JwtPayload } from '../utils/jwt';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
+import { enforceSessionTimeout } from './sessionTimeout';
 
 // Extend Express Request type to include user
 declare global {
@@ -36,6 +37,8 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
     // Attach user to request
     req.user = payload;
+
+    enforceSessionTimeout(req, res);
 
     next();
   } catch (error) {
@@ -87,6 +90,7 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction) =>
         const token = parts[1];
         const payload = verifyToken(token);
         req.user = payload;
+        enforceSessionTimeout(req, res);
       }
     }
 

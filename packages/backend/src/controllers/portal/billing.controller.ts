@@ -1,15 +1,12 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
 import logger from '../../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../../services/database';
 
 /**
  * Get balance information for client
  * GET /api/v1/portal/billing/balance
  */
-export const getBalance = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getBalance = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -32,7 +29,7 @@ export const getBalance = async (req: AuthenticatedPortalRequest, res: Response)
 
     // Calculate totals
     const totalCharges = charges.reduce((sum, charge) => sum + charge.chargeAmount.toNumber(), 0);
-    const totalPayments = payments.reduce((sum, payment) => sum + payment.amount.toNumber(), 0);
+    const totalPayments = payments.reduce((sum, payment) => sum + payment.paymentAmount.toNumber(), 0);
     const currentBalance = totalCharges - totalPayments;
 
     // Get last payment info
@@ -49,7 +46,7 @@ export const getBalance = async (req: AuthenticatedPortalRequest, res: Response)
         totalCharges,
         totalPayments,
         lastPaymentDate: lastPayment?.paymentDate || null,
-        lastPaymentAmount: lastPayment ? lastPayment.amount.toNumber() : null,
+        lastPaymentAmount: lastPayment ? lastPayment.paymentAmount.toNumber() : null,
       },
     });
   } catch (error: any) {
@@ -65,7 +62,7 @@ export const getBalance = async (req: AuthenticatedPortalRequest, res: Response)
  * Get charges for client
  * GET /api/v1/portal/billing/charges
  */
-export const getCharges = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getCharges = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -109,7 +106,7 @@ export const getCharges = async (req: AuthenticatedPortalRequest, res: Response)
  * Get payment history for client
  * GET /api/v1/portal/billing/payments
  */
-export const getPayments = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getPayments = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -128,10 +125,9 @@ export const getPayments = async (req: AuthenticatedPortalRequest, res: Response
     const formattedPayments = payments.map(payment => ({
       id: payment.id,
       paymentDate: payment.paymentDate,
-      amount: payment.amount.toNumber(),
+      amount: payment.paymentAmount.toNumber(),
       paymentMethod: payment.paymentMethod,
-      status: payment.status,
-      confirmationNumber: payment.confirmationNumber,
+      transactionId: payment.transactionId,
     }));
 
     logger.info(`Retrieved ${formattedPayments.length} payments for client ${clientId}`);
@@ -153,7 +149,7 @@ export const getPayments = async (req: AuthenticatedPortalRequest, res: Response
  * Process a payment
  * POST /api/v1/portal/billing/payments
  */
-export const makePayment = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const makePayment = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { amount, paymentMethod } = req.body;
@@ -182,7 +178,7 @@ export const makePayment = async (req: AuthenticatedPortalRequest, res: Response
     });
 
     const totalCharges = charges.reduce((sum, charge) => sum + charge.chargeAmount.toNumber(), 0);
-    const totalPayments = payments.reduce((sum, payment) => sum + payment.amount.toNumber(), 0);
+    const totalPayments = payments.reduce((sum, payment) => sum + payment.paymentAmount.toNumber(), 0);
     const currentBalance = totalCharges - totalPayments;
 
     // Validate payment doesn't exceed balance
@@ -196,31 +192,31 @@ export const makePayment = async (req: AuthenticatedPortalRequest, res: Response
     // TODO: In production, integrate with payment processor (Stripe, Square, etc.)
     // For now, we'll create a simulated successful payment
 
-    const confirmationNumber = `PAY-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
+    const transactionId = `PAY-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
 
     const payment = await prisma.paymentRecord.create({
       data: {
         clientId,
-        amount,
+        paymentAmount: amount,
         paymentDate: new Date(),
         paymentMethod: paymentMethod || 'Credit Card',
-        status: 'PROCESSED',
-        confirmationNumber,
-        notes: 'Payment processed via client portal',
+        paymentSource: 'Client Portal',
+        transactionId,
+        appliedPaymentsJson: [],
+        postedBy: clientId, // Portal payments posted by the client themselves
       },
     });
 
-    logger.info(`Payment processed for client ${clientId}: $${amount} (${confirmationNumber})`);
+    logger.info(`Payment processed for client ${clientId}: $${amount} (${transactionId})`);
 
     return res.status(200).json({
       success: true,
       message: 'Payment processed successfully',
       data: {
         id: payment.id,
-        amount: payment.amount.toNumber(),
-        confirmationNumber: payment.confirmationNumber,
+        amount: payment.paymentAmount.toNumber(),
+        transactionId: payment.transactionId,
         paymentDate: payment.paymentDate,
-        status: payment.status,
       },
     });
   } catch (error: any) {

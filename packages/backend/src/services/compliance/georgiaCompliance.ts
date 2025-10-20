@@ -1,11 +1,9 @@
+import prisma from '../database';
 // Georgia Compliance Service - Automated Compliance Checking
 // Phase 6 - Week 20 - Georgia-Specific Compliance Automation
 
-import { PrismaClient } from '@prisma/client';
-import { logger, auditLogger } from '../../utils/logger';
+import logger, { auditLogger } from '../../utils/logger';
 import { alertService } from '../alerts/alertService';
-
-const prisma = new PrismaClient();
 
 interface ComplianceViolation {
   type: string;
@@ -350,7 +348,7 @@ class GeorgiaComplianceService {
     logger.info('Running Georgia compliance checks for all clinicians...');
 
     const clinicians = await prisma.user.findMany({
-      where: { role: 'CLINICIAN', isActive: true },
+      where: { roles: { hasSome: ['CLINICIAN'] }, isActive: true },
       select: { id: true, firstName: true, lastName: true },
     });
 
@@ -377,7 +375,7 @@ class GeorgiaComplianceService {
     violationsByType: Record<string, number>;
   }> {
     const clinicians = await prisma.user.findMany({
-      where: { role: 'CLINICIAN', isActive: true },
+      where: { roles: { hasSome: ['CLINICIAN'] }, isActive: true },
       select: { id: true },
     });
 

@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
-import logger from '../../utils/logger';
 
-const prisma = new PrismaClient();
+import logger from '../../utils/logger';
+import prisma from '../../services/database';
 
 /**
  * Submit a new client referral
  * POST /api/v1/portal/referrals
  */
-export const submitReferral = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const submitReferral = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const {
@@ -88,7 +86,7 @@ export const submitReferral = async (req: AuthenticatedPortalRequest, res: Respo
  * Get client's referral history
  * GET /api/v1/portal/referrals
  */
-export const getReferrals = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getReferrals = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -139,7 +137,7 @@ export const getReferrals = async (req: AuthenticatedPortalRequest, res: Respons
  * Get referral statistics for the client
  * GET /api/v1/portal/referrals/stats
  */
-export const getReferralStats = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getReferralStats = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -216,7 +214,7 @@ export const getReferralStats = async (req: AuthenticatedPortalRequest, res: Res
  * Get referral details
  * GET /api/v1/portal/referrals/:referralId
  */
-export const getReferralDetails = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getReferralDetails = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { referralId } = req.params;

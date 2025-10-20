@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import * as portalApi from '../../lib/portalApi';
 
 interface PortalTabProps {
@@ -10,9 +11,10 @@ export default function PortalTab({ clientId }: PortalTabProps) {
   const queryClient = useQueryClient();
 
   // Form assignment state
-  const [selectedFormId, setSelectedFormId] = useState('');
+  const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
   const [formDueDate, setFormDueDate] = useState('');
   const [isFormRequired, setIsFormRequired] = useState(false);
+  const [clientMessage, setClientMessage] = useState('');
 
   // Document sharing state
   const [documentTitle, setDocumentTitle] = useState('');
@@ -39,17 +41,35 @@ export default function PortalTab({ clientId }: PortalTabProps) {
 
   // Assign form mutation
   const assignFormMutation = useMutation({
-    mutationFn: (data: portalApi.AssignFormRequest) =>
-      portalApi.assignFormToClient(clientId, data),
-    onSuccess: () => {
+    mutationFn: async (data: { formIds: string[]; dueDate?: string; isRequired: boolean; clientMessage?: string }) => {
+      // Assign each form sequentially
+      const promises = data.formIds.map(formId =>
+        portalApi.assignFormToClient(clientId, {
+          formId,
+          dueDate: data.dueDate,
+          isRequired: data.isRequired,
+          clientMessage: data.clientMessage,
+        })
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['clientForms', clientId] });
-      setSelectedFormId('');
+      setSelectedFormIds([]);
       setFormDueDate('');
       setIsFormRequired(false);
-      alert('Form assigned successfully!');
+      setClientMessage('');
+      toast.success(`Successfully assigned ${data.length} form${data.length > 1 ? 's' : ''} to client!`, {
+        duration: 4000,
+        position: 'top-center',
+        icon: '✅',
+      });
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || 'Failed to assign form');
+      toast.error(error.response?.data?.message || 'Failed to assign forms', {
+        duration: 4000,
+        position: 'top-center',
+      });
     },
   });
 
@@ -59,10 +79,17 @@ export default function PortalTab({ clientId }: PortalTabProps) {
       portalApi.removeFormAssignment(clientId, assignmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientForms', clientId] });
-      alert('Form assignment removed successfully!');
+      toast.success('Form assignment removed successfully!', {
+        duration: 3000,
+        position: 'top-center',
+        icon: '🗑️',
+      });
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || 'Failed to remove form assignment');
+      toast.error(error.response?.data?.message || 'Failed to remove form assignment', {
+        duration: 4000,
+        position: 'top-center',
+      });
     },
   });
 
@@ -71,10 +98,17 @@ export default function PortalTab({ clientId }: PortalTabProps) {
     mutationFn: (assignmentId: string) =>
       portalApi.sendFormReminder(clientId, assignmentId),
     onSuccess: () => {
-      alert('Reminder sent successfully!');
+      toast.success('Reminder sent successfully!', {
+        duration: 3000,
+        position: 'top-center',
+        icon: '📧',
+      });
     },
     onError: () => {
-      alert('Failed to send reminder');
+      toast.error('Failed to send reminder', {
+        duration: 4000,
+        position: 'top-center',
+      });
     },
   });
 
@@ -100,10 +134,17 @@ export default function PortalTab({ clientId }: PortalTabProps) {
       setDocumentTitle('');
       setDocumentType('');
       setUploadedFile(null);
-      alert('Document shared successfully!');
+      toast.success('Document shared successfully!', {
+        duration: 3000,
+        position: 'top-center',
+        icon: '📄',
+      });
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || 'Failed to share document');
+      toast.error(error.response?.data?.message || 'Failed to share document', {
+        duration: 4000,
+        position: 'top-center',
+      });
     },
   });
 
@@ -113,29 +154,51 @@ export default function PortalTab({ clientId }: PortalTabProps) {
       portalApi.revokeDocumentAccess(clientId, documentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sharedDocuments', clientId] });
-      alert('Document access revoked successfully!');
+      toast.success('Document access revoked successfully!', {
+        duration: 3000,
+        position: 'top-center',
+        icon: '🔒',
+      });
     },
     onError: () => {
-      alert('Failed to revoke document access');
+      toast.error('Failed to revoke document access', {
+        duration: 4000,
+        position: 'top-center',
+      });
     },
   });
 
   const handleAssignForm = () => {
-    if (!selectedFormId) {
-      alert('Please select a form');
+    if (selectedFormIds.length === 0) {
+      toast.error('Please select at least one form', {
+        duration: 3000,
+        position: 'top-center',
+      });
       return;
     }
 
     assignFormMutation.mutate({
-      formId: selectedFormId,
+      formIds: selectedFormIds,
       dueDate: formDueDate || undefined,
       isRequired: isFormRequired,
+      clientMessage: clientMessage || undefined,
     });
+  };
+
+  const toggleFormSelection = (formId: string) => {
+    setSelectedFormIds(prev =>
+      prev.includes(formId)
+        ? prev.filter(id => id !== formId)
+        : [...prev, formId]
+    );
   };
 
   const handleShareDocument = () => {
     if (!documentTitle || !documentType) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields', {
+        duration: 3000,
+        position: 'top-center',
+      });
       return;
     }
 
@@ -183,21 +246,45 @@ export default function PortalTab({ clientId }: PortalTabProps) {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Select Form
+                  Select Forms ({selectedFormIds.length} selected)
                 </label>
-                <select
-                  value={selectedFormId}
-                  onChange={(e) => setSelectedFormId(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                  disabled={loadingForms}
-                >
-                  <option value="">Choose a form...</option>
-                  {formLibrary.map((form) => (
-                    <option key={form.id} value={form.id}>
-                      {form.formName}
-                    </option>
-                  ))}
-                </select>
+                <div className="max-h-60 overflow-y-auto border-2 border-gray-300 rounded-xl p-3 space-y-2">
+                  {loadingForms ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto"></div>
+                    </div>
+                  ) : formLibrary.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-2">No forms available</p>
+                  ) : (
+                    formLibrary.map((form) => (
+                      <label
+                        key={form.id}
+                        className="flex items-center space-x-3 p-2 hover:bg-purple-50 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedFormIds.includes(form.id)}
+                          onChange={() => toggleFormSelection(form.id)}
+                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">{form.formName}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Message to Client (Optional)
+                </label>
+                <textarea
+                  value={clientMessage}
+                  onChange={(e) => setClientMessage(e.target.value)}
+                  placeholder="Write a message to the client about these forms..."
+                  rows={3}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none"
+                />
               </div>
 
               <div>
@@ -310,7 +397,11 @@ export default function PortalTab({ clientId }: PortalTabProps) {
                         <button
                           onClick={() => {
                             // View submission logic
-                            alert('View submission feature coming soon!');
+                            toast('View submission feature coming soon!', {
+                              duration: 3000,
+                              position: 'top-center',
+                              icon: 'ℹ️',
+                            });
                           }}
                           className="px-3 py-1 bg-indigo-500 text-white text-sm font-semibold rounded-lg hover:bg-indigo-600 transition-colors"
                         >
@@ -451,7 +542,10 @@ export default function PortalTab({ clientId }: PortalTabProps) {
                           if (document.fileUrl) {
                             window.open(document.fileUrl, '_blank');
                           } else {
-                            alert('No file URL available');
+                            toast.error('No file URL available', {
+                              duration: 3000,
+                              position: 'top-center',
+                            });
                           }
                         }}
                         className="px-3 py-1 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors"

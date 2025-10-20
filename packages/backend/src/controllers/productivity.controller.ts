@@ -1,13 +1,11 @@
+import prisma from '../services/database';
 // Productivity Controller - API Endpoints for Productivity Module
 // Phase 6 - Week 19
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { metricService } from '../services/metrics/metricService';
-import { logger, auditLogger } from '../utils/logger';
+import logger, { auditLogger } from '../utils/logger';
 import { asyncHandler } from '../middleware/errorHandler';
-
-const prisma = new PrismaClient();
 
 // ============================================================================
 // DASHBOARD ENDPOINTS
@@ -145,7 +143,7 @@ export const getSupervisorDashboard = asyncHandler(async (req: Request, res: Res
       firstName: true,
       lastName: true,
       email: true,
-      role: true,
+      roles: true,
     },
   });
 
@@ -221,7 +219,7 @@ export const getSupervisorDashboard = asyncHandler(async (req: Request, res: Res
 export const getAdministratorDashboard = asyncHandler(async (req: Request, res: Response) => {
   // Get all clinicians
   const clinicians = await prisma.user.findMany({
-    where: { role: 'CLINICIAN', isActive: true },
+    where: { roles: { hasSome: ['CLINICIAN'] }, isActive: true },
     select: {
       id: true,
       firstName: true,

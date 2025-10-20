@@ -30,7 +30,7 @@ export class AuthService {
         firstName: data.firstName,
         lastName: data.lastName,
         title: data.title,
-        roles: data.roles || [data.role], // Support both roles array and legacy role field
+        roles: [data.role], // Convert single role to roles array
         licenseNumber: data.licenseNumber,
         licenseState: data.licenseState,
         licenseExpiration: data.licenseExpiration ? new Date(data.licenseExpiration) : null,

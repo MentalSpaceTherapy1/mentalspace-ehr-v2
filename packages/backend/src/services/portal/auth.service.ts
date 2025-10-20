@@ -1,12 +1,10 @@
-import { PrismaClient } from '@mentalspace/database';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../../utils/errors';
-import logger from '../../utils/logger';
+import logger, { logControllerError } from '../../utils/logger';
 import config from '../../config';
-
-const prisma = new PrismaClient();
+import prisma from '../database';
 
 // ============================================================================
 // PORTAL ACCOUNT REGISTRATION
@@ -18,15 +16,30 @@ export async function register(data: {
   clientId: string;
 }) {
   try {
+    logger.info('=== AUTH SERVICE: Starting registration ===');
+    logger.info('Client ID received:', data.clientId);
+    logger.info('Email:', data.email);
+
+    // Check if clientId is UUID or MRN
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.clientId);
+    logger.info('Is UUID?', isUUID);
+    logger.info('Searching by:', isUUID ? 'ID' : 'MRN');
+
     // Verify client exists and doesn't already have a portal account
-    const client = await prisma.client.findUnique({
-      where: { id: data.clientId },
+    const client = await prisma.client.findFirst({
+      where: isUUID ? { id: data.clientId } : { medicalRecordNumber: data.clientId },
       include: { portalAccount: true },
     });
 
+    logger.info('Client found:', client ? `Yes (ID: ${client.id})` : 'No');
+
     if (!client) {
-      throw new AppError('Client not found', 404);
+      throw new AppError(isUUID ? 'Client not found' : 'Client with this MRN not found. Please check with your therapist.', 404);
     }
+
+    // Use the client's actual UUID for the rest of the function
+    const clientUUID = client.id;
+    logger.info('Using client UUID:', clientUUID);
 
     if (client.portalAccount) {
       throw new AppError('Portal account already exists for this client', 400);
@@ -51,7 +64,7 @@ export async function register(data: {
     // Create portal account
     const portalAccount = await prisma.portalAccount.create({
       data: {
-        clientId: data.clientId,
+        clientId: clientUUID,
         email: data.email,
         password,
         verificationToken: verificationToken,
@@ -60,7 +73,7 @@ export async function register(data: {
       },
     });
 
-    logger.info(`Portal account created for client ${data.clientId}`);
+    logger.info(`Portal account created for client ${clientUUID}`);
 
     // TODO: Send verification email
     // await sendVerificationEmail(data.email, verificationToken);

@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import * as portalAuthController from '../controllers/portal/auth.controller';
 import { authenticatePortal } from '../middleware/portalAuth';
+import {
+  authRateLimiter,
+  accountCreationRateLimiter,
+  passwordResetRateLimiter
+} from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -9,16 +14,16 @@ const router = Router();
 // ============================================================================
 
 // Registration & Email Verification
-router.post('/register', portalAuthController.register);
+router.post('/register', accountCreationRateLimiter, portalAuthController.register);
 router.post('/verify-email', portalAuthController.verifyEmail);
-router.post('/resend-verification', portalAuthController.resendVerificationEmail);
+router.post('/resend-verification', authRateLimiter, portalAuthController.resendVerificationEmail);
 
-// Login
-router.post('/login', portalAuthController.login);
+// Login (Rate limited to prevent brute-force attacks)
+router.post('/login', authRateLimiter, portalAuthController.login);
 
-// Password Reset
-router.post('/forgot-password', portalAuthController.requestPasswordReset);
-router.post('/reset-password', portalAuthController.resetPassword);
+// Password Reset (Stricter rate limiting to prevent email spam)
+router.post('/forgot-password', passwordResetRateLimiter, portalAuthController.requestPasswordReset);
+router.post('/reset-password', passwordResetRateLimiter, portalAuthController.resetPassword);
 
 // ============================================================================
 // PROTECTED ROUTES (Authentication required)

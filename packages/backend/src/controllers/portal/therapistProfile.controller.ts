@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
-import logger from '../../utils/logger';
 
-const prisma = new PrismaClient();
+import logger from '../../utils/logger';
+import prisma from '../../services/database';
 
 /**
  * Get client's assigned therapist profile
  * GET /api/v1/portal/therapist/profile
  */
-export const getMyTherapistProfile = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getMyTherapistProfile = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -82,7 +80,7 @@ export const getMyTherapistProfile = async (req: AuthenticatedPortalRequest, res
  * Get a specific therapist's public profile (for browsing/selection)
  * GET /api/v1/portal/therapist/profile/:therapistId
  */
-export const getTherapistProfile = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getTherapistProfile = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { therapistId } = req.params;
@@ -98,7 +96,7 @@ export const getTherapistProfile = async (req: AuthenticatedPortalRequest, res: 
     const therapist = await prisma.user.findFirst({
       where: {
         id: therapistId,
-        role: 'CLINICIAN',
+        roles: { hasSome: ['CLINICIAN'] },
         isActive: true,
       },
       select: {
@@ -146,7 +144,7 @@ export const getTherapistProfile = async (req: AuthenticatedPortalRequest, res: 
  * Get list of available therapists (for therapist change requests)
  * GET /api/v1/portal/therapist/available
  */
-export const getAvailableTherapists = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getAvailableTherapists = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -166,7 +164,7 @@ export const getAvailableTherapists = async (req: AuthenticatedPortalRequest, re
     // Get all active clinicians who accept new clients
     const therapists = await prisma.user.findMany({
       where: {
-        role: 'CLINICIAN',
+        roles: { hasSome: ['CLINICIAN'] },
         isActive: true,
         acceptsNewClients: true,
         id: {
@@ -212,7 +210,7 @@ export const getAvailableTherapists = async (req: AuthenticatedPortalRequest, re
  * Search therapists by specialty, language, or approach
  * GET /api/v1/portal/therapist/search
  */
-export const searchTherapists = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const searchTherapists = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { specialty, language, approach } = req.query;
@@ -226,7 +224,7 @@ export const searchTherapists = async (req: AuthenticatedPortalRequest, res: Res
 
     // Build dynamic where clause
     const where: any = {
-      role: 'CLINICIAN',
+      roles: { hasSome: ['CLINICIAN'] },
       isActive: true,
       acceptsNewClients: true,
     };

@@ -1,6 +1,6 @@
-import { PrismaClient } from '@mentalspace/database';
+﻿import prisma from './database';
+import { Prisma } from '@mentalspace/database';
 
-const prisma = new PrismaClient();
 
 interface RecurrencePattern {
   frequency: 'twice_weekly' | 'weekly' | 'bi_weekly' | 'monthly' | 'custom';
@@ -18,10 +18,12 @@ interface AppointmentData {
   duration: number;
   appointmentType: string;
   serviceLocation: string;
-  serviceCodeId: string;
   timezone: string;
-  notes?: string;
+  cptCode?: string;
+  icdCodes?: string[];
+  appointmentNotes?: string;
   createdBy: string;
+  statusUpdatedBy: string;
 }
 
 /**
@@ -30,8 +32,8 @@ interface AppointmentData {
 export async function generateRecurringAppointments(
   baseData: AppointmentData,
   pattern: RecurrencePattern
-): Promise<any[]> {
-  const appointments: any[] = [];
+): Promise<Prisma.AppointmentUncheckedCreateInput[]> {
+  const appointments: Prisma.AppointmentUncheckedCreateInput[] = [];
   const startDate = new Date(baseData.appointmentDate);
 
   // Determine end date
@@ -55,16 +57,31 @@ export async function generateRecurringAppointments(
 
   // Create appointments for each date
   for (const date of dates) {
-    const appointmentDateISO = date.toISOString();
-
-    appointments.push({
-      ...baseData,
-      appointmentDate: appointmentDateISO,
+    const appointment: Prisma.AppointmentUncheckedCreateInput = {
+      clientId: baseData.clientId,
+      clinicianId: baseData.clinicianId,
+      appointmentDate: date,
+      startTime: baseData.startTime,
+      endTime: baseData.endTime,
+      duration: baseData.duration,
+      appointmentType: baseData.appointmentType,
+      serviceLocation: baseData.serviceLocation,
+      timezone: baseData.timezone,
       status: 'SCHEDULED',
+      statusUpdatedBy: baseData.statusUpdatedBy,
+      createdBy: baseData.createdBy,
+      lastModifiedBy: baseData.createdBy,
+      icdCodes: baseData.icdCodes ?? [],
+      cptCode: baseData.cptCode ?? null,
+      appointmentNotes: baseData.appointmentNotes,
       isRecurring: true,
-      recurrencePattern: JSON.stringify(pattern),
+      recurrenceFrequency: pattern.frequency,
+      recurrenceDaysOfWeek: pattern.daysOfWeek ?? [],
+      recurrenceEndDate: pattern.endDate ? new Date(pattern.endDate) : null,
       parentRecurrenceId,
-    });
+    };
+
+    appointments.push(appointment);
   }
 
   return appointments;
@@ -255,7 +272,7 @@ export async function cancelSingleOccurrence(
     data: {
       status: 'CANCELLED',
       cancellationReason,
-      cancelledAt: new Date(),
+      cancellationDate: new Date(),
       cancelledBy,
     },
   });
@@ -287,7 +304,7 @@ export async function cancelEntireSeries(
       data: {
         status: 'CANCELLED',
         cancellationReason,
-        cancelledAt: new Date(),
+        cancellationDate: new Date(),
         cancelledBy,
       },
     })
@@ -371,7 +388,7 @@ function hasTimeOverlap(
  */
 export async function getSeriesAppointments(
   parentRecurrenceId: string
-): Promise<any[]> {
+): Promise<Prisma.AppointmentUncheckedCreateInput[]> {
   return await prisma.appointment.findMany({
     where: { parentRecurrenceId },
     orderBy: { appointmentDate: 'asc' },

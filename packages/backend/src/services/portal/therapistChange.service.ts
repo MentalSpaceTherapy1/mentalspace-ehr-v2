@@ -1,8 +1,6 @@
-import { PrismaClient } from '@mentalspace/database';
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../database';
 
 // ============================================================================
 // THERAPIST CHANGE REQUESTS (Client-side)
@@ -261,7 +259,7 @@ export async function assignNewTherapist(data: {
     const newClinician = await prisma.user.findFirst({
       where: {
         id: data.newClinicianId,
-        role: { in: ['CLINICIAN', 'SUPERVISOR'] },
+        roles: { hasSome: ['CLINICIAN', 'SUPERVISOR'] },
         isActive: true,
         acceptsNewClients: true,
       },

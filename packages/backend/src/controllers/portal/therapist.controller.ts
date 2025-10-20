@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
-import logger from '../../utils/logger';
 
-const prisma = new PrismaClient();
+import logger from '../../utils/logger';
+import prisma from '../../services/database';
 
 /**
  * Get therapist profile for client's assigned therapist
  * GET /api/v1/portal/therapist/profile
  */
-export const getTherapistProfile = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getTherapistProfile = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -104,7 +102,7 @@ export const getTherapistProfile = async (req: AuthenticatedPortalRequest, res: 
  * Get therapist availability (upcoming available slots)
  * GET /api/v1/portal/therapist/availability
  */
-export const getTherapistAvailability = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getTherapistAvailability = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { startDate, endDate } = req.query;
@@ -130,8 +128,9 @@ export const getTherapistAvailability = async (req: AuthenticatedPortalRequest, 
     }
 
     // Get therapist's schedule
-    const schedule = await prisma.clinicianSchedule.findUnique({
+    const schedule = await prisma.clinicianSchedule.findFirst({
       where: { clinicianId: client.primaryTherapistId },
+      orderBy: { effectiveStartDate: 'desc' },
     });
 
     if (!schedule) {
@@ -149,7 +148,7 @@ export const getTherapistAvailability = async (req: AuthenticatedPortalRequest, 
       success: true,
       data: {
         scheduleId: schedule.id,
-        availability: schedule.availabilityJson,
+        availability: schedule.weeklyScheduleJson,
         message: 'Please contact your therapist to schedule an appointment',
       },
     });

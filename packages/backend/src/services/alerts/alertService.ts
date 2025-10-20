@@ -1,11 +1,9 @@
+import prisma from '../database';
 // Alert Service - Automated Alert Generation and Escalation
 // Phase 6 - Week 20 - Alert & Nudge System
 
-import { PrismaClient } from '@prisma/client';
 import { MetricResult, METRIC_THRESHOLDS, shouldTriggerAlert } from '../metrics/types';
-import { logger, auditLogger } from '../../utils/logger';
-
-const prisma = new PrismaClient();
+import logger, { auditLogger } from '../../utils/logger';
 
 interface AlertConfig {
   alertType: string;

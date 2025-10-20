@@ -26,21 +26,24 @@ export class DiagnosisInheritanceService {
       orderBy: {
         sessionDate: 'desc',
       },
-      include: {
-        diagnoses: true,
+      select: {
+        diagnosisCodes: true,
+        sessionDate: true,
       },
     });
 
-    if (!latestIntake) {
+    if (!latestIntake || !latestIntake.diagnosisCodes) {
       return [];
     }
 
-    // Return the diagnoses from the intake
-    return latestIntake.diagnoses.map((dx: any) => ({
-      code: dx.icd10Code,
-      description: dx.description || '',
-      isPrimary: dx.isPrimary || false,
-      effectiveDate: dx.effectiveDate || latestIntake.sessionDate,
+    // diagnosisCodes is a JSON array of strings (ICD-10 codes)
+    // Convert to DiagnosisData format
+    const codes = Array.isArray(latestIntake.diagnosisCodes) ? latestIntake.diagnosisCodes : [];
+    return codes.map((code: any, index: number) => ({
+      code: typeof code === 'string' ? code : code.toString(),
+      description: '', // Description not stored in clinical note, would need ICD-10 lookup
+      isPrimary: index === 0, // First code is primary
+      effectiveDate: latestIntake.sessionDate,
     }));
   }
 
@@ -111,7 +114,7 @@ export class DiagnosisInheritanceService {
   ): Promise<void> {
     const note = await prisma.clinicalNote.findUnique({
       where: { id: noteId },
-      select: { noteType: true, sessionDate: true },
+      select: { noteType: true, sessionDate: true, clinicianId: true },
     });
 
     if (!note) {
@@ -129,31 +132,33 @@ export class DiagnosisInheritanceService {
       const isPrimary = i === 0; // First diagnosis is primary
 
       // Check if this diagnosis already exists for the client
-      const existing = await prisma.clientDiagnosis.findFirst({
+      const existing = await prisma.diagnosis.findFirst({
         where: {
           clientId,
-          icd10Code: code,
+          icdCode: code,
         },
       });
 
       if (existing) {
-        // Update effective date and primary status
-        await prisma.clientDiagnosis.update({
+        // Update diagnosis date and type
+        await prisma.diagnosis.update({
           where: { id: existing.id },
           data: {
-            isPrimary,
-            effectiveDate: note.sessionDate,
+            diagnosisType: isPrimary ? 'Primary' : 'Secondary',
+            diagnosisDate: note.sessionDate,
             status: 'Active',
           },
         });
       } else {
         // Create new diagnosis
-        await prisma.clientDiagnosis.create({
+        await prisma.diagnosis.create({
           data: {
             clientId,
-            icd10Code: code,
-            isPrimary,
-            effectiveDate: note.sessionDate,
+            icdCode: code,
+            diagnosisDescription: '', // Would need ICD-10 lookup service
+            diagnosisType: isPrimary ? 'Primary' : 'Secondary',
+            diagnosedBy: note.clinicianId || '', // Need to pass this from context
+            diagnosisDate: note.sessionDate,
             status: 'Active',
           },
         });

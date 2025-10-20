@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { createClientSchema, updateClientSchema } from '../utils/validation';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
+import { Prisma, ClientStatus } from '@mentalspace/database';
+import { applyClientScope, assertCanAccessClient } from '../services/accessControl.service';
+import logger, { logControllerError } from '../utils/logger';
+import { sanitizeSearchInput, sanitizePagination } from '../utils/sanitize';
 
 // Generate Medical Record Number
 function generateMRN(): string {
@@ -21,22 +23,29 @@ export const getAllClients = async (req: Request, res: Response) => {
       search,
       status,
       therapistId,
-      page = '1',
-      limit = '20',
+      page,
+      limit,
     } = req.query;
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    const take = parseInt(limit as string);
+    // Sanitize pagination parameters
+    const pagination = sanitizePagination(
+      typeof page === 'string' ? page : undefined,
+      typeof limit === 'string' ? limit : undefined
+    );
 
     const where: any = {};
 
+    // Sanitize search input to prevent SQL injection
     if (search) {
-      where.OR = [
-        { firstName: { contains: search as string, mode: 'insensitive' } },
-        { lastName: { contains: search as string, mode: 'insensitive' } },
-        { medicalRecordNumber: { contains: search as string, mode: 'insensitive' } },
-        { email: { contains: search as string, mode: 'insensitive' } },
-      ];
+      const sanitizedSearch = sanitizeSearchInput(search as string);
+      if (sanitizedSearch) {
+        where.OR = [
+          { firstName: { contains: sanitizedSearch, mode: 'insensitive' } },
+          { lastName: { contains: sanitizedSearch, mode: 'insensitive' } },
+          { medicalRecordNumber: { contains: sanitizedSearch, mode: 'insensitive' } },
+          { email: { contains: sanitizedSearch, mode: 'insensitive' } },
+        ];
+      }
     }
 
     if (status) {
@@ -47,11 +56,13 @@ export const getAllClients = async (req: Request, res: Response) => {
       where.primaryTherapistId = therapistId;
     }
 
+    const scopedWhere = applyClientScope(req.user, where, { allowBillingView: true });
+
     const [clients, total] = await Promise.all([
       prisma.client.findMany({
-        where,
-        skip,
-        take,
+        where: scopedWhere,
+        skip: pagination.skip,
+        take: pagination.limit,
         include: {
           primaryTherapist: {
             select: {
@@ -65,25 +76,28 @@ export const getAllClients = async (req: Request, res: Response) => {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.client.count({ where }),
+      prisma.client.count({ where: scopedWhere }),
     ]);
 
     res.status(200).json({
       success: true,
       data: clients,
       pagination: {
-        page: parseInt(page as string),
-        limit: parseInt(limit as string),
+        page: pagination.page,
+        limit: pagination.limit,
         total,
-        totalPages: Math.ceil(total / take),
+        totalPages: Math.ceil(total / pagination.limit),
       },
     });
   } catch (error) {
-    console.error('Get clients error:', error);
+    const errorId = logControllerError('Get clients error', error, {
+      userId: (req as any).user?.userId,
+      url: req.url,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve clients',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -120,16 +134,25 @@ export const getClientById = async (req: Request, res: Response) => {
       });
     }
 
+    await assertCanAccessClient(req.user, {
+      clientId: id,
+      allowBillingView: true,
+      clientRecord: { primaryTherapistId: client.primaryTherapistId },
+    });
+
     res.status(200).json({
       success: true,
       data: client,
     });
   } catch (error) {
-    console.error('Get client error:', error);
+    const errorId = logControllerError('Get client error', error, {
+      userId: (req as any).user?.userId,
+      clientId: req.params.id,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve client',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -143,14 +166,16 @@ export const createClient = async (req: Request, res: Response) => {
     // Generate unique Medical Record Number
     const medicalRecordNumber = generateMRN();
 
+    const clientData: Prisma.ClientUncheckedCreateInput = {
+      ...(validatedData as any),
+      medicalRecordNumber,
+      dateOfBirth: new Date(validatedData.dateOfBirth),
+      createdBy: userId,
+      lastModifiedBy: userId,
+    };
+
     const client = await prisma.client.create({
-      data: {
-        ...validatedData,
-        medicalRecordNumber,
-        dateOfBirth: new Date(validatedData.dateOfBirth),
-        createdBy: userId,
-        lastModifiedBy: userId,
-      },
+      data: clientData,
       include: {
         primaryTherapist: {
           select: {
@@ -176,21 +201,12 @@ export const createClient = async (req: Request, res: Response) => {
         code: e.code,
       }));
 
-      console.log('=== CLIENT VALIDATION FAILED ===');
-      console.log('Errors:', JSON.stringify(formattedErrors, null, 2));
-      console.log('Request body:', JSON.stringify(req.body, null, 2));
-
-      // Write to file for debugging
-      const fs = require('fs');
-      const path = require('path');
-      const debugLog = {
-        timestamp: new Date().toISOString(),
-        type: 'CLIENT_CREATION',
+      logger.warn('Client creation validation failed', {
         errors: formattedErrors,
-        requestBody: req.body,
-      };
-      const logPath = path.join(__dirname, '../../validation-errors.json');
-      fs.writeFileSync(logPath, JSON.stringify(debugLog, null, 2));
+        path: req.originalUrl,
+        method: req.method,
+        userId: (req as any).user?.userId,
+      });
 
       return res.status(400).json({
         success: false,
@@ -199,11 +215,13 @@ export const createClient = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Create client error:', error);
+    const errorId = logControllerError('Create client error', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to create client',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -265,11 +283,14 @@ export const updateClient = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Update client error:', error);
+    const errorId = logControllerError('Update client error', error, {
+      userId: (req as any).user?.userId,
+      clientId: req.params.id,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to update client',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -294,7 +315,7 @@ export const deleteClient = async (req: Request, res: Response) => {
     const client = await prisma.client.update({
       where: { id },
       data: {
-        status: 'INACTIVE',
+        status: ClientStatus.INACTIVE,
         statusDate: new Date(),
         lastModifiedBy: userId,
       },
@@ -306,11 +327,14 @@ export const deleteClient = async (req: Request, res: Response) => {
       data: client,
     });
   } catch (error) {
-    console.error('Delete client error:', error);
+    const errorId = logControllerError('Delete client error', error, {
+      userId: (req as any).user?.userId,
+      clientId: req.params.id,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to deactivate client',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -318,11 +342,14 @@ export const deleteClient = async (req: Request, res: Response) => {
 // Get client statistics
 export const getClientStats = async (req: Request, res: Response) => {
   try {
+    const baseWhere = applyClientScope(req.user, {}, { allowBillingView: true });
+    const withStatus = (status: ClientStatus) => ({ ...baseWhere, status });
+
     const [total, active, inactive, discharged] = await Promise.all([
-      prisma.client.count(),
-      prisma.client.count({ where: { status: 'ACTIVE' } }),
-      prisma.client.count({ where: { status: 'INACTIVE' } }),
-      prisma.client.count({ where: { status: 'DISCHARGED' } }),
+      prisma.client.count({ where: baseWhere }),
+      prisma.client.count({ where: withStatus(ClientStatus.ACTIVE) }),
+      prisma.client.count({ where: withStatus(ClientStatus.INACTIVE) }),
+      prisma.client.count({ where: withStatus(ClientStatus.DISCHARGED) }),
     ]);
 
     res.status(200).json({
@@ -335,11 +362,14 @@ export const getClientStats = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get client stats error:', error);
+    const errorId = logControllerError('Get client stats error', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve client statistics',
-      errors: [error],
+      errorId,
     });
   }
 };
+

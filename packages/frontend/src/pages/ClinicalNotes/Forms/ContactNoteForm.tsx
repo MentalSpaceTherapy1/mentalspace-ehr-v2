@@ -26,7 +26,8 @@ const CONTACT_TYPE_OPTIONS = [
 ];
 
 export default function ContactNoteForm() {
-  const { clientId } = useParams();
+  const { clientId, noteId } = useParams();
+  const isEditMode = !!noteId;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -37,7 +38,7 @@ export default function ContactNoteForm() {
   // Appointment selection state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
   const [appointmentData, setAppointmentData] = useState<any>(null);
-  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const appointmentId = selectedAppointmentId;
@@ -72,6 +73,16 @@ export default function ContactNoteForm() {
       return response.data.data;
     },
     enabled: !!clientId,
+  });
+
+  // Fetch existing note data if in edit mode
+  const { data: existingNoteData, isLoading: isLoadingNote } = useQuery({
+    queryKey: ['clinical-note', noteId],
+    queryFn: async () => {
+      const response = await api.get(`/clinical-notes/${noteId}`);
+      return response.data.data;
+    },
+    enabled: isEditMode && !!noteId,
   });
 
   // Fetch eligible appointments
@@ -112,8 +123,55 @@ export default function ContactNoteForm() {
     setShowAppointmentPicker(false);
   };
 
+  // Populate form fields from existingNoteData when in edit mode
+  useEffect(() => {
+    if (existingNoteData && isEditMode) {
+      // Set appointment ID from existing note
+      if (existingNoteData.appointmentId) {
+        setSelectedAppointmentId(existingNoteData.appointmentId);
+      }
+
+      // Contact date and time
+      if (existingNoteData.sessionDate) {
+        const date = new Date(existingNoteData.sessionDate);
+        setContactDate(date.toISOString().split('T')[0]);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        setContactTime(`${hours}:${minutes}`);
+      }
+
+      // Contact details
+      if (existingNoteData.contactType) setContactType(existingNoteData.contactType);
+      if (existingNoteData.duration) setDuration(existingNoteData.duration);
+      if (existingNoteData.purpose) setPurpose(existingNoteData.purpose);
+      if (existingNoteData.summary) setSummary(existingNoteData.summary);
+      if (existingNoteData.followUpNeeded !== undefined) setFollowUpNeeded(existingNoteData.followUpNeeded);
+
+      // Billing
+      if (existingNoteData.cptCode) setCptCode(existingNoteData.cptCode);
+      if (existingNoteData.billingCode) setBillingCode(existingNoteData.billingCode);
+      if (existingNoteData.billable !== undefined) setBillable(existingNoteData.billable);
+    }
+  }, [existingNoteData, isEditMode]);
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
+      return api.post('/clinical-notes', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      navigate(`/clients/${clientId}/notes`);
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
@@ -178,6 +236,37 @@ export default function ContactNoteForm() {
 
     setShowReviewModal(false);
     setGeneratedData(null);
+  };
+
+  const handleSaveDraft = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const contactDateTime = contactDate && contactTime
+      ? new Date(`${contactDate}T${contactTime}`)
+      : null;
+
+    const data = {
+      clientId,
+      noteType: 'Contact Note',
+      appointmentId: appointmentId,
+      sessionDate: contactDateTime ? contactDateTime.toISOString() : undefined,
+      subjective: `Type: ${contactType}\nDuration: ${duration}\n\nPurpose: ${purpose}`,
+      objective: summary,
+      assessment: followUpNeeded ? 'Follow-up needed' : 'No follow-up needed',
+      plan: followUpNeeded ? 'Schedule follow-up contact or session' : 'Continue as planned',
+      contactType,
+      duration,
+      purpose,
+      summary,
+      followUpNeeded,
+      cptCode,
+      billingCode,
+      billable,
+      dueDate: contactDateTime ? contactDateTime.toISOString() : undefined,
+      status: 'DRAFT',
+    };
+
+    saveDraftMutation.mutate(data);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -303,7 +392,7 @@ export default function ContactNoteForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
           {/* AI-Powered Note Generation */}
           {/* Schedule Header */}
             {appointmentData && (
@@ -428,9 +517,11 @@ export default function ContactNoteForm() {
           {/* Form Actions */}
           <FormActions
             onCancel={() => navigate(`/clients/${clientId}/notes`)}
-            onSubmit={handleSubmit}
-            submitLabel="Create Contact Note"
+            onSubmit={() => handleSubmit({} as React.FormEvent)}
+            submitLabel={isEditMode ? "Update Contact Note" : "Create Contact Note"}
             isSubmitting={saveMutation.isPending}
+            onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+            isSavingDraft={saveDraftMutation.isPending}
           />
         </form>
         )}

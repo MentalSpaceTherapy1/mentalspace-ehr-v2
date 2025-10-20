@@ -17,40 +17,44 @@ const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 // Maximum session lifetime (even with activity) - 8 hours
 const MAX_SESSION_LIFETIME_MS = 8 * 60 * 60 * 1000; // 8 hours
 
+export const enforceSessionTimeout = (req: Request, res?: Response) => {
+  if (!req.user) {
+    return;
+  }
+
+  const currentTime = Date.now();
+  const tokenIssuedAt = req.user.iat ? req.user.iat * 1000 : 0; // Convert to milliseconds
+  const lastActivity = req.user.lastActivity || tokenIssuedAt;
+
+  // Check if session has exceeded maximum lifetime
+  if (tokenIssuedAt && currentTime - tokenIssuedAt > MAX_SESSION_LIFETIME_MS) {
+    throw new UnauthorizedError(
+      'Session expired. Maximum session lifetime exceeded. Please log in again.'
+    );
+  }
+
+  // Check for inactivity timeout
+  if (lastActivity && currentTime - lastActivity > SESSION_TIMEOUT_MS) {
+    throw new UnauthorizedError(
+      'Session expired due to inactivity. Please log in again.'
+    );
+  }
+
+  if (res) {
+    res.setHeader('X-Session-Timeout', SESSION_TIMEOUT_MS.toString());
+    res.setHeader('X-Session-Expires-At', (currentTime + SESSION_TIMEOUT_MS).toString());
+  }
+
+  req.user.lastActivity = currentTime;
+};
+
 export const sessionTimeoutMiddleware = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    // Only check authenticated requests
-    if (!req.user) {
-      return next();
-    }
-
-    const currentTime = Date.now();
-    const tokenIssuedAt = req.user.iat ? req.user.iat * 1000 : 0; // Convert to milliseconds
-    const lastActivity = (req.user.lastActivity || tokenIssuedAt);
-
-    // Check if session has exceeded maximum lifetime
-    if (tokenIssuedAt && currentTime - tokenIssuedAt > MAX_SESSION_LIFETIME_MS) {
-      throw new UnauthorizedError(
-        'Session expired. Maximum session lifetime exceeded. Please log in again.'
-      );
-    }
-
-    // Check for inactivity timeout
-    if (lastActivity && currentTime - lastActivity > SESSION_TIMEOUT_MS) {
-      throw new UnauthorizedError(
-        'Session expired due to inactivity. Please log in again.'
-      );
-    }
-
-    // Update last activity timestamp in response header
-    // Frontend should track this and refresh token before timeout
-    res.setHeader('X-Session-Timeout', SESSION_TIMEOUT_MS.toString());
-    res.setHeader('X-Session-Expires-At', (lastActivity + SESSION_TIMEOUT_MS).toString());
-
+    enforceSessionTimeout(req, res);
     next();
   } catch (error) {
     next(error);

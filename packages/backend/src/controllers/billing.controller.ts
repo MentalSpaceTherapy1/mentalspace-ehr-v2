@@ -1,9 +1,9 @@
+import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { auditLogger } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
+import { Prisma } from '@mentalspace/database';
 
 // ============================================================================
 // CHARGES
@@ -82,7 +82,7 @@ export const getAllCharges = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get charges error:', error);
+    logger.error('Get charges error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve charges',
@@ -122,7 +122,7 @@ export const getChargeById = async (req: Request, res: Response) => {
       data: charge,
     });
   } catch (error) {
-    console.error('Get charge error:', error);
+    logger.error('Get charge error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve charge',
@@ -137,14 +137,27 @@ export const createCharge = async (req: Request, res: Response) => {
     const validatedData = createChargeSchema.parse(req.body);
     const userId = (req as any).user?.userId;
 
+    const chargeData: Prisma.ChargeEntryUncheckedCreateInput = {
+      clientId: validatedData.clientId,
+      appointmentId: validatedData.appointmentId,
+      serviceDate: new Date(validatedData.serviceDate),
+      providerId: validatedData.providerId,
+      supervisingProviderId: validatedData.supervisingProviderId,
+      cptCode: validatedData.cptCode,
+      cptDescription: validatedData.cptDescription,
+      modifiers: validatedData.modifiers || [],
+      units: validatedData.units,
+      diagnosisCodesJson: validatedData.diagnosisCodesJson,
+      placeOfService: validatedData.placeOfService,
+      locationId: validatedData.locationId,
+      chargeAmount: validatedData.chargeAmount,
+      primaryInsuranceId: validatedData.primaryInsuranceId,
+      secondaryInsuranceId: validatedData.secondaryInsuranceId,
+      createdBy: userId,
+    };
+
     const charge = await prisma.chargeEntry.create({
-      data: {
-        ...validatedData,
-        serviceDate: new Date(validatedData.serviceDate),
-        modifiers: validatedData.modifiers || [],
-        createdBy: userId,
-        lastModifiedBy: userId,
-      },
+      data: chargeData,
       include: {
         client: true,
       },
@@ -163,7 +176,7 @@ export const createCharge = async (req: Request, res: Response) => {
       data: charge,
     });
   } catch (error) {
-    console.error('Create charge error:', error);
+    logger.error('Create charge error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -191,8 +204,6 @@ export const updateCharge = async (req: Request, res: Response) => {
       where: { id },
       data: {
         ...req.body,
-        lastModifiedBy: userId,
-        updatedAt: new Date(),
       },
       include: {
         client: true,
@@ -211,7 +222,7 @@ export const updateCharge = async (req: Request, res: Response) => {
       data: charge,
     });
   } catch (error) {
-    console.error('Update charge error:', error);
+    logger.error('Update charge error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to update charge',
@@ -241,7 +252,7 @@ export const deleteCharge = async (req: Request, res: Response) => {
       message: 'Charge deleted successfully',
     });
   } catch (error) {
-    console.error('Delete charge error:', error);
+    logger.error('Delete charge error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to delete charge',
@@ -325,7 +336,7 @@ export const getAllPayments = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get payments error:', error);
+    logger.error('Get payments error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve payments',
@@ -358,7 +369,7 @@ export const getPaymentById = async (req: Request, res: Response) => {
       data: payment,
     });
   } catch (error) {
-    console.error('Get payment error:', error);
+    logger.error('Get payment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve payment',
@@ -378,15 +389,26 @@ export const createPayment = async (req: Request, res: Response) => {
     const totalApplied = appliedPayments.reduce((sum: number, ap: any) => sum + (ap.amount || 0), 0);
     const unappliedAmount = validatedData.paymentAmount - totalApplied;
 
+    const paymentData: Prisma.PaymentRecordUncheckedCreateInput = {
+      clientId: validatedData.clientId,
+      paymentDate: new Date(validatedData.paymentDate),
+      paymentAmount: validatedData.paymentAmount,
+      paymentSource: validatedData.paymentSource,
+      paymentMethod: validatedData.paymentMethod,
+      checkNumber: validatedData.checkNumber,
+      cardLast4: validatedData.cardLast4,
+      transactionId: validatedData.transactionId,
+      appliedPaymentsJson: validatedData.appliedPaymentsJson,
+      eobDate: validatedData.eobDate ? new Date(validatedData.eobDate) : null,
+      eobAttachment: validatedData.eobAttachment,
+      claimNumber: validatedData.claimNumber,
+      adjustmentsJson: validatedData.adjustmentsJson,
+      unappliedAmount,
+      postedBy: userId,
+    };
+
     const payment = await prisma.paymentRecord.create({
-      data: {
-        ...validatedData,
-        paymentDate: new Date(validatedData.paymentDate),
-        eobDate: validatedData.eobDate ? new Date(validatedData.eobDate) : null,
-        unappliedAmount,
-        createdBy: userId,
-        lastModifiedBy: userId,
-      },
+      data: paymentData,
       include: {
         client: true,
       },
@@ -425,7 +447,7 @@ export const createPayment = async (req: Request, res: Response) => {
       data: payment,
     });
   } catch (error) {
-    console.error('Create payment error:', error);
+    logger.error('Create payment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -453,8 +475,6 @@ export const updatePayment = async (req: Request, res: Response) => {
       where: { id },
       data: {
         ...req.body,
-        lastModifiedBy: userId,
-        updatedAt: new Date(),
       },
       include: {
         client: true,
@@ -473,7 +493,7 @@ export const updatePayment = async (req: Request, res: Response) => {
       data: payment,
     });
   } catch (error) {
-    console.error('Update payment error:', error);
+    logger.error('Update payment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to update payment',
@@ -503,7 +523,7 @@ export const deletePayment = async (req: Request, res: Response) => {
       message: 'Payment deleted successfully',
     });
   } catch (error) {
-    console.error('Delete payment error:', error);
+    logger.error('Delete payment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to delete payment',
@@ -548,7 +568,9 @@ export const getAgingReport = async (req: Request, res: Response) => {
 
     charges.forEach((charge) => {
       const daysDiff = Math.floor((now.getTime() - charge.serviceDate.getTime()) / (1000 * 60 * 60 * 24));
-      const balance = charge.chargeAmount - (charge.paymentAmount || 0);
+      const chargeAmountNum = Number(charge.chargeAmount);
+      const paymentAmountNum = Number(charge.paymentAmount || 0);
+      const balance = chargeAmountNum - paymentAmountNum;
 
       const item = {
         ...charge,
@@ -586,7 +608,7 @@ export const getAgingReport = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get aging report error:', error);
+    logger.error('Get aging report error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate aging report',
@@ -653,7 +675,7 @@ export const getRevenueReport = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get revenue report error:', error);
+    logger.error('Get revenue report error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     res.status(500).json({
       success: false,
       message: 'Failed to generate revenue report',

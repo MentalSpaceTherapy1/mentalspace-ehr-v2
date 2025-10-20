@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import config from '../config';
 import { UnauthorizedError } from './errors';
 
@@ -20,22 +20,24 @@ export interface TokenPair {
  * Generate JWT access token
  */
 export const generateAccessToken = (payload: JwtPayload): string => {
-  return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
+  const options: SignOptions = {
+    expiresIn: config.jwtExpiresIn as any,
     issuer: 'mentalspace-ehr',
     audience: 'mentalspace-api',
-  });
+  };
+  return jwt.sign(payload, config.jwtSecret, options);
 };
 
 /**
  * Generate JWT refresh token
  */
 export const generateRefreshToken = (payload: JwtPayload): string => {
-  return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtRefreshExpiresIn,
+  const options: SignOptions = {
+    expiresIn: config.jwtRefreshExpiresIn as any,
     issuer: 'mentalspace-ehr',
     audience: 'mentalspace-api',
-  });
+  };
+  return jwt.sign(payload, config.jwtSecret, options);
 };
 
 /**

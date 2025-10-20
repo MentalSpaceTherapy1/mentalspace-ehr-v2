@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import * as waitlistService from '../services/waitlist.service';
@@ -48,7 +49,14 @@ export const addToWaitlist = async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
 
     const entry = await waitlistService.addToWaitlist({
-      ...validatedData,
+      clientId: validatedData.clientId,
+      requestedClinicianId: validatedData.requestedClinicianId,
+      alternateClinicianIds: validatedData.alternateClinicianIds,
+      requestedAppointmentType: validatedData.requestedAppointmentType,
+      preferredDays: validatedData.preferredDays,
+      preferredTimes: validatedData.preferredTimes,
+      priority: validatedData.priority,
+      notes: validatedData.notes,
       addedBy: userId,
     });
 
@@ -58,7 +66,7 @@ export const addToWaitlist = async (req: Request, res: Response) => {
       data: entry,
     });
   } catch (error) {
-    console.error('Add to waitlist error:', error);
+    logger.error('Add to waitlist error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -95,7 +103,7 @@ export const getWaitlistEntries = async (req: Request, res: Response) => {
       count: entries.length,
     });
   } catch (error) {
-    console.error('Get waitlist entries error:', error);
+    logger.error('Get waitlist entries error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -123,7 +131,7 @@ export const findAvailableSlots = async (req: Request, res: Response) => {
       count: slots.length,
     });
   } catch (error) {
-    console.error('Find available slots error:', error);
+    logger.error('Find available slots error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -145,8 +153,11 @@ export const offerAppointment = async (req: Request, res: Response) => {
     const entry = await waitlistService.offerAppointment(
       id,
       {
-        ...validatedData,
+        clinicianId: validatedData.clinicianId,
         appointmentDate: new Date(validatedData.appointmentDate),
+        startTime: validatedData.startTime,
+        endTime: validatedData.endTime,
+        notificationMethod: validatedData.notificationMethod,
       },
       userId
     );
@@ -157,7 +168,7 @@ export const offerAppointment = async (req: Request, res: Response) => {
       data: entry,
     });
   } catch (error) {
-    console.error('Offer appointment error:', error);
+    logger.error('Offer appointment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -187,8 +198,15 @@ export const bookFromWaitlist = async (req: Request, res: Response) => {
     const result = await waitlistService.bookFromWaitlist(
       id,
       {
-        ...validatedData,
+        clinicianId: validatedData.clinicianId,
         appointmentDate: new Date(validatedData.appointmentDate),
+        startTime: validatedData.startTime,
+        endTime: validatedData.endTime,
+        duration: validatedData.duration,
+        serviceLocation: validatedData.serviceLocation,
+        serviceCodeId: validatedData.serviceCodeId,
+        timezone: validatedData.timezone,
+        notes: validatedData.notes,
       },
       userId
     );
@@ -199,7 +217,7 @@ export const bookFromWaitlist = async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    console.error('Book from waitlist error:', error);
+    logger.error('Book from waitlist error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -241,7 +259,7 @@ export const removeFromWaitlist = async (req: Request, res: Response) => {
       data: entry,
     });
   } catch (error) {
-    console.error('Remove from waitlist error:', error);
+    logger.error('Remove from waitlist error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -272,7 +290,7 @@ export const updatePriority = async (req: Request, res: Response) => {
       data: entry,
     });
   } catch (error) {
-    console.error('Update priority error:', error);
+    logger.error('Update priority error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({

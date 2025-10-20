@@ -11,9 +11,9 @@ import ClientForm from './pages/Clients/ClientForm';
 import ClientDetail from './pages/Clients/ClientDetail';
 import ClinicalNoteDetail from './pages/ClinicalNotes/ClinicalNoteDetail';
 import ClinicalNotesPage from './pages/ClinicalNotes/ClinicalNotesPage';
-import CosignQueue from './pages/ClinicalNotes/CosignQueue';
-import AppointmentSelector from './pages/ClinicalNotes/AppointmentSelector';
-import NoteTypeSelector from './pages/ClinicalNotes/NoteTypeSelector';
+import ComplianceDashboard from './pages/ClinicalNotes/ComplianceDashboard';
+import MyNotes from './pages/ClinicalNotes/MyNotes';
+// Old components kept for backward compatibility with direct form routes
 import IntakeAssessmentForm from './pages/ClinicalNotes/Forms/IntakeAssessmentForm';
 import ProgressNoteForm from './pages/ClinicalNotes/Forms/ProgressNoteForm';
 import TreatmentPlanForm from './pages/ClinicalNotes/Forms/TreatmentPlanForm';
@@ -47,6 +47,7 @@ import PortalMoodTracking from './pages/Portal/PortalMoodTracking';
 import PortalBilling from './pages/Portal/PortalBilling';
 import PortalProfile from './pages/Portal/PortalProfile';
 import PortalDocuments from './pages/Portal/PortalDocuments';
+import PortalFormViewer from './pages/Portal/PortalFormViewer';
 import PortalAssessments from './pages/Portal/PortalAssessments';
 import PortalAppointmentRequest from './pages/Portal/PortalAppointmentRequest';
 import PortalReferrals from './pages/Portal/PortalReferrals';
@@ -56,6 +57,9 @@ import SupervisionSessionsList from './pages/Supervision/SupervisionSessionsList
 import SupervisionSessionForm from './pages/Supervision/SupervisionSessionForm';
 import SupervisionHoursDashboard from './pages/Supervision/SupervisionHoursDashboard';
 import UnlockRequestManagement from './pages/UnlockRequests/UnlockRequestManagement';
+import EditNoteRouter from './pages/ClinicalNotes/EditNoteRouter';
+import SmartNoteCreator from './pages/ClinicalNotes/SmartNoteCreator';
+import LandingPage from './pages/Landing/LandingPage';
 
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -70,11 +74,14 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function PortalRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('portalToken');
+  console.log('🟢 PortalRoute guard checking token:', token ? 'exists' : 'missing');
 
   if (!token) {
+    console.log('🔴 PortalRoute: No token, redirecting to login');
     return <Navigate to="/portal/login" />;
   }
 
+  console.log('🟢 PortalRoute: Token valid, rendering children');
   return <PortalLayout>{children}</PortalLayout>;
 }
 
@@ -82,6 +89,9 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Routes>
+        {/* Public Landing Page */}
+        <Route path="/" element={<LandingPage />} />
+
         <Route path="/login" element={<Login />} />
 
         {/* Client Portal Routes */}
@@ -145,6 +155,14 @@ function App() {
           }
         />
         <Route
+          path="/portal/forms/:formId"
+          element={
+            <PortalRoute>
+              <PortalFormViewer />
+            </PortalRoute>
+          }
+        />
+        <Route
           path="/portal/assessments"
           element={
             <PortalRoute>
@@ -185,8 +203,9 @@ function App() {
           }
         />
 
+        {/* Staff Dashboard - requires authentication */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <PrivateRoute>
               <Dashboard />
@@ -285,7 +304,15 @@ function App() {
           path="/notes"
           element={
             <PrivateRoute>
-              <CosignQueue />
+              <ComplianceDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/notes/my-notes"
+          element={
+            <PrivateRoute>
+              <MyNotes />
             </PrivateRoute>
           }
         />
@@ -298,18 +325,10 @@ function App() {
           }
         />
         <Route
-          path="/clients/:clientId/notes/select-appointment"
+          path="/clients/:clientId/notes/create"
           element={
             <PrivateRoute>
-              <AppointmentSelector />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/clients/:clientId/notes/new"
-          element={
-            <PrivateRoute>
-              <NoteTypeSelector />
+              <SmartNoteCreator />
             </PrivateRoute>
           }
         />
@@ -382,6 +401,14 @@ function App() {
           element={
             <PrivateRoute>
               <ClinicalNoteDetail />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/:clientId/notes/:noteId/edit"
+          element={
+            <PrivateRoute>
+              <EditNoteRouter />
             </PrivateRoute>
           }
         />

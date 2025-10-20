@@ -347,7 +347,18 @@ export default function VideoSession() {
   // Handle track unsubscribed
   const handleTrackUnsubscribed = (track: RemoteTrack) => {
     console.log('Track unsubscribed:', track.kind);
-    track.detach();
+    // Detach track from all attached elements
+    // RemoteAudioTrack and RemoteVideoTrack have detach(), but RemoteDataTrack does not
+    try {
+      if (track.kind !== 'data' && 'detach' in track) {
+        const detachedElements = (track as any).detach();
+        if (Array.isArray(detachedElements)) {
+          detachedElements.forEach((element: any) => element?.remove());
+        }
+      }
+    } catch (error) {
+      console.error('Error detaching track:', error);
+    }
 
     if (track.kind === 'video' && track.name.includes('screen')) {
       setIsScreenSharing(false);
@@ -620,7 +631,7 @@ export default function VideoSession() {
             {sessionStatus === 'connected' ? '● Live' :
              sessionStatus === 'connecting' ? '○ Connecting...' :
              sessionStatus === 'reconnecting' ? '○ Reconnecting...' :
-             sessionStatus === 'waiting' ? '⏳ Waiting...' :
+             (sessionStatus as string) === 'waiting' ? '⏳ Waiting...' :
              '○ Loading...'}
           </span>
         </div>

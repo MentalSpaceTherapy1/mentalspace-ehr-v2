@@ -224,7 +224,7 @@ function VideoSessionView({
                   key={tileId}
                   className="flex-shrink-0 w-64 h-full bg-gray-700 rounded-lg overflow-hidden relative"
                 >
-                  <VideoTileGrid tileId={tileId} />
+                  <VideoTileGrid />
                 </div>
               ))}
             </div>
@@ -274,7 +274,7 @@ function VideoSessionView({
                     key={tileId}
                     className="relative bg-gray-800 rounded-2xl overflow-hidden shadow-2xl"
                   >
-                    <VideoTileGrid tileId={tileId} />
+                    <VideoTileGrid />
                     <div className="absolute bottom-4 left-4 bg-black bg-opacity-60 px-4 py-2 rounded-lg">
                       <span className="text-white font-semibold">
                         {userRole === 'clinician' ? 'Client' : 'Therapist'}

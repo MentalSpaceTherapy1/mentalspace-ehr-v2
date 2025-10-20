@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../../utils/logger';
 import anthropicService from './anthropic.service';
 import { getFieldMapping } from './fieldMappings.service';
 
@@ -64,7 +65,7 @@ class ClinicalNoteGenerationService {
         warnings: parsed.warnings,
       };
     } catch (error: any) {
-      console.error('Note Generation Error:', error);
+      logger.error('Note Generation Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`Failed to generate clinical note: ${error.message}`);
     }
   }
@@ -477,7 +478,7 @@ CRITICAL REQUIREMENTS:
         warnings: parsed.warnings || [],
       };
     } catch (error) {
-      console.error('Failed to parse AI response:', error);
+      logger.error('Failed to parse AI response:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       // Fallback: return response as plain text in content
       return {
         content: { rawResponse: response },
@@ -521,7 +522,7 @@ Provide a brief suggestion to complete or improve this field.`;
 
       return suggestion.trim();
     } catch (error) {
-      console.error('Field suggestion error:', error);
+      logger.error('Field suggestion error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return '';
     }
   }

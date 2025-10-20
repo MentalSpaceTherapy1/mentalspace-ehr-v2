@@ -237,7 +237,9 @@ model PracticeSettings {
   enableAIFeatures             Boolean @default(false)
   aiProvider                   String? // "OpenAI", "Anthropic", "Custom"
   aiModel                      String? // "gpt-4", "claude-3", etc.
-  aiApiKey                     String? // Encrypted in production
+  // DEPRECATED: Do not store API keys in database. Use AWS Secrets Manager instead.
+  // This field is kept only for backward compatibility and should remain NULL.
+  aiApiKey                     String? // DEPRECATED - Use Secrets Manager
   enableAINoteGeneration       Boolean @default(false)
   enableAITreatmentSuggestions Boolean @default(false)
   enableAIScheduling           Boolean @default(false)
@@ -251,7 +253,9 @@ model PracticeSettings {
   smtpPort                Int?
   smtpSecure              Boolean @default(true)
   smtpUser                String?
-  smtpPass                String? // Encrypted in production
+  // DEPRECATED: Do not store passwords in database. Use AWS Secrets Manager instead.
+  // This field is kept only for backward compatibility and should remain NULL.
+  smtpPass                String? // DEPRECATED - Use Secrets Manager
   emailFromName           String?
   emailFromAddress        String?
   enableAppointmentReminders Boolean @default(true)
@@ -1708,19 +1712,22 @@ model PaymentMethod {
 }
 
 model FormAssignment {
-  id           String                @id @default(uuid())
-  formId       String
-  clientId     String
-  client       Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  assignedBy   String // User ID of therapist/admin
-  assignedAt   DateTime              @default(now())
-  dueDate      DateTime?
-  isRequired   Boolean               @default(false)
-  status       String                @default("PENDING") // 'PENDING', 'IN_PROGRESS', 'COMPLETED'
-  completedAt  DateTime?
-  submissionId String?               @unique
-  form         IntakeForm            @relation(fields: [formId], references: [id])
-  submission   IntakeFormSubmission? @relation(fields: [submissionId], references: [id])
+  id              String                @id @default(uuid())
+  formId          String
+  clientId        String
+  client          Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  assignedBy      String // User ID of therapist/admin
+  assignedAt      DateTime              @default(now())
+  dueDate         DateTime?
+  isRequired      Boolean               @default(false)
+  assignmentNotes String? // Internal notes for therapist
+  clientMessage   String? // Message to send to client
+  status          String                @default("PENDING") // 'PENDING', 'IN_PROGRESS', 'COMPLETED'
+  completedAt     DateTime?
+  submissionId    String?               @unique
+  lastReminderSent DateTime?
+  form            IntakeForm            @relation(fields: [formId], references: [id])
+  submission      IntakeFormSubmission? @relation(fields: [submissionId], references: [id])
 
   @@index([clientId, status])
   @@map("form_assignments")

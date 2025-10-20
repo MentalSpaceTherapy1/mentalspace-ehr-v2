@@ -1,10 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@mentalspace/database';
 import config from '../config';
 import logger from '../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
 
 interface PortalTokenPayload {
   userId: string; // This is the clientId in portal tokens

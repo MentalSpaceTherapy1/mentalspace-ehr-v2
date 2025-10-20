@@ -139,7 +139,7 @@ export default function ClinicalNoteForm() {
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       if (isEdit) {
-        return apiClient.patch(`/clinical-notes/${noteId}`, data);
+        return api.patch(`/clinical-notes/${noteId}`, data);
       } else {
         return api.post('/clinical-notes', data);
       }

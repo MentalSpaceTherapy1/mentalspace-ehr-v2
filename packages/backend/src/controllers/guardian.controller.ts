@@ -1,8 +1,7 @@
+import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
 
 // Guardian validation schema
 const guardianSchema = z.object({
@@ -34,11 +33,13 @@ export const getClientGuardians = async (req: Request, res: Response) => {
       data: guardians,
     });
   } catch (error) {
-    console.error('Get guardians error:', error);
+    const errorId = logControllerError('Get guardians', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve guardians',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -74,11 +75,13 @@ export const getGuardianById = async (req: Request, res: Response) => {
       data: guardian,
     });
   } catch (error) {
-    console.error('Get guardian error:', error);
+    const errorId = logControllerError('Get guardian', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve guardian',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -102,7 +105,7 @@ export const createGuardian = async (req: Request, res: Response) => {
     }
 
     const guardian = await prisma.legalGuardian.create({
-      data: validatedData,
+      data: validatedData as any,
     });
 
     res.status(201).json({
@@ -119,11 +122,13 @@ export const createGuardian = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Create guardian error:', error);
+    const errorId = logControllerError('Create guardian', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to create guardian',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -178,11 +183,13 @@ export const updateGuardian = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Update guardian error:', error);
+    const errorId = logControllerError('Update guardian', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to update guardian',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -212,11 +219,13 @@ export const deleteGuardian = async (req: Request, res: Response) => {
       message: 'Guardian deleted successfully',
     });
   } catch (error) {
-    console.error('Delete guardian error:', error);
+    const errorId = logControllerError('Delete guardian', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to delete guardian',
-      errors: [error],
+      errorId,
     });
   }
 };

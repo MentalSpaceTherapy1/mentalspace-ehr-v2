@@ -461,7 +461,7 @@ export default function AppointmentsCalendar() {
                   </button>
 
                   <button
-                    onClick={() => navigate(`/clients/${selectedAppointment.clientId}/notes/new`)}
+                    onClick={() => navigate(`/clients/${selectedAppointment.clientId}/notes/create?appointmentId=${selectedAppointment.id}`)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-semibold"
                   >
                     Create Note

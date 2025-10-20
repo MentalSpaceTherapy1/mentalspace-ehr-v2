@@ -98,7 +98,7 @@ export default function VideoControls({
 
               {/* Screen Share */}
               <button
-                onClick={toggleContentShare}
+                onClick={() => toggleContentShare()}
                 className={`p-4 rounded-full transition-all ${
                   isLocalUserSharing
                     ? 'bg-blue-600 hover:bg-blue-700'

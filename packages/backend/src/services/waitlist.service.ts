@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { auditLogger } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from './database';
+import { AppointmentStatus } from '@mentalspace/database';
 
 interface WaitlistEntryData {
   clientId: string;
@@ -41,17 +40,6 @@ export async function addToWaitlist(data: WaitlistEntryData) {
         notes: data.notes,
         addedBy: data.addedBy,
         status: 'Active',
-      },
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            primaryPhone: true,
-          },
-        },
       },
     });
 
@@ -99,17 +87,6 @@ export async function getWaitlistEntries(filters: {
 
   const entries = await prisma.waitlistEntry.findMany({
     where,
-    include: {
-      client: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          primaryPhone: true,
-        },
-      },
-    },
     orderBy: [
       { priority: 'desc' }, // High priority first
       { addedDate: 'asc' }, // Oldest first
@@ -177,7 +154,7 @@ export async function findAvailableSlots(
           gte: startDate,
           lte: endDate,
         },
-        status: { notIn: ['Cancelled', 'No Show'] },
+        status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
       },
       select: {
         appointmentDate: true,
@@ -345,14 +322,11 @@ export async function bookFromWaitlist(
         duration: appointmentData.duration,
         appointmentType: entry.requestedAppointmentType,
         serviceLocation: appointmentData.serviceLocation,
-        serviceCodeId: appointmentData.serviceCodeId,
         timezone: appointmentData.timezone,
-        notes: appointmentData.notes || entry.notes,
-        status: 'Scheduled',
-        createdBy: bookedBy,
+        appointmentNotes: appointmentData.notes || entry.notes,
+        status: AppointmentStatus.SCHEDULED,
         statusUpdatedBy: bookedBy,
-        lastModifiedBy: bookedBy,
-      },
+      } as any,
     });
 
     // Update waitlist entry

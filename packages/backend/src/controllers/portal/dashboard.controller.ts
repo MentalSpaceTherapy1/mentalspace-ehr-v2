@@ -1,14 +1,12 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { PrismaClient } from '@mentalspace/database';
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
+import prisma from '../../services/database';
 import {
   billingService,
   moodTrackingService,
 } from '../../services/portal';
-
-const prisma = new PrismaClient();
 
 // ============================================================================
 // DASHBOARD OVERVIEW
@@ -189,7 +187,7 @@ export const getAppointmentDetails = async (req: Request, res: Response) => {
         telehealthSession: {
           select: {
             id: true,
-            meetingUrl: true,
+            clientJoinUrl: true,
             status: true,
           },
         },
@@ -255,7 +253,7 @@ export const cancelAppointment = async (req: Request, res: Response) => {
       data: {
         status: 'CANCELLED',
         cancellationReason: data.reason,
-        cancelledAt: new Date(),
+        cancellationDate: new Date(),
         cancelledBy: clientId,
       },
     });

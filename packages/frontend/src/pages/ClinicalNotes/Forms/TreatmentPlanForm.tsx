@@ -26,7 +26,8 @@ interface TreatmentGoal {
 }
 
 export default function TreatmentPlanForm() {
-  const { clientId } = useParams();
+  const { clientId, noteId } = useParams();
+  const isEditMode = !!noteId;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -37,7 +38,7 @@ export default function TreatmentPlanForm() {
   // Appointment selection state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
   const [appointmentData, setAppointmentData] = useState<any>(null);
-  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [canSign, setCanSign] = useState(true);
   const [diagnosisValidationMessage, setDiagnosisValidationMessage] = useState('');
@@ -83,6 +84,16 @@ export default function TreatmentPlanForm() {
       return response.data.data;
     },
     enabled: !!clientId,
+  });
+
+  // Fetch existing note data if in edit mode
+  const { data: existingNoteData, isLoading: isLoadingNote } = useQuery({
+    queryKey: ['clinical-note', noteId],
+    queryFn: async () => {
+      const response = await api.get(`/clinical-notes/${noteId}`);
+      return response.data.data;
+    },
+    enabled: isEditMode && !!noteId,
   });
 
   // Fetch eligible appointments
@@ -159,6 +170,100 @@ export default function TreatmentPlanForm() {
     }
   }, [sessionDate]);
 
+  // Populate form fields from existingNoteData when in edit mode
+  useEffect(() => {
+    if (existingNoteData && isEditMode) {
+      // Set appointment ID from existing note
+      if (existingNoteData.appointmentId) {
+        setSelectedAppointmentId(existingNoteData.appointmentId);
+      }
+
+      // Session details
+      if (existingNoteData.sessionDate) {
+        const date = new Date(existingNoteData.sessionDate);
+        setSessionDate(date.toISOString().split('T')[0]);
+      }
+      if (existingNoteData.dueDate) {
+        const date = new Date(existingNoteData.dueDate);
+        setDueDate(date.toISOString().split('T')[0]);
+      }
+      if (existingNoteData.nextSessionDate) {
+        const date = new Date(existingNoteData.nextSessionDate);
+        setNextSessionDate(date.toISOString().split('T')[0]);
+      }
+
+      // Parse goals from subjective field
+      if (existingNoteData.subjective) {
+        // Try to parse goals from the text format
+        const goalMatches = existingNoteData.subjective.matchAll(/Goal \d+:\s*(.+?)\nProgress:\s*(.+?)\nTarget Date:\s*(.+?)\nObjectives:\n((?:  Objective \d+:.+\n?)*)/gs);
+        const parsedGoals: TreatmentGoal[] = [];
+
+        for (const match of goalMatches) {
+          const goal = match[1].trim();
+          const progress = match[2].trim();
+          const targetDate = match[3].trim() !== 'Not specified' ? match[3].trim() : '';
+          const objectivesText = match[4];
+
+          const objectives = objectivesText
+            .split('\n')
+            .filter(line => line.trim().startsWith('Objective'))
+            .map(line => line.replace(/^\s*Objective \d+:\s*/, '').trim())
+            .filter(obj => obj.length > 0);
+
+          if (goal) {
+            parsedGoals.push({
+              goal,
+              targetDate,
+              objectives: objectives.length > 0 ? objectives : [''],
+              progress
+            });
+          }
+        }
+
+        if (parsedGoals.length > 0) {
+          setGoals(parsedGoals);
+        }
+      }
+
+      // Parse treatment details from objective field
+      if (existingNoteData.objective) {
+        const objective = existingNoteData.objective;
+
+        const modalitiesMatch = objective.match(/Treatment Modalities:\s*(.+?)(?:\n|$)/);
+        if (modalitiesMatch) {
+          const modalities = modalitiesMatch[1].split(',').map(m => m.trim());
+          setTreatmentModality(modalities);
+        }
+
+        const durationMatch = objective.match(/Session Duration:\s*(.+?)(?:\n|$)/);
+        if (durationMatch) setSessionDuration(durationMatch[1].trim());
+
+        const frequencyMatch = objective.match(/Frequency:\s*(.+?)(?:\n|$)/);
+        if (frequencyMatch) setFrequency(frequencyMatch[1].trim());
+
+        const settingMatch = objective.match(/Treatment Setting:\s*(.+?)(?:\n|$)/);
+        if (settingMatch) setTreatmentSetting(settingMatch[1].trim());
+
+        const estimatedDurationMatch = objective.match(/Estimated Duration:\s*(.+?)(?:\n|$)/);
+        if (estimatedDurationMatch) setEstimatedDuration(estimatedDurationMatch[1].trim());
+      }
+
+      // Parse discharge criteria from plan field
+      if (existingNoteData.plan) {
+        const dischargeMatch = existingNoteData.plan.match(/Discharge Criteria:\s*(.+?)$/s);
+        if (dischargeMatch) setDischargeCriteria(dischargeMatch[1].trim());
+      }
+
+      // Diagnosis and billing
+      if (existingNoteData.diagnosisCodes && Array.isArray(existingNoteData.diagnosisCodes)) {
+        setDiagnosisCodes(existingNoteData.diagnosisCodes);
+      }
+      if (existingNoteData.cptCode) setCptCode(existingNoteData.cptCode);
+      if (existingNoteData.billingCode) setBillingCode(existingNoteData.billingCode);
+      if (existingNoteData.billable !== undefined) setBillable(existingNoteData.billable);
+    }
+  }, [existingNoteData, isEditMode]);
+
   const addGoal = () => {
     if (goals.length < 5) {
       setGoals([...goals, { goal: '', targetDate: '', objectives: [''], progress: 'Not Started' }]);
@@ -207,6 +312,22 @@ export default function TreatmentPlanForm() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
+      return api.post('/clinical-notes', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      navigate(`/clients/${clientId}/notes`);
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
@@ -277,6 +398,49 @@ export default function TreatmentPlanForm() {
 
     setShowReviewModal(false);
     setGeneratedData(null);
+  };
+
+  const handleSaveDraft = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const goalsText = Array.isArray(goals)
+      ? goals
+        .filter(g => g.goal.trim())
+        .map((g, i) => {
+          const objectivesText = Array.isArray(g.objectives)
+            ? g.objectives.filter(o => o.trim()).map((o, idx) => `  Objective ${idx + 1}: ${o}`).join('\n')
+            : '';
+          return `Goal ${i + 1}: ${g.goal}\nProgress: ${g.progress}\nTarget Date: ${g.targetDate || 'Not specified'}\nObjectives:\n${objectivesText}`;
+        })
+        .join('\n\n')
+      : '';
+
+    const modalityText = Array.isArray(treatmentModality) && treatmentModality.length > 0
+      ? treatmentModality.join(', ')
+      : 'Not specified';
+
+    const data = {
+      clientId,
+      noteType: 'Treatment Plan',
+      appointmentId: appointmentId,
+      sessionDate: sessionDate ? new Date(sessionDate).toISOString() : undefined,
+      subjective: goalsText,
+      objective: `Treatment Modalities: ${modalityText}\nSession Duration: ${sessionDuration}\nFrequency: ${frequency}\nTreatment Setting: ${treatmentSetting}\nEstimated Duration: ${estimatedDuration}`,
+      assessment: `Formal Treatment Plan established with ${goals.filter(g => g.goal.trim()).length} goals`,
+      plan: `Discharge Criteria: ${dischargeCriteria}`,
+      interventions: modalityText,
+      frequency,
+      dischargeCriteria,
+      diagnosisCodes,
+      cptCode,
+      billingCode,
+      billable,
+      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+      status: 'DRAFT',
+    };
+
+    saveDraftMutation.mutate(data);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -465,7 +629,7 @@ export default function TreatmentPlanForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
             {/* Schedule Header */}
             {appointmentData && (
               <ScheduleHeader
@@ -751,9 +915,11 @@ export default function TreatmentPlanForm() {
             {/* Form Actions */}
             <FormActions
               onCancel={() => navigate(`/clients/${clientId}/notes`)}
-              onSubmit={handleSubmit}
-              submitLabel="Create Treatment Plan"
+              onSubmit={() => handleSubmit({} as React.FormEvent)}
+              submitLabel={isEditMode ? "Update Treatment Plan" : "Create Treatment Plan"}
               isSubmitting={saveMutation.isPending}
+              onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+              isSavingDraft={saveDraftMutation.isPending}
             />
           </form>
         )}

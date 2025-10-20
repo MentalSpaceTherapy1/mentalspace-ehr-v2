@@ -75,7 +75,7 @@ export default function ClinicalNotesList({ clientId }: ClinicalNotesListProps) 
     },
   });
 
-  const notes: ClinicalNote[] = notesData?.data?.notes || [];
+  const notes: ClinicalNote[] = notesData?.data || [];
   const filteredNotes = selectedNoteType === 'all'
     ? notes
     : notes.filter(note => note.noteType === selectedNoteType);
@@ -129,7 +129,7 @@ export default function ClinicalNotesList({ clientId }: ClinicalNotesListProps) 
           <p className="text-gray-600 mt-1">View and manage all clinical documentation</p>
         </div>
         <button
-          onClick={() => navigate(`/clients/${clientId}/notes/new`)}
+          onClick={() => navigate(`/clients/${clientId}/notes/create`)}
           className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
         >
           + New Clinical Note
@@ -175,7 +175,7 @@ export default function ClinicalNotesList({ clientId }: ClinicalNotesListProps) 
               : `No ${selectedNoteType} notes found.`}
           </p>
           <button
-            onClick={() => navigate(`/clients/${clientId}/notes/new`)}
+            onClick={() => navigate(`/clients/${clientId}/notes/create`)}
             className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
           >
             Create First Note

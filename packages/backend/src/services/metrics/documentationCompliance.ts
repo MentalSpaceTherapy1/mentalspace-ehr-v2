@@ -1,10 +1,8 @@
+import prisma from '../database';
 // Documentation Compliance Metrics
 // Phase 6 - Week 18 - Documentation Compliance (4 metrics)
 
-import { PrismaClient } from '@prisma/client';
 import { MetricCalculator, MetricResult } from './types';
-
-const prisma = new PrismaClient();
 
 // Same-Day Documentation Rate Calculator
 export class SameDayDocumentationRateCalculator implements MetricCalculator {

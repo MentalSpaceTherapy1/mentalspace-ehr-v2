@@ -371,7 +371,7 @@ export default function ClientDetail() {
             </h3>
             <div className="space-y-3">
               <button
-                onClick={() => navigate(`/clients/${id}/notes/new`)}
+                onClick={() => navigate(`/clients/${id}/notes/create`)}
                 className="w-full px-4 py-3 text-left text-sm font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center"
               >
                 <span className="mr-2">📝</span> New Clinical Note

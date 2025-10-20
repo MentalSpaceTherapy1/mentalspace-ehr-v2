@@ -124,9 +124,10 @@ interface SymptomState {
 }
 
 export default function IntakeAssessmentForm() {
-  const { clientId } = useParams();
+  const { clientId, noteId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isEditMode = !!noteId;
 
   // Get appointmentId from URL query parameters
   const [searchParams] = useSearchParams();
@@ -135,7 +136,7 @@ export default function IntakeAssessmentForm() {
   // Appointment selection state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
   const [appointmentData, setAppointmentData] = useState<any>(null);
-  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const appointmentId = selectedAppointmentId;
@@ -270,6 +271,16 @@ export default function IntakeAssessmentForm() {
     enabled: !!clientId,
   });
 
+  // Fetch existing note data if in edit mode
+  const { data: existingNoteData, isLoading: isLoadingNote } = useQuery({
+    queryKey: ['clinical-note', noteId],
+    queryFn: async () => {
+      const response = await api.get(`/clinical-notes/${noteId}`);
+      return response.data.data;
+    },
+    enabled: isEditMode && !!noteId,
+  });
+
   // Fetch appointment data when appointmentId is selected
   const { data: eligibleAppointmentsData } = useQuery({
     queryKey: ['eligible-appointments', clientId, 'Intake Assessment'],
@@ -312,6 +323,130 @@ export default function IntakeAssessmentForm() {
       setDueDate(date.toISOString().split('T')[0]);
     }
   }, [sessionDate]);
+
+  // Populate form fields from existingNoteData when in edit mode
+  useEffect(() => {
+    if (existingNoteData && isEditMode) {
+      // Set appointment ID from existing note
+      if (existingNoteData.appointmentId) {
+        setSelectedAppointmentId(existingNoteData.appointmentId);
+      }
+
+      // Session details
+      if (existingNoteData.sessionDate) {
+        const date = new Date(existingNoteData.sessionDate);
+        setSessionDate(date.toISOString().split('T')[0]);
+      }
+      if (existingNoteData.dueDate) {
+        const date = new Date(existingNoteData.dueDate);
+        setDueDate(date.toISOString().split('T')[0]);
+      }
+      if (existingNoteData.nextSessionDate) {
+        const date = new Date(existingNoteData.nextSessionDate);
+        setNextSessionDate(date.toISOString().split('T')[0]);
+      }
+
+      // Parse SOAP notes to extract field data
+      if (existingNoteData.subjective) {
+        const subjective = existingNoteData.subjective;
+        const chiefComplaintMatch = subjective.match(/Chief Complaint:\s*(.+?)(?:\n|$)/);
+        if (chiefComplaintMatch) setChiefComplaint(chiefComplaintMatch[1].trim());
+
+        const presentingProblemMatch = subjective.match(/Presenting Problem:\s*(.+?)(?:\n\nCurrent Symptoms:|$)/s);
+        if (presentingProblemMatch) setPresentingProblem(presentingProblemMatch[1].trim());
+      }
+
+      // Parse assessment for history fields
+      if (existingNoteData.assessment) {
+        const assessment = existingNoteData.assessment;
+        const psychiatricHistoryMatch = assessment.match(/Psychiatric History:\s*(.+?)(?:\nMedical History:|$)/s);
+        if (psychiatricHistoryMatch) setPsychiatricHistory(psychiatricHistoryMatch[1].trim());
+
+        const medicalHistoryMatch = assessment.match(/Medical History:\s*(.+?)(?:\nMedications:|$)/s);
+        if (medicalHistoryMatch) setMedicalHistory(medicalHistoryMatch[1].trim());
+
+        const medicationsMatch = assessment.match(/Medications:\s*(.+?)(?:\nSubstance Use:|$)/s);
+        if (medicationsMatch) setMedications(medicationsMatch[1].trim());
+
+        const substanceUseMatch = assessment.match(/Substance Use:\s*(.+?)(?:\nFamily History:|$)/s);
+        if (substanceUseMatch) {
+          const substanceText = substanceUseMatch[1];
+          const alcoholMatch = substanceText.match(/Alcohol:\s*(.+?)\s*\((.+?)\)/);
+          if (alcoholMatch) {
+            setAlcoholUse(alcoholMatch[1].trim());
+            setAlcoholFrequency(alcoholMatch[2].trim());
+          }
+          const tobaccoMatch = substanceText.match(/Tobacco:\s*(.+?)\s*\((.+?)\)/);
+          if (tobaccoMatch) {
+            setTobaccoUse(tobaccoMatch[1].trim());
+            setTobaccoFrequency(tobaccoMatch[2].trim());
+          }
+          const drugMatch = substanceText.match(/Drugs:\s*(.+?)\s*\((.+?)\)/);
+          if (drugMatch) {
+            setDrugUse(drugMatch[1].trim());
+            setDrugFrequency(drugMatch[2].trim());
+          }
+        }
+
+        const familyHistoryMatch = assessment.match(/Family History:\s*(.+?)(?:\nSocial History:|$)/s);
+        if (familyHistoryMatch) setFamilyHistory(familyHistoryMatch[1].trim());
+
+        const socialHistoryMatch = assessment.match(/Social History:\s*(.+?)(?:\nDevelopmental History:|$)/s);
+        if (socialHistoryMatch) setSocialHistory(socialHistoryMatch[1].trim());
+
+        const developmentalHistoryMatch = assessment.match(/Developmental History:\s*(.+?)$/s);
+        if (developmentalHistoryMatch) setDevelopmentalHistory(developmentalHistoryMatch[1].trim());
+      }
+
+      // Parse plan for treatment recommendations
+      if (existingNoteData.plan) {
+        const plan = existingNoteData.plan;
+        const treatmentRecommendationsMatch = plan.match(/^(.+?)(?:\n\nTreatment Recommendations:|Treatment Recommendations:)/s);
+        if (treatmentRecommendationsMatch) {
+          const planText = treatmentRecommendationsMatch[1].trim();
+          if (!planText.includes('Treatment Recommendations:')) {
+            setPlan(planText);
+          }
+        }
+
+        const recommendationsMatch = plan.match(/Treatment Recommendations:\s*(.+?)(?:\nRecommended Frequency:|$)/s);
+        if (recommendationsMatch) setTreatmentRecommendations(recommendationsMatch[1].trim());
+
+        const frequencyMatch = plan.match(/Recommended Frequency:\s*(.+?)$/s);
+        if (frequencyMatch) setRecommendedFrequency(frequencyMatch[1].trim());
+      }
+
+      // Risk assessment fields
+      if (existingNoteData.suicidalIdeation !== undefined) setSuicidalIdeation(existingNoteData.suicidalIdeation);
+      if (existingNoteData.homicidalIdeation !== undefined) setHomicidalIdeation(existingNoteData.homicidalIdeation);
+      if (existingNoteData.selfHarm !== undefined) setSelfHarm(existingNoteData.selfHarm);
+      if (existingNoteData.riskLevel) setRiskLevel(existingNoteData.riskLevel);
+
+      // Parse risk assessment notes
+      if (existingNoteData.riskAssessmentNotes) {
+        const riskNotes = existingNoteData.riskAssessmentNotes;
+        const riskFactorsMatch = riskNotes.match(/Risk Factors:\s*(.+?)(?:\nProtective Factors:|$)/s);
+        if (riskFactorsMatch) setRiskFactors(riskFactorsMatch[1].trim());
+
+        const protectiveFactorsMatch = riskNotes.match(/Protective Factors:\s*(.+?)(?:\nSafety Plan:|$)/s);
+        if (protectiveFactorsMatch) setProtectiveFactors(protectiveFactorsMatch[1].trim());
+
+        const safetyPlanMatch = riskNotes.match(/Safety Plan:\s*(.+?)(?:\nEmergency Contacts:|$)/s);
+        if (safetyPlanMatch) setSafetyPlan(safetyPlanMatch[1].trim());
+
+        const emergencyContactsMatch = riskNotes.match(/Emergency Contacts:\s*(.+?)$/s);
+        if (emergencyContactsMatch) setEmergencyContacts(emergencyContactsMatch[1].trim());
+      }
+
+      // Diagnosis and billing
+      if (existingNoteData.diagnosisCodes && Array.isArray(existingNoteData.diagnosisCodes)) {
+        setDiagnosisCodes(existingNoteData.diagnosisCodes);
+      }
+      if (existingNoteData.cptCode) setCptCode(existingNoteData.cptCode);
+      if (existingNoteData.billingCode) setBillingCode(existingNoteData.billingCode);
+      if (existingNoteData.billable !== undefined) setBillable(existingNoteData.billable);
+    }
+  }, [existingNoteData, isEditMode]);
 
   const handleAppointmentSelect = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
@@ -361,6 +496,19 @@ export default function IntakeAssessmentForm() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      return api.post('/clinical-notes', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      navigate(`/clients/${clientId}/notes`);
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
@@ -508,6 +656,77 @@ export default function IntakeAssessmentForm() {
 
     setShowReviewModal(false);
     setGeneratedData(null);
+  };
+
+  const handleSaveDraft = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Build symptoms summary
+    const symptomsPresent = Array.isArray(selectedSymptoms)
+      ? selectedSymptoms
+        .map((symptom) => {
+          let text = `${symptom.label}: ${symptom.severity}`;
+          if (symptom.extra && symptom.extra !== 'N/A') {
+            text += ` (${symptom.extra})`;
+          }
+          return text;
+        })
+        .join('\n')
+      : '';
+
+    // Build MSE summary
+    const mseAppearance = `Grooming: ${grooming}, Hygiene: ${hygiene}, Dress: ${dress}`;
+    const mseBehavior = `Eye Contact: ${eyeContact}, Motor Activity: ${motorActivity}, Cooperation: ${cooperation}, Rapport: ${rapport}`;
+    const mseSpeech = `Rate: ${speechRate}, Volume: ${speechVolume}, Fluency: ${speechFluency}, Articulation: ${speechArticulation}, Spontaneity: ${speechSpontaneity}`;
+    const mseAffect = `Range: ${affectRange}, Appropriateness: ${affectAppropriateness}, Mobility: ${affectMobility}, Quality: ${affectQuality}`;
+    const mseThoughtProcess = `Organization: ${thoughtOrganization}, Coherence: ${thoughtCoherence}, Goal-directed: ${thoughtGoalDirected ? 'Yes' : 'No'}`;
+
+    const orientationItems = [];
+    if (orientedPerson) orientationItems.push('Person');
+    if (orientedPlace) orientationItems.push('Place');
+    if (orientedTime) orientationItems.push('Time');
+    if (orientedSituation) orientationItems.push('Situation');
+    const orientation = orientationItems.length > 0 ? `Oriented to ${orientationItems.join(', ')}` : 'Disoriented';
+
+    const mseCognition = `${orientation}\nAttention: ${attention}, Concentration: ${concentration}\nMemory (Immediate/Recent/Remote): ${memoryImmediate}/${memoryRecent}/${memoryRemote}\nFund of Knowledge: ${fundKnowledge}, Abstract Thinking: ${abstractThinking}, Calculation: ${calculation}`;
+
+    const thoughtContent = [];
+    if (suicidalIdeation) thoughtContent.push(`Suicidal Ideation (Frequency: ${siFrequency}, Intensity: ${siIntensity})`);
+    if (homicidalIdeation) thoughtContent.push(`Homicidal Ideation (Frequency: ${hiFrequency}, Intensity: ${hiIntensity})`);
+    if (delusions) thoughtContent.push(`Delusions: ${delusionDetails}`);
+    const mseThoughtContent = thoughtContent.length > 0 ? thoughtContent.join('\n') : 'No SI/HI/delusions reported';
+
+    const msePerception = hasHallucinations
+      ? `Hallucinations present: ${hallucinationTypes.join(', ')}`
+      : 'No hallucinations reported';
+
+    const substanceUse = `Alcohol: ${alcoholUse || 'Not reported'} (${alcoholFrequency})\nTobacco: ${tobaccoUse || 'Not reported'} (${tobaccoFrequency})\nDrugs: ${drugUse || 'Not reported'} (${drugFrequency})`;
+
+    const data = {
+      clientId,
+      noteType: 'Intake Assessment',
+      appointmentId: appointmentId,
+      sessionDate: sessionDate ? new Date(sessionDate).toISOString() : undefined,
+      subjective: `Chief Complaint: ${chiefComplaint}\n\nPresenting Problem: ${presentingProblem}\n\nCurrent Symptoms:\n${symptomsPresent || 'No significant symptoms reported'}`,
+      objective: `Mental Status Examination:\n\nAppearance: ${mseAppearance}\nBehavior: ${mseBehavior}\nSpeech: ${mseSpeech}\nMood: ${mood}\nAffect: ${mseAffect}\nThought Process: ${mseThoughtProcess}\nThought Content: ${mseThoughtContent}\nPerception: ${msePerception}\nCognition: ${mseCognition}\nInsight: ${insight}\nJudgment: ${judgment}\nImpulse Control: ${impulseControl}`,
+      assessment: `${assessment}\n\nPsychiatric History: ${psychiatricHistory}\nMedical History: ${medicalHistory}\nMedications: ${medications}\nSubstance Use:\n${substanceUse}\nFamily History: ${familyHistory}\nSocial History: ${socialHistory}\nDevelopmental History: ${developmentalHistory}`,
+      plan: `${plan}\n\nTreatment Recommendations: ${treatmentRecommendations}\nRecommended Frequency: ${recommendedFrequency}`,
+      suicidalIdeation,
+      homicidalIdeation,
+      selfHarm,
+      riskLevel,
+      riskAssessmentNotes: `Risk Factors: ${riskFactors}\nProtective Factors: ${protectiveFactors}\nSafety Plan: ${safetyPlan}\nEmergency Contacts: ${emergencyContacts}`,
+      interventions: safetyPlan,
+      diagnosisCodes,
+      cptCode,
+      billingCode,
+      billable,
+      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+      status: 'DRAFT',
+    };
+
+    saveDraftMutation.mutate(data);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -695,7 +914,7 @@ export default function IntakeAssessmentForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
             {/* Schedule Header */}
             {appointmentData && (
               <ScheduleHeader
@@ -1494,9 +1713,11 @@ export default function IntakeAssessmentForm() {
             {/* Form Actions */}
             <FormActions
               onCancel={() => navigate(`/clients/${clientId}/notes`)}
-              onSubmit={handleSubmit}
+              onSubmit={() => handleSubmit({} as React.FormEvent)}
               submitLabel="Create Intake Assessment"
               isSubmitting={saveMutation.isPending}
+              onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+              isSavingDraft={saveDraftMutation.isPending}
             />
           </form>
         )}

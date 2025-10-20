@@ -9,13 +9,15 @@ export class UserController {
    * GET /api/v1/users
    */
   getUsers = asyncHandler(async (req: Request, res: Response) => {
-    const filters = {
-      search: req.query.search as string,
-      role: req.query.role as UserRole,
-      isActive: req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined,
-      page: req.query.page ? parseInt(req.query.page as string) : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
-    };
+    const filters: any = {};
+
+    if (req.query.search) filters.search = req.query.search as string;
+    if (req.query.role) filters.role = req.query.role as UserRole;
+    if (req.query.isActive !== undefined) {
+      filters.isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
+    }
+    if (req.query.page) filters.page = parseInt(req.query.page as string);
+    if (req.query.limit) filters.limit = parseInt(req.query.limit as string);
 
     const result = await userService.getUsers(filters);
 

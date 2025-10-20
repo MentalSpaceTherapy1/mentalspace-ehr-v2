@@ -33,7 +33,9 @@ export const register = async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId || 'system';
 
     const result = await portalAuthService.registerPortalAccount({
-      ...validatedData,
+      clientId: validatedData.clientId,
+      email: validatedData.email,
+      password: validatedData.password,
       createdBy: userId,
     });
 
@@ -57,7 +59,10 @@ export const login = async (req: Request, res: Response) => {
   try {
     const validatedData = loginSchema.parse(req.body);
 
-    const result = await portalAuthService.portalLogin(validatedData);
+    const result = await portalAuthService.portalLogin({
+      email: validatedData.email,
+      password: validatedData.password,
+    });
 
     res.status(200).json({
       success: true,

@@ -8,15 +8,45 @@ export default function NewAppointment() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const preselectedDate = searchParams.get('date');
+  const preselectedDateParam = searchParams.get('date');
   const preselectedClientId = searchParams.get('clientId');
+
+  // Parse the date parameter - it might be a full ISO datetime or just a date
+  const parseDate = (dateParam: string | null): string => {
+    if (!dateParam) {
+      return new Date().toISOString().split('T')[0];
+    }
+    // If it's a full ISO datetime, extract just the date part
+    if (dateParam.includes('T')) {
+      return dateParam.split('T')[0];
+    }
+    return dateParam;
+  };
+
+  // Parse the time from the date parameter if it's a full datetime
+  const parseTime = (dateParam: string | null): string => {
+    if (!dateParam || !dateParam.includes('T')) {
+      return '09:00';
+    }
+    try {
+      const date = new Date(dateParam);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    } catch {
+      return '09:00';
+    }
+  };
+
+  const preselectedDate = parseDate(preselectedDateParam);
+  const preselectedStartTime = parseTime(preselectedDateParam);
 
   const [formData, setFormData] = useState({
     clientId: preselectedClientId || '',
     clinicianId: '',
-    appointmentDate: preselectedDate || new Date().toISOString().split('T')[0],
-    startTime: '09:00',
-    endTime: '10:00',
+    appointmentDate: preselectedDate,
+    startTime: preselectedStartTime,
+    endTime: '10:00', // Will be auto-calculated based on duration
     duration: 60,
     appointmentType: 'Therapy Session',
     serviceLocation: 'Office',
@@ -65,13 +95,33 @@ export default function NewAppointment() {
   });
 
   // Fetch clinicians
-  const { data: clinicians } = useQuery({
+  const { data: clinicians, isLoading: cliniciansLoading, error: cliniciansError, isError: isCliniciansError } = useQuery({
     queryKey: ['clinicians'],
     queryFn: async () => {
+      console.log('Fetching clinicians from /users endpoint...');
       const response = await api.get('/users');
-      return response.data.data.filter((user: any) => ['CLINICIAN', 'SUPERVISOR'].includes(user.role));
+      console.log('Users response:', response.data);
+
+      // Log all user roles to debug
+      console.log('All user roles:', response.data.data.map((u: any) => ({
+        name: `${u.firstName} ${u.lastName}`,
+        role: u.role
+      })));
+
+      const filtered = response.data.data.filter((user: any) =>
+        user.role && ['CLINICIAN', 'SUPERVISOR', 'Clinician', 'Supervisor'].includes(user.role)
+      );
+      console.log('Filtered clinicians:', filtered);
+      return filtered;
     },
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Debug logging
+  if (isCliniciansError) {
+    console.error('Clinicians query error:', cliniciansError);
+  }
 
   // Fetch service codes (CPT codes)
   const { data: serviceCodes } = useQuery({
@@ -82,17 +132,21 @@ export default function NewAppointment() {
     },
   });
 
-  // Auto-calculate duration when times change
+  // Auto-calculate end time when start time or duration changes
   useEffect(() => {
-    if (formData.startTime && formData.endTime) {
+    if (formData.startTime && formData.duration) {
       const [startHour, startMin] = formData.startTime.split(':').map(Number);
-      const [endHour, endMin] = formData.endTime.split(':').map(Number);
-      const durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-      if (durationMinutes > 0) {
-        setFormData(prev => ({ ...prev, duration: durationMinutes }));
+      const totalMinutes = startHour * 60 + startMin + formData.duration;
+      const endHour = Math.floor(totalMinutes / 60) % 24;
+      const endMin = totalMinutes % 60;
+      const calculatedEndTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
+
+      if (calculatedEndTime !== formData.endTime) {
+        setFormData(prev => ({ ...prev, endTime: calculatedEndTime }));
       }
     }
-  }, [formData.startTime, formData.endTime]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.startTime, formData.duration]);
 
   // Create appointment mutation
   const createMutation = useMutation({
@@ -303,9 +357,15 @@ export default function NewAppointment() {
                 </option>
               ))}
             </select>
-            {!clinicians || clinicians.length === 0 ? (
+            {cliniciansLoading && (
               <p className="text-amber-600 text-sm mt-1">Loading clinicians...</p>
-            ) : null}
+            )}
+            {isCliniciansError && (
+              <p className="text-red-600 text-sm mt-1">Error loading clinicians: {(cliniciansError as any)?.message || 'Unknown error'}. Check console for details.</p>
+            )}
+            {!cliniciansLoading && !isCliniciansError && (!clinicians || clinicians.length === 0) && (
+              <p className="text-red-600 text-sm mt-1">No clinicians found. Please contact your administrator.</p>
+            )}
             {errors.clinicianId && <p className="text-red-500 text-sm mt-1">{errors.clinicianId}</p>}
           </div>
 
@@ -365,7 +425,18 @@ export default function NewAppointment() {
               label="End Time"
               required
               value={formData.endTime}
-              onChange={(time) => setFormData({ ...formData, endTime: time })}
+              onChange={(time) => {
+                // Calculate duration when end time is manually changed
+                const [startHour, startMin] = formData.startTime.split(':').map(Number);
+                const [endHour, endMin] = time.split(':').map(Number);
+                const durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+
+                setFormData({
+                  ...formData,
+                  endTime: time,
+                  duration: durationMinutes > 0 ? durationMinutes : formData.duration
+                });
+              }}
               error={errors.endTime}
             />
           </div>
@@ -386,6 +457,7 @@ export default function NewAppointment() {
               onChange={(e) => setFormData({ ...formData, appointmentType: e.target.value })}
               className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
+              <option value="Intake Assessment">Intake Assessment</option>
               <option value="Initial Consultation">Initial Consultation</option>
               <option value="Therapy Session">Therapy Session</option>
               <option value="Follow-up">Follow-up</option>

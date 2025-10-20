@@ -153,7 +153,9 @@ export const sendMessage = async (req: Request, res: Response) => {
 
     const message = await portalMessagingService.sendMessage({
       clientId,
-      ...validatedData,
+      subject: validatedData.subject,
+      message: validatedData.message,
+      priority: validatedData.priority,
     });
 
     res.status(201).json({

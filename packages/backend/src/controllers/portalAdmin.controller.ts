@@ -1,14 +1,12 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import prisma from '../services/database';
 import {
   sessionReviewsService,
   therapistChangeService,
 } from '../services/portal';
-import { PrismaClient } from '@mentalspace/database';
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
-
-const prisma = new PrismaClient();
 
 // ============================================================================
 // ADMIN: PORTAL OVERSIGHT
@@ -30,7 +28,6 @@ export const getAllReviews = async (req: Request, res: Response) => {
       clinicianId,
       minRating,
       maxRating,
-      limit,
     });
 
     res.status(200).json({
@@ -50,9 +47,7 @@ export const getReviewStatistics = async (req: Request, res: Response) => {
   try {
     const clinicianId = req.query.clinicianId as string;
 
-    const stats = await sessionReviewsService.getReviewStatistics({
-      clinicianId,
-    });
+    const stats = await sessionReviewsService.getReviewStatistics(clinicianId);
 
     res.status(200).json({
       success: true,
@@ -79,8 +74,7 @@ export const getAllChangeRequests = async (req: Request, res: Response) => {
 
     const requests = await therapistChangeService.getAllChangeRequests({
       status,
-      currentClinicianId: clinicianId,
-      isSensitive,
+      onlySensitive: isSensitive,
     });
 
     res.status(200).json({
@@ -212,12 +206,10 @@ export const denyChangeRequest = async (req: Request, res: Response) => {
 
 export const getChangeRequestStatistics = async (req: Request, res: Response) => {
   try {
-    const clinicianId = req.query.clinicianId as string;
-    const requestReason = req.query.requestReason as any;
+    const clinicianId = req.query.clinicianId as string | undefined;
 
     const stats = await therapistChangeService.getChangeRequestStatistics({
-      currentClinicianId: clinicianId,
-      requestReason,
+      clinicianId,
     });
 
     res.status(200).json({
@@ -245,7 +237,7 @@ export const getAllPortalAccounts = async (req: Request, res: Response) => {
 
     const where: any = {};
     if (isActive !== undefined) {
-      where.isActive = isActive;
+      where.accountStatus = isActive ? 'ACTIVE' : 'INACTIVE';
     }
 
     const [accounts, total] = await Promise.all([
@@ -293,7 +285,7 @@ export const activatePortalAccount = async (req: Request, res: Response) => {
 
     const account = await prisma.portalAccount.update({
       where: { id: accountId },
-      data: { isActive: true },
+      data: { accountStatus: 'ACTIVE' },
     });
 
     logger.info(`Portal account ${accountId} activated by admin ${(req as any).user?.id}`);
@@ -318,7 +310,7 @@ export const deactivatePortalAccount = async (req: Request, res: Response) => {
 
     const account = await prisma.portalAccount.update({
       where: { id: accountId },
-      data: { isActive: false },
+      data: { accountStatus: 'INACTIVE' },
     });
 
     logger.info(`Portal account ${accountId} deactivated by admin ${(req as any).user?.id}`);
@@ -346,10 +338,10 @@ export const getPortalAnalytics = async (req: Request, res: Response) => {
     // Total portal accounts
     const totalAccounts = await prisma.portalAccount.count();
     const activeAccounts = await prisma.portalAccount.count({
-      where: { isActive: true },
+      where: { accountStatus: 'ACTIVE' },
     });
     const verifiedAccounts = await prisma.portalAccount.count({
-      where: { isEmailVerified: true },
+      where: { emailVerified: true },
     });
 
     // Recent registrations (last 30 days)
@@ -368,7 +360,7 @@ export const getPortalAnalytics = async (req: Request, res: Response) => {
 
     const activeUsers = await prisma.portalAccount.count({
       where: {
-        lastLoginAt: { gte: sevenDaysAgo },
+        lastLoginDate: { gte: sevenDaysAgo },
       },
     });
 

@@ -9,6 +9,7 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [notesMenuOpen, setNotesMenuOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleLogout = () => {
@@ -32,7 +33,17 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/', icon: '🏠', label: 'Dashboard', color: 'from-blue-500 to-cyan-500' },
     { path: '/clients', icon: '🧑‍⚕️', label: 'Clients', color: 'from-purple-500 to-pink-500' },
     { path: '/appointments', icon: '📅', label: 'Appointments', color: 'from-green-500 to-emerald-500' },
-    { path: '/notes', icon: '📝', label: 'Clinical Notes', color: 'from-amber-500 to-orange-500' },
+    {
+      path: '/notes',
+      icon: '📝',
+      label: 'Clinical Notes',
+      color: 'from-amber-500 to-orange-500',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/notes', label: 'Compliance Dashboard' },
+        { path: '/notes/my-notes', label: 'My Notes' },
+      ]
+    },
     { path: '/billing', icon: '💰', label: 'Billing', color: 'from-teal-500 to-cyan-500' },
     { path: '/reports', icon: '📈', label: 'Reports', color: 'from-sky-500 to-blue-600' },
     { path: '/telehealth/session/demo', icon: '📹', label: 'Telehealth', color: 'from-blue-600 to-indigo-600' },
@@ -91,19 +102,51 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-            {navItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 ${
-                  isActive(item.path)
-                    ? `bg-gradient-to-r ${item.color} text-white shadow-lg`
-                    : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-200'
-                }`}
-              >
-                <span className="text-2xl">{item.icon}</span>
-                <span className="text-sm">{item.label}</span>
-              </button>
+            {navItems.map((item: any) => (
+              <div key={item.path}>
+                <button
+                  onClick={() => {
+                    if (item.hasSubmenu) {
+                      setNotesMenuOpen(!notesMenuOpen);
+                    } else {
+                      navigate(item.path);
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 ${
+                    isActive(item.path)
+                      ? `bg-gradient-to-r ${item.color} text-white shadow-lg`
+                      : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">{item.icon}</span>
+                    <span className="text-sm">{item.label}</span>
+                  </div>
+                  {item.hasSubmenu && (
+                    <span className="text-sm">{notesMenuOpen ? '▼' : '▶'}</span>
+                  )}
+                </button>
+
+                {/* Submenu */}
+                {item.hasSubmenu && notesMenuOpen && (
+                  <div className="ml-8 mt-2 space-y-1">
+                    {item.submenu.map((subItem: any) => (
+                      <button
+                        key={subItem.path}
+                        onClick={() => navigate(subItem.path)}
+                        className={`w-full flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          location.pathname === subItem.path
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span className="text-xs">•</span>
+                        <span>{subItem.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </nav>
 

@@ -96,7 +96,7 @@ export default function AppointmentsTab({ clientId }: AppointmentsTabProps) {
   };
 
   const handleCreateNote = (appointmentId: string) => {
-    navigate(`/clients/${clientId}/notes/new?appointmentId=${appointmentId}`);
+    navigate(`/clients/${clientId}/notes/create?appointmentId=${appointmentId}`);
   };
 
   const filteredAppointments = filterAppointments();

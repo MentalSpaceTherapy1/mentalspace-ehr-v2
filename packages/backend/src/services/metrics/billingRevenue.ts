@@ -1,10 +1,8 @@
+import prisma from '../database';
 // Billing & Revenue Metrics
 // Phase 6 - Week 19 - Billing & Revenue (4 metrics)
 
-import { PrismaClient } from '@prisma/client';
 import { MetricCalculator, MetricResult } from './types';
-
-const prisma = new PrismaClient();
 
 // Charge Entry Lag Calculator
 export class ChargeEntryLagCalculator implements MetricCalculator {
@@ -82,16 +80,20 @@ export class BillingComplianceRateCalculator implements MetricCalculator {
     }
 
     // Count sessions with charges
-    const sessionsWithCharges = await prisma.appointment.count({
+    // Get appointments that have associated charge entries
+    const appointmentsWithCharges = await prisma.chargeEntry.findMany({
       where: {
-        clinicianId: userId,
-        appointmentDate: { gte: periodStart, lte: periodEnd },
-        status: 'COMPLETED',
-        charges: {
-          some: {},
-        },
+        providerId: userId,
+        serviceDate: { gte: periodStart, lte: periodEnd },
+        appointmentId: { not: null },
       },
+      select: {
+        appointmentId: true,
+      },
+      distinct: ['appointmentId'],
     });
+
+    const sessionsWithCharges = appointmentsWithCharges.length;
 
     const rate = (sessionsWithCharges / completedSessions) * 100;
 

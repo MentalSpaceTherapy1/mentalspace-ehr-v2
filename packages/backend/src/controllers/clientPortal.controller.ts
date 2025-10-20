@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import prisma from '../services/database';
 import {
   sessionReviewsService,
   therapistChangeService,
   moodTrackingService,
 } from '../services/portal';
-import { PrismaClient } from '@mentalspace/database';
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
-
-const prisma = new PrismaClient();
 
 // ============================================================================
 // THERAPIST VIEW: CLIENT PORTAL ACTIVITY
@@ -175,9 +173,9 @@ export const getClientPortalActivity = async (req: Request, res: Response) => {
       select: {
         id: true,
         email: true,
-        isEmailVerified: true,
-        isActive: true,
-        lastLoginAt: true,
+        emailVerified: true,
+        accountStatus: true,
+        lastLoginDate: true,
         createdAt: true,
       },
     });
@@ -210,12 +208,12 @@ export const getClientPortalActivity = async (req: Request, res: Response) => {
         clinicianId: therapistId,
         isSharedWithClinician: true,
       },
-      orderBy: { submittedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: 5,
       select: {
         id: true,
         rating: true,
-        submittedAt: true,
+        createdAt: true,
         isAnonymous: true,
       },
     });
@@ -232,7 +230,7 @@ export const getClientPortalActivity = async (req: Request, res: Response) => {
     });
 
     // Get active homework
-    const activeHomework = await prisma.homework.count({
+    const activeHomework = await prisma.homeworkAssignment.count({
       where: {
         clientId,
         completedAt: null,
@@ -243,7 +241,7 @@ export const getClientPortalActivity = async (req: Request, res: Response) => {
     const activeGoals = await prisma.therapeuticGoal.count({
       where: {
         clientId,
-        status: 'IN_PROGRESS',
+        status: 'ACTIVE',
       },
     });
 
@@ -290,31 +288,12 @@ export const getClientMessages = async (req: Request, res: Response) => {
     }
 
     // Get messages between therapist and client
-    const messages = await prisma.secureMessage.findMany({
+    const messages = await prisma.portalMessage.findMany({
       where: {
-        OR: [
-          { senderId: clientId, recipientId: therapistId },
-          { senderId: therapistId, recipientId: clientId },
-        ],
+        clientId,
       },
-      orderBy: { sentAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
-      include: {
-        sender: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        recipient: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
     });
 
     res.status(200).json({

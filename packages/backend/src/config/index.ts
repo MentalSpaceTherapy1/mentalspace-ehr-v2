@@ -61,6 +61,11 @@ interface Config {
   twilioAuthToken?: string;
   twilioApiKeySid?: string;
   twilioApiKeySecret?: string;
+  twilioPhoneNumber?: string;
+
+  // Resend (Email Service)
+  resendApiKey?: string;
+  resendFromEmail?: string;
 
   // Backend URL (for webhooks)
   backendUrl: string;
@@ -98,7 +103,7 @@ const config: Config = {
   databaseUrl: getDatabaseUrl(),
 
   // JWT
-  jwtSecret: process.env.JWT_SECRET || '',
+  jwtSecret: process.env.JWT_SECRET || 'INSECURE_DEFAULT_SECRET_REPLACE_ME',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
 
@@ -136,6 +141,11 @@ const config: Config = {
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
   twilioApiKeySid: process.env.TWILIO_API_KEY_SID,
   twilioApiKeySecret: process.env.TWILIO_API_KEY_SECRET,
+  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
+
+  // Resend
+  resendApiKey: process.env.RESEND_API_KEY,
+  resendFromEmail: process.env.RESEND_FROM_EMAIL || 'MentalSpace EHR <noreply@mentalspace.com>',
 
   // Backend URL
   backendUrl: process.env.BACKEND_URL || 'http://localhost:3001',
@@ -154,10 +164,28 @@ const missingEnvVars = requiredEnvVars.filter((envVar) => {
   return !config[key as keyof Config];
 });
 
+// CRITICAL SECURITY CHECK: Enforce JWT_SECRET in production
+if (config.nodeEnv === 'production' && config.jwtSecret === 'INSECURE_DEFAULT_SECRET_REPLACE_ME') {
+  console.error('❌ FATAL: JWT_SECRET is not set or is using the insecure default value.');
+  console.error('   This is a CRITICAL security vulnerability in production.');
+  console.error('   Set JWT_SECRET environment variable to a strong random value.');
+  console.error('   Generate one with: openssl rand -base64 64');
+  process.exit(1);
+}
+
 if (missingEnvVars.length > 0) {
-  console.warn(
-    `Warning: Missing environment variables: ${missingEnvVars.join(', ')}. Some features may not work correctly.`
-  );
+  const errorMsg = `Missing required environment variables: ${missingEnvVars.join(', ')}`;
+
+  if (config.nodeEnv === 'production') {
+    // In production, fail fast
+    console.error(`❌ FATAL: ${errorMsg}`);
+    console.error('   Application cannot start without required environment variables.');
+    process.exit(1);
+  } else {
+    // In development, warn but allow to continue
+    console.warn(`⚠️  WARNING: ${errorMsg}`);
+    console.warn('   Some features may not work correctly.');
+  }
 }
 
 export default config;

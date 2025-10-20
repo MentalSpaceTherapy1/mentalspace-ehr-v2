@@ -71,7 +71,8 @@ interface InterventionState {
 }
 
 export default function ProgressNoteForm() {
-  const { clientId } = useParams();
+  const { clientId, noteId } = useParams();
+  const isEditMode = !!noteId;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -81,7 +82,7 @@ export default function ProgressNoteForm() {
   // Appointment selection state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
   const [appointmentData, setAppointmentData] = useState<any>(null);
-  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const appointmentId = selectedAppointmentId;
@@ -155,6 +156,16 @@ export default function ProgressNoteForm() {
       return response.data.data;
     },
     enabled: !!clientId,
+  });
+
+  // Fetch existing note data if in edit mode
+  const { data: existingNoteData, isLoading: isLoadingNote } = useQuery({
+    queryKey: ['clinical-note', noteId],
+    queryFn: async () => {
+      const response = await api.get(`/clinical-notes/${noteId}`);
+      return response.data.data;
+    },
+    enabled: isEditMode && !!noteId,
   });
 
   // Fetch eligible appointments
@@ -260,8 +271,108 @@ export default function ProgressNoteForm() {
     }
   }, [appearance, mood, affect, thoughtProcess]);
 
+  // Populate form fields from existingNoteData when in edit mode
+  useEffect(() => {
+    if (existingNoteData && isEditMode) {
+      // Set appointment ID from existing note
+      if (existingNoteData.appointmentId) {
+        setSelectedAppointmentId(existingNoteData.appointmentId);
+      }
+
+      // Session details
+      if (existingNoteData.sessionDate) {
+        const date = new Date(existingNoteData.sessionDate);
+        setSessionDate(date.toISOString().split('T')[0]);
+      }
+      if (existingNoteData.dueDate) {
+        const date = new Date(existingNoteData.dueDate);
+        setDueDate(date.toISOString().split('T')[0]);
+      }
+
+      // Session info
+      if (existingNoteData.sessionDuration) setSessionDuration(existingNoteData.sessionDuration);
+      if (existingNoteData.sessionType) setSessionType(existingNoteData.sessionType);
+      if (existingNoteData.location) setLocation(existingNoteData.location);
+
+      // Symptoms - parse from existing data if available
+      if (existingNoteData.symptoms) {
+        if (typeof existingNoteData.symptoms === 'object') {
+          setSymptoms(existingNoteData.symptoms);
+        }
+      }
+
+      // Goals - parse from existing data if available
+      if (existingNoteData.goals) {
+        if (Array.isArray(existingNoteData.goals) && existingNoteData.goals.length > 0) {
+          setGoals(existingNoteData.goals);
+        }
+      }
+
+      // Mental Status
+      if (existingNoteData.appearance) setAppearance(existingNoteData.appearance);
+      if (existingNoteData.mood) setMood(existingNoteData.mood);
+      if (existingNoteData.affect) setAffect(existingNoteData.affect);
+      if (existingNoteData.thoughtProcess) setThoughtProcess(existingNoteData.thoughtProcess);
+
+      // Risk assessment
+      if (existingNoteData.suicidalIdeation !== undefined) setSuicidalIdeation(existingNoteData.suicidalIdeation);
+      if (existingNoteData.homicidalIdeation !== undefined) setHomicidalIdeation(existingNoteData.homicidalIdeation);
+      if (existingNoteData.riskLevel) setRiskLevel(existingNoteData.riskLevel);
+
+      // Interventions
+      if (existingNoteData.interventionsUsed && Array.isArray(existingNoteData.interventionsUsed)) {
+        const interventionsObj: InterventionState = {};
+        existingNoteData.interventionsUsed.forEach((intervention: string) => {
+          if (intervention.startsWith('Other:')) {
+            setOtherIntervention(intervention.replace('Other:', '').trim());
+          } else {
+            interventionsObj[intervention] = true;
+          }
+        });
+        setInterventionsUsed(interventionsObj);
+      }
+
+      // Client response
+      if (existingNoteData.engagementLevel) setEngagementLevel(existingNoteData.engagementLevel);
+      if (existingNoteData.responseToInterventions) setResponseToInterventions(existingNoteData.responseToInterventions);
+      if (existingNoteData.homeworkCompliance) setHomeworkCompliance(existingNoteData.homeworkCompliance);
+      if (existingNoteData.clientResponseNotes) setClientResponseNotes(existingNoteData.clientResponseNotes);
+
+      // SOAP notes
+      if (existingNoteData.subjective) setSubjective(existingNoteData.subjective);
+      if (existingNoteData.objective) setObjective(existingNoteData.objective);
+      if (existingNoteData.assessment) setAssessment(existingNoteData.assessment);
+      if (existingNoteData.plan) setPlan(existingNoteData.plan);
+
+      // Safety plan
+      if (existingNoteData.safetyPlanReviewed !== undefined) setSafetyPlanReviewed(existingNoteData.safetyPlanReviewed);
+      if (existingNoteData.safetyPlanUpdated !== undefined) setSafetyPlanUpdated(existingNoteData.safetyPlanUpdated);
+
+      // Billing
+      if (existingNoteData.cptCode) setCptCode(existingNoteData.cptCode);
+      if (existingNoteData.sessionDurationMinutes) setSessionDurationMinutes(existingNoteData.sessionDurationMinutes.toString());
+      if (existingNoteData.billable !== undefined) setBillable(existingNoteData.billable);
+    }
+  }, [existingNoteData, isEditMode]);
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
+      return api.post('/clinical-notes', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      navigate(`/clients/${clientId}/notes`);
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
@@ -361,6 +472,56 @@ export default function ProgressNoteForm() {
 
     setShowReviewModal(false);
     setGeneratedData(null);
+  };
+
+  const handleSaveDraft = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const selectedInterventions = Object.entries(interventionsUsed)
+      .filter(([_, checked]) => checked)
+      .map(([intervention]) => intervention);
+
+    if (otherIntervention) {
+      selectedInterventions.push(`Other: ${otherIntervention}`);
+    }
+
+    const data = {
+      clientId,
+      noteType: 'Progress Note',
+      appointmentId,
+      sessionDate: sessionDate ? new Date(sessionDate).toISOString() : undefined,
+      sessionDuration,
+      sessionType,
+      location,
+      symptoms,
+      goals: Array.isArray(goals) ? goals : [],
+      appearance,
+      mood,
+      affect,
+      thoughtProcess,
+      suicidalIdeation,
+      homicidalIdeation,
+      riskLevel,
+      interventionsUsed: selectedInterventions,
+      engagementLevel,
+      responseToInterventions,
+      homeworkCompliance,
+      clientResponseNotes,
+      subjective,
+      objective,
+      assessment,
+      plan,
+      diagnosisCodes: Array.isArray(diagnosisCodes) ? diagnosisCodes : [],
+      safetyPlanReviewed: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanReviewed : undefined,
+      safetyPlanUpdated: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanUpdated : undefined,
+      cptCode,
+      sessionDurationMinutes: sessionDurationMinutes ? parseInt(sessionDurationMinutes) : undefined,
+      billable,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+      status: 'DRAFT',
+    };
+
+    saveDraftMutation.mutate(data);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -546,7 +707,7 @@ export default function ProgressNoteForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
             {/* Schedule Header */}
             {appointmentData && (
               <ScheduleHeader
@@ -875,9 +1036,11 @@ export default function ProgressNoteForm() {
             {/* Form Actions */}
             <FormActions
               onCancel={() => navigate(`/clients/${clientId}/notes`)}
-              onSubmit={handleSubmit}
-              submitLabel="Create Progress Note"
+              onSubmit={() => handleSubmit({} as React.FormEvent)}
+              submitLabel={isEditMode ? "Update Progress Note" : "Create Progress Note"}
               isSubmitting={saveMutation.isPending}
+              onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+              isSavingDraft={saveDraftMutation.isPending}
             />
           </form>
         )}

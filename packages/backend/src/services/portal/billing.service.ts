@@ -1,10 +1,9 @@
-import { PrismaClient } from '@mentalspace/database';
 import Stripe from 'stripe';
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import config from '../../config';
+import prisma from '../database';
 
-const prisma = new PrismaClient();
 const stripe = config.stripeApiKey ? new Stripe(config.stripeApiKey, {
   apiVersion: '2025-09-30.clover',
 }) : null;
@@ -252,12 +251,12 @@ export async function makePayment(data: {
         clientId: data.clientId,
         paymentAmount: data.amount,
         paymentDate: new Date(),
-        paymentMethod: `${paymentMethod.cardBrand} ****${paymentMethod.cardLast4}`,
-        transactionReference: paymentIntent.id,
-        paymentStatus: 'COMPLETED',
-        paymentNotes: data.description,
-        recordedBy: data.clientId, // Portal payment
-      },
+        paymentSource: 'Client',
+        paymentMethod: 'Card',
+        transactionId: paymentIntent.id,
+        cardLast4: paymentMethod.cardLast4,
+        appliedPaymentsJson: [],
+      } as any,
     });
 
     logger.info(`Payment of $${data.amount} processed for client ${data.clientId}`);

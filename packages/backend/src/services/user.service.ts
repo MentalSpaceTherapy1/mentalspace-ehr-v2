@@ -1,7 +1,7 @@
 import prisma from './database';
 import bcrypt from 'bcryptjs';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../utils/errors';
-import { UserRole } from '@mentalspace/shared';
+import { UserRole } from '@mentalspace/database';
 
 export interface CreateUserDto {
   email: string;

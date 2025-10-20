@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../services/database';
 
-const prisma = new PrismaClient();
 
 const serviceCodes = [
   // Psychiatric Diagnostic Evaluation
@@ -198,7 +197,7 @@ async function main() {
 
   // Get the first admin user to use as createdBy
   const adminUser = await prisma.user.findFirst({
-    where: { role: 'ADMINISTRATOR' },
+    where: { roles: { hasSome: ['ADMINISTRATOR'] } },
   });
 
   if (!adminUser) {

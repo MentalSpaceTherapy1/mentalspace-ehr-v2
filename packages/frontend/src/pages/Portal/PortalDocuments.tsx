@@ -70,12 +70,22 @@ export default function PortalDocuments() {
   };
 
   const handleFormStart = (assignmentId: string, formId: string) => {
-    navigate(`/portal/forms/${formId}?assignmentId=${assignmentId}`);
+    const targetPath = `/portal/forms/${formId}?assignmentId=${assignmentId}`;
+    console.log('NAVIGATION DEBUG:', {
+      assignmentId,
+      formId,
+      targetPath,
+      portalToken: localStorage.getItem('portalToken') ? 'exists' : 'missing'
+    });
+    console.log('Before navigate - current URL:', window.location.href);
+
+    // Use React Router navigation (NOT window.location which cancels AJAX requests!)
+    navigate(targetPath);
   };
 
-  const handleDocumentView = async (document: SharedDocument) => {
+  const handleDocumentView = async (doc: SharedDocument) => {
     try {
-      const response = await api.get(`/portal/documents/${document.id}/download`, {
+      const response = await api.get(`/portal/documents/${doc.id}/download`, {
         responseType: 'blob',
       });
 
@@ -83,7 +93,7 @@ export default function PortalDocuments() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', document.documentName);
+      link.setAttribute('download', doc.documentName);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -109,7 +119,6 @@ export default function PortalDocuments() {
 
       await api.post('/portal/documents/upload', formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
       });

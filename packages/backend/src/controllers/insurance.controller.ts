@@ -1,36 +1,31 @@
+import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 // Insurance validation schema
 const insuranceSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
-  rank: z.number().int().min(1).max(3),
-  insuranceType: z.string().min(1, 'Insurance type is required'),
-  payerName: z.string().min(1, 'Payer name is required'),
-  payerId: z.string().optional(),
-  memberNumber: z.string().min(1, 'Member number is required'),
+  rank: z.string().min(1, 'Rank is required'), // Primary, Secondary, Tertiary
+  insuranceCompany: z.string().min(1, 'Insurance company is required'),
+  insuranceCompanyId: z.string().optional(),
+  planName: z.string().min(1, 'Plan name is required'),
+  planType: z.string().min(1, 'Plan type is required'),
+  memberId: z.string().min(1, 'Member ID is required'),
   groupNumber: z.string().optional(),
-  planName: z.string().optional(),
-  planType: z.string().optional(),
   effectiveDate: z.string().datetime('Invalid effective date'),
   terminationDate: z.string().datetime().optional(),
-  subscriberFirstName: z.string().min(1, 'Subscriber first name is required'),
-  subscriberLastName: z.string().min(1, 'Subscriber last name is required'),
-  subscriberDOB: z.string().datetime('Invalid subscriber DOB'),
-  subscriberRelationship: z.string().min(1, 'Relationship is required'),
+  subscriberFirstName: z.string().optional(),
+  subscriberLastName: z.string().optional(),
+  subscriberDOB: z.string().datetime().optional(),
   subscriberSSN: z.string().optional(),
+  relationshipToSubscriber: z.string().optional(),
   copay: z.number().optional(),
   deductible: z.number().optional(),
   outOfPocketMax: z.number().optional(),
-  verificationStatus: z.string().default('PENDING'),
-  verificationDate: z.string().datetime().optional(),
-  verifiedBy: z.string().optional(),
-  authorizationRequired: z.boolean().default(false),
-  authorizationNumber: z.string().optional(),
-  notes: z.string().optional(),
+  lastVerificationDate: z.string().datetime().optional(),
+  lastVerifiedBy: z.string().optional(),
+  verificationNotes: z.string().optional(),
 });
 
 const updateInsuranceSchema = insuranceSchema.partial().omit({ clientId: true });
@@ -40,7 +35,7 @@ export const getClientInsurance = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
 
-    const insurance = await prisma.insuranceInfo.findMany({
+    const insurance = await prisma.insuranceInformation.findMany({
       where: { clientId },
       orderBy: { rank: 'asc' },
     });
@@ -50,11 +45,13 @@ export const getClientInsurance = async (req: Request, res: Response) => {
       data: insurance,
     });
   } catch (error) {
-    console.error('Get insurance error:', error);
+    const errorId = logControllerError('Get insurance', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve insurance information',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -64,7 +61,7 @@ export const getInsuranceById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const insurance = await prisma.insuranceInfo.findUnique({
+    const insurance = await prisma.insuranceInformation.findUnique({
       where: { id },
       include: {
         client: {
@@ -90,11 +87,13 @@ export const getInsuranceById = async (req: Request, res: Response) => {
       data: insurance,
     });
   } catch (error) {
-    console.error('Get insurance error:', error);
+    const errorId = logControllerError('Get insurance', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve insurance information',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -105,7 +104,7 @@ export const createInsurance = async (req: Request, res: Response) => {
     const validatedData = insuranceSchema.parse(req.body);
 
     // Check if rank already exists for this client
-    const existingInsurance = await prisma.insuranceInfo.findFirst({
+    const existingInsurance = await prisma.insuranceInformation.findFirst({
       where: {
         clientId: validatedData.clientId,
         rank: validatedData.rank,
@@ -119,13 +118,29 @@ export const createInsurance = async (req: Request, res: Response) => {
       });
     }
 
-    const insurance = await prisma.insuranceInfo.create({
+    const insurance = await prisma.insuranceInformation.create({
       data: {
-        ...validatedData,
+        clientId: validatedData.clientId,
+        rank: validatedData.rank,
+        insuranceCompany: validatedData.insuranceCompany,
+        insuranceCompanyId: validatedData.insuranceCompanyId,
+        planName: validatedData.planName,
+        planType: validatedData.planType,
+        memberId: validatedData.memberId,
+        groupNumber: validatedData.groupNumber,
         effectiveDate: new Date(validatedData.effectiveDate),
         terminationDate: validatedData.terminationDate ? new Date(validatedData.terminationDate) : null,
-        subscriberDOB: new Date(validatedData.subscriberDOB),
-        verificationDate: validatedData.verificationDate ? new Date(validatedData.verificationDate) : null,
+        subscriberFirstName: validatedData.subscriberFirstName,
+        subscriberLastName: validatedData.subscriberLastName,
+        subscriberDOB: validatedData.subscriberDOB ? new Date(validatedData.subscriberDOB) : null,
+        subscriberSSN: validatedData.subscriberSSN,
+        relationshipToSubscriber: validatedData.relationshipToSubscriber,
+        copay: validatedData.copay,
+        deductible: validatedData.deductible,
+        outOfPocketMax: validatedData.outOfPocketMax,
+        lastVerificationDate: validatedData.lastVerificationDate ? new Date(validatedData.lastVerificationDate) : null,
+        lastVerifiedBy: validatedData.lastVerifiedBy,
+        verificationNotes: validatedData.verificationNotes,
       },
     });
 
@@ -143,11 +158,13 @@ export const createInsurance = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Create insurance error:', error);
+    const errorId = logControllerError('Create insurance', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to create insurance information',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -158,7 +175,7 @@ export const updateInsurance = async (req: Request, res: Response) => {
     const { id } = req.params;
     const validatedData = updateInsuranceSchema.parse(req.body);
 
-    const existingInsurance = await prisma.insuranceInfo.findUnique({
+    const existingInsurance = await prisma.insuranceInformation.findUnique({
       where: { id },
     });
 
@@ -171,7 +188,7 @@ export const updateInsurance = async (req: Request, res: Response) => {
 
     // If rank is being updated, check for conflicts
     if (validatedData.rank && validatedData.rank !== existingInsurance.rank) {
-      const conflictingInsurance = await prisma.insuranceInfo.findFirst({
+      const conflictingInsurance = await prisma.insuranceInformation.findFirst({
         where: {
           clientId: existingInsurance.clientId,
           rank: validatedData.rank,
@@ -199,11 +216,11 @@ export const updateInsurance = async (req: Request, res: Response) => {
     if (validatedData.subscriberDOB) {
       updateData.subscriberDOB = new Date(validatedData.subscriberDOB);
     }
-    if (validatedData.verificationDate) {
-      updateData.verificationDate = new Date(validatedData.verificationDate);
+    if (validatedData.lastVerificationDate) {
+      updateData.lastVerificationDate = new Date(validatedData.lastVerificationDate);
     }
 
-    const insurance = await prisma.insuranceInfo.update({
+    const insurance = await prisma.insuranceInformation.update({
       where: { id },
       data: updateData,
     });
@@ -222,11 +239,13 @@ export const updateInsurance = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Update insurance error:', error);
+    const errorId = logControllerError('Update insurance', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to update insurance information',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -236,7 +255,7 @@ export const deleteInsurance = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const existingInsurance = await prisma.insuranceInfo.findUnique({
+    const existingInsurance = await prisma.insuranceInformation.findUnique({
       where: { id },
     });
 
@@ -247,7 +266,7 @@ export const deleteInsurance = async (req: Request, res: Response) => {
       });
     }
 
-    await prisma.insuranceInfo.delete({
+    await prisma.insuranceInformation.delete({
       where: { id },
     });
 
@@ -256,11 +275,13 @@ export const deleteInsurance = async (req: Request, res: Response) => {
       message: 'Insurance information deleted successfully',
     });
   } catch (error) {
-    console.error('Delete insurance error:', error);
+    const errorId = logControllerError('Delete insurance', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to delete insurance information',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -271,7 +292,7 @@ export const verifyInsurance = async (req: Request, res: Response) => {
     const { id } = req.params;
     const userId = (req as any).user.userId;
 
-    const existingInsurance = await prisma.insuranceInfo.findUnique({
+    const existingInsurance = await prisma.insuranceInformation.findUnique({
       where: { id },
     });
 
@@ -282,12 +303,12 @@ export const verifyInsurance = async (req: Request, res: Response) => {
       });
     }
 
-    const insurance = await prisma.insuranceInfo.update({
+    const insurance = await prisma.insuranceInformation.update({
       where: { id },
       data: {
-        verificationStatus: 'VERIFIED',
-        verificationDate: new Date(),
-        verifiedBy: userId,
+        lastVerificationDate: new Date(),
+        lastVerifiedBy: userId,
+        verificationNotes: 'Verified',
       },
     });
 
@@ -297,11 +318,13 @@ export const verifyInsurance = async (req: Request, res: Response) => {
       data: insurance,
     });
   } catch (error) {
-    console.error('Verify insurance error:', error);
+    const errorId = logControllerError('Verify insurance', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to verify insurance',
-      errors: [error],
+      errorId,
     });
   }
 };

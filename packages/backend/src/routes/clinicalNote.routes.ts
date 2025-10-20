@@ -13,12 +13,24 @@ import {
   getTreatmentPlanStatus,
   getEligibleAppointments,
   getInheritedDiagnoses,
+  getMyNotes,
+  getAppointmentsWithoutNotes,
+  getComplianceDashboard,
 } from '../controllers/clinicalNote.controller';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Get my notes (logged-in clinician's notes across all clients)
+router.get('/my-notes', getMyNotes);
+
+// Get compliance dashboard data
+router.get('/compliance/dashboard', getComplianceDashboard);
+
+// Get appointments without signed notes
+router.get('/compliance/appointments-without-notes', getAppointmentsWithoutNotes);
 
 // Get notes for co-signing (supervisor)
 router.get('/cosigning', getNotesForCosigning);
@@ -46,6 +58,7 @@ router.post('/', createClinicalNote);
 
 // Update note
 router.patch('/:id', updateClinicalNote);
+router.put('/:id', updateClinicalNote);
 
 // Sign note
 router.post('/:id/sign', signClinicalNote);

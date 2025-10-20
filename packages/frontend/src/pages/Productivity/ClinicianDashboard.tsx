@@ -5,7 +5,10 @@ import MetricCard from '../../components/Productivity/MetricCard';
 import { AlertCircle, CheckCircle, Clock, FileText, User, TrendingUp } from 'lucide-react';
 
 export default function ClinicianDashboard() {
-  const userId = localStorage.getItem('userId') || '';
+  // Get userId from the user object in localStorage
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const userId = user?.id || '';
   const { data: dashboardData, isLoading, error } = useClinicianDashboard(userId);
   const { kvr: realtimeKVR, metadata, connected } = useRealtimeKVR(userId);
 

@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import * as scheduleService from '../services/clinicianSchedule.service';
@@ -52,7 +53,13 @@ export const upsertClinicianSchedule = async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
 
     const schedule = await scheduleService.upsertClinicianSchedule({
-      ...validatedData,
+      clinicianId: validatedData.clinicianId,
+      weeklyScheduleJson: validatedData.weeklyScheduleJson as any,
+      acceptNewClients: validatedData.acceptNewClients,
+      maxAppointmentsPerDay: validatedData.maxAppointmentsPerDay,
+      maxAppointmentsPerWeek: validatedData.maxAppointmentsPerWeek,
+      bufferTimeBetweenAppointments: validatedData.bufferTimeBetweenAppointments,
+      availableLocations: validatedData.availableLocations,
       effectiveStartDate: new Date(validatedData.effectiveStartDate),
       effectiveEndDate: validatedData.effectiveEndDate
         ? new Date(validatedData.effectiveEndDate)
@@ -66,7 +73,7 @@ export const upsertClinicianSchedule = async (req: Request, res: Response) => {
       data: schedule,
     });
   } catch (error) {
-    console.error('Upsert clinician schedule error:', error);
+    logger.error('Upsert clinician schedule error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -111,7 +118,7 @@ export const getClinicianSchedule = async (req: Request, res: Response) => {
       data: schedule,
     });
   } catch (error) {
-    console.error('Get clinician schedule error:', error);
+    logger.error('Get clinician schedule error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -140,7 +147,7 @@ export const getAllCliniciansSchedules = async (req: Request, res: Response) => 
       count: schedules.length,
     });
   } catch (error) {
-    console.error('Get all clinicians schedules error:', error);
+    logger.error('Get all clinicians schedules error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -159,9 +166,15 @@ export const createScheduleException = async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
 
     const exception = await scheduleService.createScheduleException({
-      ...validatedData,
+      clinicianId: validatedData.clinicianId,
+      exceptionType: validatedData.exceptionType,
       startDate: new Date(validatedData.startDate),
       endDate: new Date(validatedData.endDate),
+      startTime: validatedData.startTime,
+      endTime: validatedData.endTime,
+      allDay: validatedData.allDay,
+      reason: validatedData.reason,
+      notes: validatedData.notes,
       createdBy: userId,
     });
 
@@ -171,7 +184,7 @@ export const createScheduleException = async (req: Request, res: Response) => {
       data: exception,
     });
   } catch (error) {
-    console.error('Create schedule exception error:', error);
+    logger.error('Create schedule exception error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -214,7 +227,7 @@ export const getScheduleExceptions = async (req: Request, res: Response) => {
       count: exceptions.length,
     });
   } catch (error) {
-    console.error('Get schedule exceptions error:', error);
+    logger.error('Get schedule exceptions error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -240,7 +253,7 @@ export const approveScheduleException = async (req: Request, res: Response) => {
       data: exception,
     });
   } catch (error) {
-    console.error('Approve schedule exception error:', error);
+    logger.error('Approve schedule exception error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -278,7 +291,7 @@ export const denyScheduleException = async (req: Request, res: Response) => {
       data: exception,
     });
   } catch (error) {
-    console.error('Deny schedule exception error:', error);
+    logger.error('Deny schedule exception error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -304,7 +317,7 @@ export const deleteScheduleException = async (req: Request, res: Response) => {
       data: exception,
     });
   } catch (error) {
-    console.error('Delete schedule exception error:', error);
+    logger.error('Delete schedule exception error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -341,7 +354,7 @@ export const getClinicianAvailability = async (req: Request, res: Response) => {
       count: availability.length,
     });
   } catch (error) {
-    console.error('Get clinician availability error:', error);
+    logger.error('Get clinician availability error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -378,7 +391,7 @@ export const checkCapacity = async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    console.error('Check capacity error:', error);
+    logger.error('Check capacity error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,

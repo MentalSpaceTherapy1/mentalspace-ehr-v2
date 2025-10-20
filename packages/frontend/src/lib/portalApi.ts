@@ -41,6 +41,7 @@ export interface AssignFormRequest {
   dueDate?: string;
   isRequired?: boolean;
   assignmentNotes?: string;
+  clientMessage?: string;
 }
 
 /**

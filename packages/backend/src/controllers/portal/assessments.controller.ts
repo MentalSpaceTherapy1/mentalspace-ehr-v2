@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
-import logger from '../../utils/logger';
 
-const prisma = new PrismaClient();
+import logger from '../../utils/logger';
+import prisma from '../../services/database';
 
 /**
  * Get pending assessments for client
  * GET /api/v1/portal/assessments/pending
  */
-export const getPendingAssessments = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getPendingAssessments = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -52,7 +50,7 @@ export const getPendingAssessments = async (req: AuthenticatedPortalRequest, res
  * Get completed assessments for client
  * GET /api/v1/portal/assessments/completed
  */
-export const getCompletedAssessments = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getCompletedAssessments = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -90,7 +88,7 @@ export const getCompletedAssessments = async (req: AuthenticatedPortalRequest, r
  * Get assessment details for taking
  * GET /api/v1/portal/assessments/:assessmentId
  */
-export const getAssessmentDetails = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getAssessmentDetails = async (req: Request, res: Response) => {
   try {
     const { assessmentId } = req.params;
     const clientId = (req as any).portalAccount?.clientId;
@@ -141,7 +139,7 @@ export const getAssessmentDetails = async (req: AuthenticatedPortalRequest, res:
  * Start an assessment (mark as IN_PROGRESS)
  * POST /api/v1/portal/assessments/:assessmentId/start
  */
-export const startAssessment = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const startAssessment = async (req: Request, res: Response) => {
   try {
     const { assessmentId } = req.params;
     const clientId = (req as any).portalAccount?.clientId;
@@ -193,7 +191,7 @@ export const startAssessment = async (req: AuthenticatedPortalRequest, res: Resp
  * Submit completed assessment
  * POST /api/v1/portal/assessments/:assessmentId/submit
  */
-export const submitAssessment = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const submitAssessment = async (req: Request, res: Response) => {
   try {
     const { assessmentId } = req.params;
     const { responses } = req.body;
@@ -265,7 +263,7 @@ export const submitAssessment = async (req: AuthenticatedPortalRequest, res: Res
  * Get assessment results
  * GET /api/v1/portal/assessments/:assessmentId/results
  */
-export const getAssessmentResults = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getAssessmentResults = async (req: Request, res: Response) => {
   try {
     const { assessmentId } = req.params;
     const clientId = (req as any).portalAccount?.clientId;
@@ -311,7 +309,7 @@ export const getAssessmentResults = async (req: AuthenticatedPortalRequest, res:
  * Get assessment history/trends
  * GET /api/v1/portal/assessments/history
  */
-export const getAssessmentHistory = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getAssessmentHistory = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { assessmentType } = req.query;

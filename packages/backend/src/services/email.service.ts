@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../utils/logger';
 import nodemailer from 'nodemailer';
 
 // Email configuration (use environment variables in production)
@@ -16,7 +17,7 @@ let transporter: nodemailer.Transporter | null = null;
 
 function getTransporter() {
   if (!transporter) {
-    transporter = nodemailer.createTransporter(EMAIL_CONFIG);
+    transporter = nodemailer.createTransport(EMAIL_CONFIG);
   }
   return transporter;
 }
@@ -38,12 +39,12 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
     // In development, log emails instead of sending
     if (process.env.NODE_ENV === 'development' || !process.env.SMTP_USER) {
-      console.log('📧 [EMAIL] (Development Mode - Not Actually Sent)');
-      console.log('To:', options.to);
-      console.log('Subject:', options.subject);
-      console.log('---');
-      console.log(options.html.replace(/<[^>]*>/g, '')); // Strip HTML tags for console
-      console.log('---');
+      logger.info('📧 [EMAIL] (Development Mode - Not Actually Sent)');
+      logger.info('To:', options.to);
+      logger.info('Subject:', options.subject);
+      logger.info('---');
+      logger.info(options.html.replace(/<[^>]*>/g, '')); // Strip HTML tags for console
+      logger.info('---');
       return true;
     }
 
@@ -59,11 +60,11 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       bcc: options.bcc,
     });
 
-    console.log('✅ Email sent:', info.messageId);
+    logger.info('✅ Email sent:', info.messageId);
     return true;
 
   } catch (error) {
-    console.error('❌ Error sending email:', error);
+    logger.error('❌ Error sending email:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return false;
   }
 }
@@ -79,7 +80,7 @@ export async function sendBulkEmail(recipients: string[], subject: string, html:
     if (success) successCount++;
   }
 
-  console.log(`📧 Bulk email complete: ${successCount}/${recipients.length} sent successfully`);
+  logger.info(`📧 Bulk email complete: ${successCount}/${recipients.length} sent successfully`);
   return successCount;
 }
 
@@ -229,10 +230,10 @@ export async function verifyEmailConfig(): Promise<boolean> {
   try {
     const transport = getTransporter();
     await transport.verify();
-    console.log('✅ Email server connection verified');
+    logger.info('✅ Email server connection verified');
     return true;
   } catch (error) {
-    console.error('❌ Email server connection failed:', error);
+    logger.error('❌ Email server connection failed:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return false;
   }
 }

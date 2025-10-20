@@ -27,7 +27,8 @@ const PURPOSE_CATEGORY_OPTIONS = [
 ];
 
 export default function MiscellaneousNoteForm() {
-  const { clientId } = useParams();
+  const { clientId, noteId } = useParams();
+  const isEditMode = !!noteId;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -38,7 +39,7 @@ export default function MiscellaneousNoteForm() {
   // Appointment selection state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
   const [appointmentData, setAppointmentData] = useState<any>(null);
-  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const appointmentId = selectedAppointmentId;
@@ -71,6 +72,16 @@ export default function MiscellaneousNoteForm() {
       return response.data.data;
     },
     enabled: !!clientId,
+  });
+
+  // Fetch existing note data if in edit mode
+  const { data: existingNoteData, isLoading: isLoadingNote } = useQuery({
+    queryKey: ['clinical-note', noteId],
+    queryFn: async () => {
+      const response = await api.get(`/clinical-notes/${noteId}`);
+      return response.data.data;
+    },
+    enabled: isEditMode && !!noteId,
   });
 
   // Fetch eligible appointments
@@ -111,8 +122,51 @@ export default function MiscellaneousNoteForm() {
     setShowAppointmentPicker(false);
   };
 
+  // Populate form fields from existingNoteData when in edit mode
+  useEffect(() => {
+    if (existingNoteData && isEditMode) {
+      // Set appointment ID from existing note
+      if (existingNoteData.appointmentId) {
+        setSelectedAppointmentId(existingNoteData.appointmentId);
+      }
+
+      // Note date
+      if (existingNoteData.sessionDate) {
+        const date = new Date(existingNoteData.sessionDate);
+        setNoteDate(date.toISOString().split('T')[0]);
+      }
+
+      // Note details
+      if (existingNoteData.subject) setSubject(existingNoteData.subject);
+      if (existingNoteData.purposeCategory) setPurposeCategory(existingNoteData.purposeCategory);
+      if (existingNoteData.content) setContent(existingNoteData.content);
+      if (existingNoteData.relatedToTreatment !== undefined) setRelatedToTreatment(existingNoteData.relatedToTreatment);
+
+      // Billing
+      if (existingNoteData.cptCode) setCptCode(existingNoteData.cptCode);
+      if (existingNoteData.billingCode) setBillingCode(existingNoteData.billingCode);
+      if (existingNoteData.billable !== undefined) setBillable(existingNoteData.billable);
+    }
+  }, [existingNoteData, isEditMode]);
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
+      return api.post('/clinical-notes', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      navigate(`/clients/${clientId}/notes`);
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
@@ -166,6 +220,32 @@ export default function MiscellaneousNoteForm() {
 
     setShowReviewModal(false);
     setGeneratedData(null);
+  };
+
+  const handleSaveDraft = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const data = {
+      clientId,
+      noteType: 'Miscellaneous Note',
+      appointmentId: appointmentId,
+      sessionDate: noteDate ? new Date(noteDate).toISOString() : undefined,
+      subjective: `Subject: ${subject}\nCategory: ${purposeCategory}`,
+      objective: content,
+      assessment: `Miscellaneous note - ${relatedToTreatment ? 'Related to treatment' : 'Administrative'}`,
+      plan: 'Continue as planned',
+      subject,
+      purposeCategory,
+      content,
+      relatedToTreatment,
+      cptCode: billable ? cptCode : '',
+      billingCode: billable ? billingCode : '',
+      billable,
+      dueDate: noteDate ? new Date(noteDate).toISOString() : undefined,
+      status: 'DRAFT',
+    };
+
+    saveDraftMutation.mutate(data);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -288,7 +368,7 @@ export default function MiscellaneousNoteForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
           {/* AI-Powered Note Generation */}
           {/* Schedule Header */}
             {appointmentData && (
@@ -393,9 +473,11 @@ export default function MiscellaneousNoteForm() {
           {/* Form Actions */}
           <FormActions
             onCancel={() => navigate(`/clients/${clientId}/notes`)}
-            onSubmit={handleSubmit}
-            submitLabel="Create Miscellaneous Note"
+            onSubmit={() => handleSubmit({} as React.FormEvent)}
+            submitLabel={isEditMode ? "Update Miscellaneous Note" : "Create Miscellaneous Note"}
             isSubmitting={saveMutation.isPending}
+            onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+            isSavingDraft={saveDraftMutation.isPending}
           />
         </form>
         )}

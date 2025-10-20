@@ -17,8 +17,8 @@ router.get('/:id', authenticate, getServiceCodeById);
 router.get('/code/:code', authenticate, getServiceCodeByCode);
 
 // Admin/Supervisor only routes
-router.post('/', authenticate, authorize('ADMIN', 'SUPERVISOR'), createServiceCode);
-router.put('/:id', authenticate, authorize('ADMIN', 'SUPERVISOR'), updateServiceCode);
-router.delete('/:id', authenticate, authorize('ADMIN'), deleteServiceCode);
+router.post('/', authenticate, authorize('ADMINISTRATOR', 'SUPERVISOR'), createServiceCode);
+router.put('/:id', authenticate, authorize('ADMINISTRATOR', 'SUPERVISOR'), updateServiceCode);
+router.delete('/:id', authenticate, authorize('ADMINISTRATOR'), deleteServiceCode);
 
 export default router;

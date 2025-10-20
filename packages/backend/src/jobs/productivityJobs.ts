@@ -1,14 +1,12 @@
+import prisma from '../services/database';
 // Productivity Module - Scheduled Jobs
 // Phase 6 - Week 20 - Daily, Weekly, Monthly, and Hourly Jobs
 
 import cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
 import { metricService } from '../services/metrics/metricService';
 import { alertService } from '../services/alerts/alertService';
 import { georgiaComplianceService } from '../services/compliance/georgiaCompliance';
-import { logger } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import logger from '../utils/logger';
 
 /**
  * Daily Metric Calculation Job
@@ -30,7 +28,7 @@ export function startDailyMetricCalculation() {
 
       // Get all active clinicians
       const clinicians = await prisma.user.findMany({
-        where: { role: 'CLINICIAN', isActive: true },
+        where: { roles: { hasSome: ['CLINICIAN'] }, isActive: true },
         select: { id: true, firstName: true, lastName: true },
       });
 
@@ -92,7 +90,7 @@ export function startWeeklyAggregation() {
       startOfWeek.setHours(0, 0, 0, 0);
 
       const clinicians = await prisma.user.findMany({
-        where: { role: 'CLINICIAN', isActive: true },
+        where: { roles: { hasSome: ['CLINICIAN'] }, isActive: true },
         select: {
           id: true,
           firstName: true,
@@ -160,7 +158,7 @@ export function startMonthlyAggregation() {
       startOfMonth.setHours(0, 0, 0, 0);
 
       const clinicians = await prisma.user.findMany({
-        where: { role: 'CLINICIAN', isActive: true },
+        where: { roles: { hasSome: ['CLINICIAN'] }, isActive: true },
         select: { id: true, firstName: true, lastName: true },
       });
 
@@ -293,7 +291,7 @@ export async function triggerDailyMetricCalculationNow() {
   periodEnd.setHours(23, 59, 59, 999);
 
   const clinicians = await prisma.user.findMany({
-    where: { role: 'CLINICIAN', isActive: true },
+    where: { roles: { hasSome: ['CLINICIAN'] }, isActive: true },
     select: { id: true },
   });
 

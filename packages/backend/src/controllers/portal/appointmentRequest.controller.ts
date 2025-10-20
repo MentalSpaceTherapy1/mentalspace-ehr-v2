@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
-import logger from '../../utils/logger';
 
-const prisma = new PrismaClient();
+import logger from '../../utils/logger';
+import prisma from '../../services/database';
 
 /**
  * Get therapist availability for calendar view
  * GET /api/v1/portal/appointments/availability
  */
-export const getTherapistAvailability = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getTherapistAvailability = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { clinicianId, startDate, endDate } = req.query;
@@ -107,7 +105,7 @@ export const getTherapistAvailability = async (req: AuthenticatedPortalRequest, 
  * Request a new appointment
  * POST /api/v1/portal/appointments/request
  */
-export const requestAppointment = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const requestAppointment = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const {
@@ -188,7 +186,7 @@ export const requestAppointment = async (req: AuthenticatedPortalRequest, res: R
         status: 'REQUESTED',
         statusUpdatedBy: clientId,
         appointmentNotes: appointmentNotes || 'Client-requested appointment',
-      },
+      } as any,
       include: {
         clinician: {
           select: {
@@ -221,7 +219,7 @@ export const requestAppointment = async (req: AuthenticatedPortalRequest, res: R
  * Get client's requested appointments (pending approval)
  * GET /api/v1/portal/appointments/requested
  */
-export const getRequestedAppointments = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getRequestedAppointments = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -269,7 +267,7 @@ export const getRequestedAppointments = async (req: AuthenticatedPortalRequest, 
  * Cancel a requested appointment
  * DELETE /api/v1/portal/appointments/request/:appointmentId
  */
-export const cancelRequestedAppointment = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const cancelRequestedAppointment = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { appointmentId } = req.params;
@@ -321,7 +319,7 @@ export const cancelRequestedAppointment = async (req: AuthenticatedPortalRequest
  * Get available appointment types
  * GET /api/v1/portal/appointments/types
  */
-export const getAppointmentTypes = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getAppointmentTypes = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 

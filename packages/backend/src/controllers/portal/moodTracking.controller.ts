@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
-import logger from '../../utils/logger';
 
-const prisma = new PrismaClient();
+import logger from '../../utils/logger';
+import prisma from '../../services/database';
 
 /**
  * Create a new mood entry
  * POST /api/v1/portal/mood-entries
  */
-export const createMoodEntry = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const createMoodEntry = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const {
@@ -84,7 +82,7 @@ export const createMoodEntry = async (req: AuthenticatedPortalRequest, res: Resp
  * Get mood entries for client with optional date filtering
  * GET /api/v1/portal/mood-entries?days=7
  */
-export const getMoodEntries = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getMoodEntries = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
     const { days } = req.query;
@@ -143,7 +141,7 @@ export const getMoodEntries = async (req: AuthenticatedPortalRequest, res: Respo
  * Get mood trends analysis
  * GET /api/v1/portal/mood-entries/trends
  */
-export const getMoodTrends = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getMoodTrends = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 

@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import * as reminderService from '../services/reminder.service';
@@ -20,7 +21,7 @@ const reminderSettingsSchema = z.object({
 export const upsertReminderSettings = async (req: Request, res: Response) => {
   try {
     const validatedData = reminderSettingsSchema.parse(req.body);
-    const settings = await reminderService.upsertReminderSettings(validatedData);
+    const settings = await reminderService.upsertReminderSettings(validatedData as any);
 
     res.status(200).json({
       success: true,
@@ -28,7 +29,7 @@ export const upsertReminderSettings = async (req: Request, res: Response) => {
       data: settings,
     });
   } catch (error) {
-    console.error('Upsert reminder settings error:', error);
+    logger.error('Upsert reminder settings error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -56,7 +57,7 @@ export const getReminderSettings = async (req: Request, res: Response) => {
       data: settings,
     });
   } catch (error) {
-    console.error('Get reminder settings error:', error);
+    logger.error('Get reminder settings error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -76,7 +77,7 @@ export const processReminders = async (req: Request, res: Response) => {
       data: results,
     });
   } catch (error) {
-    console.error('Process reminders error:', error);
+    logger.error('Process reminders error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,
@@ -110,7 +111,7 @@ export const sendImmediateReminder = async (req: Request, res: Response) => {
         : 'Failed to send reminder',
     });
   } catch (error) {
-    console.error('Send immediate reminder error:', error);
+    logger.error('Send immediate reminder error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     res.status(500).json({
       success: false,

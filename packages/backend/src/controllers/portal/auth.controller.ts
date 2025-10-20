@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import * as portalAuthService from '../../services/portal/auth.service';
+import logger from '../../utils/logger';
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -9,7 +10,7 @@ import * as portalAuthService from '../../services/portal/auth.service';
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(100),
-  clientId: z.string().uuid(),
+  clientId: z.string().min(1), // Accept either UUID or MRN
 });
 
 const loginSchema = z.object({
@@ -67,12 +68,23 @@ export const register = async (req: Request, res: Response) => {
       clientId: data.clientId,
     });
 
+    logger.info('Portal account registered', {
+      clientId: data.clientId,
+      email: data.email,
+    });
+
     res.status(201).json({
       success: true,
       message: 'Portal account created successfully. Please check your email to verify your account.',
       data: result,
     });
   } catch (error: any) {
+    logger.error('Portal registration failed', {
+      message: error?.message,
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+      statusCode: error?.statusCode,
+    });
+
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to create portal account',

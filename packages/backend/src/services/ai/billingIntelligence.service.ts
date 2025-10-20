@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../../utils/logger';
 import anthropicService from './anthropic.service';
 
 /**
@@ -70,7 +71,7 @@ class BillingIntelligenceService {
 
       return this.parseResponse(response);
     } catch (error: any) {
-      console.error('Billing Intelligence Error:', error);
+      logger.error('Billing Intelligence Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`Failed to analyze billing: ${error.message}`);
     }
   }
@@ -114,7 +115,7 @@ Suggest the most appropriate CPT code. Return as JSON:
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed;
     } catch (error) {
-      console.error('CPT code suggestion error:', error);
+      logger.error('CPT code suggestion error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw error;
     }
   }
@@ -162,7 +163,7 @@ Evaluate medical necessity. Return as JSON:
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed;
     } catch (error) {
-      console.error('Medical necessity validation error:', error);
+      logger.error('Medical necessity validation error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return {
         isAdequate: false,
         score: 0,
@@ -213,7 +214,7 @@ Identify potential billing errors or warnings. Return as JSON:
       const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}');
       return parsed.errors || [];
     } catch (error) {
-      console.error('Billing error detection failed:', error);
+      logger.error('Billing error detection failed:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return [];
     }
   }
@@ -363,7 +364,7 @@ GUIDELINES:
         confidence: parsed.confidence || 0.5,
       };
     } catch (error) {
-      console.error('Failed to parse billing intelligence:', error);
+      logger.error('Failed to parse billing intelligence:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw error;
     }
   }

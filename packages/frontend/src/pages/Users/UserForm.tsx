@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
@@ -286,8 +286,9 @@ export default function UserForm() {
                     { value: 'ADMINISTRATOR', label: '🔴 Administrator', color: 'from-rose-500 to-pink-500' },
                     { value: 'SUPERVISOR', label: '🟣 Supervisor', color: 'from-purple-500 to-indigo-500' },
                     { value: 'CLINICIAN', label: '🔵 Clinician', color: 'from-blue-500 to-cyan-500' },
-                    { value: 'BILLER', label: '🟢 Biller', color: 'from-green-500 to-emerald-500' },
-                    { value: 'RECEPTIONIST', label: '🟡 Receptionist', color: 'from-amber-500 to-orange-500' },
+                    { value: 'BILLING_STAFF', label: '🟢 Billing Staff', color: 'from-green-500 to-emerald-500' },
+                    { value: 'FRONT_DESK', label: '🟡 Front Desk', color: 'from-amber-500 to-orange-500' },
+                    { value: 'ASSOCIATE', label: '🟠 Associate', color: 'from-sky-500 to-cyan-500' },
                   ].map((roleOption) => (
                     <div key={roleOption.value} className="flex items-center bg-white p-3 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
                       <input

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import {
   getAllClients,
   getClientById,
@@ -15,11 +15,23 @@ const router = Router();
 router.use(authenticate);
 
 // Client routes
-router.get('/', getAllClients);
-router.get('/stats', getClientStats);
-router.get('/:id', getClientById);
-router.post('/', createClient);
-router.patch('/:id', updateClient);
-router.delete('/:id', deleteClient);
+router.get(
+  '/',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'FRONT_DESK', 'BILLING_STAFF'),
+  getAllClients
+);
+router.get(
+  '/stats',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'BILLING_STAFF'),
+  getClientStats
+);
+router.get(
+  '/:id',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'BILLING_STAFF'),
+  getClientById
+);
+router.post('/', authorize('ADMINISTRATOR', 'SUPERVISOR'), createClient);
+router.patch('/:id', authorize('ADMINISTRATOR', 'SUPERVISOR'), updateClient);
+router.delete('/:id', authorize('ADMINISTRATOR', 'SUPERVISOR'), deleteClient);
 
 export default router;

@@ -247,4 +247,42 @@ export const logSecurity = (
   });
 };
 
+/**
+ * Sanitized error logging for controllers
+ * HIPAA-compliant: Only logs error type and context, never PHI or full error objects
+ * @param context - Description of where error occurred (e.g., 'Get clients')
+ * @param error - The error object (will extract only safe properties)
+ * @param metadata - Additional safe context (userId, action, etc.)
+ */
+export const logControllerError = (
+  context: string,
+  error: unknown,
+  metadata?: Record<string, any>
+) => {
+  const errorId = `ERR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  const safeErrorInfo: any = {
+    errorId,
+    context,
+    errorType: error instanceof Error ? error.constructor.name : typeof error,
+    timestamp: new Date().toISOString(),
+    ...metadata,
+  };
+
+  // Add error message only if it's a known app error or validation error
+  if (error instanceof Error) {
+    // For Prisma errors, only log error code, not full message
+    if (error.constructor.name.includes('Prisma')) {
+      safeErrorInfo.prismaCode = (error as any).code;
+    } else {
+      // For app errors, log message (assumed to be safe)
+      safeErrorInfo.message = error.message;
+    }
+  }
+
+  logger.error(context, safeErrorInfo);
+
+  return errorId;
+};
+
 export default logger;

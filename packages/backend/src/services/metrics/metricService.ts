@@ -1,7 +1,7 @@
+import prisma from '../database';
 // Metric Service - Central Orchestrator for Productivity Metrics
 // Phase 6 - Week 18-19
 
-import { PrismaClient } from '@prisma/client';
 import { MetricCalculator, MetricResult, shouldTriggerAlert } from './types';
 import logger from '../../utils/logger';
 
@@ -39,8 +39,6 @@ import {
   DaysInARCalculator,
   CollectionRateCalculator,
 } from './additionalMetrics';
-
-const prisma = new PrismaClient();
 
 class MetricService {
   private calculators: Map<string, MetricCalculator> = new Map();

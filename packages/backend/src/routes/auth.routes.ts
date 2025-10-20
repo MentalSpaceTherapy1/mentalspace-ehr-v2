@@ -7,6 +7,7 @@ import {
   loginSchema,
   changePasswordSchema,
 } from '../utils/validation';
+import { authRateLimiter, accountCreationRateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -14,15 +15,17 @@ const router = Router();
  * @route   POST /api/v1/auth/register
  * @desc    Register a new user
  * @access  Public (or Admin only, depending on requirements)
+ * @security Rate limited to prevent automated account creation
  */
-router.post('/register', validateBody(registerSchema), authController.register);
+router.post('/register', accountCreationRateLimiter, validateBody(registerSchema), authController.register);
 
 /**
  * @route   POST /api/v1/auth/login
  * @desc    Login user
  * @access  Public
+ * @security Rate limited to prevent brute-force attacks
  */
-router.post('/login', validateBody(loginSchema), authController.login);
+router.post('/login', authRateLimiter, validateBody(loginSchema), authController.login);
 
 /**
  * @route   GET /api/v1/auth/me

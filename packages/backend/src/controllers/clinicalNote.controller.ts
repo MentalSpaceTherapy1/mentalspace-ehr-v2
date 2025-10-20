@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { ClinicalNotesValidationService } from '../services/clinical-notes-validation.service';
@@ -168,7 +169,7 @@ export const getClientNotes = async (req: Request, res: Response) => {
       treatmentPlanStatus,
     });
   } catch (error: any) {
-    console.error('Get client notes error:', error);
+    logger.error('Get client notes error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve clinical notes',
@@ -228,7 +229,7 @@ export const getClinicalNoteById = async (req: Request, res: Response) => {
       data: note,
     });
   } catch (error: any) {
-    console.error('Get clinical note error:', error);
+    logger.error('Get clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve clinical note',
@@ -273,7 +274,7 @@ export const createClinicalNote = async (req: Request, res: Response) => {
 
     const note = await prisma.clinicalNote.create({
       data: {
-        ...validatedData,
+        ...(validatedData as any),
         clinicianId: userId,
         requiresCosign,
         lastModifiedBy: userId,
@@ -295,30 +296,28 @@ export const createClinicalNote = async (req: Request, res: Response) => {
       },
     });
 
-    // If this is an Intake or Treatment Plan with diagnosis codes, update client's diagnosis
-    if (
-      (validatedData.noteType === 'Intake Assessment' || validatedData.noteType === 'Treatment Plan') &&
-      validatedData.diagnosisCodes.length > 0
-    ) {
-      await prisma.client.update({
-        where: { id: validatedData.clientId },
-        data: { diagnosisCodes: validatedData.diagnosisCodes },
-      });
-    }
-
     return res.status(201).json({
       success: true,
       message: 'Clinical note created successfully',
       data: note,
     });
   } catch (error: any) {
-    console.error('Create clinical note error:', error);
+    logger.error('Create clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
         success: false,
         message: 'Validation error',
         errors: error.errors,
+      });
+    }
+
+    // Handle Prisma unique constraint violation (duplicate appointment + noteType)
+    if (error.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        message: 'A clinical note of this type already exists for this appointment. Please select a different appointment or edit the existing note.',
+        errorCode: 'DUPLICATE_NOTE',
       });
     }
 
@@ -360,6 +359,30 @@ export const updateClinicalNote = async (req: Request, res: Response) => {
 
     const updateData = { ...req.body, lastModifiedBy: userId };
 
+    // Map frontend field names to database field names
+    if (updateData.riskAssessmentNotes !== undefined) {
+      updateData.riskAssessmentDetails = updateData.riskAssessmentNotes;
+      delete updateData.riskAssessmentNotes;
+    }
+    if (updateData.interventions !== undefined) {
+      updateData.interventionsTaken = updateData.interventions;
+      delete updateData.interventions;
+    }
+
+    // Remove fields that cannot/should not be updated
+    // These are relational fields or identifiers that define the note's identity
+    delete updateData.id;
+    delete updateData.clientId;
+    delete updateData.noteType;
+    delete updateData.appointmentId;
+    delete updateData.clinicianId;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.client;
+    delete updateData.clinician;
+    delete updateData.appointment;
+    delete updateData.cosigner;
+
     // Convert date strings to Date objects if present
     if (updateData.sessionDate) {
       updateData.sessionDate = new Date(updateData.sessionDate);
@@ -386,24 +409,13 @@ export const updateClinicalNote = async (req: Request, res: Response) => {
       },
     });
 
-    // Update client diagnosis if this is Intake or Treatment Plan
-    if (
-      (note.noteType === 'Intake Assessment' || note.noteType === 'Treatment Plan') &&
-      updateData.diagnosisCodes
-    ) {
-      await prisma.client.update({
-        where: { id: note.clientId },
-        data: { diagnosisCodes: updateData.diagnosisCodes },
-      });
-    }
-
     return res.json({
       success: true,
       message: 'Clinical note updated successfully',
       data: note,
     });
   } catch (error: any) {
-    console.error('Update clinical note error:', error);
+    logger.error('Update clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to update clinical note',
@@ -484,7 +496,7 @@ export const signClinicalNote = async (req: Request, res: Response) => {
       data: updatedNote,
     });
   } catch (error: any) {
-    console.error('Sign clinical note error:', error);
+    logger.error('Sign clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to sign clinical note',
@@ -571,7 +583,7 @@ export const cosignClinicalNote = async (req: Request, res: Response) => {
       data: updatedNote,
     });
   } catch (error: any) {
-    console.error('Cosign clinical note error:', error);
+    logger.error('Cosign clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to co-sign clinical note',
@@ -624,7 +636,7 @@ export const deleteClinicalNote = async (req: Request, res: Response) => {
       message: 'Clinical note deleted successfully',
     });
   } catch (error: any) {
-    console.error('Delete clinical note error:', error);
+    logger.error('Delete clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to delete clinical note',
@@ -680,7 +692,7 @@ export const getNotesForCosigning = async (req: Request, res: Response) => {
       count: notes.length,
     });
   } catch (error: any) {
-    console.error('Get notes for cosigning error:', error);
+    logger.error('Get notes for cosigning error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve notes for co-signing',
@@ -696,24 +708,24 @@ export const getClientDiagnosis = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
 
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
+    // Get diagnosis from latest signed Intake Assessment or Treatment Plan
+    const latestDiagnosisNote = await prisma.clinicalNote.findFirst({
+      where: {
+        clientId,
+        noteType: { in: ['Intake Assessment', 'Treatment Plan'] },
+        status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] },
+        diagnosisCodes: { isEmpty: false },
+      },
+      orderBy: { signedDate: 'desc' },
       select: { diagnosisCodes: true },
     });
 
-    if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found',
-      });
-    }
-
     return res.json({
       success: true,
-      data: { diagnosisCodes: client.diagnosisCodes || [] },
+      data: { diagnosisCodes: latestDiagnosisNote?.diagnosisCodes || [] },
     });
   } catch (error: any) {
-    console.error('Get client diagnosis error:', error);
+    logger.error('Get client diagnosis error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve client diagnosis',
@@ -736,7 +748,7 @@ export const getTreatmentPlanStatus = async (req: Request, res: Response) => {
       data: status,
     });
   } catch (error: any) {
-    console.error('Get treatment plan status error:', error);
+    logger.error('Get treatment plan status error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to check treatment plan status',
@@ -768,7 +780,7 @@ export const getEligibleAppointments = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Get eligible appointments error:', error);
+    logger.error('Get eligible appointments error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve eligible appointments',
@@ -803,10 +815,466 @@ export const getInheritedDiagnoses = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Get inherited diagnoses error:', error);
+    logger.error('Get inherited diagnoses error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve inherited diagnoses',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get all notes for the logged-in clinician (My Notes)
+ */
+export const getMyNotes = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { status, noteType, clientId, startDate, endDate, search } = req.query;
+
+    // Build where clause
+    const where: any = {
+      clinicianId: userId,
+    };
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (noteType) {
+      where.noteType = noteType;
+    }
+
+    if (clientId) {
+      where.clientId = clientId;
+    }
+
+    if (startDate || endDate) {
+      where.sessionDate = {};
+      if (startDate) {
+        where.sessionDate.gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        where.sessionDate.lte = new Date(endDate as string);
+      }
+    }
+
+    // Search filter (client name or note content)
+    if (search) {
+      where.OR = [
+        {
+          client: {
+            OR: [
+              { firstName: { contains: search as string, mode: 'insensitive' } },
+              { lastName: { contains: search as string, mode: 'insensitive' } },
+            ],
+          },
+        },
+        { subjective: { contains: search as string, mode: 'insensitive' } },
+        { objective: { contains: search as string, mode: 'insensitive' } },
+        { assessment: { contains: search as string, mode: 'insensitive' } },
+        { plan: { contains: search as string, mode: 'insensitive' } },
+      ];
+    }
+
+    const notes = await prisma.clinicalNote.findMany({
+      where,
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            medicalRecordNumber: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+        cosigner: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+        appointment: {
+          select: {
+            id: true,
+            appointmentDate: true,
+            startTime: true,
+            endTime: true,
+          },
+        },
+      },
+      orderBy: { sessionDate: 'desc' },
+    });
+
+    // Calculate statistics
+    const stats = {
+      total: notes.length,
+      draft: notes.filter((n) => n.status === 'DRAFT').length,
+      signed: notes.filter((n) => n.status === 'SIGNED').length,
+      pendingCosign: notes.filter((n) => n.status === 'PENDING_COSIGN').length,
+      cosigned: notes.filter((n) => n.status === 'COSIGNED').length,
+      locked: notes.filter((n) => n.isLocked).length,
+      overdue: notes.filter((n) => {
+        if (n.signedDate) return false;
+        const daysSince = Math.floor((new Date().getTime() - new Date(n.sessionDate).getTime()) / (1000 * 60 * 60 * 24));
+        return daysSince > 3;
+      }).length,
+    };
+
+    return res.json({
+      success: true,
+      data: notes,
+      stats,
+      count: notes.length,
+    });
+  } catch (error: any) {
+    logger.error('Get my notes error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve notes',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get appointments without notes (Compliance Dashboard)
+ * Shows past completed appointments that don't have signed notes
+ */
+export const getAppointmentsWithoutNotes = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { roles: true },
+    });
+
+    // Build filter based on role
+    let appointmentFilter: any = {
+      status: 'COMPLETED',
+      appointmentDate: { lt: new Date() }, // Past appointments only
+    };
+
+    // Supervisors see supervisees' appointments, admins see all, clinicians see their own
+    if (user?.roles.includes('ADMINISTRATOR')) {
+      // Admins see all
+    } else if (user?.roles.includes('SUPERVISOR')) {
+      // Get all supervisees
+      const supervisees = await prisma.user.findMany({
+        where: { supervisorId: userId },
+        select: { id: true },
+      });
+      const superviseeIds = supervisees.map((s) => s.id);
+      appointmentFilter.clinicianId = { in: [...superviseeIds, userId] };
+    } else {
+      // Clinicians see their own
+      appointmentFilter.clinicianId = userId;
+    }
+
+    // Get all completed appointments
+    const appointments = await prisma.appointment.findMany({
+      where: appointmentFilter,
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            medicalRecordNumber: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+        clinicalNotes: {
+          where: {
+            status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] },
+          },
+        },
+      },
+      orderBy: { appointmentDate: 'desc' },
+    });
+
+    // Filter to only appointments without signed notes
+    const appointmentsWithoutNotes = appointments.filter(
+      (apt) => apt.clinicalNotes.length === 0
+    );
+
+    // Calculate days since appointment
+    const enrichedAppointments = appointmentsWithoutNotes.map((apt) => {
+      const daysSince = Math.floor(
+        (new Date().getTime() - new Date(apt.appointmentDate).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      const isOverdue = daysSince > 3; // 3-day rule
+      const isUrgent = daysSince > 7; // 7-day rule
+
+      return {
+        ...apt,
+        daysSince,
+        isOverdue,
+        isUrgent,
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: enrichedAppointments,
+      count: enrichedAppointments.length,
+      stats: {
+        total: enrichedAppointments.length,
+        overdue: enrichedAppointments.filter((a) => a.isOverdue).length,
+        urgent: enrichedAppointments.filter((a) => a.isUrgent).length,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Get appointments without notes error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve appointments without notes',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get compliance dashboard data
+ * Comprehensive view of all compliance-related items
+ */
+export const getComplianceDashboard = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { roles: true },
+    });
+
+    // Build filter based on role
+    let clinicianFilter: any = {};
+    if (user?.roles.includes('ADMINISTRATOR')) {
+      // Admins see all
+    } else if (user?.roles.includes('SUPERVISOR')) {
+      // Get all supervisees
+      const supervisees = await prisma.user.findMany({
+        where: { supervisorId: userId },
+        select: { id: true },
+      });
+      const superviseeIds = supervisees.map((s) => s.id);
+      clinicianFilter = { in: [...superviseeIds, userId] };
+    } else {
+      // Clinicians see their own
+      clinicianFilter = userId;
+    }
+
+    const now = new Date();
+    const cutoffDate = new Date(now);
+    cutoffDate.setDate(cutoffDate.getDate() - 3); // 3-day rule
+
+    // Get all relevant data
+    const [
+      notesAwaitingCosign,
+      overdueNotes,
+      lockedNotes,
+      draftNotes,
+      appointmentsWithoutNotes,
+    ] = await Promise.all([
+      // Notes awaiting co-signature
+      prisma.clinicalNote.findMany({
+        where: {
+          clinicianId: clinicianFilter,
+          status: 'PENDING_COSIGN',
+          requiresCosign: true,
+          cosignedDate: null,
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          clinician: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              title: true,
+            },
+          },
+        },
+        orderBy: { signedDate: 'desc' },
+      }),
+
+      // Overdue notes (not signed, past 3-day deadline)
+      prisma.clinicalNote.findMany({
+        where: {
+          clinicianId: clinicianFilter,
+          signedDate: null,
+          sessionDate: { lt: cutoffDate },
+          isLocked: false,
+          status: { in: ['DRAFT', 'PENDING_COSIGN'] },
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          clinician: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              title: true,
+            },
+          },
+        },
+        orderBy: { sessionDate: 'asc' },
+      }),
+
+      // Locked notes
+      prisma.clinicalNote.findMany({
+        where: {
+          clinicianId: clinicianFilter,
+          isLocked: true,
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          clinician: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              title: true,
+            },
+          },
+        },
+        orderBy: { lockedDate: 'desc' },
+      }),
+
+      // Draft notes
+      prisma.clinicalNote.findMany({
+        where: {
+          clinicianId: clinicianFilter,
+          status: 'DRAFT',
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          clinician: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              title: true,
+            },
+          },
+        },
+        orderBy: { sessionDate: 'desc' },
+      }),
+
+      // Appointments without signed notes
+      prisma.appointment.findMany({
+        where: {
+          clinicianId: clinicianFilter,
+          status: 'COMPLETED',
+          appointmentDate: { lt: now },
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          clinician: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              title: true,
+            },
+          },
+          clinicalNotes: {
+            where: {
+              status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] },
+            },
+          },
+        },
+        orderBy: { appointmentDate: 'desc' },
+      }),
+    ]);
+
+    // Filter appointments to only those without signed notes
+    const appointmentsWithoutSignedNotes = appointmentsWithoutNotes
+      .filter((apt) => apt.clinicalNotes.length === 0)
+      .map((apt) => {
+        const daysSince = Math.floor(
+          (now.getTime() - new Date(apt.appointmentDate).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        return {
+          ...apt,
+          daysSince,
+          isOverdue: daysSince > 3,
+          isUrgent: daysSince > 7,
+        };
+      });
+
+    // Calculate statistics
+    const stats = {
+      awaitingCosign: notesAwaitingCosign.length,
+      overdue: overdueNotes.length,
+      locked: lockedNotes.length,
+      drafts: draftNotes.length,
+      missingNotes: appointmentsWithoutSignedNotes.length,
+      urgent: appointmentsWithoutSignedNotes.filter((a) => a.isUrgent).length,
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        notesAwaitingCosign,
+        overdueNotes,
+        lockedNotes,
+        draftNotes,
+        appointmentsWithoutNotes: appointmentsWithoutSignedNotes,
+        stats,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Get compliance dashboard error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve compliance dashboard',
       error: error.message,
     });
   }

@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedPortalRequest } from '../../middleware/portalAuth';
-import logger from '../../utils/logger';
 
-const prisma = new PrismaClient();
+import logger, { logControllerError } from '../../utils/logger';
+import prisma from '../../services/database';
 
 /**
  * Get client's assigned forms
  * GET /api/v1/portal/forms/assignments
  */
-export const getFormAssignments = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getFormAssignments = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -20,9 +18,26 @@ export const getFormAssignments = async (req: AuthenticatedPortalRequest, res: R
       });
     }
 
-    // TODO: Implement form assignments functionality
-    // For now, return empty array
-    const assignments: any[] = [];
+    // Get all form assignments for this client
+    const assignments = await prisma.formAssignment.findMany({
+      where: {
+        clientId,
+      },
+      include: {
+        form: {
+          select: {
+            id: true,
+            formName: true,
+            formDescription: true,
+            formType: true,
+            formFieldsJson: true,
+          },
+        },
+      },
+      orderBy: {
+        assignedAt: 'desc',
+      },
+    });
 
     logger.info(`Retrieved ${assignments.length} form assignments for client ${clientId}`);
 
@@ -31,7 +46,7 @@ export const getFormAssignments = async (req: AuthenticatedPortalRequest, res: R
       data: assignments,
     });
   } catch (error: any) {
-    console.error('Error fetching form assignments:', error);
+    logger.error('Error fetching form assignments:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch form assignments',
@@ -43,7 +58,23 @@ export const getFormAssignments = async (req: AuthenticatedPortalRequest, res: R
  * Get form details for completion
  * GET /api/v1/portal/forms/:formId
  */
-export const getFormDetails = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getFormDetails = async (req: Request, res: Response) => {
+  logger.info('🔵🔵🔵 getFormDetails CALLED 🔵🔵🔵', {
+    formId: req.params.formId,
+    assignmentId: req.query.assignmentId,
+    fullUrl: req.url,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl,
+    path: req.path,
+    method: req.method
+  });
+  logger.info('🔵 getFormDetails CALLED', { formId: req.params.formId, assignmentId: req.query.assignmentId });
+
+  // Add cache-control headers to prevent browser caching
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   try {
     const { formId } = req.params;
     const { assignmentId } = req.query;
@@ -85,10 +116,18 @@ export const getFormDetails = async (req: AuthenticatedPortalRequest, res: Respo
 
     logger.info(`Client ${clientId} accessed form ${formId}`);
 
+    // Convert formFieldsJson to string if it's an object (Prisma returns it as object)
+    const formToSend = {
+      ...form,
+      formFieldsJson: typeof form.formFieldsJson === 'object'
+        ? JSON.stringify(form.formFieldsJson)
+        : form.formFieldsJson
+    };
+
     return res.status(200).json({
       success: true,
       data: {
-        form,
+        form: formToSend,
         assignment,
       },
     });
@@ -105,7 +144,7 @@ export const getFormDetails = async (req: AuthenticatedPortalRequest, res: Respo
  * Submit completed form
  * POST /api/v1/portal/forms/:formId/submit
  */
-export const submitForm = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const submitForm = async (req: Request, res: Response) => {
   try {
     const { formId } = req.params;
     const { assignmentId, responses, signature } = req.body;
@@ -139,9 +178,9 @@ export const submitForm = async (req: AuthenticatedPortalRequest, res: Response)
       data: {
         formId,
         clientId,
-        responses,
-        submittedBy: clientId,
-        submittedAt: new Date(),
+        responsesJson: responses,
+        status: 'Submitted',
+        submittedDate: new Date(),
       },
     });
 
@@ -189,7 +228,7 @@ export const submitForm = async (req: AuthenticatedPortalRequest, res: Response)
  * Get shared documents
  * GET /api/v1/portal/documents/shared
  */
-export const getSharedDocuments = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getSharedDocuments = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -230,7 +269,7 @@ export const getSharedDocuments = async (req: AuthenticatedPortalRequest, res: R
  * Download a shared document
  * GET /api/v1/portal/documents/:documentId/download
  */
-export const downloadDocument = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const downloadDocument = async (req: Request, res: Response) => {
   try {
     const { documentId } = req.params;
     const clientId = (req as any).portalAccount?.clientId;
@@ -295,7 +334,7 @@ export const downloadDocument = async (req: AuthenticatedPortalRequest, res: Res
  * Upload a document from client
  * POST /api/v1/portal/documents/upload
  */
-export const uploadDocument = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const uploadDocument = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -315,10 +354,10 @@ export const uploadDocument = async (req: AuthenticatedPortalRequest, res: Respo
         clientId,
         documentType: documentType || 'CLIENT_UPLOAD',
         documentName: documentName || 'Uploaded Document',
-        uploadedAt: new Date(),
+        uploadedDate: new Date(),
         uploadedBy: clientId,
         // In real implementation: add fileUrl, fileSize, mimeType
-      },
+      } as any,
     });
 
     logger.info(`Client ${clientId} uploaded document ${document.id}`);
@@ -341,7 +380,7 @@ export const uploadDocument = async (req: AuthenticatedPortalRequest, res: Respo
  * Get client's uploaded documents
  * GET /api/v1/portal/documents/uploads
  */
-export const getUploadedDocuments = async (req: AuthenticatedPortalRequest, res: Response) => {
+export const getUploadedDocuments = async (req: Request, res: Response) => {
   try {
     const clientId = (req as any).portalAccount?.clientId;
 
@@ -357,7 +396,7 @@ export const getUploadedDocuments = async (req: AuthenticatedPortalRequest, res:
         clientId,
         uploadedBy: clientId, // Only documents uploaded by the client themselves
       },
-      orderBy: { uploadedAt: 'desc' },
+      orderBy: { uploadedDate: 'desc' },
     });
 
     logger.info(`Retrieved ${documents.length} uploaded documents for client ${clientId}`);

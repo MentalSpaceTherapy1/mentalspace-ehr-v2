@@ -1,8 +1,7 @@
+import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
 
 // Emergency Contact validation schema
 const emergencyContactSchema = z.object({
@@ -36,11 +35,13 @@ export const getEmergencyContacts = async (req: Request, res: Response) => {
       data: contacts,
     });
   } catch (error) {
-    console.error('Get emergency contacts error:', error);
+    const errorId = logControllerError('Get emergency contacts', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve emergency contacts',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -76,11 +77,13 @@ export const getEmergencyContactById = async (req: Request, res: Response) => {
       data: contact,
     });
   } catch (error) {
-    console.error('Get emergency contact error:', error);
+    const errorId = logControllerError('Get emergency contact', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve emergency contact',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -104,7 +107,7 @@ export const createEmergencyContact = async (req: Request, res: Response) => {
     }
 
     const contact = await prisma.emergencyContact.create({
-      data: validatedData,
+      data: validatedData as any,
     });
 
     res.status(201).json({
@@ -121,11 +124,13 @@ export const createEmergencyContact = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Create emergency contact error:', error);
+    const errorId = logControllerError('Create emergency contact', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to create emergency contact',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -180,11 +185,13 @@ export const updateEmergencyContact = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Update emergency contact error:', error);
+    const errorId = logControllerError('Update emergency contact', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to update emergency contact',
-      errors: [error],
+      errorId,
     });
   }
 };
@@ -214,11 +221,13 @@ export const deleteEmergencyContact = async (req: Request, res: Response) => {
       message: 'Emergency contact deleted successfully',
     });
   } catch (error) {
-    console.error('Delete emergency contact error:', error);
+    const errorId = logControllerError('Delete emergency contact', error, {
+      userId: (req as any).user?.userId,
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to delete emergency contact',
-      errors: [error],
+      errorId,
     });
   }
 };

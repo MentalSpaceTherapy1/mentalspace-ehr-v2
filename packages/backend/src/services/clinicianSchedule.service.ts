@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { auditLogger } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from './database';
+import { AppointmentStatus } from '@mentalspace/database';
 
 interface DaySchedule {
   isAvailable: boolean;
@@ -155,17 +154,6 @@ export async function getAllCliniciansSchedules(effectiveDate?: Date) {
     where: {
       effectiveStartDate: { lte: date },
       OR: [{ effectiveEndDate: null }, { effectiveEndDate: { gte: date } }],
-    },
-    include: {
-      clinician: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          title: true,
-          email: true,
-        },
-      },
     },
     orderBy: { clinicianId: 'asc' },
   });
@@ -348,7 +336,7 @@ export async function getClinicianAvailability(
         gte: startDate,
         lte: endDate,
       },
-      status: { notIn: ['Cancelled', 'No Show'] },
+      status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
     },
     select: {
       appointmentDate: true,
@@ -431,7 +419,7 @@ export async function hasCapacity(
       where: {
         clinicianId,
         appointmentDate: appointmentDate,
-        status: { notIn: ['Cancelled', 'No Show'] },
+        status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
       },
     });
 
@@ -456,7 +444,7 @@ export async function hasCapacity(
           gte: weekStart,
           lte: weekEnd,
         },
-        status: { notIn: ['Cancelled', 'No Show'] },
+        status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
       },
     });
 
@@ -474,7 +462,7 @@ export async function hasCapacity(
     where: {
       clinicianId,
       appointmentDate: appointmentDate,
-      status: { notIn: ['Cancelled', 'No Show'] },
+      status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
       OR: [
         {
           AND: [

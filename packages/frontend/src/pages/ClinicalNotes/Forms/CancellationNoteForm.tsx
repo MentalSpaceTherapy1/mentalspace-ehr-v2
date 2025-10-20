@@ -31,7 +31,8 @@ const NOTIFICATION_METHOD_OPTIONS = [
 ];
 
 export default function CancellationNoteForm() {
-  const { clientId } = useParams();
+  const { clientId, noteId } = useParams();
+  const isEditMode = !!noteId;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -42,7 +43,7 @@ export default function CancellationNoteForm() {
   // Appointment selection state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
   const [appointmentData, setAppointmentData] = useState<any>(null);
-  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const appointmentId = selectedAppointmentId;
@@ -76,6 +77,16 @@ export default function CancellationNoteForm() {
       return response.data.data;
     },
     enabled: !!clientId,
+  });
+
+  // Fetch existing note data if in edit mode
+  const { data: existingNoteData, isLoading: isLoadingNote } = useQuery({
+    queryKey: ['clinical-note', noteId],
+    queryFn: async () => {
+      const response = await api.get(`/clinical-notes/${noteId}`);
+      return response.data.data;
+    },
+    enabled: isEditMode && !!noteId,
   });
 
   // Fetch eligible appointments
@@ -122,8 +133,66 @@ export default function CancellationNoteForm() {
     setShowAppointmentPicker(false);
   };
 
+  // Populate form fields from existingNoteData when in edit mode
+  useEffect(() => {
+    if (existingNoteData && isEditMode) {
+      // Set appointment ID from existing note
+      if (existingNoteData.appointmentId) {
+        setSelectedAppointmentId(existingNoteData.appointmentId);
+      }
+
+      // Cancellation date and time
+      if (existingNoteData.sessionDate) {
+        const date = new Date(existingNoteData.sessionDate);
+        setCancellationDate(date.toISOString().split('T')[0]);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        setCancellationTime(`${hours}:${minutes}`);
+      }
+
+      // Cancellation details
+      if (existingNoteData.cancelledBy) setCancelledBy(existingNoteData.cancelledBy);
+      if (existingNoteData.notificationMethod) setNotificationMethod(existingNoteData.notificationMethod);
+      if (existingNoteData.reason) setReason(existingNoteData.reason);
+
+      // Rescheduling
+      if (existingNoteData.rescheduled !== undefined) setRescheduled(existingNoteData.rescheduled);
+      if (existingNoteData.newAppointmentDate) {
+        const newDate = new Date(existingNoteData.newAppointmentDate);
+        setNewAppointmentDate(newDate.toISOString().split('T')[0]);
+        const hours = newDate.getHours().toString().padStart(2, '0');
+        const minutes = newDate.getMinutes().toString().padStart(2, '0');
+        setNewAppointmentTime(`${hours}:${minutes}`);
+      }
+
+      // Parse notes from plan field
+      if (existingNoteData.plan) {
+        setNotes(existingNoteData.plan);
+      }
+
+      // Billing
+      if (existingNoteData.billable !== undefined) setBillable(existingNoteData.billable);
+    }
+  }, [existingNoteData, isEditMode]);
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
+      return api.post('/clinical-notes', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      navigate(`/clients/${clientId}/notes`);
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (isEditMode) {
+        return api.put(`/clinical-notes/${noteId}`, data);
+      }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
@@ -190,6 +259,40 @@ export default function CancellationNoteForm() {
 
     setShowReviewModal(false);
     setGeneratedData(null);
+  };
+
+  const handleSaveDraft = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const cancellationDateTime = cancellationDate && cancellationTime
+      ? new Date(`${cancellationDate}T${cancellationTime}`)
+      : null;
+    const newDateTime = rescheduled && newAppointmentDate && newAppointmentTime
+      ? new Date(`${newAppointmentDate}T${newAppointmentTime}`)
+      : null;
+
+    const data = {
+      clientId,
+      noteType: 'Cancellation Note',
+      appointmentId: appointmentId,
+      sessionDate: cancellationDateTime ? cancellationDateTime.toISOString() : undefined,
+      subjective: `Appointment cancelled by: ${cancelledBy}\nNotification method: ${notificationMethod}\n\nReason: ${reason}`,
+      objective: rescheduled
+        ? `Rescheduled to: ${newDateTime?.toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })}`
+        : 'Not rescheduled',
+      assessment: `Cancellation documented`,
+      plan: notes || 'Follow up as scheduled',
+      cancelledBy,
+      reason,
+      notificationMethod,
+      rescheduled,
+      newAppointmentDate: newDateTime?.toISOString() || '',
+      billable,
+      dueDate: cancellationDateTime ? cancellationDateTime.toISOString() : undefined,
+      status: 'DRAFT',
+    };
+
+    saveDraftMutation.mutate(data);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -441,9 +544,11 @@ export default function CancellationNoteForm() {
             {/* Form Actions */}
             <FormActions
               onCancel={() => navigate(`/clients/${clientId}/notes`)}
-              onSubmit={handleSubmit}
-              submitLabel="Create Cancellation Note"
+              onSubmit={() => handleSubmit({} as React.FormEvent)}
+              submitLabel={isEditMode ? "Update Cancellation Note" : "Create Cancellation Note"}
               isSubmitting={saveMutation.isPending}
+              onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+              isSavingDraft={saveDraftMutation.isPending}
             />
           </form>
         )}

@@ -88,7 +88,9 @@ export const updateUserAdminSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   title: z.string().optional(),
-  role: z.enum(['ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'BILLER', 'RECEPTIONIST']).optional(),
+  role: z
+    .enum(['ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'BILLING_STAFF', 'FRONT_DESK', 'ASSOCIATE'])
+    .optional(),
   npiNumber: z.string().optional(),
   licenseNumber: z.string().optional(),
   licenseState: z.string().optional(),

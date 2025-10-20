@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
@@ -82,22 +82,24 @@ export default function ClinicianSchedule() {
       const response = await api.get(`/clinician-schedules/${selectedClinicianId}`);
       return response.data.data;
     },
-    onSuccess: (data) => {
-      if (data) {
-        setScheduleData({
-          clinicianId: data.clinicianId,
-          weeklyScheduleJson: data.weeklyScheduleJson,
-          acceptNewClients: data.acceptNewClients,
-          maxAppointmentsPerDay: data.maxAppointmentsPerDay,
-          maxAppointmentsPerWeek: data.maxAppointmentsPerWeek,
-          bufferTimeBetweenAppointments: data.bufferTimeBetweenAppointments,
-          availableLocations: data.availableLocations,
-          effectiveStartDate: data.effectiveStartDate,
-          effectiveEndDate: data.effectiveEndDate,
-        });
-      }
-    },
   });
+
+  // Update schedule data when currentSchedule changes
+  useEffect(() => {
+    if (currentSchedule) {
+      setScheduleData({
+        clinicianId: currentSchedule.clinicianId,
+        weeklyScheduleJson: currentSchedule.weeklyScheduleJson,
+        acceptNewClients: currentSchedule.acceptNewClients,
+        maxAppointmentsPerDay: currentSchedule.maxAppointmentsPerDay,
+        maxAppointmentsPerWeek: currentSchedule.maxAppointmentsPerWeek,
+        bufferTimeBetweenAppointments: currentSchedule.bufferTimeBetweenAppointments,
+        availableLocations: currentSchedule.availableLocations,
+        effectiveStartDate: currentSchedule.effectiveStartDate,
+        effectiveEndDate: currentSchedule.effectiveEndDate,
+      });
+    }
+  }, [currentSchedule]);
 
   // Save schedule mutation
   const saveScheduleMutation = useMutation({

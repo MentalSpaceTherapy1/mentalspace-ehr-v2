@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import logger, { logControllerError } from '../utils/logger';
 import cron from 'node-cron';
 import { sendEmail } from './email.service';
-
-const prisma = new PrismaClient();
+import prisma from './database';
 
 // Compliance Configuration (can be moved to database later)
 const COMPLIANCE_CONFIG = {
@@ -51,7 +50,7 @@ function getNextSundayLockout(): Date {
  * Runs every Sunday at 11:59:59 PM
  */
 export async function sundayLockout() {
-  console.log('🔒 Running Sunday Lockout...');
+  logger.info('🔒 Running Sunday Lockout...');
 
   try {
     const now = new Date();
@@ -97,7 +96,7 @@ export async function sundayLockout() {
       },
     });
 
-    console.log(`Found ${notesToLock.length} notes to lock`);
+    logger.info(`Found ${notesToLock.length} notes to lock`);
 
     // Lock each note and send notifications
     for (const note of notesToLock) {
@@ -200,14 +199,14 @@ export async function sundayLockout() {
         });
       }
 
-      console.log(`✅ Locked note ${note.id} for ${note.clinician.firstName} ${note.clinician.lastName}`);
+      logger.info(`✅ Locked note ${note.id} for ${note.clinician.firstName} ${note.clinician.lastName}`);
     }
 
-    console.log(`🔒 Sunday Lockout Complete: ${notesToLock.length} notes locked`);
+    logger.info(`🔒 Sunday Lockout Complete: ${notesToLock.length} notes locked`);
     return { locked: notesToLock.length, notes: notesToLock };
 
   } catch (error) {
-    console.error('❌ Error during Sunday Lockout:', error);
+    logger.error('❌ Error during Sunday Lockout:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
     throw error;
   }
 }
@@ -216,7 +215,7 @@ export async function sundayLockout() {
  * Send reminder emails for notes approaching due date
  */
 export async function sendNoteReminders() {
-  console.log('📧 Sending note reminders...');
+  logger.info('📧 Sending note reminders...');
 
   try {
     const now = new Date();
@@ -290,11 +289,12 @@ export async function sendNoteReminders() {
         });
       }
 
-      console.log(`Sent ${notesApproachingDue.length} reminders for notes due ${urgency}`);
+      const urgencyText = daysUntilDue === 0 ? 'TODAY' : daysUntilDue === 1 ? 'TOMORROW' : `in ${daysUntilDue} days`;
+      logger.info(`Sent ${notesApproachingDue.length} reminders for notes due ${urgencyText}`);
     }
 
   } catch (error) {
-    console.error('❌ Error sending note reminders:', error);
+    logger.error('❌ Error sending note reminders:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
   }
 }
 
@@ -302,32 +302,32 @@ export async function sendNoteReminders() {
  * Initialize cron jobs for compliance
  */
 export function initializeComplianceCronJobs() {
-  console.log('⏰ Initializing compliance cron jobs...');
+  logger.info('⏰ Initializing compliance cron jobs...');
 
   // Sunday Lockout: Every Sunday at 11:59 PM
   // Cron format: second minute hour day-of-month month day-of-week
   cron.schedule('59 23 * * 0', async () => {
-    console.log('🔒 Running scheduled Sunday Lockout...');
+    logger.info('🔒 Running scheduled Sunday Lockout...');
     await sundayLockout();
   }, {
     timezone: 'America/New_York', // Adjust to your practice timezone
   });
 
-  console.log('✅ Sunday Lockout scheduled: Every Sunday at 11:59 PM EST');
+  logger.info('✅ Sunday Lockout scheduled: Every Sunday at 11:59 PM EST');
 
   // Daily reminder check: Every day at 9:00 AM
   cron.schedule('0 9 * * *', async () => {
-    console.log('📧 Running daily reminder check...');
+    logger.info('📧 Running daily reminder check...');
     await sendNoteReminders();
   }, {
     timezone: 'America/New_York',
   });
 
-  console.log('✅ Daily reminders scheduled: Every day at 9:00 AM EST');
+  logger.info('✅ Daily reminders scheduled: Every day at 9:00 AM EST');
 
   // For testing: Run lockout check every hour (commented out for production)
   // cron.schedule('0 * * * *', async () => {
-  //   console.log('🔒 Running hourly lockout check (TEST MODE)...');
+  //   logger.info('🔒 Running hourly lockout check (TEST MODE)...');
   //   await sundayLockout();
   // });
 }
@@ -336,7 +336,7 @@ export function initializeComplianceCronJobs() {
  * Manual trigger for testing Sunday Lockout
  */
 export async function triggerSundayLockoutManually() {
-  console.log('🔒 Manually triggering Sunday Lockout...');
+  logger.info('🔒 Manually triggering Sunday Lockout...');
   return await sundayLockout();
 }
 

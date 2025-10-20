@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import logger from '../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
 
 /**
  * EHR-side controller for managing client assessment assignments

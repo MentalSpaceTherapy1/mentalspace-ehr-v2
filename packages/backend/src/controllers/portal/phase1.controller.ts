@@ -137,7 +137,9 @@ export const makePayment = async (req: Request, res: Response) => {
 
     const result = await billingService.makePayment({
       clientId,
-      ...data,
+      amount: data.amount,
+      paymentMethodId: data.paymentMethodId,
+      description: data.description,
     });
 
     res.status(200).json({
@@ -266,7 +268,12 @@ export const createSessionReview = async (req: Request, res: Response) => {
 
     const review = await sessionReviewsService.createSessionReview({
       clientId,
-      ...data,
+      appointmentId: data.appointmentId,
+      rating: data.rating,
+      feedback: data.feedback,
+      categories: data.categories,
+      isSharedWithClinician: data.isSharedWithClinician,
+      isAnonymous: data.isAnonymous,
     });
 
     res.status(201).json({
@@ -346,7 +353,9 @@ export const createChangeRequest = async (req: Request, res: Response) => {
 
     const request = await therapistChangeService.createChangeRequest({
       clientId,
-      ...data,
+      requestReason: data.requestReason,
+      reasonDetails: data.reasonDetails,
+      isSensitive: data.isSensitive,
     });
 
     res.status(201).json({
@@ -422,7 +431,12 @@ export const createMoodEntry = async (req: Request, res: Response) => {
 
     const entry = await moodTrackingService.createMoodEntry({
       clientId,
-      ...data,
+      moodScore: data.moodScore,
+      timeOfDay: data.timeOfDay,
+      symptoms: data.symptoms,
+      customMetrics: data.customMetrics,
+      notes: data.notes,
+      sharedWithClinician: data.sharedWithClinician,
     });
 
     res.status(201).json({

@@ -1,8 +1,6 @@
-import { PrismaClient } from '@mentalspace/database';
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../database';
 
 // ============================================================================
 // SESSION REVIEWS (Client-side)

@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient, AuditAction, AuditEntityType } from '@mentalspace/database';
 import logger from '../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../services/database';
 
 /**
  * HIPAA Audit Logging Middleware
@@ -18,6 +16,10 @@ const prisma = new PrismaClient();
  * - IP address and user agent
  * - Success or failure status
  */
+
+// Define audit types locally since they're not in Prisma schema
+export type AuditAction = 'VIEW' | 'CREATE' | 'UPDATE' | 'DELETE';
+export type AuditEntityType = 'Client' | 'Appointment' | 'ClinicalNote' | 'User' | 'Insurance' | 'Other';
 
 export interface AuditLogOptions {
   entityType: AuditEntityType;
@@ -137,11 +139,12 @@ async function createAuditLog(data: {
         action: data.action,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
-        success: data.success,
-        statusCode: data.statusCode,
-        duration: data.duration,
-        details: data.details,
-        timestamp: new Date(),
+        changes: {
+          success: data.success,
+          statusCode: data.statusCode,
+          duration: data.duration,
+          ...data.details,
+        },
       },
     });
 

@@ -40,7 +40,18 @@ router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/portal-auth', portalAuthRoutes);
 router.use('/users', userRoutes);
+
+// Client Portal Management routes (EHR-side) - MUST come before general /clients routes
+// Forms: /api/v1/clients/library, /api/v1/clients/:clientId/forms/*
+router.use('/clients', clientFormsRoutes);
+// Documents: /api/v1/clients/upload, /api/v1/clients/:clientId/documents/*
+router.use('/clients', clientDocumentsRoutes);
+// Assessments: /api/v1/clients/:clientId/assessments/*
+router.use('/clients', clientAssessmentsRoutes);
+
+// General client CRUD routes - comes after specific routes to avoid conflicts
 router.use('/clients', clientRoutes);
+
 router.use('/emergency-contacts', emergencyContactRoutes);
 router.use('/insurance', insuranceRoutes);
 router.use('/guardians', guardianRoutes);
@@ -61,14 +72,6 @@ router.use('/', clientPortalRoutes);
 
 // Admin portal routes
 router.use('/', portalAdminRoutes);
-
-// Client Portal Management routes (EHR-side)
-// Forms: /api/v1/clients/library, /api/v1/clients/:clientId/forms/*
-router.use('/clients', clientFormsRoutes);
-// Documents: /api/v1/clients/upload, /api/v1/clients/:clientId/documents/*
-router.use('/clients', clientDocumentsRoutes);
-// Assessments: /api/v1/clients/:clientId/assessments/*
-router.use('/clients', clientAssessmentsRoutes);
 
 // Admin routes (temporary for database seeding)
 router.use('/admin', adminRoutes);

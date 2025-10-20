@@ -1,3 +1,4 @@
+import logger, { logControllerError } from '../utils/logger';
 import prisma from './database';
 import { encryptSensitiveFields, decryptSensitiveFields, maskSensitiveFields } from '../utils/encryption';
 
@@ -240,7 +241,7 @@ async function createSettingsAuditLog(userId: string, action: string, changes: a
   try {
     // For now, just log to console
     // In production, you'd store this in an AuditLog table
-    console.log('📋 [SETTINGS AUDIT]', {
+    logger.info('📋 [SETTINGS AUDIT]', {
       timestamp: new Date().toISOString(),
       userId,
       action,
@@ -257,7 +258,7 @@ async function createSettingsAuditLog(userId: string, action: string, changes: a
     //   },
     // });
   } catch (error) {
-    console.error('Failed to create audit log:', error);
+    logger.error('Failed to create audit log:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
   }
 }
 

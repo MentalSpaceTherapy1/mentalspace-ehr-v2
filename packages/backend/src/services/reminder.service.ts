@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import logger, { logControllerError } from '../utils/logger';
 import { auditLogger } from '../utils/logger';
+import prisma from './database';
 // import sgMail from '@sendgrid/mail'; // Uncomment when SendGrid is configured
 // import twilio from 'twilio'; // Uncomment when Twilio is configured
-
-const prisma = new PrismaClient();
 
 // TODO: Configure SendGrid
 // sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
@@ -123,7 +122,7 @@ export async function getAppointmentsNeedingReminders() {
         gte: now,
         lte: futureDate,
       },
-      status: 'Scheduled',
+      status: 'SCHEDULED',
     },
     include: {
       client: {
@@ -133,7 +132,6 @@ export async function getAppointmentsNeedingReminders() {
           lastName: true,
           email: true,
           primaryPhone: true,
-          timezone: true,
         },
       },
       clinician: {
@@ -274,7 +272,7 @@ export async function sendEmailReminder(
     // await sgMail.send(msg);
 
     // Log the reminder (for now, just log to console)
-    console.log(`[EMAIL REMINDER] Sent to ${client.email} for appointment ${appointment.id}`);
+    logger.info(`[EMAIL REMINDER] Sent to ${client.email} for appointment ${appointment.id}`);
 
     auditLogger.info('Email reminder sent', {
       appointmentId: appointment.id,
@@ -327,7 +325,7 @@ export async function sendSMSReminder(
     // });
 
     // Log the reminder (for now, just log to console)
-    console.log(`[SMS REMINDER] Sent to ${client.primaryPhone} for appointment ${appointment.id}`);
+    logger.info(`[SMS REMINDER] Sent to ${client.primaryPhone} for appointment ${appointment.id}`);
 
     auditLogger.info('SMS reminder sent', {
       appointmentId: appointment.id,
@@ -408,7 +406,6 @@ export async function sendImmediateReminder(
           lastName: true,
           email: true,
           primaryPhone: true,
-          timezone: true,
         },
       },
       clinician: {

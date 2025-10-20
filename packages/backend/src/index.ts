@@ -4,6 +4,8 @@ import logger from './utils/logger';
 import prisma from './services/database';
 import { startAllProductivityJobs } from './jobs/productivityJobs';
 import { initializeComplianceCronJobs } from './services/compliance.service';
+import { initializeSocketIO } from './socket';
+import { notificationScheduler } from './services/notifications/scheduler';
 
 const PORT = config.port;
 
@@ -13,6 +15,9 @@ const server = app.listen(PORT, () => {
   logger.info(`📝 Environment: ${config.nodeEnv}`);
   logger.info(`🌐 CORS origins: ${config.corsOrigins.join(', ')}`);
 });
+
+// Initialize Socket.IO
+initializeSocketIO(server);
 
 // Test database connection
 prisma.$connect()
@@ -24,6 +29,9 @@ prisma.$connect()
 
     // Start compliance cron jobs (Sunday lockout, reminders)
     initializeComplianceCronJobs();
+
+    // Start notification scheduler (appointment reminders)
+    notificationScheduler.startReminderJob();
   })
   .catch((error) => {
     logger.error('❌ Database connection failed', { error: error.message });
@@ -35,6 +43,9 @@ prisma.$connect()
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
   logger.info(`${signal} received. Starting graceful shutdown...`);
+
+  // Stop cron jobs
+  notificationScheduler.stopReminderJob();
 
   server.close(async () => {
     logger.info('HTTP server closed');

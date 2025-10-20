@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { sendEmail, EmailTemplates } from '../services/email.service';
+import prisma from '../services/database';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * GET /api/v1/unlock-requests

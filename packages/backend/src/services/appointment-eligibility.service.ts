@@ -102,9 +102,9 @@ export class AppointmentEligibilityService {
       };
     }
 
-    // Add service code filter if specified
+    // Add CPT code filter if specified
     if (mapping.serviceCodes.length > 0) {
-      where.serviceCode = {
+      where.cptCode = {
         in: mapping.serviceCodes,
       };
     }
@@ -144,8 +144,8 @@ export class AppointmentEligibilityService {
         startTime: apt.startTime,
         endTime: apt.endTime,
         duration: apt.duration || 0,
-        serviceCode: apt.serviceCode || '',
-        location: apt.location || '',
+        serviceCode: apt.cptCode || '',
+        location: apt.serviceLocation || '',
         status: apt.status,
         appointmentType: apt.appointmentType || '',
         hasNote: apt.clinicalNotes.length > 0,
@@ -198,10 +198,10 @@ export class AppointmentEligibilityService {
       return false;
     }
 
-    // Check service code if specified
+    // Check CPT code if specified
     if (
       mapping.serviceCodes.length > 0 &&
-      !mapping.serviceCodes.includes(appointment.serviceCode || '')
+      !mapping.serviceCodes.includes(appointment.cptCode || '')
     ) {
       return false;
     }

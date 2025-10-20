@@ -1,10 +1,8 @@
+import prisma from '../database';
 // Clinical Quality Metrics
 // Phase 6 - Week 19 - Clinical Quality (3 metrics)
 
-import { PrismaClient } from '@prisma/client';
 import { MetricCalculator, MetricResult } from './types';
-
-const prisma = new PrismaClient();
 
 // Client Retention Rate (90 Days) Calculator
 export class ClientRetentionRate90DaysCalculator implements MetricCalculator {
