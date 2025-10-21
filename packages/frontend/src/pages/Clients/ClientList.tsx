@@ -28,6 +28,13 @@ interface Client {
 
 export default function ClientList() {
   const navigate = useNavigate();
+
+  const formatDOB = (value: Date | string) => {
+    // Treat DOB as date-only to avoid timezone shifting
+    const iso = typeof value === 'string' ? value : value.toISOString();
+    const [year, month, day] = iso.split('T')[0].split('-');
+    return `${month}/${day}/${year}`;
+  };
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -248,7 +255,7 @@ export default function ClientList() {
                           {getGenderIcon(client.gender)} Age {calculateAge(client.dateOfBirth)}
                         </p>
                         <p className="text-xs text-gray-600">
-                          DOB: {new Date(client.dateOfBirth).toLocaleDateString()}
+                          DOB: {formatDOB(client.dateOfBirth)}
                         </p>
                       </div>
                     </td>

@@ -335,6 +335,16 @@ export default function IntakeAssessmentForm() {
     fetchAppointmentData();
   }, [selectedAppointmentId, appointmentData]);
 
+  // Sync session date with appointment data (handles rescheduled appointments)
+  useEffect(() => {
+    if (appointmentData?.appointmentDate) {
+      const date = new Date(appointmentData.appointmentDate);
+      const sessionDateValue = date.toISOString().split('T')[0];
+      console.log('🟢 SYNCING sessionDate from appointment:', sessionDateValue);
+      setSessionDate(sessionDateValue);
+    }
+  }, [appointmentData?.appointmentDate]);
+
   // Auto-set due date to 7 days from session date
   useEffect(() => {
     if (sessionDate && !dueDate) {
@@ -354,19 +364,13 @@ export default function IntakeAssessmentForm() {
     });
 
     if (existingNoteData && isEditMode) {
-      console.log('🔴 OVERWRITING WITH EXISTING NOTE DATA');
+      console.log('🔴 LOADING EXISTING NOTE DATA');
       // Set appointment ID from existing note
       if (existingNoteData.appointmentId) {
         setSelectedAppointmentId(existingNoteData.appointmentId);
       }
 
-      // Session details
-      if (existingNoteData.sessionDate) {
-        const date = new Date(existingNoteData.sessionDate);
-        const overwriteValue = date.toISOString().split('T')[0];
-        console.log('🔴 OVERWRITING sessionDate to:', overwriteValue);
-        setSessionDate(overwriteValue);
-      }
+      // Session details - let appointment data drive sessionDate, only set if no appointment
       if (existingNoteData.dueDate) {
         const date = new Date(existingNoteData.dueDate);
         setDueDate(date.toISOString().split('T')[0]);

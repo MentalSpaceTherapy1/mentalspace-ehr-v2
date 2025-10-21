@@ -6,6 +6,7 @@ import * as recurringService from '../services/recurringAppointment.service';
 import prisma from '../services/database';
 import { Prisma } from '@mentalspace/database';
 import { applyAppointmentScope, assertCanAccessClient } from '../services/accessControl.service';
+import { calculateNoteDueDate } from '../services/compliance.service';
 // Fixed phoneNumber -> primaryPhone field name
 
 const ensureAppointmentAccess = async (
@@ -861,6 +862,16 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
       include: {
         client: true,
         clinician: true,
+      },
+    });
+
+    // Sync linked clinical notes with the rescheduled appointment date
+    const newSessionDate = new Date(validatedData.appointmentDate);
+    await prisma.clinicalNote.updateMany({
+      where: { appointmentId: id },
+      data: {
+        sessionDate: newSessionDate,
+        dueDate: calculateNoteDueDate(newSessionDate),
       },
     });
 

@@ -45,6 +45,13 @@ export default function ClientDetail() {
     }
   };
 
+  const formatDOB = (value: Date | string) => {
+    // Treat DOB as date-only to avoid timezone shifting
+    const iso = typeof value === 'string' ? value : value.toISOString();
+    const [year, month, day] = iso.split('T')[0].split('-');
+    return `${month}/${day}/${year}`;
+  };
+
   const calculateAge = (dob: string) => {
     const birthDate = new Date(dob);
     const today = new Date();
@@ -214,7 +221,7 @@ export default function ClientDetail() {
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl">
                 <dt className="text-sm font-bold text-gray-600 mb-1">Date of Birth</dt>
                 <dd className="text-base font-semibold text-gray-900">
-                  {new Date(client.dateOfBirth).toLocaleDateString()} (Age {calculateAge(client.dateOfBirth)})
+                  {formatDOB(client.dateOfBirth)} (Age {calculateAge(client.dateOfBirth)})
                 </dd>
               </div>
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl">

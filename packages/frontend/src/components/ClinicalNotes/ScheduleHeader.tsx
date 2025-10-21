@@ -42,13 +42,11 @@ export default function ScheduleHeader({
     });
   };
 
-  const formatDOB = (date: Date | string) => {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
+  const formatDOB = (value: Date | string) => {
+    // Treat DOB as date-only to avoid timezone shifting
+    const iso = typeof value === 'string' ? value : value.toISOString();
+    const [year, month, day] = iso.split('T')[0].split('-');
+    return `${month}/${day}/${year}`;
   };
 
   const formatTime = (timeString: string) => {
