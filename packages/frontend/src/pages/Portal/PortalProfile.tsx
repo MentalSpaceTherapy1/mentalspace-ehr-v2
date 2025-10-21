@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
+import AddressAutocomplete from '../../components/AddressAutocomplete';
 
 interface ClientProfile {
   id: string;
@@ -340,12 +341,17 @@ export default function PortalProfile() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                <input
-                  type="text"
+                <AddressAutocomplete
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                  disabled={isSaving}
+                  onChange={(value) => setAddress(value)}
+                  onAddressSelect={(addressComponents) => {
+                    setAddress(addressComponents.street1);
+                    setCity(addressComponents.city);
+                    setState(addressComponents.state);
+                    setZipCode(addressComponents.zipCode);
+                  }}
+                  placeholder="Start typing your address..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 

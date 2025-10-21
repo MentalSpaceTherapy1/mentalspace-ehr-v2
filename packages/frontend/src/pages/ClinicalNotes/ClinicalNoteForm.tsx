@@ -146,6 +146,7 @@ export default function ClinicalNoteForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });

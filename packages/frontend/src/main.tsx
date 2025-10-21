@@ -7,7 +7,7 @@ import App from './App';
 import './index.css';
 
 // Configure axios defaults globally
-const API_URL = import.meta.env.VITE_API_URL || 'http://mentalspace-ehr-dev-881286108.us-east-1.elb.amazonaws.com';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 axios.defaults.baseURL = API_URL;
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 

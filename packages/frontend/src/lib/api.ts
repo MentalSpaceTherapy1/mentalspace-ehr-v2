@@ -24,16 +24,6 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // DEBUG: Log the exact URL being called
-    console.log('🌐 API REQUEST:', {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      baseURL: config.baseURL,
-      fullURL: `${config.baseURL}${config.url}`,
-      isPortalRoute,
-      hasToken: !!token
-    });
-
     return config;
   },
   (error) => {

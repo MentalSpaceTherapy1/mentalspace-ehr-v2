@@ -184,6 +184,7 @@ export default function CancellationNoteForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -197,6 +198,7 @@ export default function CancellationNoteForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -262,7 +264,7 @@ export default function CancellationNoteForm() {
   };
 
   const handleSaveDraft = (e: React.FormEvent) => {
-    e.preventDefault();
+    
 
     const cancellationDateTime = cancellationDate && cancellationTime
       ? new Date(`${cancellationDate}T${cancellationTime}`)
@@ -296,7 +298,7 @@ export default function CancellationNoteForm() {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    
 
     const cancellationDateTime = new Date(`${cancellationDate}T${cancellationTime}`);
     const newDateTime = rescheduled && newAppointmentDate && newAppointmentTime
@@ -420,7 +422,7 @@ export default function CancellationNoteForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as any)} className="space-y-6">
             {/* Schedule Header */}
             {appointmentData && (
               <ScheduleHeader
@@ -544,10 +546,10 @@ export default function CancellationNoteForm() {
             {/* Form Actions */}
             <FormActions
               onCancel={() => navigate(`/clients/${clientId}/notes`)}
-              onSubmit={() => handleSubmit({} as React.FormEvent)}
+              onSubmit={() => handleSubmit({} as any)}
               submitLabel={isEditMode ? "Update Cancellation Note" : "Create Cancellation Note"}
               isSubmitting={saveMutation.isPending}
-              onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+              onSaveDraft={() => handleSaveDraft({} as any)}
               isSavingDraft={saveDraftMutation.isPending}
             />
           </form>

@@ -101,6 +101,7 @@ export default function ClinicalNoteDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       setShowSignModal(false);
       setSignature('');
     },
@@ -113,6 +114,7 @@ export default function ClinicalNoteDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       setShowCosignModal(false);
       setSignature('');
     },
@@ -124,6 +126,7 @@ export default function ClinicalNoteDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });

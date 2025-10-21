@@ -184,6 +184,7 @@ export default function TerminationNoteForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -197,6 +198,7 @@ export default function TerminationNoteForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -273,7 +275,7 @@ export default function TerminationNoteForm() {
   };
 
   const handleSaveDraft = (e: React.FormEvent) => {
-    e.preventDefault();
+    
 
     const data = {
       clientId,
@@ -303,7 +305,7 @@ export default function TerminationNoteForm() {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    
 
     const data = {
       clientId,
@@ -426,7 +428,7 @@ export default function TerminationNoteForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as any)} className="space-y-6">
           {/* AI-Powered Note Generation */}
           {/* Schedule Header */}
             {appointmentData && (
@@ -570,10 +572,10 @@ export default function TerminationNoteForm() {
           {/* Form Actions */}
           <FormActions
             onCancel={() => navigate(`/clients/${clientId}/notes`)}
-            onSubmit={() => handleSubmit({} as React.FormEvent)}
+            onSubmit={() => handleSubmit({} as any)}
             submitLabel={isEditMode ? "Update Termination Note" : "Create Termination Note"}
             isSubmitting={saveMutation.isPending}
-            onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+            onSaveDraft={() => handleSaveDraft({} as any)}
             isSavingDraft={saveDraftMutation.isPending}
           />
         </form>

@@ -31,6 +31,7 @@ const UnlockRequestModal: React.FC<UnlockRequestModalProps> = ({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
       queryClient.invalidateQueries({ queryKey: ['clinical-notes'] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       alert(`Unlock request submitted successfully. ${data.notifiedTo} has been notified.`);
       setUnlockReason('');
       onClose();

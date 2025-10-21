@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import AddressAutocomplete from '../../components/AddressAutocomplete';
 import {
   PRONOUNS_OPTIONS,
   GENDER_IDENTITY_OPTIONS,
@@ -497,15 +498,33 @@ export default function ClientForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Street Address <span className="text-red-500">*</span>
+                  Street Address
                 </label>
-                <input
-                  type="text"
-                  name="addressStreet1"
+                <AddressAutocomplete
                   value={formData.addressStreet1}
-                  onChange={handleChange}
-                  required
-                  placeholder="123 Main Street"
+                  onChange={(value) => {
+                    console.log('💙 AddressAutocomplete onChange called with:', value);
+                    setFormData({ ...formData, addressStreet1: value });
+                  }}
+                  onAddressSelect={(address) => {
+                    console.log('💙 AddressAutocomplete onAddressSelect called with:', address);
+                    setFormData({
+                      ...formData,
+                      addressStreet1: address.street1,
+                      addressCity: address.city,
+                      addressState: address.state,
+                      addressZipCode: address.zipCode,
+                      addressCounty: address.county || formData.addressCounty
+                    });
+                    console.log('💙 State updated, new formData should be:', {
+                      street: address.street1,
+                      city: address.city,
+                      state: address.state,
+                      zip: address.zipCode,
+                      county: address.county
+                    });
+                  }}
+                  placeholder="Start typing your address..."
                   className="w-full px-4 py-3 border-2 border-cyan-200 rounded-xl focus:ring-4 focus:ring-cyan-300 focus:border-cyan-400 transition-all duration-200 font-medium"
                 />
               </div>

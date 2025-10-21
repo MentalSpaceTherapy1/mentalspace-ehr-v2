@@ -129,6 +129,12 @@ export default function IntakeAssessmentForm() {
   const queryClient = useQueryClient();
   const isEditMode = !!noteId;
 
+  console.log('🟣 COMPONENT MOUNTED/RE-RENDERED', {
+    clientId,
+    noteId,
+    isEditMode
+  });
+
   // Get appointmentId from URL query parameters
   const [searchParams] = useSearchParams();
   const appointmentIdFromURL = searchParams.get('appointmentId') || '';
@@ -141,7 +147,14 @@ export default function IntakeAssessmentForm() {
 
   const appointmentId = selectedAppointmentId;
 
-  const [sessionDate, setSessionDate] = useState('');
+  const [sessionDate, _setSessionDate] = useState('');
+  const setSessionDate = (value: string) => {
+    console.log('📅 setSessionDate called with:', value);
+    console.log('📅 Previous sessionDate state:', sessionDate);
+    console.trace('📅 Call stack:');
+    _setSessionDate(value);
+  };
+
   const [dueDate, setDueDate] = useState('');
   const [nextSessionDate, setNextSessionDate] = useState('');
 
@@ -300,12 +313,19 @@ export default function IntakeAssessmentForm() {
         try {
           const response = await api.get(`/appointments/${selectedAppointmentId}`);
           const apt = response.data.data;
+          console.log('🔵 APPOINTMENT DATA:', apt);
+          console.log('🔵 apt.appointmentDate:', apt.appointmentDate);
+          console.log('🔵 typeof apt.appointmentDate:', typeof apt.appointmentDate);
           setAppointmentData(apt);
 
           // Auto-populate session date from appointment
           if (apt.appointmentDate) {
             const date = new Date(apt.appointmentDate);
-            setSessionDate(date.toISOString().split('T')[0]);
+            console.log('🔵 Date object created:', date);
+            console.log('🔵 date.toISOString():', date.toISOString());
+            const sessionDateValue = date.toISOString().split('T')[0];
+            console.log('🔵 sessionDate value being set:', sessionDateValue);
+            setSessionDate(sessionDateValue);
           }
         } catch (error) {
           console.error('Error fetching appointment data:', error);
@@ -326,7 +346,15 @@ export default function IntakeAssessmentForm() {
 
   // Populate form fields from existingNoteData when in edit mode
   useEffect(() => {
+    console.log('🔴 EDIT MODE EFFECT TRIGGERED', {
+      existingNoteData: !!existingNoteData,
+      isEditMode,
+      noteId,
+      existingSessionDate: existingNoteData?.sessionDate
+    });
+
     if (existingNoteData && isEditMode) {
+      console.log('🔴 OVERWRITING WITH EXISTING NOTE DATA');
       // Set appointment ID from existing note
       if (existingNoteData.appointmentId) {
         setSelectedAppointmentId(existingNoteData.appointmentId);
@@ -335,7 +363,9 @@ export default function IntakeAssessmentForm() {
       // Session details
       if (existingNoteData.sessionDate) {
         const date = new Date(existingNoteData.sessionDate);
-        setSessionDate(date.toISOString().split('T')[0]);
+        const overwriteValue = date.toISOString().split('T')[0];
+        console.log('🔴 OVERWRITING sessionDate to:', overwriteValue);
+        setSessionDate(overwriteValue);
       }
       if (existingNoteData.dueDate) {
         const date = new Date(existingNoteData.dueDate);
@@ -500,6 +530,7 @@ export default function IntakeAssessmentForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -513,6 +544,7 @@ export default function IntakeAssessmentForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -659,7 +691,7 @@ export default function IntakeAssessmentForm() {
   };
 
   const handleSaveDraft = (e: React.FormEvent) => {
-    e.preventDefault();
+    
 
     // Build symptoms summary
     const symptomsPresent = Array.isArray(selectedSymptoms)
@@ -730,7 +762,14 @@ export default function IntakeAssessmentForm() {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    console.log('🟢 handleSubmit called - sessionDate at START of function:', sessionDate);
+    console.log('🟢 All state values:', {
+      sessionDate,
+      dueDate,
+      nextSessionDate,
+      appointmentId,
+      selectedAppointmentId
+    });
 
     // Validate required fields
     if (!chiefComplaint || !presentingProblem) {
@@ -793,6 +832,11 @@ export default function IntakeAssessmentForm() {
       : 'No hallucinations reported';
 
     const substanceUse = `Alcohol: ${alcoholUse || 'Not reported'} (${alcoholFrequency})\nTobacco: ${tobaccoUse || 'Not reported'} (${tobaccoFrequency})\nDrugs: ${drugUse || 'Not reported'} (${drugFrequency})`;
+
+    console.log('🟢 SUBMITTING NOTE - sessionDate state:', sessionDate);
+    console.log('🟢 typeof sessionDate:', typeof sessionDate);
+    console.log('🟢 new Date(sessionDate):', new Date(sessionDate));
+    console.log('🟢 new Date(sessionDate).toISOString():', new Date(sessionDate).toISOString());
 
     const data = {
       clientId,
@@ -914,7 +958,7 @@ export default function IntakeAssessmentForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as any)} className="space-y-6">
             {/* Schedule Header */}
             {appointmentData && (
               <ScheduleHeader
@@ -1713,10 +1757,10 @@ export default function IntakeAssessmentForm() {
             {/* Form Actions */}
             <FormActions
               onCancel={() => navigate(`/clients/${clientId}/notes`)}
-              onSubmit={() => handleSubmit({} as React.FormEvent)}
+              onSubmit={() => handleSubmit({} as any)}
               submitLabel="Create Intake Assessment"
               isSubmitting={saveMutation.isPending}
-              onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+              onSaveDraft={() => handleSaveDraft({} as any)}
               isSavingDraft={saveDraftMutation.isPending}
             />
           </form>

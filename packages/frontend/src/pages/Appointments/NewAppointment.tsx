@@ -105,11 +105,13 @@ export default function NewAppointment() {
       // Log all user roles to debug
       console.log('All user roles:', response.data.data.map((u: any) => ({
         name: `${u.firstName} ${u.lastName}`,
-        role: u.role
+        roles: u.roles
       })));
 
       const filtered = response.data.data.filter((user: any) =>
-        user.role && ['CLINICIAN', 'SUPERVISOR', 'Clinician', 'Supervisor'].includes(user.role)
+        user.roles && Array.isArray(user.roles) && user.roles.some((role: string) =>
+          ['CLINICIAN', 'SUPERVISOR'].includes(role)
+        )
       );
       console.log('Filtered clinicians:', filtered);
       return filtered;
@@ -198,6 +200,7 @@ export default function NewAppointment() {
     const newErrors: Record<string, string> = {};
     if (!formData.clientId) newErrors.clientId = 'Client is required';
     if (!formData.clinicianId) newErrors.clinicianId = 'Clinician is required';
+    if (!formData.cptCode) newErrors.cptCode = 'Service Code (CPT Code) is required';
     if (!formData.appointmentDate) newErrors.appointmentDate = 'Date is required';
     if (!formData.startTime) newErrors.startTime = 'Start time is required';
     if (!formData.endTime) newErrors.endTime = 'End time is required';
@@ -369,10 +372,10 @@ export default function NewAppointment() {
             {errors.clinicianId && <p className="text-red-500 text-sm mt-1">{errors.clinicianId}</p>}
           </div>
 
-          {/* Service Code (CPT Code) - Optional */}
+          {/* Service Code (CPT Code) - Required */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Service Code (CPT Code)
+              Service Code (CPT Code) <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.cptCode}
@@ -389,13 +392,14 @@ export default function NewAppointment() {
               }}
               className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              <option value="">Select Service Code (Optional)</option>
+              <option value="">Select Service Code</option>
               {serviceCodes?.map((code: any) => (
                 <option key={code.id} value={code.code}>
                   {code.code} - {code.description} {code.defaultDuration ? `(${code.defaultDuration} min)` : ''}
                 </option>
               ))}
             </select>
+            {errors.cptCode && <p className="text-red-500 text-sm mt-1">{errors.cptCode}</p>}
           </div>
 
           {/* Date and Time */}

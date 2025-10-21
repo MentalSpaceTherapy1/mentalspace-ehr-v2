@@ -364,6 +364,7 @@ export default function ProgressNoteForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -377,6 +378,7 @@ export default function ProgressNoteForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -475,7 +477,7 @@ export default function ProgressNoteForm() {
   };
 
   const handleSaveDraft = (e: React.FormEvent) => {
-    e.preventDefault();
+    
 
     const selectedInterventions = Object.entries(interventionsUsed)
       .filter(([_, checked]) => checked)
@@ -525,7 +527,7 @@ export default function ProgressNoteForm() {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    
 
     // Validate required fields
     if (!subjective || !objective || !assessment || !plan) {
@@ -707,7 +709,7 @@ export default function ProgressNoteForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as any)} className="space-y-6">
             {/* Schedule Header */}
             {appointmentData && (
               <ScheduleHeader
@@ -1036,10 +1038,10 @@ export default function ProgressNoteForm() {
             {/* Form Actions */}
             <FormActions
               onCancel={() => navigate(`/clients/${clientId}/notes`)}
-              onSubmit={() => handleSubmit({} as React.FormEvent)}
+              onSubmit={() => handleSubmit({} as any)}
               submitLabel={isEditMode ? "Update Progress Note" : "Create Progress Note"}
               isSubmitting={saveMutation.isPending}
-              onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+              onSaveDraft={() => handleSaveDraft({} as any)}
               isSavingDraft={saveDraftMutation.isPending}
             />
           </form>

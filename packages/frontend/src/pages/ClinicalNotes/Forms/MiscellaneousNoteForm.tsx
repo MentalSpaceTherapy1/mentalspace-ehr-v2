@@ -158,6 +158,7 @@ export default function MiscellaneousNoteForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -171,6 +172,7 @@ export default function MiscellaneousNoteForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
   });
@@ -223,7 +225,7 @@ export default function MiscellaneousNoteForm() {
   };
 
   const handleSaveDraft = (e: React.FormEvent) => {
-    e.preventDefault();
+    
 
     const data = {
       clientId,
@@ -249,7 +251,7 @@ export default function MiscellaneousNoteForm() {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    
 
     const data = {
       clientId,
@@ -368,7 +370,7 @@ export default function MiscellaneousNoteForm() {
 
         {/* Form - only shown after appointment is selected */}
         {!showAppointmentPicker && selectedAppointmentId && (
-          <form onSubmit={() => handleSubmit({} as React.FormEvent)} className="space-y-6">
+          <form onSubmit={() => handleSubmit({} as any)} className="space-y-6">
           {/* AI-Powered Note Generation */}
           {/* Schedule Header */}
             {appointmentData && (
@@ -473,10 +475,10 @@ export default function MiscellaneousNoteForm() {
           {/* Form Actions */}
           <FormActions
             onCancel={() => navigate(`/clients/${clientId}/notes`)}
-            onSubmit={() => handleSubmit({} as React.FormEvent)}
+            onSubmit={() => handleSubmit({} as any)}
             submitLabel={isEditMode ? "Update Miscellaneous Note" : "Create Miscellaneous Note"}
             isSubmitting={saveMutation.isPending}
-            onSaveDraft={() => handleSaveDraft({} as React.FormEvent)}
+            onSaveDraft={() => handleSaveDraft({} as any)}
             isSavingDraft={saveDraftMutation.isPending}
           />
         </form>

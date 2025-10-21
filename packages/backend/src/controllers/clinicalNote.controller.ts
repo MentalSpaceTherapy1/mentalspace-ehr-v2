@@ -272,6 +272,16 @@ export const createClinicalNote = async (req: Request, res: Response) => {
 
     const requiresCosign = clinician?.isUnderSupervision || false;
 
+    // DEBUG: Log the sessionDate being received
+    logger.info('🟢 CREATING CLINICAL NOTE - sessionDate received:', {
+      sessionDateRaw: validatedData.sessionDate,
+      sessionDateType: typeof validatedData.sessionDate,
+      sessionDateParsed: new Date(validatedData.sessionDate).toISOString(),
+      appointmentId: validatedData.appointmentId,
+      clientId: validatedData.clientId,
+      noteType: validatedData.noteType
+    });
+
     const note = await prisma.clinicalNote.create({
       data: {
         ...(validatedData as any),
