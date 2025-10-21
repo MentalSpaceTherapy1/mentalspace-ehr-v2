@@ -88,3 +88,17 @@ credentials.json
 deploy.log
 ecs-task-definition.json
 AWS_DEPLOYMENT_GUIDE.md
+
+# AWS Task Definitions and Deployment Artifacts (contain secrets)
+*task-def*.json
+current-task-def.json
+new-task-def.json
+backend-task*.json
+migration-task*.json
+run-*.json
+deployment-*.json
+service-update-result.json
+task-registration-result.json
+cloudfront-*.json
+dns-records.json
+deployment-logs.txt
