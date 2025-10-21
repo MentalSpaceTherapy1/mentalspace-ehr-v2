@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import AddressAutocomplete from '../../components/AddressAutocomplete';
 import {
   PRONOUNS_OPTIONS,
   GENDER_IDENTITY_OPTIONS,
@@ -228,6 +229,13 @@ export default function ClientForm() {
       race: prev.race.includes(race)
         ? prev.race.filter(r => r !== race)
         : [...prev.race, race],
+    }));
+  };
+
+  const handleAddressSelect = (addressComponents: any) => {
+    setFormData(prev => ({
+      ...prev,
+      ...addressComponents,
     }));
   };
 
@@ -499,15 +507,18 @@ export default function ClientForm() {
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   Street Address <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <AddressAutocomplete
                   name="addressStreet1"
                   value={formData.addressStreet1}
                   onChange={handleChange}
+                  onAddressSelect={handleAddressSelect}
                   required
-                  placeholder="123 Main Street"
+                  placeholder="Start typing address... (autocomplete enabled)"
                   className="w-full px-4 py-3 border-2 border-cyan-200 rounded-xl focus:ring-4 focus:ring-cyan-300 focus:border-cyan-400 transition-all duration-200 font-medium"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  💡 Start typing and select from dropdown to auto-fill city, state, and ZIP
+                </p>
               </div>
 
               <div className="md:col-span-2">
