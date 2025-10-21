@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import healthRoutes from './health.routes';
+import versionRoutes from './version.routes';
 import authRoutes from './auth.routes';
 import userRoutes from './user.routes';
 import clientRoutes from './client.routes';
@@ -35,6 +36,9 @@ const router = Router();
 
 // Health check routes (no authentication required)
 router.use('/health', healthRoutes);
+
+// Version endpoint (no authentication required)
+router.use('/', versionRoutes);
 
 // API routes
 router.use('/auth', authRoutes);

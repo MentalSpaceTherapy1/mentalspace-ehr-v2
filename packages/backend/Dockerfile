@@ -1,6 +1,10 @@
 # Multi-stage Dockerfile for MentalSpace EHR Backend
 # Optimized for production deployment
 
+# Build arguments for deployment tracking
+ARG GIT_SHA=unknown
+ARG BUILD_TIME=unknown
+
 # Stage 1: Builder
 FROM node:20-alpine AS builder
 
@@ -32,6 +36,14 @@ RUN npx prisma generate
 
 # Stage 2: Production - use Debian slim for better OpenSSL compatibility with Prisma
 FROM node:20-slim
+
+# Re-declare build arguments for this stage
+ARG GIT_SHA=unknown
+ARG BUILD_TIME=unknown
+
+# Set as environment variables for runtime access
+ENV GIT_SHA=${GIT_SHA}
+ENV BUILD_TIME=${BUILD_TIME}
 
 # Install curl for health checks and OpenSSL for Prisma
 RUN apt-get update && apt-get install -y --no-install-recommends \
