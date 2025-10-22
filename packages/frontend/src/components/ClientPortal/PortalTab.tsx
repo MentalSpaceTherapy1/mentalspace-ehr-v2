@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as portalApi from '../../lib/portalApi';
+import FormSubmissionViewer from './FormSubmissionViewer';
 
 interface PortalTabProps {
   clientId: string;
@@ -20,6 +21,9 @@ export default function PortalTab({ clientId }: PortalTabProps) {
   const [documentTitle, setDocumentTitle] = useState('');
   const [documentType, setDocumentType] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
+  // Form submission viewer state
+  const [viewingSubmission, setViewingSubmission] = useState<{ clientId: string; assignmentId: string } | null>(null);
 
   // Fetch form library
   const { data: formLibrary = [], isLoading: loadingForms } = useQuery({
@@ -396,11 +400,9 @@ export default function PortalTab({ clientId }: PortalTabProps) {
                       {assignment.status === 'COMPLETED' && (
                         <button
                           onClick={() => {
-                            // View submission logic
-                            toast('View submission feature coming soon!', {
-                              duration: 3000,
-                              position: 'top-center',
-                              icon: 'ℹ️',
+                            setViewingSubmission({
+                              clientId: clientId,
+                              assignmentId: assignment.id,
                             });
                           }}
                           className="px-3 py-1 bg-indigo-500 text-white text-sm font-semibold rounded-lg hover:bg-indigo-600 transition-colors"
@@ -599,7 +601,14 @@ export default function PortalTab({ clientId }: PortalTabProps) {
             </div>
           </div>
         </div>
-      </div>
+      {/* Form Submission Viewer Modal */}
+      {viewingSubmission && (
+        <FormSubmissionViewer
+          clientId={viewingSubmission.clientId}
+          assignmentId={viewingSubmission.assignmentId}
+          onClose={() => setViewingSubmission(null)}
+        />
+      )}
     </div>
   );
 }

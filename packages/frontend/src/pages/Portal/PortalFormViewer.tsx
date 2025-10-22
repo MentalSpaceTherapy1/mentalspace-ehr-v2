@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
+import { ESignatureSection } from '../../components/ClientPortal/ESignatureSection';
 
 interface FormField {
   id: string;
@@ -100,11 +101,30 @@ export default function PortalFormViewer() {
       return;
     }
 
+    // Validate e-signature
+    if (!consentAgreed) {
+      toast.error('Please agree to the e-signature consent before submitting');
+      return;
+    }
+
+    if (!signedByName.trim()) {
+      toast.error('Please enter your full name for the signature');
+      return;
+    }
+
+    if (!signatureData) {
+      toast.error('Please provide your signature before submitting');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       await api.post(`/portal/forms/${formId}/submit`, {
         assignmentId,
         responses,
+        signatureData,
+        signedByName,
+        consentAgreed,
       });
 
       toast.success('Form submitted successfully!');
@@ -304,6 +324,19 @@ export default function PortalFormViewer() {
               {renderField(field)}
             </div>
           ))}
+
+          {/* E-Signature Section */}
+          <div className="mt-8 pt-8 border-t-2 border-gray-300">
+            <ESignatureSection
+              signatureData={signatureData}
+              signedByName={signedByName}
+              consentAgreed={consentAgreed}
+              onSignatureChange={setSignatureData}
+              onNameChange={setSignedByName}
+              onConsentChange={setConsentAgreed}
+              required={true}
+            />
+          </div>
 
           {/* Submit Buttons */}
           <div className="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between">

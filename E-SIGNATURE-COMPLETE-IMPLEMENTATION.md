@@ -221,6 +221,54 @@ Status: ✅ **Fully implemented**
 
 ---
 
+#### 3.5 FormSubmissionViewer Component (EHR Side)
+**File**: `packages/frontend/src/components/ClientPortal/FormSubmissionViewer.tsx`
+
+**Features**:
+- Complete modal viewer for submitted intake forms
+- Display all form fields and client responses
+- Full e-signature display with SignatureDisplay component
+- Assignment information (assigned by, dates, status)
+- Review functionality (mark as reviewed, add notes)
+- Review status indicators
+- Loading and error states
+- Responsive design with scrollable content
+
+**Props**:
+```typescript
+interface FormSubmissionViewerProps {
+  clientId: string;
+  assignmentId: string;
+  onClose: () => void;
+}
+```
+
+**Usage Example (in PortalTab)**:
+```tsx
+{viewingSubmission && (
+  <FormSubmissionViewer
+    clientId={viewingSubmission.clientId}
+    assignmentId={viewingSubmission.assignmentId}
+    onClose={() => setViewingSubmission(null)}
+  />
+)}
+```
+
+**Components Displayed**:
+1. **Header**: Form name, type, and status
+2. **Assignment Details**: Assigned by, dates, messages
+3. **Client Responses**: All form field values in organized layout
+4. **E-Signature Section**: Uses SignatureDisplay component to show:
+   - Signature image
+   - Signer name and date
+   - IP address and audit trail
+   - Consent status
+5. **Review Section**: Review status, notes, mark as reviewed button
+
+Status: ✅ **Fully implemented and integrated**
+
+---
+
 ## 📋 INTEGRATION INSTRUCTIONS
 
 ### Portal Form Submission Page
@@ -284,31 +332,59 @@ const handleSubmit = async () => {
 
 ---
 
-### EHR Form Submission View
+### EHR Form Submission View - ✅ COMPLETED
 
-To display signatures in the EHR when viewing submitted forms:
+The EHR integration is now complete. Staff can view submitted forms with e-signatures by:
 
-**1. Import the component**:
+**Location**: Client Detail Page → Portal Tab → Assigned Forms Section
+
+**Implementation**:
+**File**: `packages/frontend/src/components/ClientPortal/PortalTab.tsx`
+
+**1. Import the component** (✅ Complete):
 ```tsx
-import { SignatureDisplay } from '../components/Forms/SignatureDisplay';
+import FormSubmissionViewer from './FormSubmissionViewer';
 ```
 
-**2. Add to submission view**:
+**2. Add state variable** (✅ Complete):
 ```tsx
-{submission.signatureData && (
-  <div className="mt-6">
-    <h3 className="text-lg font-semibold mb-3">Client Signature</h3>
-    <SignatureDisplay
-      signatureData={submission.signatureData}
-      signedByName={submission.signedByName}
-      signedDate={submission.signedDate}
-      signatureIpAddress={submission.signatureIpAddress}
-      consentAgreed={submission.consentAgreed}
-      showAuditTrail={true}
-    />
-  </div>
+const [viewingSubmission, setViewingSubmission] = useState<{ clientId: string; assignmentId: string } | null>(null);
+```
+
+**3. "View Submission" button** (✅ Complete):
+```tsx
+{assignment.status === 'COMPLETED' && (
+  <button
+    onClick={() => {
+      setViewingSubmission({
+        clientId: clientId,
+        assignmentId: assignment.id,
+      });
+    }}
+    className="px-3 py-1 bg-indigo-500 text-white text-sm font-semibold rounded-lg hover:bg-indigo-600 transition-colors"
+  >
+    View Submission
+  </button>
 )}
 ```
+
+**4. FormSubmissionViewer modal** (✅ Complete):
+```tsx
+{viewingSubmission && (
+  <FormSubmissionViewer
+    clientId={viewingSubmission.clientId}
+    assignmentId={viewingSubmission.assignmentId}
+    onClose={() => setViewingSubmission(null)}
+  />
+)}
+```
+
+**What Staff Will See**:
+- Complete form submission details
+- All client responses
+- E-signature with full audit trail (using SignatureDisplay component)
+- Assignment information
+- Ability to review and add notes
 
 ---
 
@@ -595,13 +671,16 @@ For questions or issues with e-signature implementation:
 | ESignatureConsent | ✅ Complete | E-SIGN Act compliant |
 | ESignatureSection | ✅ Complete | 3-step workflow |
 | SignatureDisplay | ✅ Complete | EHR view component |
+| FormSubmissionViewer | ✅ Complete | Full submission viewer with signature display |
+| Portal Integration | ✅ Complete | Integrated into PortalFormViewer.tsx |
+| EHR Integration | ✅ Complete | Integrated into PortalTab.tsx |
 | Documentation | ✅ Complete | This file |
-| Local Testing | ⏳ Pending | Awaiting integration |
-| Production Deployment | ⏳ Pending | Awaiting approval |
+| Local Testing | ⏳ Pending | Ready for testing |
+| Production Deployment | ⏳ Pending | Ready for deployment |
 
 ---
 
 **Last Updated**: October 22, 2025
 **Version**: 1.0.0
-**Implementation Time**: ~4 hours
-**Status**: Ready for Integration & Testing
+**Implementation Time**: ~6 hours
+**Status**: ✅ FULLY INTEGRATED - Ready for Testing & Deployment
