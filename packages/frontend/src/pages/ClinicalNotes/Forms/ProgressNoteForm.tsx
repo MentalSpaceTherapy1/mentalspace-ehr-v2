@@ -16,6 +16,9 @@ import ReviewModal from '../../../components/AI/ReviewModal';
 import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
 import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
 import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
+import { useNoteValidation } from '../../../hooks/useNoteValidation';
+import ValidatedField from '../../../components/ClinicalNotes/ValidatedField';
+import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 
 // Constants
 const SESSION_TYPES = ['Individual', 'Couples', 'Family', 'Group'];
@@ -147,6 +150,11 @@ export default function ProgressNoteForm() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  // Phase 1.3: Validation
+  const { validateNote, summary, isFieldRequired, getFieldHelpText, validateField } = useNoteValidation('Progress Note');
+  const [validationErrors, setValidationErrors] = useState<any[]>([]);
+  const [showValidation, setShowValidation] = useState(false);
 
   // Fetch client data
   const { data: clientData } = useQuery({
@@ -527,21 +535,24 @@ export default function ProgressNoteForm() {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    
 
-    // Validate required fields
-    if (!subjective || !objective || !assessment || !plan) {
-      setAiWarnings(['Please fill in all required SOAP fields (Subjective, Objective, Assessment, Plan) before submitting.']);
-      return;
-    }
 
-    if (!engagementLevel || !responseToInterventions) {
-      setAiWarnings(['Please fill in all required Client Response fields before submitting.']);
-      return;
-    }
+    // Phase 1.3: Validate note data before submission
+    const noteData = {
+      subjective,
+      objective,
+      assessment,
+      plan,
+      cptCode,
+    };
 
-    if (!cptCode) {
-      setAiWarnings(['Please select a CPT Code before submitting.']);
+    const validation = validateNote(noteData);
+    setValidationErrors(validation.errors);
+    setShowValidation(true);
+
+    if (!validation.isValid) {
+      setAiWarnings(['Please complete all required fields before submitting.']);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -932,38 +943,77 @@ export default function ProgressNoteForm() {
           {/* SOAP Notes */}
           <FormSection title="SOAP Notes" number={6}>
             <div className="space-y-6">
-              <TextAreaField
+              <ValidatedField
                 label="Subjective"
-                value={subjective}
-                onChange={setSubjective}
-                required
-                rows={4}
-                placeholder="Client's reported symptoms, concerns, and subjective experience (auto-populated from symptoms)"
-              />
-              <TextAreaField
+                fieldName="subjective"
+                isRequired={isFieldRequired('subjective')}
+                helpText={getFieldHelpText('subjective')}
+                error={validationErrors.find(e => e.field === 'subjective')}
+                showValidation={showValidation}
+              >
+                <TextAreaField
+                  label=""
+                  value={subjective}
+                  onChange={setSubjective}
+                  required={isFieldRequired('subjective')}
+                  rows={4}
+                  placeholder="Client's reported symptoms, concerns, and subjective experience (auto-populated from symptoms)"
+                />
+              </ValidatedField>
+
+              <ValidatedField
                 label="Objective"
-                value={objective}
-                onChange={setObjective}
-                required
-                rows={4}
-                placeholder="Observable behaviors, mental status observations (auto-populated from MSE)"
-              />
-              <TextAreaField
+                fieldName="objective"
+                isRequired={isFieldRequired('objective')}
+                helpText={getFieldHelpText('objective')}
+                error={validationErrors.find(e => e.field === 'objective')}
+                showValidation={showValidation}
+              >
+                <TextAreaField
+                  label=""
+                  value={objective}
+                  onChange={setObjective}
+                  required={isFieldRequired('objective')}
+                  rows={4}
+                  placeholder="Observable behaviors, mental status observations (auto-populated from MSE)"
+                />
+              </ValidatedField>
+
+              <ValidatedField
                 label="Assessment"
-                value={assessment}
-                onChange={setAssessment}
-                required
-                rows={4}
-                placeholder="Clinical impressions, progress evaluation, symptom severity, response to treatment..."
-              />
-              <TextAreaField
+                fieldName="assessment"
+                isRequired={isFieldRequired('assessment')}
+                helpText={getFieldHelpText('assessment')}
+                error={validationErrors.find(e => e.field === 'assessment')}
+                showValidation={showValidation}
+              >
+                <TextAreaField
+                  label=""
+                  value={assessment}
+                  onChange={setAssessment}
+                  required={isFieldRequired('assessment')}
+                  rows={4}
+                  placeholder="Clinical impressions, progress evaluation, symptom severity, response to treatment..."
+                />
+              </ValidatedField>
+
+              <ValidatedField
                 label="Plan"
-                value={plan}
-                onChange={setPlan}
-                required
-                rows={4}
-                placeholder="Treatment interventions for this session, homework assigned, follow-up plans..."
-              />
+                fieldName="plan"
+                isRequired={isFieldRequired('plan')}
+                helpText={getFieldHelpText('plan')}
+                error={validationErrors.find(e => e.field === 'plan')}
+                showValidation={showValidation}
+              >
+                <TextAreaField
+                  label=""
+                  value={plan}
+                  onChange={setPlan}
+                  required={isFieldRequired('plan')}
+                  rows={4}
+                  placeholder="Treatment interventions for this session, homework assigned, follow-up plans..."
+                />
+              </ValidatedField>
             </div>
           </FormSection>
 
@@ -1002,12 +1052,16 @@ export default function ProgressNoteForm() {
           <FormSection title="Billing Information" number={8}>
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    CPT Code <span className="text-red-500">*</span>
-                  </label>
+                <ValidatedField
+                  label="CPT Code"
+                  fieldName="cptCode"
+                  isRequired={isFieldRequired('cptCode')}
+                  helpText={getFieldHelpText('cptCode')}
+                  error={validationErrors.find(e => e.field === 'cptCode')}
+                  showValidation={showValidation}
+                >
                   <CPTCodeAutocomplete value={cptCode} onChange={setCptCode} />
-                </div>
+                </ValidatedField>
                 <TextField
                   label="Session Duration (minutes)"
                   value={sessionDurationMinutes}
@@ -1034,6 +1088,18 @@ export default function ProgressNoteForm() {
               </div>
             </div>
           </FormSection>
+
+            {/* Phase 1.3: Validation Summary */}
+            {showValidation && (
+              <div className="mt-6">
+                <ValidationSummary
+                  errors={validationErrors}
+                  requiredFields={summary?.requiredFields || []}
+                  noteType="Progress Note"
+                  showOnlyWhenInvalid={false}
+                />
+              </div>
+            )}
 
             {/* Form Actions */}
             <FormActions

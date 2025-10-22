@@ -99,15 +99,6 @@ model User {
   mfaEnabled    Boolean   @default(false)
   lastLoginDate DateTime?
 
-  // Password Management
-  mustChangePassword     Boolean   @default(false)
-  passwordResetToken     String?   @unique
-  passwordResetExpiry    DateTime?
-  emailVerified          Boolean   @default(true) // Default true for staff (manual creation)
-  emailVerificationToken String?   @unique
-  invitationSentAt       DateTime?
-  invitationToken        String?   @unique
-
   // Signature
   digitalSignature String? // base64
   signatureDate    DateTime?
@@ -962,17 +953,16 @@ enum NoteStatus {
   LOCKED
   PENDING_COSIGN
   COSIGNED
-  RETURNED_FOR_REVISION
 }
 
 model ClinicalNote {
-  id            String      @id @default(uuid())
+  id            String       @id @default(uuid())
   clientId      String
-  client        Client      @relation(fields: [clientId], references: [id])
+  client        Client       @relation(fields: [clientId], references: [id])
   clinicianId   String
-  clinician     User        @relation("NoteCreator", fields: [clinicianId], references: [id])
-  appointmentId String
-  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  clinician     User         @relation("NoteCreator", fields: [clinicianId], references: [id])
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
 
   noteType         String // SOAP, Intake, Treatment Plan, etc.
   sessionDate      DateTime
@@ -1020,12 +1010,6 @@ model ClinicalNote {
   cosigner           User?     @relation("NoteCosigner", fields: [cosignedBy], references: [id])
   supervisorComments String?
 
-  // Revision Workflow (Phase 1.2)
-  revisionHistory Json[]  @default([])  // Array of {date, returnedBy, comments, requiredChanges, resolvedDate, resubmittedDate}
-  revisionCount   Int     @default(0)
-  currentRevisionComments String?  // Current active revision comments
-  currentRevisionRequiredChanges String[]  @default([])  // Current active required changes list
-
   // Compliance
   dueDate         DateTime
   completedOnTime Boolean  @default(false)
@@ -1065,43 +1049,6 @@ model ClinicalNote {
   // Unique constraint: One note per appointment per note type
   @@unique([appointmentId, noteType])
   @@map("clinical_notes")
-}
-
-// ============================================================================
-// PHASE 1.3: REQUIRED FIELD VALIDATION ENGINE
-// ============================================================================
-
-model NoteValidationRule {
-  id String @id @default(uuid())
-
-  noteType String // Which note type this rule applies to
-  fieldName String // Name of the field being validated
-  isRequired Boolean @default(false) // Whether field is required
-  minLength Int? // Minimum length for text fields
-  maxLength Int? // Maximum length for text fields
-  validationPattern String? // Regex pattern for validation
-  errorMessage String? // Custom error message
-
-  // Conditional requirements
-  conditionalOn String? // Field name that this depends on
-  conditionalValue String? // Value that conditionalOn must have
-
-  // Metadata
-  displayLabel String? // User-friendly label for UI
-  helpText String? // Help text for users
-  validationOrder Int @default(0) // Order in which to validate
-
-  // Status
-  isActive Boolean @default(true)
-
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdBy String?
-  lastModifiedBy String?
-
-  @@unique([noteType, fieldName])
-  @@map("note_validation_rules")
 }
 
 model TreatmentPlan {
@@ -1416,14 +1363,6 @@ model IntakeFormSubmission {
   reviewedDate   DateTime?
   reviewedBy     String?
   reviewerNotes  String?
-
-  // E-Signature fields
-  signatureData      String?   // Base64 encoded signature image (canvas drawing)
-  signedByName       String?   // Full name entered by client
-  signedDate         DateTime?
-  signatureIpAddress String?   // IP address at time of signature
-  consentAgreed      Boolean   @default(false) // Client agreed to e-signature consent
-
 
   ipAddress  String?
   userAgent  String?

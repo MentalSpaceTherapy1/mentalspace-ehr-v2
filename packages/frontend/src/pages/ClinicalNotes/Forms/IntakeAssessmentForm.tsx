@@ -17,6 +17,9 @@ import ReviewModal from '../../../components/AI/ReviewModal';
 import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
 import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
 import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
+import { useNoteValidation } from '../../../hooks/useNoteValidation';
+import ValidatedField from '../../../components/ClinicalNotes/ValidatedField';
+import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 
 // Constants for dropdowns
 const RISK_LEVELS = ['None', 'Low', 'Moderate', 'High', 'Imminent'];
@@ -273,6 +276,11 @@ export default function IntakeAssessmentForm() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  // Phase 1.3: Validation
+  const { validateNote, summary, isFieldRequired, getFieldHelpText } = useNoteValidation('Intake Assessment');
+  const [validationErrors, setValidationErrors] = useState<any[]>([]);
+  const [showValidation, setShowValidation] = useState(false);
 
   // Fetch client data
   const { data: clientData } = useQuery({
@@ -775,24 +783,21 @@ export default function IntakeAssessmentForm() {
       selectedAppointmentId
     });
 
-    // Validate required fields
-    if (!chiefComplaint || !presentingProblem) {
-      setAiWarnings(['Please fill in Chief Complaint and Presenting Problem before submitting.']);
-      return;
-    }
+    // Phase 1.3: Validate note data before submission
+    const noteData = {
+      subjective: presentingProblem,
+      assessment,
+      plan,
+      diagnosisCodes,
+    };
 
-    if (!assessment || !plan) {
-      setAiWarnings(['Please fill in Clinical Assessment and Plan sections before submitting.']);
-      return;
-    }
+    const validation = validateNote(noteData);
+    setValidationErrors(validation.errors);
+    setShowValidation(true);
 
-    if (!Array.isArray(diagnosisCodes) || diagnosisCodes.length === 0) {
-      setAiWarnings(['Please add at least one diagnosis code (ICD-10) before submitting.']);
-      return;
-    }
-
-    if (!treatmentRecommendations) {
-      setAiWarnings(['Please fill in Treatment Recommendations before submitting.']);
+    if (!validation.isValid) {
+      setAiWarnings(['Please complete all required fields before submitting.']);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -997,14 +1002,23 @@ export default function IntakeAssessmentForm() {
                 rows={2}
                 placeholder="Client's stated reason for seeking services..."
               />
-              <TextAreaField
+              <ValidatedField
                 label="Presenting Problem"
-                value={presentingProblem}
-                onChange={setPresentingProblem}
-                required
-                rows={4}
-                placeholder="Detailed description of current concerns, onset, duration, severity..."
-              />
+                fieldName="subjective"
+                isRequired={isFieldRequired('subjective')}
+                helpText={getFieldHelpText('subjective')}
+                error={validationErrors.find(e => e.field === 'subjective')}
+                showValidation={showValidation}
+              >
+                <TextAreaField
+                  label=""
+                  value={presentingProblem}
+                  onChange={setPresentingProblem}
+                  required={isFieldRequired('subjective')}
+                  rows={4}
+                  placeholder="Detailed description of current concerns, onset, duration, severity..."
+                />
+              </ValidatedField>
             </div>
           </FormSection>
 
@@ -1688,37 +1702,60 @@ export default function IntakeAssessmentForm() {
           {/* Clinical Assessment */}
           <FormSection title="Clinical Assessment" number={8}>
             <div className="space-y-6">
-              <TextAreaField
+              <ValidatedField
                 label="Assessment"
-                value={assessment}
-                onChange={setAssessment}
-                required
-                rows={5}
-                placeholder="Clinical impressions, diagnostic formulation, severity assessment, prognosis..."
-              />
-              <TextAreaField
+                fieldName="assessment"
+                isRequired={isFieldRequired('assessment')}
+                helpText={getFieldHelpText('assessment')}
+                error={validationErrors.find(e => e.field === 'assessment')}
+                showValidation={showValidation}
+              >
+                <TextAreaField
+                  label=""
+                  value={assessment}
+                  onChange={setAssessment}
+                  required={isFieldRequired('assessment')}
+                  rows={5}
+                  placeholder="Clinical impressions, diagnostic formulation, severity assessment, prognosis..."
+                />
+              </ValidatedField>
+
+              <ValidatedField
                 label="Plan"
-                value={plan}
-                onChange={setPlan}
-                required
-                rows={5}
-                placeholder="Treatment interventions, therapeutic approach, goals, follow-up plans..."
-              />
+                fieldName="plan"
+                isRequired={isFieldRequired('plan')}
+                helpText={getFieldHelpText('plan')}
+                error={validationErrors.find(e => e.field === 'plan')}
+                showValidation={showValidation}
+              >
+                <TextAreaField
+                  label=""
+                  value={plan}
+                  onChange={setPlan}
+                  required={isFieldRequired('plan')}
+                  rows={5}
+                  placeholder="Treatment interventions, therapeutic approach, goals, follow-up plans..."
+                />
+              </ValidatedField>
             </div>
           </FormSection>
 
           {/* Diagnosis & Billing */}
           <FormSection title="Diagnosis & Billing" number={9}>
             <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Diagnosis Codes (ICD-10) <span className="text-red-500">*</span>
-                </label>
+              <ValidatedField
+                label="Diagnosis Codes (ICD-10)"
+                fieldName="diagnosisCodes"
+                isRequired={isFieldRequired('diagnosisCodes')}
+                helpText={getFieldHelpText('diagnosisCodes')}
+                error={validationErrors.find(e => e.field === 'diagnosisCodes')}
+                showValidation={showValidation}
+              >
                 <ICD10Autocomplete
                   selectedCodes={diagnosisCodes}
                   onCodesChange={setDiagnosisCodes}
                 />
-              </div>
+              </ValidatedField>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -1757,6 +1794,18 @@ export default function IntakeAssessmentForm() {
               />
             </div>
           </FormSection>
+
+            {/* Phase 1.3: Validation Summary */}
+            {showValidation && (
+              <div className="mt-6">
+                <ValidationSummary
+                  errors={validationErrors}
+                  requiredFields={summary?.requiredFields || []}
+                  noteType="Intake Assessment"
+                  showOnlyWhenInvalid={false}
+                />
+              </div>
+            )}
 
             {/* Form Actions */}
             <FormActions

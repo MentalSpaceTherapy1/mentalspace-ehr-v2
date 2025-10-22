@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Calendar, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Calendar, ArrowLeft, CheckCircle, Search, Filter } from 'lucide-react';
 import api from '../../lib/api';
 
 // Import all form components
@@ -12,6 +12,9 @@ import ConsultationNoteForm from './Forms/ConsultationNoteForm';
 import ContactNoteForm from './Forms/ContactNoteForm';
 import TerminationNoteForm from './Forms/TerminationNoteForm';
 import MiscellaneousNoteForm from './Forms/MiscellaneousNoteForm';
+
+// Import appointment quick create modal
+import AppointmentQuickCreate from '../../components/ClinicalNotes/AppointmentQuickCreate';
 
 // Note types that require appointments
 const APPOINTMENT_REQUIRED_NOTE_TYPES = [
@@ -109,7 +112,14 @@ export default function SmartNoteCreator() {
   const [selectedNoteType, setSelectedNoteType] = useState<string>('');
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>('');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [showQuickCreateModal, setShowQuickCreateModal] = useState(false);
+
+  // Search/filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterLocation, setFilterLocation] = useState<string>('ALL');
+  const [filterType, setFilterType] = useState<string>('ALL');
 
   // Check if note type and appointment were provided in URL
   useEffect(() => {
@@ -151,12 +161,48 @@ export default function SmartNoteCreator() {
       );
 
       setAppointments(validAppointments);
+      setFilteredAppointments(validAppointments); // Initialize filtered list
     } catch (err) {
       console.error('Failed to load appointments:', err);
     } finally {
       setLoadingAppointments(false);
     }
   };
+
+  // Filter appointments based on search query and filters
+  useEffect(() => {
+    let filtered = [...appointments];
+
+    // Apply search query
+    if (searchQuery) {
+      filtered = filtered.filter((apt) => {
+        const searchLower = searchQuery.toLowerCase();
+        const dateStr = new Date(apt.appointmentDate).toLocaleDateString().toLowerCase();
+        const typeStr = apt.appointmentType.toLowerCase();
+        const locationStr = apt.serviceLocation.toLowerCase();
+
+        return (
+          dateStr.includes(searchLower) ||
+          typeStr.includes(searchLower) ||
+          locationStr.includes(searchLower) ||
+          apt.startTime.includes(searchQuery) ||
+          apt.endTime.includes(searchQuery)
+        );
+      });
+    }
+
+    // Apply location filter
+    if (filterLocation !== 'ALL') {
+      filtered = filtered.filter((apt) => apt.serviceLocation === filterLocation);
+    }
+
+    // Apply type filter
+    if (filterType !== 'ALL') {
+      filtered = filtered.filter((apt) => apt.appointmentType === filterType);
+    }
+
+    setFilteredAppointments(filtered);
+  }, [searchQuery, filterLocation, filterType, appointments]);
 
   const handleSelectNoteType = (noteType: string) => {
     setSelectedNoteType(noteType);
@@ -176,6 +222,15 @@ export default function SmartNoteCreator() {
 
   const handleSelectAppointment = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
+    setStep('form');
+  };
+
+  const handleQuickCreateSuccess = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowQuickCreateModal(false);
+    // Refresh appointments list
+    fetchAppointments();
+    // Move to form
     setStep('form');
   };
 
@@ -354,7 +409,7 @@ export default function SmartNoteCreator() {
                       This client doesn't have any appointments in a valid status.
                     </p>
                     <button
-                      onClick={() => navigate(`/appointments/new?clientId=${clientId}`)}
+                      onClick={() => setShowQuickCreateModal(true)}
                       className="mt-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold rounded-lg transition-colors"
                     >
                       Create New Appointment
@@ -363,8 +418,83 @@ export default function SmartNoteCreator() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {appointments.map((appointment) => (
+              <>
+                {/* Search and Filter Controls */}
+                <div className="mb-6 space-y-4">
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Search by date, time, type, or location..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Filters */}
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2 text-gray-700">
+                      <Filter className="w-4 h-4" />
+                      <span className="font-semibold text-sm">Filters:</span>
+                    </div>
+
+                    <select
+                      value={filterLocation}
+                      onChange={(e) => setFilterLocation(e.target.value)}
+                      className="px-4 py-2 border-2 border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    >
+                      <option value="ALL">All Locations</option>
+                      <option value="IN_OFFICE">In Office</option>
+                      <option value="TELEHEALTH">Telehealth</option>
+                      <option value="HOME_VISIT">Home Visit</option>
+                    </select>
+
+                    <select
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="px-4 py-2 border-2 border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    >
+                      <option value="ALL">All Types</option>
+                      <option value="THERAPY">Therapy</option>
+                      <option value="INTAKE">Intake</option>
+                      <option value="CONSULTATION">Consultation</option>
+                      <option value="FOLLOW_UP">Follow-up</option>
+                      <option value="GROUP_THERAPY">Group Therapy</option>
+                      <option value="FAMILY_THERAPY">Family Therapy</option>
+                    </select>
+
+                    {(searchQuery || filterLocation !== 'ALL' || filterType !== 'ALL') && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setFilterLocation('ALL');
+                          setFilterType('ALL');
+                        }}
+                        className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Results Count */}
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <span>
+                      Showing {filteredAppointments.length} of {appointments.length} appointments
+                    </span>
+                    {filteredAppointments.length === 0 && appointments.length > 0 && (
+                      <span className="text-orange-600 font-medium">
+                        No appointments match your filters
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Appointments List */}
+                <div className="space-y-4">
+                  {filteredAppointments.map((appointment) => (
                   <button
                     key={appointment.id}
                     onClick={() => handleSelectAppointment(appointment.id)}
@@ -397,30 +527,40 @@ export default function SmartNoteCreator() {
                   </button>
                 ))}
 
-                <button
-                  onClick={() => navigate(`/appointments/new?clientId=${clientId}`)}
-                  className="w-full bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 rounded-xl shadow-md p-6 text-left border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 transform hover:scale-[1.01]"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-full p-3 text-white text-2xl">
-                        ➕
+                  <button
+                    onClick={() => setShowQuickCreateModal(true)}
+                    className="w-full bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 rounded-xl shadow-md p-6 text-left border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 transform hover:scale-[1.01]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-full p-3 text-white text-2xl">
+                          ➕
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-800">Create New Appointment</h3>
+                          <p className="text-sm text-gray-600">
+                            Quick inline appointment creation
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-800">Create New Appointment</h3>
-                        <p className="text-sm text-gray-600">
-                          Schedule a new appointment for this client
-                        </p>
-                      </div>
+                      <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
-                    <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-              </div>
+                  </button>
+                </div>
+              </>
             )}
           </>
+        )}
+
+        {/* Quick Create Modal */}
+        {showQuickCreateModal && clientId && (
+          <AppointmentQuickCreate
+            clientId={clientId}
+            onSuccess={handleQuickCreateSuccess}
+            onCancel={() => setShowQuickCreateModal(false)}
+          />
         )}
       </div>
     </div>

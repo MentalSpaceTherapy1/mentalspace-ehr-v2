@@ -470,6 +470,17 @@ export const signClinicalNote = async (req: Request, res: Response) => {
       });
     }
 
+    // PHASE 1.3: Validate note before signing
+    const validationResult = await NoteValidationService.validateNote(note.noteType, note);
+    if (!validationResult.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Note validation failed. Please complete all required fields.',
+        errors: validationResult.errors,
+        validationErrors: validationResult.errors, // For frontend compatibility
+      });
+    }
+
     // Calculate days to complete
     const daysToComplete = Math.floor(
       (new Date().getTime() - new Date(note.sessionDate).getTime()) / (1000 * 60 * 60 * 24)
@@ -1285,6 +1296,367 @@ export const getComplianceDashboard = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve compliance dashboard',
+      error: error.message,
+    });
+  }
+};
+
+// ============================================================================
+// PHASE 1.2: RETURN FOR REVISION WORKFLOW
+// ============================================================================
+
+/**
+ * Return a note for revision (supervisor to clinician)
+ * POST /api/v1/clinical-notes/:id/return-for-revision
+ */
+export const returnForRevision = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.userId;
+    const userRole = (req as any).user?.role;
+
+    // Validate request body
+    const returnSchema = z.object({
+      comments: z.string().min(10, 'Comments must be at least 10 characters'),
+      requiredChanges: z.array(z.string()).min(1, 'At least one required change must be specified'),
+    });
+
+    const validation = returnSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validation.error.errors,
+      });
+    }
+
+    const { comments, requiredChanges } = validation.data;
+
+    // Get the note
+    const note = await prisma.clinicalNote.findUnique({
+      where: { id },
+      include: {
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!note) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinical note not found',
+      });
+    }
+
+    // Only supervisors/administrators can return notes for revision
+    if (userRole !== 'SUPERVISOR' && userRole !== 'ADMINISTRATOR') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only supervisors can return notes for revision',
+      });
+    }
+
+    // Note must be PENDING_COSIGN to be returned
+    if (note.status !== 'PENDING_COSIGN') {
+      return res.status(400).json({
+        success: false,
+        message: `Note must be in PENDING_COSIGN status. Current status: ${note.status}`,
+      });
+    }
+
+    // Create revision history entry
+    const revisionEntry = {
+      date: new Date().toISOString(),
+      returnedBy: userId,
+      returnedByName: (req as any).user?.firstName + ' ' + (req as any).user?.lastName,
+      comments,
+      requiredChanges,
+      resolvedDate: null,
+      resubmittedDate: null,
+    };
+
+    // Update note with revision status
+    const updatedNote = await prisma.clinicalNote.update({
+      where: { id },
+      data: {
+        status: 'RETURNED_FOR_REVISION',
+        revisionHistory: {
+          push: revisionEntry,
+        },
+        revisionCount: {
+          increment: 1,
+        },
+        currentRevisionComments: comments,
+        currentRevisionRequiredChanges: requiredChanges,
+        lastModifiedBy: userId,
+      },
+      include: {
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    logger.info('Note returned for revision', {
+      noteId: id,
+      returnedBy: userId,
+      clinicianId: note.clinicianId,
+      revisionCount: updatedNote.revisionCount,
+    });
+
+    res.json({
+      success: true,
+      message: 'Note returned for revision',
+      data: updatedNote,
+    });
+  } catch (error: any) {
+    logControllerError('returnForRevision', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to return note for revision',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Resubmit a note for review after revisions (clinician to supervisor)
+ * POST /api/v1/clinical-notes/:id/resubmit-for-review
+ */
+export const resubmitForReview = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.userId;
+
+    // Get the note
+    const note = await prisma.clinicalNote.findUnique({
+      where: { id },
+      include: {
+        cosigner: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!note) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinical note not found',
+      });
+    }
+
+    // Only the note creator can resubmit
+    if (note.clinicianId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the note creator can resubmit for review',
+      });
+    }
+
+    // Note must be RETURNED_FOR_REVISION to be resubmitted
+    if (note.status !== 'RETURNED_FOR_REVISION') {
+      return res.status(400).json({
+        success: false,
+        message: `Note must be in RETURNED_FOR_REVISION status. Current status: ${note.status}`,
+      });
+    }
+
+    // Update the latest revision history entry with resubmission date
+    const revisionHistory = note.revisionHistory as any[];
+    if (revisionHistory && revisionHistory.length > 0) {
+      const latestRevision = revisionHistory[revisionHistory.length - 1];
+      latestRevision.resubmittedDate = new Date().toISOString();
+    }
+
+    // Update note status back to PENDING_COSIGN
+    const updatedNote = await prisma.clinicalNote.update({
+      where: { id },
+      data: {
+        status: 'PENDING_COSIGN',
+        revisionHistory: revisionHistory,
+        currentRevisionComments: null,
+        currentRevisionRequiredChanges: [],
+        lastModifiedBy: userId,
+      },
+      include: {
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        cosigner: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    logger.info('Note resubmitted for review', {
+      noteId: id,
+      clinicianId: userId,
+      revisionCount: note.revisionCount,
+    });
+
+    res.json({
+      success: true,
+      message: 'Note resubmitted for review',
+      data: updatedNote,
+    });
+  } catch (error: any) {
+    logControllerError('resubmitForReview', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resubmit note for review',
+      error: error.message,
+    });
+  }
+};
+
+// ============================================================================
+// PHASE 1.3: REQUIRED FIELD VALIDATION ENGINE
+// ============================================================================
+
+import * as NoteValidationService from '../services/note-validation.service';
+
+/**
+ * Get validation rules for a specific note type
+ * GET /api/v1/clinical-notes/validation-rules/:noteType
+ */
+export const getValidationRulesForNoteType = async (req: Request, res: Response) => {
+  try {
+    const { noteType } = req.params;
+
+    if (!noteType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Note type is required',
+      });
+    }
+
+    const rules = await NoteValidationService.getValidationRules(noteType);
+
+    res.json({
+      success: true,
+      data: rules,
+    });
+  } catch (error: any) {
+    logControllerError('getValidationRulesForNoteType', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch validation rules',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Validate note data against its type's rules
+ * POST /api/v1/clinical-notes/validate
+ */
+export const validateNoteData = async (req: Request, res: Response) => {
+  try {
+    const { noteType, noteData } = req.body;
+
+    if (!noteType || !noteData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Note type and note data are required',
+      });
+    }
+
+    const result = await NoteValidationService.validateNote(noteType, noteData);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    logControllerError('validateNoteData', error);
+    res.status(500).json({
+      success: false,
+      message: 'Validation failed',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get validation summary for a note type
+ * GET /api/v1/clinical-notes/validation-summary/:noteType
+ */
+export const getValidationSummaryForNoteType = async (req: Request, res: Response) => {
+  try {
+    const { noteType } = req.params;
+
+    if (!noteType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Note type is required',
+      });
+    }
+
+    const summary = await NoteValidationService.getValidationSummary(noteType);
+
+    res.json({
+      success: true,
+      data: summary,
+    });
+  } catch (error: any) {
+    logControllerError('getValidationSummaryForNoteType', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch validation summary',
       error: error.message,
     });
   }

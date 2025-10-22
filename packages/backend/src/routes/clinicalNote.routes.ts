@@ -16,6 +16,11 @@ import {
   getMyNotes,
   getAppointmentsWithoutNotes,
   getComplianceDashboard,
+  returnForRevision,
+  resubmitForReview,
+  getValidationRulesForNoteType,
+  validateNoteData,
+  getValidationSummaryForNoteType,
 } from '../controllers/clinicalNote.controller';
 
 const router = Router();
@@ -65,6 +70,17 @@ router.post('/:id/sign', signClinicalNote);
 
 // Co-sign note (supervisor)
 router.post('/:id/cosign', cosignClinicalNote);
+
+// Return for revision (Phase 1.2 - supervisor)
+router.post('/:id/return-for-revision', returnForRevision);
+
+// Resubmit for review (Phase 1.2 - clinician)
+router.post('/:id/resubmit-for-review', resubmitForReview);
+
+// Phase 1.3: Validation endpoints
+router.get('/validation-rules/:noteType', getValidationRulesForNoteType);
+router.post('/validate', validateNoteData);
+router.get('/validation-summary/:noteType', getValidationSummaryForNoteType);
 
 // Delete note (draft only)
 router.delete('/:id', deleteClinicalNote);

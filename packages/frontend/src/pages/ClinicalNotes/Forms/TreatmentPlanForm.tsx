@@ -17,6 +17,9 @@ import ReviewModal from '../../../components/AI/ReviewModal';
 import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
 import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
 import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
+import { useNoteValidation } from '../../../hooks/useNoteValidation';
+import ValidatedField from '../../../components/ClinicalNotes/ValidatedField';
+import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 
 interface TreatmentGoal {
   goal: string;
@@ -75,6 +78,11 @@ export default function TreatmentPlanForm() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  // Phase 1.3: Validation
+  const { validateNote, summary, isFieldRequired, getFieldHelpText } = useNoteValidation('Treatment Plan');
+  const [validationErrors, setValidationErrors] = useState<any[]>([]);
+  const [showValidation, setShowValidation] = useState(false);
 
   // Fetch client data
   const { data: clientData } = useQuery({
@@ -446,31 +454,27 @@ export default function TreatmentPlanForm() {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    
 
-    // Validate required fields
-    if (!Array.isArray(goals) || goals.length === 0 || !goals[0].goal.trim()) {
-      setAiWarnings(['Please add at least one treatment goal before submitting.']);
-      return;
-    }
 
-    if (!Array.isArray(treatmentModality) || treatmentModality.length === 0) {
-      setAiWarnings(['Please select at least one treatment modality before submitting.']);
-      return;
-    }
+    // Construct assessment and plan fields for validation
+    const goalsCount = Array.isArray(goals) ? goals.filter(g => g.goal.trim()).length : 0;
+    const assessmentText = `Formal Treatment Plan established with ${goalsCount} goals`;
+    const planText = dischargeCriteria ? `Discharge Criteria: ${dischargeCriteria}` : '';
 
-    if (!sessionDuration || !frequency || !treatmentSetting || !estimatedDuration) {
-      setAiWarnings(['Please fill in all treatment details (Duration, Frequency, Setting, Estimated Duration) before submitting.']);
-      return;
-    }
+    // Phase 1.3: Validate note data before submission
+    const noteData = {
+      assessment: assessmentText,
+      plan: planText,
+      diagnosisCodes,
+    };
 
-    if (!dischargeCriteria) {
-      setAiWarnings(['Please specify discharge criteria before submitting.']);
-      return;
-    }
+    const validation = validateNote(noteData);
+    setValidationErrors(validation.errors);
+    setShowValidation(true);
 
-    if (!Array.isArray(diagnosisCodes) || diagnosisCodes.length === 0) {
-      setAiWarnings(['Please add at least one diagnosis code (ICD-10) before submitting.']);
+    if (!validation.isValid) {
+      setAiWarnings(['Please complete all required fields before submitting.']);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -877,18 +881,19 @@ export default function TreatmentPlanForm() {
           {/* Diagnosis & Billing */}
           <FormSection title="Diagnosis & Billing" number={3}>
             <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Diagnosis Codes (ICD-10) <span className="text-red-500">*</span>
-                </label>
-                <p className="text-sm text-gray-600 mb-2">
-                  Update or confirm diagnosis codes for this treatment plan
-                </p>
+              <ValidatedField
+                label="Diagnosis Codes (ICD-10)"
+                fieldName="diagnosisCodes"
+                isRequired={isFieldRequired('diagnosisCodes')}
+                helpText={getFieldHelpText('diagnosisCodes') || 'Update or confirm diagnosis codes for this treatment plan'}
+                error={validationErrors.find(e => e.field === 'diagnosisCodes')}
+                showValidation={showValidation}
+              >
                 <ICD10Autocomplete
                   selectedCodes={diagnosisCodes}
                   onCodesChange={setDiagnosisCodes}
                 />
-              </div>
+              </ValidatedField>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -913,6 +918,18 @@ export default function TreatmentPlanForm() {
               />
             </div>
           </FormSection>
+
+            {/* Phase 1.3: Validation Summary */}
+            {showValidation && (
+              <div className="mt-6">
+                <ValidationSummary
+                  errors={validationErrors}
+                  requiredFields={summary?.requiredFields || []}
+                  noteType="Treatment Plan"
+                  showOnlyWhenInvalid={false}
+                />
+              </div>
+            )}
 
             {/* Form Actions */}
             <FormActions

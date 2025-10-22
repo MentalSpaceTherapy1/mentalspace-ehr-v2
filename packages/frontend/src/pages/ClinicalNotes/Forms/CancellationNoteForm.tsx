@@ -15,6 +15,8 @@ import ReviewModal from '../../../components/AI/ReviewModal';
 import AppointmentPicker from '../../../components/ClinicalNotes/AppointmentPicker';
 import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
 import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
+import { useNoteValidation } from '../../../hooks/useNoteValidation';
+import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 
 const CANCELLED_BY_OPTIONS = [
   { value: 'Client', label: 'Client' },

@@ -992,3 +992,177 @@ export const deleteAppointment = async (req: Request, res: Response) => {
     });
   }
 };
+
+// Get or create appointment for clinical note
+// This endpoint supports the mandatory appointment requirement for clinical notes
+export const getOrCreateAppointment = async (req: Request, res: Response) => {
+  try {
+    const {
+      clientId,
+      appointmentDate,
+      startTime,
+      endTime,
+      appointmentType = 'THERAPY',
+      serviceLocation = 'IN_OFFICE',
+      clinicianId,
+    } = req.body;
+
+    const userId = (req as any).user?.userId;
+
+    // Validation
+    if (!clientId || !appointmentDate || !startTime || !endTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'clientId, appointmentDate, startTime, and endTime are required',
+      });
+    }
+
+    await assertCanAccessClient(req.user, { clientId });
+
+    const parsedDate = new Date(appointmentDate);
+    const finalClinicianId = clinicianId || userId;
+
+    // Check if appointment already exists
+    const existingAppointment = await prisma.appointment.findFirst({
+      where: {
+        clientId,
+        clinicianId: finalClinicianId,
+        appointmentDate: parsedDate,
+        startTime,
+        endTime,
+        status: {
+          notIn: ['CANCELLED', 'NO_SHOW'],
+        },
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    if (existingAppointment) {
+      return res.status(200).json({
+        success: true,
+        message: 'Existing appointment found',
+        data: existingAppointment,
+        created: false,
+      });
+    }
+
+    // Calculate duration
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    const duration = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+
+    if (duration <= 0 || duration > 480) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid time range. Duration must be between 1 and 480 minutes',
+      });
+    }
+
+    // Check for scheduling conflicts
+    const conflicts = await prisma.appointment.findMany({
+      where: {
+        clinicianId: finalClinicianId,
+        appointmentDate: parsedDate,
+        status: {
+          in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
+        },
+        OR: [
+          {
+            AND: [
+              { startTime: { lte: startTime } },
+              { endTime: { gt: startTime } },
+            ],
+          },
+          {
+            AND: [
+              { startTime: { lt: endTime } },
+              { endTime: { gte: endTime } },
+            ],
+          },
+        ],
+      },
+    });
+
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Scheduling conflict detected',
+        conflicts,
+      });
+    }
+
+    // Create new appointment
+    const newAppointment = await prisma.appointment.create({
+      data: {
+        clientId,
+        clinicianId: finalClinicianId,
+        appointmentDate: parsedDate,
+        startTime,
+        endTime,
+        duration,
+        appointmentType,
+        serviceLocation,
+        timezone: 'America/New_York',
+        status: 'SCHEDULED',
+        statusUpdatedBy: userId,
+        createdBy: userId,
+        lastModifiedBy: userId,
+        icdCodes: [],
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    auditLogger.info('Appointment created via getOrCreate', {
+      userId,
+      appointmentId: newAppointment.id,
+      clientId,
+      action: 'APPOINTMENT_GET_OR_CREATE',
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'New appointment created',
+      data: newAppointment,
+      created: true,
+    });
+  } catch (error) {
+    logControllerError('getOrCreateAppointment', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get or create appointment',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};

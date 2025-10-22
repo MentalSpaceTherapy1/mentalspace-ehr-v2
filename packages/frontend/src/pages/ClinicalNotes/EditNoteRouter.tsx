@@ -9,6 +9,7 @@ import ConsultationNoteForm from './Forms/ConsultationNoteForm';
 import ContactNoteForm from './Forms/ContactNoteForm';
 import TerminationNoteForm from './Forms/TerminationNoteForm';
 import MiscellaneousNoteForm from './Forms/MiscellaneousNoteForm';
+import RevisionBanner from '../../components/ClinicalNotes/RevisionBanner';
 
 export default function EditNoteRouter() {
   const { clientId, noteId } = useParams();
@@ -40,25 +41,60 @@ export default function EditNoteRouter() {
 
   // Route to correct form based on note type
   const noteType = noteData.noteType;
+  const showRevisionBanner = noteData.status === 'RETURNED_FOR_REVISION';
+
+  let FormComponent;
 
   switch (noteType) {
     case 'Intake Assessment':
-      return <IntakeAssessmentForm />;
+      FormComponent = IntakeAssessmentForm;
+      break;
     case 'Progress Note':
-      return <ProgressNoteForm />;
+      FormComponent = ProgressNoteForm;
+      break;
     case 'Treatment Plan':
-      return <TreatmentPlanForm />;
+      FormComponent = TreatmentPlanForm;
+      break;
     case 'Cancellation Note':
-      return <CancellationNoteForm />;
+      FormComponent = CancellationNoteForm;
+      break;
     case 'Consultation Note':
-      return <ConsultationNoteForm />;
+      FormComponent = ConsultationNoteForm;
+      break;
     case 'Contact Note':
-      return <ContactNoteForm />;
+      FormComponent = ContactNoteForm;
+      break;
     case 'Termination Note':
-      return <TerminationNoteForm />;
+      FormComponent = TerminationNoteForm;
+      break;
     case 'Miscellaneous Note':
-      return <MiscellaneousNoteForm />;
+      FormComponent = MiscellaneousNoteForm;
+      break;
     default:
       return <Navigate to={`/clients/${clientId}/notes/${noteId}`} />;
   }
+
+  return (
+    <div>
+      {showRevisionBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 p-4">
+          <div className="max-w-7xl mx-auto">
+            <RevisionBanner
+              noteId={noteData.id}
+              currentRevisionComments={noteData.currentRevisionComments || ''}
+              currentRevisionRequiredChanges={noteData.currentRevisionRequiredChanges || []}
+              revisionCount={noteData.revisionCount || 0}
+              revisionHistory={noteData.revisionHistory || []}
+              onResubmitSuccess={() => {
+                window.location.reload();
+              }}
+            />
+          </div>
+        </div>
+      )}
+      <div className={showRevisionBanner ? 'mt-64' : ''}>
+        <FormComponent />
+      </div>
+    </div>
+  );
 }

@@ -16,6 +16,8 @@ import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
 import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
 import SessionInputBox from '../../../components/AI/SessionInputBox';
 import ReviewModal from '../../../components/AI/ReviewModal';
+import { useNoteValidation } from '../../../hooks/useNoteValidation';
+import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 
 const PURPOSE_CATEGORY_OPTIONS = [
   { value: 'Administrative', label: 'Administrative' },

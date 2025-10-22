@@ -12,6 +12,7 @@ import {
   rescheduleAppointment,
   markNoShow,
   deleteAppointment,
+  getOrCreateAppointment,
 } from '../controllers/appointment.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireClientAccess } from '../middleware/clientAccess';
@@ -45,6 +46,13 @@ router.get(
 
 // Create new appointment
 router.post('/', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), createAppointment);
+
+// Get or create appointment (for clinical notes)
+router.post(
+  '/get-or-create',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
+  getOrCreateAppointment
+);
 
 // Create recurring appointments
 router.post(

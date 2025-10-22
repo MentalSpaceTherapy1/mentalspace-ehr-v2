@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import UnlockRequestModal from '../../components/UnlockRequestModal';
+import ReturnForRevisionModal from '../../components/ClinicalNotes/ReturnForRevisionModal';
 
 interface ClinicalNote {
   id: string;
@@ -24,7 +25,7 @@ interface ClinicalNote {
   billable: boolean;
   nextSessionDate?: string;
   dueDate: string;
-  status: 'DRAFT' | 'SIGNED' | 'PENDING_COSIGN' | 'COSIGNED' | 'LOCKED';
+  status: 'DRAFT' | 'SIGNED' | 'PENDING_COSIGN' | 'COSIGNED' | 'LOCKED' | 'RETURNED_FOR_REVISION';
   requiresCosign: boolean;
   completedOnTime: boolean;
   clinician: {
@@ -74,6 +75,7 @@ const STATUS_COLORS: Record<string, string> = {
   PENDING_COSIGN: 'bg-yellow-100 text-yellow-700',
   COSIGNED: 'bg-blue-100 text-blue-700',
   LOCKED: 'bg-purple-100 text-purple-700',
+  RETURNED_FOR_REVISION: 'bg-orange-100 text-orange-700',
 };
 
 export default function ClinicalNoteDetail() {
@@ -83,6 +85,7 @@ export default function ClinicalNoteDetail() {
   const [showSignModal, setShowSignModal] = useState(false);
   const [showCosignModal, setShowCosignModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
   const [signature, setSignature] = useState('');
 
 
@@ -158,6 +161,7 @@ export default function ClinicalNoteDetail() {
   const canEdit = note?.status === 'DRAFT';
   const canSign = note?.status === 'DRAFT';
   const canCosign = note?.status === 'SIGNED' && note?.requiresCosign;
+  const canReturn = note?.status === 'PENDING_COSIGN';
   const canDelete = note?.status === 'DRAFT';
 
   const handleSign = () => {
@@ -280,6 +284,14 @@ export default function ClinicalNoteDetail() {
                   className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
                 >
                   Co-Sign Note
+                </button>
+              )}
+              {canReturn && (
+                <button
+                  onClick={() => setShowReturnModal(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
+                >
+                  ↩ Return for Revision
                 </button>
               )}
               {canDelete && (
@@ -597,6 +609,23 @@ export default function ClinicalNoteDetail() {
           noteType={note.noteType}
           clientName={`${note.clinician.firstName} ${note.clinician.lastName}`}
           sessionDate={note.sessionDate}
+        />
+      )}
+
+      {/* Return for Revision Modal */}
+      {showReturnModal && note && (
+        <ReturnForRevisionModal
+          noteId={note.id}
+          noteType={note.noteType}
+          clientName={`${note.clinician.firstName} ${note.clinician.lastName}`}
+          clinicianName={`${note.clinician.title} ${note.clinician.firstName} ${note.clinician.lastName}`}
+          onClose={() => setShowReturnModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
+            queryClient.invalidateQueries({ queryKey: ['cosign-queue'] });
+            setShowReturnModal(false);
+            navigate('/supervision/cosign-queue');
+          }}
         />
       )}
     </div>
