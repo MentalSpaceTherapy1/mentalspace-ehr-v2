@@ -37,6 +37,9 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
     },
+    mutations: {
+      retry: 0, // Never retry mutations to prevent duplicate submissions
+    },
   },
 });
 
