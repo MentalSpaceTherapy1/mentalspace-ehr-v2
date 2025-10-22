@@ -1,5 +1,6 @@
 import logger, { logControllerError } from '../utils/logger';
 import nodemailer from 'nodemailer';
+import { sendEmailViaSES, sendBulkEmailViaSES } from './email.service.ses';
 
 // Email configuration (use environment variables in production)
 const EMAIL_CONFIG = {
@@ -12,7 +13,10 @@ const EMAIL_CONFIG = {
   },
 };
 
-// Create reusable transporter
+// Determine which email provider to use
+const USE_SES = process.env.USE_SES === 'true' || process.env.NODE_ENV === 'production';
+
+// Create reusable transporter (for SMTP fallback)
 let transporter: nodemailer.Transporter | null = null;
 
 function getTransporter() {
@@ -33,9 +37,15 @@ interface EmailOptions {
 }
 
 /**
- * Send email using nodemailer
+ * Send email - automatically uses SES in production, SMTP in development
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
+  // Use SES in production or if explicitly enabled
+  if (USE_SES) {
+    return sendEmailViaSES(options);
+  }
+
+  // Fallback to SMTP (development)
   try {
     // In development, log emails instead of sending
     if (process.env.NODE_ENV === 'development' || !process.env.SMTP_USER) {
@@ -73,6 +83,12 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
  * Send email to multiple recipients
  */
 export async function sendBulkEmail(recipients: string[], subject: string, html: string): Promise<number> {
+  // Use SES bulk email in production
+  if (USE_SES) {
+    return sendBulkEmailViaSES(recipients, subject, html);
+  }
+
+  // SMTP fallback
   let successCount = 0;
 
   for (const recipient of recipients) {
