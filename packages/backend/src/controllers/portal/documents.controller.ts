@@ -147,7 +147,13 @@ export const getFormDetails = async (req: Request, res: Response) => {
 export const submitForm = async (req: Request, res: Response) => {
   try {
     const { formId } = req.params;
-    const { assignmentId, responses, signature } = req.body;
+    const {
+      assignmentId,
+      responses,
+      signatureData,
+      signedByName,
+      consentAgreed
+    } = req.body;
     const clientId = (req as any).portalAccount?.clientId;
 
     if (!clientId) {
@@ -173,7 +179,38 @@ export const submitForm = async (req: Request, res: Response) => {
       });
     }
 
-    // Create submission
+    // Validate e-signature if provided
+    if (signatureData || signedByName) {
+      // If any signature field is provided, all required fields must be present
+      if (!signatureData) {
+        return res.status(400).json({
+          success: false,
+          message: 'Signature image is required when submitting with e-signature',
+        });
+      }
+
+      if (!signedByName || signedByName.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Signed name is required when submitting with e-signature',
+        });
+      }
+
+      if (!consentAgreed) {
+        return res.status(400).json({
+          success: false,
+          message: 'You must agree to the e-signature consent to submit',
+        });
+      }
+    }
+
+    // Get client's IP address for audit trail
+    const ipAddress = req.ip ||
+                     req.headers['x-forwarded-for'] as string ||
+                     req.socket.remoteAddress ||
+                     'unknown';
+
+    // Create submission with e-signature data
     const submission = await prisma.intakeFormSubmission.create({
       data: {
         formId,
@@ -181,6 +218,15 @@ export const submitForm = async (req: Request, res: Response) => {
         responsesJson: responses,
         status: 'Submitted',
         submittedDate: new Date(),
+        // E-signature fields
+        signatureData: signatureData || null,
+        signedByName: signedByName ? signedByName.trim() : null,
+        signedDate: signatureData ? new Date() : null,
+        signatureIpAddress: signatureData ? ipAddress : null,
+        consentAgreed: consentAgreed || false,
+        // Audit fields
+        ipAddress: ipAddress,
+        userAgent: req.get('user-agent') || 'unknown',
       },
     });
 
@@ -190,25 +236,15 @@ export const submitForm = async (req: Request, res: Response) => {
       data: {
         status: 'COMPLETED',
         completedAt: new Date(),
+        submissionId: submission.id,
       },
     });
 
-    // Create signature record if provided
-    if (signature) {
-      await prisma.documentSignature.create({
-        data: {
-          documentId: submission.id,
-          signedBy: clientId,
-          signatureImageS3: signature, // In real implementation, upload to S3 first
-          signedAt: new Date(),
-          ipAddress: req.ip || '',
-          userAgent: req.get('user-agent') || '',
-          signatureType: 'ELECTRONIC',
-        },
-      });
-    }
-
-    logger.info(`Client ${clientId} submitted form ${formId}`);
+    logger.info(`Client ${clientId} submitted form ${formId}`, {
+      submissionId: submission.id,
+      hasSignature: !!signatureData,
+      signedByName: signedByName || 'N/A',
+    });
 
     return res.status(200).json({
       success: true,
@@ -220,6 +256,7 @@ export const submitForm = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to submit form',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };

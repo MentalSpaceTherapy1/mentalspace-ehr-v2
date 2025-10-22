@@ -1364,6 +1364,14 @@ model IntakeFormSubmission {
   reviewedBy     String?
   reviewerNotes  String?
 
+  // E-Signature fields
+  signatureData      String?   // Base64 encoded signature image (canvas drawing)
+  signedByName       String?   // Full name entered by client
+  signedDate         DateTime?
+  signatureIpAddress String?   // IP address at time of signature
+  consentAgreed      Boolean   @default(false) // Client agreed to e-signature consent
+
+
   ipAddress  String?
   userAgent  String?
 
