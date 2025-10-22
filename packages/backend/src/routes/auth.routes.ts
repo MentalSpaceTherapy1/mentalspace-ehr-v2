@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import authController from '../controllers/auth.controller';
+import userController from '../controllers/user.controller';
 import { validateBody } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
 import {
@@ -7,7 +8,7 @@ import {
   loginSchema,
   changePasswordSchema,
 } from '../utils/validation';
-import { authRateLimiter, accountCreationRateLimiter } from '../middleware/rateLimiter';
+import { authRateLimiter, accountCreationRateLimiter, passwordResetRateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -59,5 +60,27 @@ router.post('/logout', authenticate, authController.logout);
  * @access  Public
  */
 router.post('/refresh', authController.refresh);
+
+/**
+ * @route   POST /api/v1/auth/forgot-password
+ * @desc    Request password reset email
+ * @access  Public
+ */
+router.post(
+  '/forgot-password',
+  passwordResetRateLimiter,
+  userController.forgotPassword
+);
+
+/**
+ * @route   POST /api/v1/auth/reset-password
+ * @desc    Reset password using token
+ * @access  Public
+ */
+router.post(
+  '/reset-password',
+  passwordResetRateLimiter,
+  userController.resetPasswordWithToken
+);
 
 export default router;

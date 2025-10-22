@@ -132,6 +132,96 @@ export class UserController {
       data: stats,
     });
   });
+
+  /**
+   * Invite user (create and send email)
+   * POST /api/v1/users/invite
+   */
+  inviteUser = asyncHandler(async (req: Request, res: Response) => {
+    const createdBy = req.user!.userId;
+    const result = await userService.createUserWithInvitation(req.body, createdBy);
+
+    res.status(201).json({
+      success: true,
+      message: 'User invited successfully',
+      data: result,
+    });
+  });
+
+  /**
+   * Resend user invitation
+   * POST /api/v1/users/:id/resend-invitation
+   */
+  resendInvitation = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.params.id;
+    const resendBy = req.user!.userId;
+    const result = await userService.resendInvitation(userId, resendBy);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  });
+
+  /**
+   * Request password reset (forgot password)
+   * POST /api/v1/users/forgot-password
+   */
+  forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+    const { email } = req.body;
+    const result = await userService.requestPasswordReset(email);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  });
+
+  /**
+   * Reset password with token
+   * POST /api/v1/users/reset-password-with-token
+   */
+  resetPasswordWithToken = asyncHandler(async (req: Request, res: Response) => {
+    const { token, newPassword } = req.body;
+    const result = await userService.resetPasswordWithToken(token, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  });
+
+  /**
+   * Change own password
+   * POST /api/v1/users/change-password
+   */
+  changeOwnPassword = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const { oldPassword, newPassword } = req.body;
+    const result = await userService.changePassword(userId, oldPassword, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  });
+
+  /**
+   * Force password change (first login)
+   * POST /api/v1/users/force-password-change
+   */
+  forcePasswordChange = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const { newPassword } = req.body;
+    const result = await userService.forcePasswordChange(userId, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  });
 }
 
 export default new UserController();

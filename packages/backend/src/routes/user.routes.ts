@@ -104,4 +104,47 @@ router.post(
   userController.resetPassword
 );
 
+/**
+ * @route   POST /api/v1/users/invite
+ * @desc    Create user and send invitation email
+ * @access  Admin only
+ */
+router.post(
+  '/invite',
+  authorize('ADMINISTRATOR'),
+  validateBody(createUserSchema),
+  userController.inviteUser
+);
+
+/**
+ * @route   POST /api/v1/users/:id/resend-invitation
+ * @desc    Resend invitation email to user
+ * @access  Admin only
+ */
+router.post(
+  '/:id/resend-invitation',
+  authorize('ADMINISTRATOR'),
+  userController.resendInvitation
+);
+
+/**
+ * @route   POST /api/v1/users/change-password
+ * @desc    Change own password
+ * @access  Authenticated user
+ */
+router.post(
+  '/change-password',
+  userController.changeOwnPassword
+);
+
+/**
+ * @route   POST /api/v1/users/force-password-change
+ * @desc    Force password change on first login
+ * @access  Authenticated user with mustChangePassword flag
+ */
+router.post(
+  '/force-password-change',
+  userController.forcePasswordChange
+);
+
 export default router;

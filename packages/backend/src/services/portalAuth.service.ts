@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import config from '../config';
 import logger from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
+import { sendEmail, EmailTemplates } from './email.service';
+import { generateResetToken, generateVerificationToken, getVerificationExpiry } from '../utils/passwordGenerator';
 
 interface RegisterPortalAccountData {
   clientId: string;
@@ -73,13 +75,24 @@ export async function registerPortalAccount(data: RegisterPortalAccountData) {
       email: data.email,
     });
 
-    // TODO: Send verification email
+    // Send verification email
+    const verificationLink = `${process.env.PORTAL_URL || process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/portal/verify?token=${verificationToken}`;
+    const emailSent = await sendEmail({
+      to: data.email,
+      ...EmailTemplates.clientVerification(client.firstName, verificationLink),
+    });
+
+    logger.info('Verification email sent', {
+      portalAccountId: portalAccount.id,
+      emailSent,
+    });
 
     return {
       id: portalAccount.id,
       email: portalAccount.email,
       status: portalAccount.accountStatus,
-      verificationToken, // Return for testing; remove in production
+      verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined, // Only for dev
+      emailSent,
     };
   } catch (error: any) {
     logger.error('Failed to register portal account', {
@@ -350,4 +363,183 @@ export async function resetPassword(token: string, newPassword: string) {
     });
     throw error;
   }
+}
+
+/**
+ * Invite client to portal (staff-initiated)
+ */
+export async function inviteClientToPortal(clientId: string, invitedBy: string) {
+  try {
+    // Check if client exists
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      include: {
+        primaryTherapist: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!client) {
+      throw new Error('Client not found');
+    }
+
+    if (!client.email) {
+      throw new Error('Client does not have an email address on file');
+    }
+
+    // Check if portal account already exists
+    const existingAccount = await prisma.portalAccount.findUnique({
+      where: { clientId },
+    });
+
+    if (existingAccount) {
+      throw new Error('Client already has a portal account');
+    }
+
+    // Generate verification token
+    const verificationToken = generateVerificationToken();
+
+    // Create portal account (no password yet - will be set when they complete registration)
+    const portalAccount = await prisma.portalAccount.create({
+      data: {
+        clientId,
+        email: client.email.toLowerCase(),
+        password: await bcrypt.hash(generateResetToken(), 10), // Temporary password, must be changed
+        verificationToken,
+        accountStatus: 'PENDING_VERIFICATION',
+        portalAccessGranted: true,
+      },
+    });
+
+    // Get clinician name for email
+    const clinicianName = client.primaryTherapist
+      ? `${client.primaryTherapist.firstName} ${client.primaryTherapist.lastName}`
+      : 'your provider';
+
+    // Send invitation email
+    const invitationLink = `${process.env.PORTAL_URL || process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/portal/register?token=${verificationToken}&email=${encodeURIComponent(client.email)}`;
+    const emailSent = await sendEmail({
+      to: client.email,
+      ...EmailTemplates.clientInvitation(client.firstName, invitationLink, clinicianName),
+    });
+
+    logger.info('Client portal invitation sent', {
+      clientId,
+      portalAccountId: portalAccount.id,
+      invitedBy,
+      emailSent,
+    });
+
+    return {
+      success: true,
+      portalAccountId: portalAccount.id,
+      email: client.email,
+      invitationSent: emailSent,
+      verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined,
+    };
+  } catch (error: any) {
+    logger.error('Failed to invite client to portal', {
+      error: error.message,
+      clientId,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Resend portal invitation/verification email
+ */
+export async function resendPortalInvitation(clientId: string) {
+  try {
+    const portalAccount = await prisma.portalAccount.findUnique({
+      where: { clientId },
+      include: {
+        client: {
+          select: {
+            firstName: true,
+            email: true,
+            primaryTherapist: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!portalAccount) {
+      throw new Error('Portal account not found');
+    }
+
+    if (portalAccount.accountStatus === 'ACTIVE') {
+      throw new Error('Account is already active');
+    }
+
+    // Generate new verification token
+    const verificationToken = generateVerificationToken();
+
+    await prisma.portalAccount.update({
+      where: { id: portalAccount.id },
+      data: { verificationToken },
+    });
+
+    // Get clinician name for email
+    const clinicianName = portalAccount.client.primaryTherapist
+      ? `${portalAccount.client.primaryTherapist.firstName} ${portalAccount.client.primaryTherapist.lastName}`
+      : 'your provider';
+
+    // Resend verification email
+    const invitationLink = `${process.env.PORTAL_URL || process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/portal/register?token=${verificationToken}&email=${encodeURIComponent(portalAccount.email)}`;
+    const emailSent = await sendEmail({
+      to: portalAccount.email,
+      ...EmailTemplates.clientInvitation(portalAccount.client.firstName, invitationLink, clinicianName),
+    });
+
+    logger.info('Portal invitation resent', {
+      clientId,
+      portalAccountId: portalAccount.id,
+      emailSent,
+    });
+
+    return {
+      success: true,
+      message: 'Invitation resent successfully',
+      emailSent,
+      verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined,
+    };
+  } catch (error: any) {
+    logger.error('Failed to resend portal invitation', {
+      error: error.message,
+      clientId,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get portal account status for a client
+ */
+export async function getPortalAccountStatus(clientId: string) {
+  const portalAccount = await prisma.portalAccount.findUnique({
+    where: { clientId },
+    select: {
+      id: true,
+      email: true,
+      accountStatus: true,
+      portalAccessGranted: true,
+      lastLoginDate: true,
+      createdAt: true,
+    },
+  });
+
+  return {
+    hasPortalAccount: !!portalAccount,
+    portalAccount,
+  };
 }

@@ -89,30 +89,68 @@ export async function sendBulkEmail(recipients: string[], subject: string, html:
  */
 export const EmailTemplates = {
   /**
-   * Welcome email for new users
+   * Welcome email for new staff users (with temporary password)
    */
   welcome: (firstName: string, email: string, tempPassword: string) => ({
-    subject: 'Welcome to MentalSpace EHR',
+    subject: 'Welcome to MentalSpace EHR - Account Created',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #4f46e5;">Welcome to MentalSpace EHR!</h2>
         <p>Hi ${firstName},</p>
-        <p>Your account has been created. Here are your login credentials:</p>
+        <p>Your MentalSpace EHR staff account has been created. Here are your login credentials:</p>
         <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
           <strong>Email:</strong> ${email}<br>
-          <strong>Temporary Password:</strong> ${tempPassword}
+          <strong>Temporary Password:</strong> <code style="background-color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${tempPassword}</code>
         </div>
-        <p><strong>⚠️ Please change your password after your first login.</strong></p>
-        <p>Login at: <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login">MentalSpace EHR</a></p>
+        <p><strong style="color: #dc2626;">⚠️ IMPORTANT:</strong> You will be required to change this password when you first log in.</p>
+        <div style="margin: 24px 0;">
+          <a href="${process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/login" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Login to MentalSpace EHR
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">If you have any questions, please contact your system administrator.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+        <p style="color: #9ca3af; font-size: 12px;">This email contains confidential information. If you received this in error, please delete it immediately.</p>
       </div>
     `,
   }),
 
   /**
-   * Password reset email
+   * Staff invitation email (cleaner version without showing password in subject)
+   */
+  staffInvitation: (firstName: string, email: string, tempPassword: string, inviterName: string) => ({
+    subject: 'You\'re Invited to Join MentalSpace EHR',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #4f46e5;">You've Been Invited to MentalSpace EHR</h2>
+        <p>Hi ${firstName},</p>
+        <p>${inviterName} has invited you to join the MentalSpace EHR team.</p>
+        <p>Your account has been created with the following credentials:</p>
+        <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <strong>Email:</strong> ${email}<br>
+          <strong>Temporary Password:</strong> <code style="background-color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 16px; font-family: monospace;">${tempPassword}</code>
+        </div>
+        <p><strong style="color: #dc2626;">⚠️ Security Notice:</strong></p>
+        <ul style="color: #6b7280; line-height: 1.6;">
+          <li>You must change this temporary password on your first login</li>
+          <li>Choose a strong password (minimum 8 characters)</li>
+          <li>Never share your password with anyone</li>
+        </ul>
+        <div style="margin: 24px 0;">
+          <a href="${process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/login" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Get Started
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">Questions? Contact ${inviterName} or your system administrator.</p>
+      </div>
+    `,
+  }),
+
+  /**
+   * Password reset email (for both staff and clients)
    */
   passwordReset: (firstName: string, resetLink: string) => ({
-    subject: 'Password Reset Request',
+    subject: 'Password Reset Request - MentalSpace',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #4f46e5;">Password Reset Request</h2>
@@ -123,8 +161,95 @@ export const EmailTemplates = {
             Reset Password
           </a>
         </div>
-        <p style="color: #6b7280; font-size: 14px;">This link will expire in 1 hour.</p>
-        <p style="color: #6b7280; font-size: 14px;">If you didn't request this, please ignore this email.</p>
+        <p style="color: #6b7280; font-size: 14px;">Or copy and paste this link:</p>
+        <p style="color: #6b7280; font-size: 12px; word-break: break-all;">${resetLink}</p>
+        <p style="color: #dc2626; font-size: 14px; margin-top: 24px;"><strong>⚠️ This link will expire in 1 hour.</strong></p>
+        <p style="color: #6b7280; font-size: 14px;">If you didn't request this, please ignore this email and your password will remain unchanged.</p>
+      </div>
+    `,
+  }),
+
+  /**
+   * Client portal invitation email
+   */
+  clientInvitation: (firstName: string, invitationLink: string, clinicianName: string) => ({
+    subject: 'You\'re Invited to MentalSpace Client Portal',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #4f46e5;">Welcome to MentalSpace Client Portal</h2>
+        <p>Hi ${firstName},</p>
+        <p>Your therapist, ${clinicianName}, has invited you to access our secure client portal.</p>
+        <p><strong>What you can do in the portal:</strong></p>
+        <ul style="color: #374151; line-height: 1.8;">
+          <li>View and manage your appointments</li>
+          <li>Complete intake forms and assessments</li>
+          <li>Communicate securely with your provider</li>
+          <li>Access session summaries and resources</li>
+          <li>Track your therapeutic goals and progress</li>
+          <li>Access crisis resources 24/7</li>
+        </ul>
+        <div style="margin: 32px 0;">
+          <a href="${invitationLink}" style="background-color: #4f46e5; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-size: 16px;">
+            Set Up Your Portal Account
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">Or copy and paste this link:</p>
+        <p style="color: #6b7280; font-size: 12px; word-break: break-all;">${invitationLink}</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">This invitation link will expire in 7 days.</p>
+        <p style="color: #6b7280; font-size: 14px;">If you have any questions, please contact your therapist.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+        <p style="color: #9ca3af; font-size: 12px;">This email contains confidential health information protected by HIPAA. If you received this in error, please delete it immediately and notify the sender.</p>
+      </div>
+    `,
+  }),
+
+  /**
+   * Client email verification email
+   */
+  clientVerification: (firstName: string, verificationLink: string) => ({
+    subject: 'Verify Your MentalSpace Portal Account',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #4f46e5;">Verify Your Email Address</h2>
+        <p>Hi ${firstName},</p>
+        <p>Thank you for creating your MentalSpace Portal account. Please verify your email address to complete your registration:</p>
+        <div style="margin: 32px 0;">
+          <a href="${verificationLink}" style="background-color: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-size: 16px;">
+            Verify Email Address
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">Or copy and paste this link:</p>
+        <p style="color: #6b7280; font-size: 12px; word-break: break-all;">${verificationLink}</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">Once verified, you'll have full access to your client portal.</p>
+        <p style="color: #6b7280; font-size: 14px;">If you didn't create this account, please ignore this email.</p>
+      </div>
+    `,
+  }),
+
+  /**
+   * Client portal account activated email
+   */
+  clientAccountActivated: (firstName: string, portalUrl: string) => ({
+    subject: 'Your MentalSpace Portal Account is Active',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #10b981;">Your Account is Active!</h2>
+        <p>Hi ${firstName},</p>
+        <p>Great news! Your MentalSpace Client Portal account has been verified and is now active.</p>
+        <p>You can now:</p>
+        <ul style="color: #374151; line-height: 1.8;">
+          <li>Access your appointments and schedule</li>
+          <li>Complete assigned forms and assessments</li>
+          <li>Message your therapist securely</li>
+          <li>View session notes and treatment plans</li>
+          <li>Track your progress and goals</li>
+        </ul>
+        <div style="margin: 32px 0;">
+          <a href="${portalUrl}" style="background-color: #4f46e5; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-size: 16px;">
+            Go to Portal
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">We're here to support you on your therapeutic journey.</p>
       </div>
     `,
   }),

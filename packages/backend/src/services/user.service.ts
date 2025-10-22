@@ -2,6 +2,14 @@ import prisma from './database';
 import bcrypt from 'bcryptjs';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../utils/errors';
 import { UserRole } from '@mentalspace/database';
+import { sendEmail, EmailTemplates } from './email.service';
+import {
+  generateTemporaryPassword,
+  generateResetToken,
+  getPasswordResetExpiry,
+  isTokenExpired,
+} from '../utils/passwordGenerator';
+import logger from '../utils/logger';
 
 export interface CreateUserDto {
   email: string;
@@ -363,6 +371,269 @@ class UserService {
       inactive,
       byRole,
     };
+  }
+
+  /**
+   * Create user and send invitation email with temporary password
+   */
+  async createUserWithInvitation(data: CreateUserDto, createdBy: string) {
+    // Generate temporary password
+    const tempPassword = generateTemporaryPassword();
+
+    // Create user with must change password flag
+    const user = await this.createUser({
+      ...data,
+      password: tempPassword,
+    }, createdBy);
+
+    // Get inviter information
+    const inviter = await prisma.user.findUnique({
+      where: { id: createdBy },
+      select: { firstName: true, lastName: true },
+    });
+
+    const inviterName = inviter ? `${inviter.firstName} ${inviter.lastName}` : 'Administrator';
+
+    // Update user to mark invitation sent and mustChangePassword
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        mustChangePassword: true,
+        invitationSentAt: new Date(),
+        invitationToken: generateResetToken(),
+      },
+    });
+
+    // Send welcome email with temporary password
+    const emailSent = await sendEmail({
+      to: user.email,
+      ...EmailTemplates.staffInvitation(user.firstName, user.email, tempPassword, inviterName),
+    });
+
+    logger.info('Staff invitation sent', {
+      userId: user.id,
+      email: user.email,
+      emailSent,
+    });
+
+    return {
+      user,
+      tempPassword: emailSent ? undefined : tempPassword, // Only return if email failed
+      invitationSent: emailSent,
+    };
+  }
+
+  /**
+   * Resend invitation email to user
+   */
+  async resendInvitation(userId: string, resendBy: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Generate new temporary password
+    const tempPassword = generateTemporaryPassword();
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    // Get resender information
+    const resender = await prisma.user.findUnique({
+      where: { id: resendBy },
+      select: { firstName: true, lastName: true },
+    });
+
+    const resenderName = resender ? `${resender.firstName} ${resender.lastName}` : 'Administrator';
+
+    // Update user with new password and reset token
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: true,
+        invitationSentAt: new Date(),
+        invitationToken: generateResetToken(),
+      },
+    });
+
+    // Send invitation email
+    const emailSent = await sendEmail({
+      to: user.email,
+      ...EmailTemplates.staffInvitation(user.firstName, user.email, tempPassword, resenderName),
+    });
+
+    logger.info('Staff invitation resent', {
+      userId: user.id,
+      email: user.email,
+      emailSent,
+    });
+
+    return {
+      message: 'Invitation resent successfully',
+      invitationSent: emailSent,
+      tempPassword: emailSent ? undefined : tempPassword, // Only return if email failed
+    };
+  }
+
+  /**
+   * Request password reset for staff user (forgot password)
+   */
+  async requestPasswordReset(email: string) {
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      logger.warn('Password reset requested for non-existent user', { email });
+      return { message: 'If that email exists, a password reset link has been sent' };
+    }
+
+    // Generate reset token
+    const resetToken = generateResetToken();
+    const resetExpiry = getPasswordResetExpiry(1); // 1 hour
+
+    // Save token to database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetToken: resetToken,
+        passwordResetExpiry: resetExpiry,
+      },
+    });
+
+    // Send password reset email
+    const resetLink = `${process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/reset-password?token=${resetToken}`;
+    const emailSent = await sendEmail({
+      to: user.email,
+      ...EmailTemplates.passwordReset(user.firstName, resetLink),
+    });
+
+    logger.info('Password reset requested', {
+      userId: user.id,
+      email: user.email,
+      emailSent,
+    });
+
+    return {
+      message: 'If that email exists, a password reset link has been sent',
+      resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined, // Only for dev
+    };
+  }
+
+  /**
+   * Reset password using reset token
+   */
+  async resetPasswordWithToken(token: string, newPassword: string) {
+    const user = await prisma.user.findUnique({
+      where: { passwordResetToken: token },
+    });
+
+    if (!user) {
+      throw new BadRequestError('Invalid or expired reset token');
+    }
+
+    // Check if token expired
+    if (isTokenExpired(user.passwordResetExpiry)) {
+      throw new BadRequestError('Reset token has expired');
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password and clear reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpiry: null,
+        mustChangePassword: false, // Reset this flag if it was set
+      },
+    });
+
+    logger.info('Password reset completed', {
+      userId: user.id,
+      email: user.email,
+    });
+
+    return { message: 'Password reset successfully' };
+  }
+
+  /**
+   * Change password (authenticated user changing their own password)
+   */
+  async changePassword(userId: string, oldPassword: string, newPassword: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Verify old password
+    const isValidPassword = await bcrypt.compare(oldPassword, user.password);
+    if (!isValidPassword) {
+      throw new BadRequestError('Current password is incorrect');
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password and clear mustChangePassword flag
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: false,
+      },
+    });
+
+    logger.info('Password changed', {
+      userId: user.id,
+      email: user.email,
+    });
+
+    return { message: 'Password changed successfully' };
+  }
+
+  /**
+   * Force password change (for first login)
+   */
+  async forcePasswordChange(userId: string, newPassword: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    if (!user.mustChangePassword) {
+      throw new BadRequestError('Password change not required');
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password and clear mustChangePassword flag
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: false,
+      },
+    });
+
+    logger.info('Forced password change completed', {
+      userId: user.id,
+      email: user.email,
+    });
+
+    return { message: 'Password set successfully' };
   }
 }
 

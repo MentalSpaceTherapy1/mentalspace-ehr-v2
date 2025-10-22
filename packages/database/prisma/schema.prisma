@@ -99,6 +99,15 @@ model User {
   mfaEnabled    Boolean   @default(false)
   lastLoginDate DateTime?
 
+  // Password Management
+  mustChangePassword     Boolean   @default(false)
+  passwordResetToken     String?   @unique
+  passwordResetExpiry    DateTime?
+  emailVerified          Boolean   @default(true) // Default true for staff (manual creation)
+  emailVerificationToken String?   @unique
+  invitationSentAt       DateTime?
+  invitationToken        String?   @unique
+
   // Signature
   digitalSignature String? // base64
   signatureDate    DateTime?
