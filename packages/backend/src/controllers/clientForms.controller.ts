@@ -348,4 +348,242 @@ export const viewFormSubmission = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Transfer form submission data to client demographics
+ * POST /api/v1/clients/:clientId/forms/:assignmentId/transfer-to-demographics
+ */
+export const transferToDemographics = async (req: Request, res: Response) => {
+  try {
+    const { clientId, assignmentId } = req.params;
+    const { selectedFields, mappedData } = req.body;
+
+    // Verify user has access to this client
+    await assertCanAccessClient(req.user!.userId, clientId, req.user!.organizationId);
+
+    // Get the form submission
+    const assignment = await prisma.formAssignment.findFirst({
+      where: {
+        id: assignmentId,
+        clientId,
+      },
+      include: {
+        form: true,
+        submission: true,
+      },
+    });
+
+    if (!assignment || !assignment.submission) {
+      return res.status(404).json({
+        success: false,
+        message: 'Form submission not found',
+      });
+    }
+
+    // Verify this is a Client Information Form
+    if (assignment.form.formName !== 'Client Information Form') {
+      return res.status(400).json({
+        success: false,
+        message: 'This form cannot be transferred to demographics',
+      });
+    }
+
+    // Get current client data for audit trail
+    const currentClient = await prisma.client.findUnique({
+      where: { id: clientId },
+    });
+
+    if (!currentClient) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found',
+      });
+    }
+
+    // Create audit record of what's being changed
+    const changedFields: Record<string, { old: any; new: any }> = {};
+    Object.keys(mappedData).forEach(field => {
+      const oldValue = (currentClient as any)[field];
+      const newValue = mappedData[field];
+      if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+        changedFields[field] = { old: oldValue, new: newValue };
+      }
+    });
+
+    // Update client demographics
+    const updatedClient = await prisma.client.update({
+      where: { id: clientId },
+      data: {
+        ...mappedData,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Log the transfer
+    logger.info(`Demographics transferred from form submission ${assignment.submission.id} to client ${clientId}`, {
+      selectedFields,
+      changedFields: Object.keys(changedFields),
+      transferredBy: req.user!.userId,
+    });
+
+    // Create activity log (if you have activity logging)
+    // await prisma.activityLog.create({
+    //   data: {
+    //     userId: req.user!.userId,
+    //     action: 'TRANSFER_FORM_TO_DEMOGRAPHICS',
+    //     entityType: 'Client',
+    //     entityId: clientId,
+    //     details: { formSubmissionId: assignment.submission.id, changedFields },
+    //   },
+    // });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Client information transferred successfully to demographics',
+      data: {
+        updatedClient,
+        changedFields,
+        transferredFields: selectedFields,
+      },
+    });
+  } catch (error) {
+    logger.error('Error transferring to demographics:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to transfer data to demographics',
+    });
+  }
+};
+
+/**
+ * Transfer form submission data to clinical intake assessment
+ * POST /api/v1/clients/:clientId/forms/:assignmentId/transfer-to-intake
+ */
+export const transferToIntake = async (req: Request, res: Response) => {
+  try {
+    const { clientId, assignmentId } = req.params;
+    const { selectedFields, mappedData, intakeAssessmentId } = req.body;
+
+    // Verify user has access to this client
+    await assertCanAccessClient(req.user!.userId, clientId, req.user!.organizationId);
+
+    // Get the form submission
+    const assignment = await prisma.formAssignment.findFirst({
+      where: {
+        id: assignmentId,
+        clientId,
+      },
+      include: {
+        form: true,
+        submission: true,
+      },
+    });
+
+    if (!assignment || !assignment.submission) {
+      return res.status(404).json({
+        success: false,
+        message: 'Form submission not found',
+      });
+    }
+
+    // Verify this is a Client History Form
+    if (assignment.form.formName !== 'Client History Form') {
+      return res.status(400).json({
+        success: false,
+        message: 'This form cannot be transferred to intake assessment',
+      });
+    }
+
+    let intake;
+
+    // If intakeAssessmentId provided, update existing intake
+    if (intakeAssessmentId) {
+      const existingIntake = await prisma.clientAssessmentForm.findFirst({
+        where: {
+          id: intakeAssessmentId,
+          clientId,
+        },
+      });
+
+      if (!existingIntake) {
+        return res.status(404).json({
+          success: false,
+          message: 'Intake assessment not found',
+        });
+      }
+
+      // Get current intake data for audit trail
+      const changedFields: Record<string, { old: any; new: any }> = {};
+      Object.keys(mappedData).forEach(field => {
+        const oldValue = (existingIntake as any)[field];
+        const newValue = mappedData[field];
+        if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+          changedFields[field] = { old: oldValue, new: newValue };
+        }
+      });
+
+      // Update existing intake
+      intake = await prisma.clientAssessmentForm.update({
+        where: { id: intakeAssessmentId },
+        data: {
+          ...mappedData,
+          updatedAt: new Date(),
+        },
+      });
+
+      logger.info(`Intake assessment ${intakeAssessmentId} updated from form submission ${assignment.submission.id}`, {
+        selectedFields,
+        changedFields: Object.keys(changedFields),
+        transferredBy: req.user!.userId,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Client history transferred successfully to existing intake assessment',
+        data: {
+          intake,
+          changedFields,
+          transferredFields: selectedFields,
+          isNewIntake: false,
+        },
+      });
+    } else {
+      // Create new intake assessment
+      intake = await prisma.clientAssessmentForm.create({
+        data: {
+          clientId,
+          assessmentType: 'Initial',
+          status: 'Draft',
+          ...mappedData,
+          assessmentDate: new Date(),
+          assessedBy: req.user!.userId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      logger.info(`New intake assessment created from form submission ${assignment.submission.id}`, {
+        intakeId: intake.id,
+        selectedFields,
+        transferredBy: req.user!.userId,
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Client history transferred successfully to new intake assessment',
+        data: {
+          intake,
+          transferredFields: selectedFields,
+          isNewIntake: true,
+        },
+      });
+    }
+  } catch (error) {
+    logger.error('Error transferring to intake:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to transfer data to intake assessment',
+    });
+  }
+};
+
 

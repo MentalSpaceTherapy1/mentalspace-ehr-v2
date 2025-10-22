@@ -24,5 +24,9 @@ router.delete('/:clientId/forms/:assignmentId', clientFormsController.removeForm
 router.post('/:clientId/forms/:assignmentId/remind', clientFormsController.sendFormReminder);
 router.get('/:clientId/forms/:assignmentId/submission', clientFormsController.viewFormSubmission);
 
+// Data transfer routes
+router.post('/:clientId/forms/:assignmentId/transfer-to-demographics', clientFormsController.transferToDemographics);
+router.post('/:clientId/forms/:assignmentId/transfer-to-intake', clientFormsController.transferToIntake);
+
 export default router;
 

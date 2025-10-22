@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { viewFormSubmission } from '../../lib/portalApi';
 import { SignatureDisplay } from '../Forms/SignatureDisplay';
+import { getTransferConfig, isTransferableForm } from '../../config/formFieldMappings';
+import TransferDataButton from '../Forms/TransferDataButton';
+import api from '../../lib/api';
 
 interface FormSubmissionViewerProps {
   clientId: string;
@@ -65,6 +68,8 @@ export const FormSubmissionViewer: React.FC<FormSubmissionViewerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [isReviewing, setIsReviewing] = useState(false);
+  const [currentClientData, setCurrentClientData] = useState<any>(null);
+  const [loadingClientData, setLoadingClientData] = useState(false);
 
   useEffect(() => {
     loadSubmission();
