@@ -362,6 +362,181 @@ export const EmailTemplates = {
       </html>
     `,
   }),
+
+  /**
+   * Staff invitation email (for new staff members)
+   */
+  staffInvitation: (firstName: string, email: string, tempPassword: string, inviterName: string) => ({
+    subject: 'You\'re Invited to Join MentalSpace EHR',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">You've Been Invited to MentalSpace EHR</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">${inviterName} has invited you to join the MentalSpace EHR team.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Your account has been created with the following credentials:</p>
+              <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #667eea;">
+                <p style="margin: 0 0 12px 0; color: #374151;"><strong>Email:</strong> ${email}</p>
+                <p style="margin: 0; color: #374151;"><strong>Temporary Password:</strong> <code style="background-color: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 16px;">${tempPassword}</code></p>
+              </div>
+              <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+                <p style="margin: 0 0 8px 0; color: #92400e; font-size: 14px;"><strong>Security Notice:</strong></p>
+                <ul style="margin: 0; color: #92400e; font-size: 14px; padding-left: 20px;">
+                  <li>You must change this temporary password on your first login</li>
+                  <li>Choose a strong password (minimum 8 characters)</li>
+                  <li>Never share your password with anyone</li>
+                </ul>
+              </div>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/login" style="display: inline-block; background-color: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Get Started</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">Questions? Contact ${inviterName} or your system administrator.</p>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
+   * Client portal invitation email
+   */
+  clientInvitation: (firstName: string, invitationLink: string, clinicianName: string) => ({
+    subject: 'You\'re Invited to MentalSpace Client Portal',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to MentalSpace Client Portal</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Your therapist, ${clinicianName}, has invited you to access our secure client portal.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-top: 24px;"><strong>What you can do in the portal:</strong></p>
+              <ul style="color: #374151; line-height: 1.8; font-size: 15px;">
+                <li>View and manage your appointments</li>
+                <li>Complete intake forms and assessments</li>
+                <li>Communicate securely with your provider</li>
+                <li>Access session summaries and resources</li>
+                <li>Track your therapeutic goals and progress</li>
+                <li>Access crisis resources 24/7</li>
+              </ul>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${invitationLink}" style="display: inline-block; background-color: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Set Up Your Portal Account</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">Or copy and paste this link:</p>
+              <p style="color: #6b7280; font-size: 12px; word-break: break-all; background-color: #f9fafb; padding: 12px; border-radius: 4px;">${invitationLink}</p>
+              <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+                <p style="margin: 0; color: #92400e; font-size: 14px;">This invitation link will expire in 7 days.</p>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">If you have any questions, please contact your therapist.</p>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 11px; margin: 0;">This email contains confidential health information protected by HIPAA. If you received this in error, please delete it immediately and notify the sender.</p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
+   * Client email verification email
+   */
+  clientVerification: (firstName: string, verificationLink: string) => ({
+    subject: 'Verify Your MentalSpace Portal Account',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #3b82f6; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Verify Your Email Address</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Thank you for creating your MentalSpace Portal account. Please verify your email address to complete your registration:</p>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${verificationLink}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Verify Email Address</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">Or copy and paste this link:</p>
+              <p style="color: #6b7280; font-size: 12px; word-break: break-all; background-color: #f9fafb; padding: 12px; border-radius: 4px;">${verificationLink}</p>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 24px;">Once verified, you'll have full access to your client portal.</p>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">If you didn't create this account, please ignore this email.</p>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
+   * Client portal account activated email
+   */
+  clientAccountActivated: (firstName: string, portalUrl: string) => ({
+    subject: 'Your MentalSpace Portal Account is Active',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #10b981; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Your Account is Active!</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Great news! Your MentalSpace Client Portal account has been verified and is now active.</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-top: 24px;"><strong>You can now:</strong></p>
+              <ul style="color: #374151; line-height: 1.8; font-size: 15px;">
+                <li>Access your appointments and schedule</li>
+                <li>Complete assigned forms and assessments</li>
+                <li>Message your therapist securely</li>
+                <li>View session notes and treatment plans</li>
+                <li>Track your progress and goals</li>
+              </ul>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${portalUrl}" style="display: inline-block; background-color: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Go to Portal</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">We're here to support you on your therapeutic journey.</p>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
 };
 
 /**
