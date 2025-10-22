@@ -40,6 +40,11 @@ export default function PortalFormViewer() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // E-signature state
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [signedByName, setSignedByName] = useState('');
+  const [consentAgreed, setConsentAgreed] = useState(false);
+
   useEffect(() => {
     fetchFormData();
   }, [formId, assignmentId]);

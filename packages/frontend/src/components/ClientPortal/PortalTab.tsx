@@ -601,6 +601,8 @@ export default function PortalTab({ clientId }: PortalTabProps) {
             </div>
           </div>
         </div>
+      </div>
+
       {/* Form Submission Viewer Modal */}
       {viewingSubmission && (
         <FormSubmissionViewer
