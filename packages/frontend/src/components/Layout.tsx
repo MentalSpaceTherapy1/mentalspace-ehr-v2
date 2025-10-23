@@ -168,6 +168,12 @@ export default function Layout({ children }: LayoutProps) {
                 </div>
               </div>
               <button
+                onClick={() => navigate('/profile')}
+                className="w-full px-4 py-2 mb-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-bold text-sm flex items-center justify-center"
+              >
+                <span className="mr-2">👤</span> My Profile
+              </button>
+              <button
                 onClick={handleLogout}
                 className="w-full px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:from-red-600 hover:to-pink-600 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-bold text-sm flex items-center justify-center"
               >
