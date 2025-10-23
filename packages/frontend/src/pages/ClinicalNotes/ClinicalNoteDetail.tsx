@@ -5,6 +5,8 @@ import api from '../../lib/api';
 import UnlockRequestModal from '../../components/UnlockRequestModal';
 import ReturnForRevisionModal from '../../components/ClinicalNotes/ReturnForRevisionModal';
 import { SignatureModal } from '../../components/ClinicalNotes/SignatureModal';
+import { AmendmentModal } from '../../components/ClinicalNotes/AmendmentModal';
+import { AmendmentHistoryTab } from '../../components/ClinicalNotes/AmendmentHistoryTab';
 
 interface ClinicalNote {
   id: string;
@@ -87,6 +89,8 @@ export default function ClinicalNoteDetail() {
   const [showCosignModal, setShowCosignModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showAmendModal, setShowAmendModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'amendments'>('details');
 
 
   const { data: noteData, isLoading } = useQuery({
@@ -161,6 +165,7 @@ export default function ClinicalNoteDetail() {
   const canCosign = note?.status === 'SIGNED' && note?.requiresCosign;
   const canReturn = note?.status === 'PENDING_COSIGN';
   const canDelete = note?.status === 'DRAFT';
+  const canAmend = note?.status === 'SIGNED' || note?.status === 'COSIGNED' || note?.status === 'PENDING_COSIGN';
 
   const handleSign = async (authData: { pin?: string; password?: string }) => {
     await signMutation.mutateAsync(authData);
@@ -284,6 +289,14 @@ export default function ClinicalNoteDetail() {
                   Co-Sign Note
                 </button>
               )}
+              {canAmend && (
+                <button
+                  onClick={() => setShowAmendModal(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
+                >
+                  ✏️ Amend Note
+                </button>
+              )}
               {canReturn && (
                 <button
                   onClick={() => setShowReturnModal(true)}
@@ -304,8 +317,37 @@ export default function ClinicalNoteDetail() {
           </div>
         </div>
 
-        {/* Clinician Info */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+        {/* Tabs */}
+        <div className="bg-white rounded-2xl shadow-xl mb-6 overflow-hidden">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`flex-1 px-6 py-4 font-semibold text-center transition-colors ${
+                activeTab === 'details'
+                  ? 'bg-purple-50 text-purple-700 border-b-4 border-purple-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              📋 Note Details
+            </button>
+            <button
+              onClick={() => setActiveTab('amendments')}
+              className={`flex-1 px-6 py-4 font-semibold text-center transition-colors ${
+                activeTab === 'amendments'
+                  ? 'bg-purple-50 text-purple-700 border-b-4 border-purple-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              ✏️ Amendment History
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'details' ? (
+          <>
+            {/* Clinician Info */}
+            <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="text-sm font-semibold text-gray-600 mb-2">Clinician</h3>
@@ -502,7 +544,30 @@ export default function ClinicalNoteDetail() {
             </div>
           </div>
         </div>
+          </>
+        ) : (
+          /* Amendment History Tab */
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <AmendmentHistoryTab noteId={note.id} />
+          </div>
+        )}
       </div>
+
+      {/* Amendment Modal - Phase 1.5: Amendment History System */}
+      {showAmendModal && note && (
+        <AmendmentModal
+          open={showAmendModal}
+          onClose={() => setShowAmendModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
+            setShowAmendModal(false);
+            setActiveTab('amendments');
+          }}
+          noteId={note.id}
+          noteType={note.noteType}
+          currentNoteData={note}
+        />
+      )}
 
       {/* Sign Modal - Phase 1.4: Electronic Signatures */}
       {showSignModal && note && (
