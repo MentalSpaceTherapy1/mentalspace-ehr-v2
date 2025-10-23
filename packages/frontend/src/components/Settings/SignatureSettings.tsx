@@ -42,7 +42,7 @@ export const SignatureSettings: React.FC = () => {
   const fetchSignatureStatus = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/v1/users/signature-status');
+      const response = await axios.get('/users/signature-status');
       setHasPin(response.data.data.hasPinConfigured);
       setHasPassword(response.data.data.hasPasswordConfigured);
     } catch (err) {
@@ -68,7 +68,7 @@ export const SignatureSettings: React.FC = () => {
     }
 
     try {
-      await axios.post('/api/v1/users/signature-pin', {
+      await axios.post('/users/signature-pin', {
         pin: newPin,
         currentPassword,
       });
@@ -104,7 +104,7 @@ export const SignatureSettings: React.FC = () => {
     }
 
     try {
-      await axios.post('/api/v1/users/signature-password', {
+      await axios.post('/users/signature-password', {
         signaturePassword: newSignaturePassword,
         currentPassword,
       });
