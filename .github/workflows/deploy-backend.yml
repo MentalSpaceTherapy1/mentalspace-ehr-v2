@@ -1,6 +1,24 @@
-name: Deploy Backend to Production
+name: Deploy Backend to Production [DISABLED - BROKEN]
+
+# ⚠️ WARNING: THIS WORKFLOW IS DISABLED DUE TO SILENT FAILURES
+#
+# This workflow was completing in 20-60 seconds when it should take 10-15 minutes,
+# indicating it was failing early without proper error reporting. This caused
+# multiple "successful" runs that never actually deployed anything.
+#
+# DO NOT RE-ENABLE UNTIL THE ROOT CAUSE IS FIXED AND TESTED
+#
+# For deployments, use: ops/MANUAL-DEPLOYMENT-GUIDE.md
+#
+# Investigation needed:
+# - Why workflows complete so fast
+# - Why no error messages are shown
+# - Why no task definitions are created
+# - Whether AWS credentials work
+# - Whether Docker builds succeed
 
 on:
+  # Disabled - only manual trigger for debugging
   workflow_dispatch:
     inputs:
       run_smoke_tests:
@@ -8,14 +26,14 @@ on:
         required: false
         default: 'true'
         type: boolean
-  push:
-    branches:
-      - master
-    paths:
-      - 'packages/backend/**'
-      - 'packages/database/**'
-      - 'packages/shared/**'
-      - '.github/workflows/deploy-backend.yml'
+  # push:  # DISABLED - was triggering broken deployments
+  #   branches:
+  #     - master
+  #   paths:
+  #     - 'packages/backend/**'
+  #     - 'packages/database/**'
+  #     - 'packages/shared/**'
+  #     - '.github/workflows/deploy-backend.yml'
 
 env:
   AWS_REGION: us-east-1
