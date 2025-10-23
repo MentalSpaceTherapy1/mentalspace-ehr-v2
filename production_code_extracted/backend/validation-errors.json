@@ -1,0 +1,68 @@
+{
+  "timestamp": "2025-10-14T03:04:37.437Z",
+  "type": "CLIENT_CREATION",
+  "errors": [
+    {
+      "path": "addressStreet1",
+      "message": "Required",
+      "code": "invalid_type"
+    },
+    {
+      "path": "addressCity",
+      "message": "Required",
+      "code": "invalid_type"
+    },
+    {
+      "path": "addressZipCode",
+      "message": "Required",
+      "code": "invalid_type"
+    }
+  ],
+  "requestBody": {
+    "firstName": "John",
+    "middleName": "",
+    "lastName": "Doe",
+    "suffix": "",
+    "preferredName": "",
+    "pronouns": "",
+    "dateOfBirth": "2000-01-01T00:00:00.000Z",
+    "primaryPhone": "4049447698",
+    "primaryPhoneType": "Mobile",
+    "secondaryPhone": "",
+    "secondaryPhoneType": "Home",
+    "email": "lelejoseli@gmail.com",
+    "preferredContactMethod": "Email",
+    "okayToLeaveMessage": true,
+    "addressStreet1": "",
+    "addressStreet2": "",
+    "addressCity": "",
+    "addressState": "GA",
+    "addressZipCode": "",
+    "addressCounty": "",
+    "gender": "PREFER_NOT_TO_SAY",
+    "genderIdentity": "",
+    "sexualOrientation": "",
+    "religion": "",
+    "maritalStatus": "SINGLE",
+    "race": [],
+    "ethnicity": "",
+    "primaryLanguage": "English",
+    "otherLanguages": [],
+    "needsInterpreter": false,
+    "interpreterLanguage": "",
+    "primaryTherapistId": "6d3f63fb-bc06-48a3-b487-566f555739ea",
+    "secondaryTherapist1Id": "",
+    "secondaryTherapist2Id": "",
+    "secondaryTherapist3Id": "",
+    "psychiatristId": "",
+    "caseManagerId": "",
+    "education": "",
+    "employmentStatus": "",
+    "occupation": "",
+    "livingArrangement": "",
+    "housingStatus": "",
+    "guardianName": "",
+    "guardianPhone": "",
+    "guardianRelationship": ""
+  }
+}

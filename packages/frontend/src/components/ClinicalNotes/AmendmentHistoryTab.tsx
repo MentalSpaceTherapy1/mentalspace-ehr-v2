@@ -11,6 +11,8 @@ import {
   CardContent,
   Grid,
   Divider,
+} from '@mui/material';
+import {
   Timeline,
   TimelineItem,
   TimelineSeparator,
@@ -18,7 +20,7 @@ import {
   TimelineContent,
   TimelineDot,
   TimelineOppositeContent,
-} from '@mui/material';
+} from '@mui/lab';
 import {
   Edit as EditIcon,
   CheckCircle as CheckCircleIcon,

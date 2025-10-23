@@ -1,0 +1,6 @@
+ALTER TABLE intake_form_submissions
+ADD COLUMN IF NOT EXISTS "signatureData" TEXT,
+ADD COLUMN IF NOT EXISTS "signedByName" TEXT,
+ADD COLUMN IF NOT EXISTS "signedDate" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "signatureIpAddress" TEXT,
+ADD COLUMN IF NOT EXISTS "consentAgreed" BOOLEAN NOT NULL DEFAULT false;

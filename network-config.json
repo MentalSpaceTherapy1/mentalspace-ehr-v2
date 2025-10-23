@@ -1,0 +1,10 @@
+{
+    "subnets": [
+        "subnet-0bfd11207446ec5b6",
+        "subnet-00fdc193d4baf7f32"
+    ],
+    "securityGroups": [
+        "sg-050c3f7df2116918b"
+    ],
+    "assignPublicIp": "ENABLED"
+}

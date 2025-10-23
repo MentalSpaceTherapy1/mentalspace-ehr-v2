@@ -60,6 +60,10 @@ COPY --from=builder /app/tsconfig.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 
+# Copy entrypoint script and make it executable
+COPY packages/backend/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Create non-root user for security
 RUN groupadd --gid 1001 nodejs && \
     useradd --uid 1001 --gid nodejs --shell /bin/bash --create-home nodejs && \
@@ -77,5 +81,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
 # Set working directory to backend
 WORKDIR /app/packages/backend
 
-# Start application with ts-node (transpile-only skips type checking)
-CMD ["npx", "ts-node", "--transpile-only", "src/index.ts"]
+# Use entrypoint script that runs migrations then starts the app
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -1,0 +1,2290 @@
+[
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\__tests__\\_templates\\api\\endpoints\\all-endpoints.test.ts",
+    "size": 12634,
+    "lines": 365,
+    "hash": "e2ffd0e90fb63aa387415bcf7dde37d9",
+    "lastModified": "2025-10-21T15:50:01.612Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\__tests__\\_templates\\database\\schema-validation.test.ts",
+    "size": 10335,
+    "lines": 354,
+    "hash": "86f11d155ea6f378f1e4f22508fd1afb",
+    "lastModified": "2025-10-21T15:51:34.517Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\__tests__\\_templates\\integration\\workflows\\patient-workflow.test.ts",
+    "size": 10724,
+    "lines": 334,
+    "hash": "3ad629d6d87def7fb7c04847a213050e",
+    "lastModified": "2025-10-21T15:49:10.193Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\__tests__\\_templates\\security\\phi-protection.test.ts",
+    "size": 11141,
+    "lines": 313,
+    "hash": "dfb08b8356b5c8f9ceab856e49d8fe0a",
+    "lastModified": "2025-10-21T15:52:28.421Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\__tests__\\_templates\\unit\\controllers\\client.controller.test.ts",
+    "size": 14334,
+    "lines": 437,
+    "hash": "6283b0516ad72047ab3439b9bd6f8e13",
+    "lastModified": "2025-10-21T15:48:20.173Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\__tests__\\helpers\\apiHelpers.ts",
+    "size": 6575,
+    "lines": 250,
+    "hash": "b292e0debe474a69c01eeb1e1c407c82",
+    "lastModified": "2025-10-21T15:46:55.672Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\__tests__\\helpers\\testDatabase.ts",
+    "size": 3500,
+    "lines": 155,
+    "hash": "f835bfc45bcb02191dc7532837dfaebe",
+    "lastModified": "2025-10-21T15:46:21.256Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\__tests__\\setup.ts",
+    "size": 884,
+    "lines": 39,
+    "hash": "7e5d85979b114518760ccf0550dc41f7",
+    "lastModified": "2025-10-20T04:19:27.408Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\app.ts",
+    "size": 1555,
+    "lines": 70,
+    "hash": "7a832e97e7f708bc1bdec5de9d1a9539",
+    "lastModified": "2025-10-20T20:09:29.370Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\config\\advancedmd.config.ts",
+    "size": 5574,
+    "lines": 206,
+    "hash": "495a400772b2ec12d505ef9c316d67f2",
+    "lastModified": "2025-10-20T04:19:22.484Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\config\\index.ts",
+    "size": 5904,
+    "lines": 192,
+    "hash": "63a885fc311f37257d1c3f17b02004db",
+    "lastModified": "2025-10-20T05:08:51.081Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\config\\secrets.ts",
+    "size": 7761,
+    "lines": 251,
+    "hash": "db47f95db53ebbc770c253c72aba7ec3",
+    "lastModified": "2025-10-20T04:19:22.542Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\admin\\seedForms.controller.ts",
+    "size": 7495,
+    "lines": 211,
+    "hash": "ac7a77c65d27c67f492da3b3b8bdd5c0",
+    "lastModified": "2025-10-20T04:19:22.582Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\appointment.controller.ts",
+    "size": 28889,
+    "lines": 995,
+    "hash": "9eba622b39b60764aa310c304cdbb23f",
+    "lastModified": "2025-10-21T19:30:56.653Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\auth.controller.ts",
+    "size": 2556,
+    "lines": 105,
+    "hash": "f4e4043b438fc25672ce6f8404319ec5",
+    "lastModified": "2025-10-20T04:19:22.653Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\billing.controller.ts",
+    "size": 20138,
+    "lines": 686,
+    "hash": "e140423701e405af0a6827e0560a7298",
+    "lastModified": "2025-10-20T04:19:22.681Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\client.controller.ts",
+    "size": 9700,
+    "lines": 376,
+    "hash": "458a7cd36e753d92898777b91dc17e6c",
+    "lastModified": "2025-10-20T04:29:50.521Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\clientAssessments.controller.ts",
+    "size": 8428,
+    "lines": 316,
+    "hash": "367520c744ab273fd0b39849ed1daef2",
+    "lastModified": "2025-10-20T04:19:22.749Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\clientDocuments.controller.ts",
+    "size": 5756,
+    "lines": 213,
+    "hash": "8d5bcb124a197b1b4b511727c30bc23b",
+    "lastModified": "2025-10-20T04:19:22.783Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\clientForms.controller.ts",
+    "size": 8843,
+    "lines": 352,
+    "hash": "aee1250dab71e8526827120f3cd46f7e",
+    "lastModified": "2025-10-20T04:19:22.817Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\clientPortal.controller.ts",
+    "size": 8564,
+    "lines": 311,
+    "hash": "763042a51c17fd1738e30ca7e44338a5",
+    "lastModified": "2025-10-20T04:19:22.853Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\clinicalNote.controller.ts",
+    "size": 35455,
+    "lines": 1292,
+    "hash": "a78e6c85c3b1d3bf07fc68a41d368830",
+    "lastModified": "2025-10-21T13:37:40.673Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\clinicianSchedule.controller.ts",
+    "size": 12255,
+    "lines": 403,
+    "hash": "9a96900d8e36f30b78fd1ea4d323a12a",
+    "lastModified": "2025-10-20T04:19:22.916Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\diagnosis.controller.ts",
+    "size": 5443,
+    "lines": 233,
+    "hash": "f47406858f681ec013b078d37fb59921",
+    "lastModified": "2025-10-20T04:19:22.944Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\emergencyContact.controller.ts",
+    "size": 6149,
+    "lines": 234,
+    "hash": "71cb70599b83d1a9f52219080a1f7ddb",
+    "lastModified": "2025-10-20T04:19:22.976Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\guardian.controller.ts",
+    "size": 5786,
+    "lines": 232,
+    "hash": "cadec1721a37d0a927eb1da6a27b0d28",
+    "lastModified": "2025-10-20T04:19:23.012Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\insurance.controller.ts",
+    "size": 9794,
+    "lines": 331,
+    "hash": "ae9a8b43337dc8d5035dfba9dc540d09",
+    "lastModified": "2025-10-20T04:47:42.757Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal.controller.ts",
+    "size": 9245,
+    "lines": 366,
+    "hash": "a3033a0b1bcaf6ef3c67b2f5b2376158",
+    "lastModified": "2025-10-20T04:19:23.413Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portalAdmin.controller.ts",
+    "size": 12797,
+    "lines": 434,
+    "hash": "a8e33f7634369e6e2e88e755b88db9bc",
+    "lastModified": "2025-10-20T04:19:23.445Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portalAuth.controller.ts",
+    "size": 4035,
+    "lines": 146,
+    "hash": "dcafe7bac9bbe5559f79c90ef701822b",
+    "lastModified": "2025-10-20T04:19:23.479Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\appointmentRequest.controller.ts",
+    "size": 12182,
+    "lines": 424,
+    "hash": "adb42a239a1ec4dcad5edc536b2b9cf3",
+    "lastModified": "2025-10-20T04:19:23.073Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\assessments.controller.ts",
+    "size": 24562,
+    "lines": 579,
+    "hash": "4236542a6120ff5a6a24af7937ac98b5",
+    "lastModified": "2025-10-20T04:19:23.108Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\auth.controller.ts",
+    "size": 8359,
+    "lines": 296,
+    "hash": "a5bb6ea995fa060821e5229643ec6e02",
+    "lastModified": "2025-10-20T04:19:23.141Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\billing.controller.ts",
+    "size": 6563,
+    "lines": 230,
+    "hash": "e6edc495a2334cdafd5a0f30bfc8f4d3",
+    "lastModified": "2025-10-20T04:19:23.176Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\dashboard.controller.ts",
+    "size": 11075,
+    "lines": 401,
+    "hash": "3e8b8bdaf5ac429e5df8c7a5b220e604",
+    "lastModified": "2025-10-20T04:19:23.209Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\documents.controller.ts",
+    "size": 10624,
+    "lines": 416,
+    "hash": "f1dac0aaec5c0de5109315f746974a5a",
+    "lastModified": "2025-10-20T04:19:23.249Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\messages.controller.ts",
+    "size": 9079,
+    "lines": 349,
+    "hash": "df7d736b5b6fdc59986d6e084e7f6509",
+    "lastModified": "2025-10-20T04:19:23.282Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\moodTracking.controller.ts",
+    "size": 7223,
+    "lines": 260,
+    "hash": "5d6a9da8a383b0e4b1042859ed332f3e",
+    "lastModified": "2025-10-20T04:19:23.311Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\phase1.controller.ts",
+    "size": 14549,
+    "lines": 502,
+    "hash": "a0a14d752203e6a5576b947f9d52f8ca",
+    "lastModified": "2025-10-20T04:19:23.319Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\profile.controller.ts",
+    "size": 8821,
+    "lines": 333,
+    "hash": "cd3357b50ed82b2f639e67e2a44fe703",
+    "lastModified": "2025-10-20T04:19:23.355Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\referral.controller.ts",
+    "size": 6859,
+    "lines": 274,
+    "hash": "29cf539283162a1c8d3c11693739c7a6",
+    "lastModified": "2025-10-20T04:19:23.390Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\therapist.controller.ts",
+    "size": 4615,
+    "lines": 163,
+    "hash": "7c5a12da62fbe6556c47e3adf7be8bae",
+    "lastModified": "2025-10-20T04:19:23.397Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\portal\\therapistProfile.controller.ts",
+    "size": 7163,
+    "lines": 286,
+    "hash": "2f63275cf71f145f15005b29e3604a11",
+    "lastModified": "2025-10-20T04:19:23.405Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\productivity.controller.ts",
+    "size": 14935,
+    "lines": 561,
+    "hash": "dc527506be54e3014214d7a1167e9da8",
+    "lastModified": "2025-10-20T04:19:23.512Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\reminder.controller.ts",
+    "size": 3936,
+    "lines": 123,
+    "hash": "c80c8ce3c48d7983031c2278b10fb7b5",
+    "lastModified": "2025-10-20T04:19:23.548Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\reports.controller.ts",
+    "size": 19298,
+    "lines": 614,
+    "hash": "46bc4709d55b0590de8c8c31d92584a7",
+    "lastModified": "2025-10-20T04:19:23.582Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\serviceCode.controller.ts",
+    "size": 5062,
+    "lines": 221,
+    "hash": "66a8663a6ec3ec8c6d63e23ed6d90f2a",
+    "lastModified": "2025-10-20T04:19:23.616Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\telehealth.controller.ts",
+    "size": 5662,
+    "lines": 199,
+    "hash": "06f7a8c1342f806b069f9f2a06283d19",
+    "lastModified": "2025-10-20T04:19:23.654Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\telehealthConsent.controller.ts",
+    "size": 5147,
+    "lines": 178,
+    "hash": "ab9a1873f1f447d1cf86c3740b6c54bf",
+    "lastModified": "2025-10-20T04:19:23.689Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\user.controller.ts",
+    "size": 3606,
+    "lines": 138,
+    "hash": "97875505113213b84691d68bbda87a7e",
+    "lastModified": "2025-10-20T04:19:23.713Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\controllers\\waitlist.controller.ts",
+    "size": 9562,
+    "lines": 310,
+    "hash": "9d87a4fe2fe3ca644247ce98cf8adc54",
+    "lastModified": "2025-10-20T04:19:23.754Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\debug-env.ts",
+    "size": 768,
+    "lines": 13,
+    "hash": "f086c38f5c9010aa0e185e6c07feef07",
+    "lastModified": "2025-10-20T04:19:23.786Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\index.ts",
+    "size": 2572,
+    "lines": 89,
+    "hash": "baaedd1a33488693feed3ab9dbe79000",
+    "lastModified": "2025-10-20T19:25:14.492Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\jobs\\productivityJobs.ts",
+    "size": 10226,
+    "lines": 310,
+    "hash": "32fd0e824424140aa755386435c92d34",
+    "lastModified": "2025-10-20T04:19:23.872Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\lib\\prisma.ts",
+    "size": 1577,
+    "lines": 62,
+    "hash": "42f94a41b0e3403ae7b2e8c0b4572fe0",
+    "lastModified": "2025-10-20T04:19:23.914Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\auditLogger.ts",
+    "size": 6174,
+    "lines": 237,
+    "hash": "1d7a168cf357062db8b6ef876d65512c",
+    "lastModified": "2025-10-20T04:19:23.942Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\auditPHI.ts",
+    "size": 3838,
+    "lines": 132,
+    "hash": "13592dda3cb0699843667bf7f6f67f8c",
+    "lastModified": "2025-10-20T04:30:49.507Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\auth.ts",
+    "size": 2913,
+    "lines": 106,
+    "hash": "9a874f67b6c28118904b7d8144eef952",
+    "lastModified": "2025-10-20T04:19:23.972Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\clientAccess.ts",
+    "size": 865,
+    "lines": 33,
+    "hash": "34512e8a781ed6b98fd0a3abeabd0021",
+    "lastModified": "2025-10-20T04:19:24.001Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\csrf.ts",
+    "size": 1604,
+    "lines": 56,
+    "hash": "9a72e9c16cb728d69813260b18c6af16",
+    "lastModified": "2025-10-20T04:32:12.836Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\errorHandler.ts",
+    "size": 6755,
+    "lines": 254,
+    "hash": "1786d364939d8f99716adf04f1ceec70",
+    "lastModified": "2025-10-20T04:19:24.030Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\portalAuth.ts",
+    "size": 4272,
+    "lines": 167,
+    "hash": "0874ee3005d81f2105db8f8c5390d0ac",
+    "lastModified": "2025-10-20T04:19:24.036Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\rateLimiter.ts",
+    "size": 3200,
+    "lines": 111,
+    "hash": "168c5007f71a8db4f7ea24a1a98e374d",
+    "lastModified": "2025-10-20T04:25:19.085Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\requestLogger.ts",
+    "size": 1134,
+    "lines": 39,
+    "hash": "4e0466b46fca140a06c00cab8698487a",
+    "lastModified": "2025-10-20T04:19:24.073Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\sessionTimeout.ts",
+    "size": 2567,
+    "lines": 87,
+    "hash": "3393f2e1c5cef79141e917ed34c3d13a",
+    "lastModified": "2025-10-20T04:19:24.101Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\middleware\\validate.ts",
+    "size": 2716,
+    "lines": 103,
+    "hash": "1ed8d1fb502972de36563893c51a8af5",
+    "lastModified": "2025-10-20T04:19:24.108Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\admin.routes.ts",
+    "size": 489,
+    "lines": 19,
+    "hash": "14b1863c5d87350a410be89022bbb151",
+    "lastModified": "2025-10-20T04:19:24.144Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\ai.routes.ts",
+    "size": 12529,
+    "lines": 416,
+    "hash": "64ba3f747e4081dd25feac0af20d4f97",
+    "lastModified": "2025-10-20T04:19:24.171Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\appointment.routes.ts",
+    "size": 2356,
+    "lines": 78,
+    "hash": "9cd0241c666d1e8911d5b1937ae58e0e",
+    "lastModified": "2025-10-20T04:19:24.207Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\auth.routes.ts",
+    "size": 1673,
+    "lines": 64,
+    "hash": "a7d6e3061a1f930e91a839a5a2b2c466",
+    "lastModified": "2025-10-20T04:26:10.279Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\billing.routes.ts",
+    "size": 1563,
+    "lines": 51,
+    "hash": "4b44ac236265d61a587c6d6fbd67c810",
+    "lastModified": "2025-10-20T04:19:24.246Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\client.routes.ts",
+    "size": 957,
+    "lines": 38,
+    "hash": "8ff332c54eb2b730df01037bc822f48c",
+    "lastModified": "2025-10-20T04:19:24.273Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\clientAssessments.routes.ts",
+    "size": 1326,
+    "lines": 28,
+    "hash": "5ba4e3a42e24d27204693d1cb8e14e0d",
+    "lastModified": "2025-10-20T04:19:24.305Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\clientDocuments.routes.ts",
+    "size": 1074,
+    "lines": 28,
+    "hash": "b5ab1ae4435eb0fe840e14d4bbca9ff1",
+    "lastModified": "2025-10-20T04:19:24.329Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\clientForms.routes.ts",
+    "size": 1153,
+    "lines": 29,
+    "hash": "8040b2e14167fdc6b84d0ceae7f41b08",
+    "lastModified": "2025-10-20T04:19:24.361Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\clientPortal.routes.ts",
+    "size": 1364,
+    "lines": 51,
+    "hash": "7a63ba2546ea88ab25643f40fcf07b42",
+    "lastModified": "2025-10-20T04:19:24.388Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\clinicalNote.routes.ts",
+    "size": 2055,
+    "lines": 73,
+    "hash": "f23e12216356fa4ae04a90f341970c9b",
+    "lastModified": "2025-10-20T04:19:24.418Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\clinicianSchedule.routes.ts",
+    "size": 1267,
+    "lines": 44,
+    "hash": "e1858b5ea3d260600bf43a493c5a3206",
+    "lastModified": "2025-10-20T04:19:24.445Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\diagnosis.routes.ts",
+    "size": 2016,
+    "lines": 91,
+    "hash": "84c6663afd33ce77f91782cbbd5f29e6",
+    "lastModified": "2025-10-20T04:19:24.471Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\emergencyContact.routes.ts",
+    "size": 654,
+    "lines": 24,
+    "hash": "5da26b2330fcd39a7708f2ed02f4ff5e",
+    "lastModified": "2025-10-20T04:19:24.494Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\guardian.routes.ts",
+    "size": 569,
+    "lines": 24,
+    "hash": "f754044fa4f0a859241109d2954d8aea",
+    "lastModified": "2025-10-20T04:19:24.522Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\health.routes.ts",
+    "size": 3116,
+    "lines": 114,
+    "hash": "d7e9e57709d55eb69d8bc47a0fe39794",
+    "lastModified": "2025-10-20T04:19:24.545Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\index.ts",
+    "size": 4035,
+    "lines": 102,
+    "hash": "a3f7738c49cabcfd56603c042cfbb287",
+    "lastModified": "2025-10-21T17:16:10.510Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\insurance.routes.ts",
+    "size": 643,
+    "lines": 26,
+    "hash": "29eacd84039d0a3695c94f33a52bfbd8",
+    "lastModified": "2025-10-20T04:19:24.600Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\portal.routes.ts",
+    "size": 8004,
+    "lines": 125,
+    "hash": "90d1c6d57ef9c31bd414c051ef46bdb6",
+    "lastModified": "2025-10-20T04:19:24.628Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\portalAdmin.routes.ts",
+    "size": 2415,
+    "lines": 101,
+    "hash": "ba5a67fa49a32c514d476a7c4cc75990",
+    "lastModified": "2025-10-20T04:19:24.656Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\portalAuth.routes.ts",
+    "size": 1825,
+    "lines": 39,
+    "hash": "25b53c2adf366db610398b01c3370017",
+    "lastModified": "2025-10-20T04:26:25.714Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\practiceSettings.routes.ts",
+    "size": 7968,
+    "lines": 296,
+    "hash": "a09f0581c0ee05bd4b28d2b821a1c016",
+    "lastModified": "2025-10-20T04:19:24.708Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\productivity.routes.ts",
+    "size": 2227,
+    "lines": 79,
+    "hash": "d3cb9a9637aa76237e26b9733c002761",
+    "lastModified": "2025-10-20T04:19:24.739Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\reminder.routes.ts",
+    "size": 638,
+    "lines": 25,
+    "hash": "f2a6106997296c1c8dbe73c8c72feb34",
+    "lastModified": "2025-10-20T04:19:24.764Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\reports.routes.ts",
+    "size": 1305,
+    "lines": 42,
+    "hash": "34c3903eec348a1245f506cad48eb212",
+    "lastModified": "2025-10-20T04:19:24.797Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\serviceCode.routes.ts",
+    "size": 839,
+    "lines": 25,
+    "hash": "e0e950f0c8a213537e4bef31eb2cfaec",
+    "lastModified": "2025-10-20T04:19:24.822Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\supervision.routes.ts",
+    "size": 20980,
+    "lines": 741,
+    "hash": "d45d13f8591f899943042e89a511d325",
+    "lastModified": "2025-10-20T04:19:24.845Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\telehealth.routes.ts",
+    "size": 910,
+    "lines": 36,
+    "hash": "3b73dd8f62431dfb1144beda630950bb",
+    "lastModified": "2025-10-20T04:19:24.878Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\telehealthConsent.routes.ts",
+    "size": 857,
+    "lines": 26,
+    "hash": "bc589f0d5208aedfd7ce4832b5edff6a",
+    "lastModified": "2025-10-20T04:19:24.903Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\unlockRequest.routes.ts",
+    "size": 13644,
+    "lines": 484,
+    "hash": "00a29d9d1152481090b59fe558f87afc",
+    "lastModified": "2025-10-20T04:19:24.929Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\user.routes.ts",
+    "size": 2128,
+    "lines": 108,
+    "hash": "0c907243050bf941555ee99b13fba0e9",
+    "lastModified": "2025-10-20T04:19:24.967Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\version.routes.ts",
+    "size": 534,
+    "lines": 20,
+    "hash": "bc37bb8640ca7eb0f707a92b766194d7",
+    "lastModified": "2025-10-21T17:15:44.938Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\routes\\waitlist.routes.ts",
+    "size": 963,
+    "lines": 40,
+    "hash": "3c393f37f19a7bc6449be1e3b569f8ad",
+    "lastModified": "2025-10-20T04:19:25.000Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\scripts\\seed-service-codes.ts",
+    "size": 6960,
+    "lines": 253,
+    "hash": "cc527cb6a89a85cea0ce8c9c21e8674a",
+    "lastModified": "2025-10-20T04:19:25.024Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\accessControl.service.ts",
+    "size": 3610,
+    "lines": 144,
+    "hash": "6bfebd8a1f4e029b525eb969d92e906f",
+    "lastModified": "2025-10-20T04:19:25.054Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\advancedmd\\claims.service.ts",
+    "size": 0,
+    "lines": 1,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "lastModified": "2025-10-20T04:19:25.085Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\advancedmd\\client.ts",
+    "size": 9828,
+    "lines": 366,
+    "hash": "cbf09be5135041cd44bad0dd0adaac7b",
+    "lastModified": "2025-10-20T04:19:25.087Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\advancedmd\\eligibility.service.ts",
+    "size": 0,
+    "lines": 1,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "lastModified": "2025-10-20T04:19:25.129Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\advancedmd\\era.service.ts",
+    "size": 0,
+    "lines": 1,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "lastModified": "2025-10-20T04:19:25.131Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\advancedmd\\rateLimiter.ts",
+    "size": 5521,
+    "lines": 223,
+    "hash": "8fae32d6ba7b8d5cb488c3a52fed9c6d",
+    "lastModified": "2025-10-20T04:19:25.140Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\ai\\anthropic.service.ts",
+    "size": 3591,
+    "lines": 134,
+    "hash": "d5936db8bcb6a20633a3c8d90ad99706",
+    "lastModified": "2025-10-20T04:19:25.176Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\ai\\billingIntelligence.service.ts",
+    "size": 11387,
+    "lines": 375,
+    "hash": "48910c1d51b107226bae2a1ae35c9fa7",
+    "lastModified": "2025-10-20T04:19:25.180Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\ai\\clinicalNoteGeneration.service.ts",
+    "size": 19057,
+    "lines": 533,
+    "hash": "f31db0a9d56fa7cae525c0a327c36686",
+    "lastModified": "2025-10-20T04:19:25.213Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\ai\\diagnosisAssistance.service.ts",
+    "size": 12484,
+    "lines": 413,
+    "hash": "f88413dbf5a4e87daf44e825695cfecc",
+    "lastModified": "2025-10-20T04:19:25.277Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\ai\\fieldMappings.service.ts",
+    "size": 18947,
+    "lines": 269,
+    "hash": "508724ae3ac03a7fe92a79b3b0c516ab",
+    "lastModified": "2025-10-20T04:19:25.333Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\ai\\treatmentSuggestions.service.ts",
+    "size": 11412,
+    "lines": 357,
+    "hash": "ca91d037d986a79ad1de974a21a237a8",
+    "lastModified": "2025-10-20T04:19:25.371Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\alerts\\alertService.ts",
+    "size": 13505,
+    "lines": 405,
+    "hash": "9c3688d8ebd8d3c48c07f02f94831667",
+    "lastModified": "2025-10-20T04:19:25.418Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\appointment-eligibility.service.ts",
+    "size": 7229,
+    "lines": 275,
+    "hash": "cffb3f94239129374176ad8cc806ba57",
+    "lastModified": "2025-10-20T04:19:25.468Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\auth.service.ts",
+    "size": 6795,
+    "lines": 278,
+    "hash": "66a6d607c99ec69576d50205699edf0d",
+    "lastModified": "2025-10-20T04:19:25.498Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\chime.service.ts",
+    "size": 3943,
+    "lines": 150,
+    "hash": "9f57d073e1a40bace1647f4c1610e9fb",
+    "lastModified": "2025-10-20T04:19:25.517Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\clinical-notes-validation.service.ts",
+    "size": 8281,
+    "lines": 323,
+    "hash": "29e2ab8c98ecb52aa16487cd3dec0a8c",
+    "lastModified": "2025-10-20T04:19:25.544Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\clinicianSchedule.service.ts",
+    "size": 13203,
+    "lines": 506,
+    "hash": "333feb5449f61619af8422e53e8d28fa",
+    "lastModified": "2025-10-20T04:19:25.581Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\compliance.service.ts",
+    "size": 15002,
+    "lines": 416,
+    "hash": "6ae018841f4d7eb20e7ed0476262b484",
+    "lastModified": "2025-10-20T04:19:25.649Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\compliance\\georgiaCompliance.ts",
+    "size": 13292,
+    "lines": 429,
+    "hash": "83efe697086a9ea30ebdce8fdc3efbca",
+    "lastModified": "2025-10-20T04:19:25.617Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\database.ts",
+    "size": 60,
+    "lines": 4,
+    "hash": "42ad018e27d982254f6e80d6de5b89e6",
+    "lastModified": "2025-10-20T04:19:25.691Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\diagnosis-inheritance.service.ts",
+    "size": 5173,
+    "lines": 169,
+    "hash": "ebf2bc7cc2503ff32e697340cf6a3d84",
+    "lastModified": "2025-10-20T04:19:25.704Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\diagnosis.service.ts",
+    "size": 10685,
+    "lines": 399,
+    "hash": "9719b3ef7f4e61a2f2afaf392846c7ec",
+    "lastModified": "2025-10-20T04:19:25.736Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\email.service.ts",
+    "size": 9382,
+    "lines": 240,
+    "hash": "a151ac6a789176a40ade294f682df3d8",
+    "lastModified": "2025-10-20T04:19:25.775Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\era\\parser.ts",
+    "size": 9536,
+    "lines": 349,
+    "hash": "d6316e359881efa3369533c72b0ae497",
+    "lastModified": "2025-10-20T04:19:25.807Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\metrics\\additionalMetrics.ts",
+    "size": 10806,
+    "lines": 377,
+    "hash": "f2d2faa38ccf5180a48306ee7598ca16",
+    "lastModified": "2025-10-20T04:19:25.842Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\metrics\\billingRevenue.ts",
+    "size": 5497,
+    "lines": 208,
+    "hash": "71fca2044b468a3c3bee318da83491d9",
+    "lastModified": "2025-10-20T04:19:25.877Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\metrics\\clinicalProductivity.ts",
+    "size": 5139,
+    "lines": 196,
+    "hash": "16922732f609cc900c602ea256211541",
+    "lastModified": "2025-10-20T04:19:25.906Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\metrics\\clinicalQuality.ts",
+    "size": 4765,
+    "lines": 170,
+    "hash": "3fc43947267008cb7c9b7192b56bc055",
+    "lastModified": "2025-10-20T04:19:25.934Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\metrics\\documentationCompliance.ts",
+    "size": 5740,
+    "lines": 219,
+    "hash": "43cc3d3b40810cd7c0972755076829a8",
+    "lastModified": "2025-10-20T04:19:25.965Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\metrics\\kvr.ts",
+    "size": 1558,
+    "lines": 64,
+    "hash": "7526cf4e051daa266541763316b37a74",
+    "lastModified": "2025-10-20T04:19:25.992Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\metrics\\metricService.ts",
+    "size": 8478,
+    "lines": 268,
+    "hash": "5a9952298b783eeca7586cc4926cee53",
+    "lastModified": "2025-10-20T04:19:26.020Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\metrics\\types.ts",
+    "size": 3282,
+    "lines": 151,
+    "hash": "b4bc69a3c398e97f9167c9fffc76c457",
+    "lastModified": "2025-10-20T04:19:26.051Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\notifications\\reminder.service.ts",
+    "size": 12444,
+    "lines": 432,
+    "hash": "714df57603d8e48b6d4d495c90583a77",
+    "lastModified": "2025-10-20T05:10:24.443Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\notifications\\scheduler.ts",
+    "size": 2920,
+    "lines": 111,
+    "hash": "39c5a3a11de665b0c9b61d3891d52cb9",
+    "lastModified": "2025-10-20T05:10:46.143Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portalAppointments.service.ts",
+    "size": 3601,
+    "lines": 166,
+    "hash": "f5fb7f323b1811017c27d62ef78eb264",
+    "lastModified": "2025-10-20T04:19:26.620Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portalAuth.service.ts",
+    "size": 9107,
+    "lines": 354,
+    "hash": "675e87c57599803abc16c12f10ae62fc",
+    "lastModified": "2025-10-20T04:19:26.651Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portalMessaging.service.ts",
+    "size": 4260,
+    "lines": 203,
+    "hash": "0c3a539db013533b8c7447ee196ace5a",
+    "lastModified": "2025-10-20T04:19:26.698Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portal\\auth.service.ts",
+    "size": 17484,
+    "lines": 600,
+    "hash": "c9b94686030674ebe888c473dd65c2cd",
+    "lastModified": "2025-10-20T04:19:26.095Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portal\\billing.service.ts",
+    "size": 9529,
+    "lines": 323,
+    "hash": "78ca46c6e60aa8418776d367b3d5f032",
+    "lastModified": "2025-10-20T04:19:26.179Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portal\\index.ts",
+    "size": 540,
+    "lines": 13,
+    "hash": "38cd1e48867cd9dc62478f4b737d391f",
+    "lastModified": "2025-10-20T04:19:26.251Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portal\\insurance.service.ts",
+    "size": 8129,
+    "lines": 273,
+    "hash": "0dfd2179007ded294953a88ef8a4ca9e",
+    "lastModified": "2025-10-20T04:19:26.282Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portal\\moodTracking.service.ts",
+    "size": 13959,
+    "lines": 469,
+    "hash": "12bc0b3c0588e6b8cd00e5563b54e3bb",
+    "lastModified": "2025-10-20T04:19:26.368Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portal\\sessionReviews.service.ts",
+    "size": 11183,
+    "lines": 418,
+    "hash": "a27451ab2c9d4717e35e4b3ae2de54a6",
+    "lastModified": "2025-10-20T04:19:26.461Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\portal\\therapistChange.service.ts",
+    "size": 12405,
+    "lines": 444,
+    "hash": "0f3d979cfe6268146a58e8827e3ba84e",
+    "lastModified": "2025-10-20T04:19:26.538Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\practiceSettings.service.ts",
+    "size": 11614,
+    "lines": 397,
+    "hash": "73a0c1c9a22ff12914c51de1b0d03559",
+    "lastModified": "2025-10-20T04:19:26.743Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\recurringAppointment.service.ts",
+    "size": 10987,
+    "lines": 417,
+    "hash": "fee4cd0ce6b7f7e11c17a756802969b3",
+    "lastModified": "2025-10-20T04:19:26.777Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\reminder.service.ts",
+    "size": 13033,
+    "lines": 434,
+    "hash": "fbecb67938c7eaa5ec8d2cb97dc0de90",
+    "lastModified": "2025-10-20T04:19:26.819Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\resend.service.ts",
+    "size": 20716,
+    "lines": 384,
+    "hash": "aeb509d24a6bc7b6529d56dedb370648",
+    "lastModified": "2025-10-20T05:07:17.648Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\sms.service.ts",
+    "size": 6451,
+    "lines": 233,
+    "hash": "2e49373f6ea3349b39ae4894177789e9",
+    "lastModified": "2025-10-20T05:09:31.859Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\telehealth.service.ts",
+    "size": 12962,
+    "lines": 490,
+    "hash": "b966b9e5991b973367830cfea3a5235a",
+    "lastModified": "2025-10-20T04:19:26.852Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\telehealthConsent.service.ts",
+    "size": 8537,
+    "lines": 277,
+    "hash": "6b6a91fabf1e5c553efe7800afed1e4d",
+    "lastModified": "2025-10-20T04:19:26.901Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\twilio.service.ts",
+    "size": 5728,
+    "lines": 217,
+    "hash": "a0d0f752dffeb61dcf9a51fc13c9f97d",
+    "lastModified": "2025-10-20T04:19:26.936Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\user.service.ts",
+    "size": 8714,
+    "lines": 370,
+    "hash": "c44373509a16d87a0ca4eeaa7660e7ec",
+    "lastModified": "2025-10-20T04:19:26.963Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\services\\waitlist.service.ts",
+    "size": 10384,
+    "lines": 405,
+    "hash": "cbb57dfabf9ac81f7b5b1ab6a8441d0f",
+    "lastModified": "2025-10-20T04:19:26.992Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\socket\\handlers\\collaboration.ts",
+    "size": 1896,
+    "lines": 61,
+    "hash": "79e4c237ac2ffec617f6feb7ba7f86be",
+    "lastModified": "2025-10-20T04:19:27.031Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\socket\\handlers\\notifications.ts",
+    "size": 2121,
+    "lines": 74,
+    "hash": "7e62220d8c2dfcb4a5db6fa4fa0f79f0",
+    "lastModified": "2025-10-20T04:19:27.066Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\socket\\handlers\\productivity.ts",
+    "size": 1695,
+    "lines": 62,
+    "hash": "5c830720d8302975cab2d7cbbb747ba4",
+    "lastModified": "2025-10-20T04:19:27.099Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\socket\\index.ts",
+    "size": 2336,
+    "lines": 87,
+    "hash": "988714b5daa5f776b63be33ea8810eaf",
+    "lastModified": "2025-10-20T04:19:27.129Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\socket\\middleware\\auth.ts",
+    "size": 1412,
+    "lines": 52,
+    "hash": "3a1ae9c9f5fdd3e837bbedf79152a974",
+    "lastModified": "2025-10-20T04:19:27.135Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\__tests__\\encryption.test.ts",
+    "size": 3396,
+    "lines": 117,
+    "hash": "201fb90f518b72232d01581d66be699c",
+    "lastModified": "2025-10-21T16:21:09.849Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\__tests__\\errors.test.ts",
+    "size": 7957,
+    "lines": 267,
+    "hash": "29a6d6242d42cebc769a77e424128fe2",
+    "lastModified": "2025-10-21T16:23:34.379Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\__tests__\\jwt.test.ts",
+    "size": 4805,
+    "lines": 156,
+    "hash": "81d8a394d13c66eb7fbe17e9cddc8477",
+    "lastModified": "2025-10-20T04:19:27.375Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\asyncHandler.ts",
+    "size": 360,
+    "lines": 11,
+    "hash": "3d24beb8b00d05b0ef2406889b5cde8a",
+    "lastModified": "2025-10-20T04:19:27.165Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\encryption.ts",
+    "size": 853,
+    "lines": 29,
+    "hash": "4582b5d2bfbd7e3c4e711c0fda048335",
+    "lastModified": "2025-10-20T04:19:27.182Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\errors.ts",
+    "size": 2527,
+    "lines": 83,
+    "hash": "0daf6becef3bc72d876bf902d6dfc372",
+    "lastModified": "2025-10-20T04:19:27.221Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\jwt.ts",
+    "size": 2191,
+    "lines": 85,
+    "hash": "7db7d8ea11d320f90991557ff92f7154",
+    "lastModified": "2025-10-20T04:19:27.247Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\logger.ts",
+    "size": 7709,
+    "lines": 289,
+    "hash": "2f446b783e5020c8e912281a18aa0122",
+    "lastModified": "2025-10-20T04:19:27.271Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\passwordPolicy.ts",
+    "size": 9330,
+    "lines": 332,
+    "hash": "521e318830a2e989751270d900b52c7b",
+    "lastModified": "2025-10-20T04:19:27.304Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\sanitize.ts",
+    "size": 5784,
+    "lines": 240,
+    "hash": "4a1563feb4e8522acaa22d7415ef6556",
+    "lastModified": "2025-10-20T04:28:11.750Z"
+  },
+  {
+    "category": "BACKEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\backend\\src\\utils\\validation.ts",
+    "size": 9140,
+    "lines": 238,
+    "hash": "31b3d50531aea858b8e8ab4cdfee61e2",
+    "lastModified": "2025-10-20T19:49:06.145Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\App.tsx",
+    "size": 16662,
+    "lines": 589,
+    "hash": "4b4f4a67be8169ea2d71458944c72594",
+    "lastModified": "2025-10-20T05:49:42.285Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\AI\\AIAssistant.tsx",
+    "size": 9447,
+    "lines": 257,
+    "hash": "35b8150b7083af56b20b857d32dd15f5",
+    "lastModified": "2025-10-18T13:12:17.995Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\AI\\AIFieldSuggestion.tsx",
+    "size": 2010,
+    "lines": 61,
+    "hash": "a65e88b2adcdb7e6858480763b09f8fd",
+    "lastModified": "2025-10-18T13:12:43.864Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\AI\\AIFloatingButton.tsx",
+    "size": 979,
+    "lines": 36,
+    "hash": "27d5d7a537d32574cf2bbbccb2cac2c2",
+    "lastModified": "2025-10-18T13:12:29.728Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\AI\\ReviewModal.tsx",
+    "size": 8170,
+    "lines": 234,
+    "hash": "ca06ee5420f77d5055a6018050931e4c",
+    "lastModified": "2025-10-18T14:00:57.819Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\AI\\SessionInputBox.tsx",
+    "size": 5231,
+    "lines": 135,
+    "hash": "c895738f5131f32ad60807d9153fff61",
+    "lastModified": "2025-10-18T14:00:28.050Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\AddressAutocomplete.tsx",
+    "size": 5543,
+    "lines": 168,
+    "hash": "450b760313bf6f9adff643c0989eda5c",
+    "lastModified": "2025-10-21T03:23:00.537Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\Appointments\\AppointmentsTab.tsx",
+    "size": 10297,
+    "lines": 262,
+    "hash": "3dcc108f099891ebe8f09fdbdcca13e0",
+    "lastModified": "2025-10-19T13:36:12.590Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ClientPortal\\AssessmentTab.tsx",
+    "size": 16924,
+    "lines": 390,
+    "hash": "f02e5c8b642d5dc00880f2c47ab95efb",
+    "lastModified": "2025-10-18T01:25:52.238Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ClientPortal\\PortalTab.tsx",
+    "size": 24931,
+    "lines": 606,
+    "hash": "405914dca43ac91612664f8ea4c8be71",
+    "lastModified": "2025-10-19T20:13:21.698Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ClinicalNotes\\AppointmentPicker.tsx",
+    "size": 7201,
+    "lines": 214,
+    "hash": "2f6c2a1ceb7c3be5647b55bcf1f50448",
+    "lastModified": "2025-10-18T17:21:20.004Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ClinicalNotes\\CPTCodeAutocomplete.tsx",
+    "size": 9117,
+    "lines": 184,
+    "hash": "daf2a9d7b96c363ddaacdbc6ba3a2402",
+    "lastModified": "2025-10-18T01:25:52.341Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ClinicalNotes\\ClinicalNotesList.tsx",
+    "size": 11675,
+    "lines": 265,
+    "hash": "0386a1b7c62e7ebcd44152b8b20742e5",
+    "lastModified": "2025-10-19T13:35:48.573Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ClinicalNotes\\CreateAppointmentModal.tsx",
+    "size": 11839,
+    "lines": 299,
+    "hash": "868c49f65d47ce9d025c0acf6b2296ff",
+    "lastModified": "2025-10-18T17:24:24.476Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ClinicalNotes\\ICD10Autocomplete.tsx",
+    "size": 11641,
+    "lines": 238,
+    "hash": "aaf13d5a0914034c4fc05a01a28d6808",
+    "lastModified": "2025-10-18T01:25:52.374Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ClinicalNotes\\ScheduleHeader.tsx",
+    "size": 6976,
+    "lines": 189,
+    "hash": "3f9a2d329fe3d7ab14448247769c44b4",
+    "lastModified": "2025-10-21T19:31:53.196Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ClinicalNotes\\SharedFormComponents.tsx",
+    "size": 6091,
+    "lines": 199,
+    "hash": "d9899e2b37ba297f152d2ada0cff00b1",
+    "lastModified": "2025-10-18T23:00:55.949Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\EmergencyContacts.tsx",
+    "size": 17432,
+    "lines": 434,
+    "hash": "bd4a86983c3c2e8f1b659a2b86a94045",
+    "lastModified": "2025-10-18T01:25:52.414Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\Guardians.tsx",
+    "size": 14730,
+    "lines": 385,
+    "hash": "d5610c30156b3b702797fa84266fb0c4",
+    "lastModified": "2025-10-18T01:25:52.451Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\InsuranceInfo.tsx",
+    "size": 28047,
+    "lines": 680,
+    "hash": "d260c1fbd798b467134d19739cc7eac8",
+    "lastModified": "2025-10-18T01:25:52.479Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\Layout.tsx",
+    "size": 10752,
+    "lines": 241,
+    "hash": "7d5acc6640aed79c9099a6d58fe7b972",
+    "lastModified": "2025-10-20T20:05:57.657Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\PortalLayout.tsx",
+    "size": 9839,
+    "lines": 233,
+    "hash": "c77e40b0a0654175b14978404ed6726d",
+    "lastModified": "2025-10-18T01:25:52.542Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\Productivity\\MetricCard.tsx",
+    "size": 3719,
+    "lines": 134,
+    "hash": "16d04d5570b80239f4d7661a413f067b",
+    "lastModified": "2025-10-18T01:25:52.578Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\Productivity\\PerformanceChart.tsx",
+    "size": 7360,
+    "lines": 193,
+    "hash": "10c07fd173499ef3e0f36c7180ea84c4",
+    "lastModified": "2025-10-18T01:25:52.590Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ReportViewModal.tsx",
+    "size": 7354,
+    "lines": 211,
+    "hash": "67ac4088a65af055cf0976540156abd9",
+    "lastModified": "2025-10-18T01:25:52.597Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\ScheduleNavigation.tsx",
+    "size": 1896,
+    "lines": 37,
+    "hash": "6455c4cbdc9c048964a302a7b2dc8e72",
+    "lastModified": "2025-10-18T01:25:52.602Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\Telehealth\\VideoControls.tsx",
+    "size": 7156,
+    "lines": 202,
+    "hash": "3df05dbc2c36e4e54bce6a39ed87e42a",
+    "lastModified": "2025-10-20T03:38:46.603Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\Telehealth\\WaitingRoom.tsx",
+    "size": 9067,
+    "lines": 227,
+    "hash": "03d9d3054e5661644ece0301224ae66b",
+    "lastModified": "2025-10-18T02:13:36.202Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\TimePicker.tsx",
+    "size": 4615,
+    "lines": 146,
+    "hash": "ef982a8cd39cbae593ce0c23872b5a2e",
+    "lastModified": "2025-10-18T01:25:52.663Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\components\\UnlockRequestModal.tsx",
+    "size": 6395,
+    "lines": 160,
+    "hash": "89f0e5ea73dab7e758b022df10b1c2d4",
+    "lastModified": "2025-10-21T12:44:37.277Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\constants\\clientFormOptions.ts",
+    "size": 3345,
+    "lines": 142,
+    "hash": "8d2511e0ddf27012e69ae72561033f97",
+    "lastModified": "2025-10-18T01:25:52.698Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\hooks\\productivity\\useProductivityMetrics.ts",
+    "size": 1934,
+    "lines": 77,
+    "hash": "d5dc66e3692a86d1d75165aeac710a7f",
+    "lastModified": "2025-10-20T03:43:27.191Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\hooks\\productivity\\useRealtimeKVR.ts",
+    "size": 1612,
+    "lines": 65,
+    "hash": "1a3c913d7497a3cc833bd9b0e2cc4864",
+    "lastModified": "2025-10-19T17:14:22.624Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\hooks\\telehealth\\useTelehealthSession.ts",
+    "size": 3774,
+    "lines": 136,
+    "hash": "312773bf52c5e4f1ce5bae9110ef78bb",
+    "lastModified": "2025-10-18T01:25:52.786Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\hooks\\useAI.ts",
+    "size": 5364,
+    "lines": 221,
+    "hash": "6cff80228602dff3f2fc876ba01259fb",
+    "lastModified": "2025-10-18T13:13:07.581Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\hooks\\useAuth.ts",
+    "size": 778,
+    "lines": 37,
+    "hash": "94bc37987dd69f60c258bf5aadb1abed",
+    "lastModified": "2025-10-18T01:58:40.062Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\hooks\\useReports.ts",
+    "size": 6022,
+    "lines": 169,
+    "hash": "43fdbdb6466dfabbf3f33e9b808f9466",
+    "lastModified": "2025-10-18T01:25:52.837Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\lib\\api.ts",
+    "size": 2987,
+    "lines": 92,
+    "hash": "874ed652a7e13e4fde1adccd5ee36a5a",
+    "lastModified": "2025-10-21T02:46:10.539Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\lib\\assessmentApi.ts",
+    "size": 7792,
+    "lines": 279,
+    "hash": "bad1487ed46ea298e64b5bff418768cc",
+    "lastModified": "2025-10-18T01:25:52.903Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\lib\\portalApi.ts",
+    "size": 4502,
+    "lines": 195,
+    "hash": "a29379561f35aa202a232f9831c6ae31",
+    "lastModified": "2025-10-19T20:03:37.929Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\main.tsx",
+    "size": 1472,
+    "lines": 52,
+    "hash": "cc910f2c053efebbece1ebc0e03d310d",
+    "lastModified": "2025-10-21T00:26:21.299Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Appointments\\AppointmentsCalendar.tsx",
+    "size": 21640,
+    "lines": 489,
+    "hash": "eb221f76826f4ac2149f76ac5ba9f24d",
+    "lastModified": "2025-10-19T14:52:20.586Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Appointments\\ClinicianSchedule.tsx",
+    "size": 13110,
+    "lines": 349,
+    "hash": "61e71de74d7807b2612a8a9073ccd4ba",
+    "lastModified": "2025-10-20T03:40:47.242Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Appointments\\NewAppointment.tsx",
+    "size": 28164,
+    "lines": 631,
+    "hash": "c935cd79ec636009fe95c0411b89797d",
+    "lastModified": "2025-10-21T01:12:00.204Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Appointments\\TimeOffRequests.tsx",
+    "size": 19464,
+    "lines": 471,
+    "hash": "2d0770129c04c11c9fb7cfb879384147",
+    "lastModified": "2025-10-18T01:53:51.281Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Appointments\\Waitlist.tsx",
+    "size": 17990,
+    "lines": 441,
+    "hash": "a9878cf599245fc97952474a609e3d02",
+    "lastModified": "2025-10-18T01:54:56.695Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Billing\\BillingDashboard.tsx",
+    "size": 14110,
+    "lines": 288,
+    "hash": "52e3e7347f034e72e68f0bbec503f530",
+    "lastModified": "2025-10-18T02:10:29.339Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Billing\\ChargesPage.tsx",
+    "size": 22745,
+    "lines": 526,
+    "hash": "032e34ac6537e8d13b0b69dfe556376b",
+    "lastModified": "2025-10-18T02:10:59.273Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Billing\\PaymentsPage.tsx",
+    "size": 30370,
+    "lines": 672,
+    "hash": "e5736d50dba48626215ac6f7b2dd952f",
+    "lastModified": "2025-10-18T02:11:33.681Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Clients\\ClientDetail.tsx",
+    "size": 22115,
+    "lines": 469,
+    "hash": "05773d3ec732715b78a6ad284b35f6ca",
+    "lastModified": "2025-10-21T19:32:50.389Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Clients\\ClientForm.tsx",
+    "size": 44630,
+    "lines": 1010,
+    "hash": "2551c7b621e3c59fa3cdec3d6ac92ac0",
+    "lastModified": "2025-10-21T11:27:30.673Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Clients\\ClientList.tsx",
+    "size": 14425,
+    "lines": 336,
+    "hash": "c79bb52d6b1a7ac48fe16ca6001ba303",
+    "lastModified": "2025-10-21T19:33:30.196Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\AppointmentSelector.tsx",
+    "size": 10144,
+    "lines": 227,
+    "hash": "5abafd2d5fca89ba207890fd701957ca",
+    "lastModified": "2025-10-18T17:59:36.284Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\ClinicalNoteDetail.tsx",
+    "size": 25080,
+    "lines": 605,
+    "hash": "4a6d35f32834715da72c852d3879b80f",
+    "lastModified": "2025-10-21T12:44:20.107Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\ClinicalNoteForm.tsx",
+    "size": 22898,
+    "lines": 520,
+    "hash": "f36d1d43aa064e97a8b317d0c95d1527",
+    "lastModified": "2025-10-21T12:35:35.562Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\ClinicalNotesPage.tsx",
+    "size": 525,
+    "lines": 19,
+    "hash": "823a0eb0dc5f34749b6d41897c1b212f",
+    "lastModified": "2025-10-18T01:25:53.478Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\ComplianceDashboard.tsx",
+    "size": 28792,
+    "lines": 602,
+    "hash": "8a4cbd18a13213739531ce0332bf1691",
+    "lastModified": "2025-10-19T15:42:37.721Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\CosignQueue.tsx",
+    "size": 11168,
+    "lines": 251,
+    "hash": "183da4d11376d06b5e5e4fa0ac27712f",
+    "lastModified": "2025-10-18T03:54:05.090Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\EditNoteRouter.tsx",
+    "size": 2273,
+    "lines": 65,
+    "hash": "16ff36c493f0211f621675af37161bec",
+    "lastModified": "2025-10-18T22:53:10.052Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\Forms\\CancellationNoteForm.tsx",
+    "size": 22221,
+    "lines": 578,
+    "hash": "5775aa84a8070c283aa7064d23ea212a",
+    "lastModified": "2025-10-21T13:20:40.363Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\Forms\\ConsultationNoteForm.tsx",
+    "size": 21428,
+    "lines": 547,
+    "hash": "139cebb493e2c02b0b387b97eb6bfe87",
+    "lastModified": "2025-10-21T13:20:40.537Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\Forms\\ContactNoteForm.tsx",
+    "size": 20633,
+    "lines": 551,
+    "hash": "dc2fdc8e2933a42556aaa8f5d1f691be",
+    "lastModified": "2025-10-21T13:20:40.685Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\Forms\\IntakeAssessmentForm.tsx",
+    "size": 81240,
+    "lines": 1793,
+    "hash": "861123af2ae8e93e06b25a2769a8ee8c",
+    "lastModified": "2025-10-21T19:31:29.881Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\Forms\\MiscellaneousNoteForm.tsx",
+    "size": 19291,
+    "lines": 507,
+    "hash": "d860b8c71fa1d95d1395a1ae207f2250",
+    "lastModified": "2025-10-21T13:20:40.995Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\Forms\\ProgressNoteForm.tsx",
+    "size": 44374,
+    "lines": 1070,
+    "hash": "5b1998f5cbcacd0b857fb5cbe7103b87",
+    "lastModified": "2025-10-21T13:20:41.144Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\Forms\\TerminationNoteForm.tsx",
+    "size": 23660,
+    "lines": 604,
+    "hash": "516e930be6768f56dda50d019f0a02be",
+    "lastModified": "2025-10-21T13:20:41.297Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\Forms\\TreatmentPlanForm.tsx",
+    "size": 39921,
+    "lines": 949,
+    "hash": "25fbee632f0cbbd70480712c7e3efd10",
+    "lastModified": "2025-10-21T13:20:41.433Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\MyNotes.tsx",
+    "size": 16635,
+    "lines": 398,
+    "hash": "e16656cb199adc45b08a0f825dbe257c",
+    "lastModified": "2025-10-19T15:44:57.064Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\NoteTypeSelector.tsx",
+    "size": 10773,
+    "lines": 257,
+    "hash": "aa11ed0d85516e3ccead45e6a43ded17",
+    "lastModified": "2025-10-18T17:59:08.045Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\ClinicalNotes\\SmartNoteCreator.tsx",
+    "size": 17387,
+    "lines": 429,
+    "hash": "f3b1417470bbd26894269ac943740afe",
+    "lastModified": "2025-10-20T03:41:59.969Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Dashboard.tsx",
+    "size": 18028,
+    "lines": 358,
+    "hash": "7d5225bb8b83359443dcc7a2bb328442",
+    "lastModified": "2025-10-20T06:27:03.867Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Landing\\LandingPage.tsx",
+    "size": 7069,
+    "lines": 176,
+    "hash": "55ab47a444bf39bf2efee7dc96e99488",
+    "lastModified": "2025-10-20T06:08:25.002Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Login.tsx",
+    "size": 4343,
+    "lines": 117,
+    "hash": "08ae38eb5761d37ec915980c1a18f9cc",
+    "lastModified": "2025-10-20T06:14:48.291Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalAppointmentRequest.tsx",
+    "size": 18340,
+    "lines": 502,
+    "hash": "cb937d7fcf1e296806694a771e98a4a8",
+    "lastModified": "2025-10-18T02:41:27.124Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalAppointments.tsx",
+    "size": 21671,
+    "lines": 476,
+    "hash": "a03628d87839acfee0b4af4f97e83bf3",
+    "lastModified": "2025-10-18T02:41:27.127Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalAssessments.tsx",
+    "size": 11843,
+    "lines": 282,
+    "hash": "2cbef6e67ac6570de3b4c3e6c37aaaeb",
+    "lastModified": "2025-10-18T05:49:24.907Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalBilling.tsx",
+    "size": 22188,
+    "lines": 494,
+    "hash": "008224300a1f18267bc80d8a38e5d090",
+    "lastModified": "2025-10-18T02:41:27.133Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalDashboard.tsx",
+    "size": 19490,
+    "lines": 391,
+    "hash": "5405d1528f257f25a0f6258cbf1529a5",
+    "lastModified": "2025-10-18T02:41:27.133Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalDocuments.tsx",
+    "size": 17666,
+    "lines": 415,
+    "hash": "cda0902a10436350d60000ada4e00038",
+    "lastModified": "2025-10-20T03:42:34.187Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalForgotPassword.tsx",
+    "size": 4850,
+    "lines": 116,
+    "hash": "b1a92249784923c140d7799625cdc770",
+    "lastModified": "2025-10-18T02:41:27.147Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalFormViewer.tsx",
+    "size": 11202,
+    "lines": 330,
+    "hash": "af142c885a610ae56f85a3416a929e21",
+    "lastModified": "2025-10-19T22:03:58.453Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalLogin.tsx",
+    "size": 5106,
+    "lines": 130,
+    "hash": "835f901a79ac5d00bc95b795f8cbc30f",
+    "lastModified": "2025-10-18T02:41:27.154Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalMessages.tsx",
+    "size": 26251,
+    "lines": 590,
+    "hash": "8ef6d95a5784ce8118e9f60d2c954373",
+    "lastModified": "2025-10-18T02:41:27.162Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalMoodTracking.tsx",
+    "size": 23043,
+    "lines": 559,
+    "hash": "8a9b18e36be0c725dab7e0d3fa76afcc",
+    "lastModified": "2025-10-18T02:41:27.165Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalProfile.tsx",
+    "size": 29259,
+    "lines": 663,
+    "hash": "70b0be2f84d535636dc7fe443b2a3b2a",
+    "lastModified": "2025-10-21T01:44:16.030Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalReferrals.tsx",
+    "size": 16559,
+    "lines": 393,
+    "hash": "aa6bb2b308238ce1f53be10507a76bc8",
+    "lastModified": "2025-10-18T02:41:27.176Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalRegister.tsx",
+    "size": 6536,
+    "lines": 164,
+    "hash": "be017897b628e82cd47520a9d83efe0a",
+    "lastModified": "2025-10-18T02:41:27.187Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalTherapistChange.tsx",
+    "size": 16743,
+    "lines": 402,
+    "hash": "084bd28892f83f341e8b495fb5d3d59a",
+    "lastModified": "2025-10-18T02:41:27.196Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Portal\\PortalTherapistProfile.tsx",
+    "size": 13594,
+    "lines": 284,
+    "hash": "8f4a5fef6d132822ba890b8684a71843",
+    "lastModified": "2025-10-18T02:41:27.202Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\PracticeSettings.tsx",
+    "size": 19874,
+    "lines": 393,
+    "hash": "487ea507b44c7d55f3fbae6d7dceca8f",
+    "lastModified": "2025-10-18T01:25:54.572Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Productivity\\AdministratorDashboard.tsx",
+    "size": 18815,
+    "lines": 407,
+    "hash": "565a3f6c916c3b85388ab393eea7e346",
+    "lastModified": "2025-10-18T01:25:54.638Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Productivity\\ClinicianDashboard.tsx",
+    "size": 11905,
+    "lines": 270,
+    "hash": "b09ff18b610a9cda179a3c8f25fb1c78",
+    "lastModified": "2025-10-19T16:32:30.716Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Productivity\\SupervisorDashboard.tsx",
+    "size": 14726,
+    "lines": 324,
+    "hash": "69d48b956f5a5669e2cd3ec6b410b57f",
+    "lastModified": "2025-10-18T01:25:54.733Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Reports\\ReportsDashboard.tsx",
+    "size": 19509,
+    "lines": 550,
+    "hash": "a3f322fc12234efa8bba7f51f1cf43b3",
+    "lastModified": "2025-10-18T01:25:54.784Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Settings\\AIIntegrationTab.tsx",
+    "size": 20819,
+    "lines": 413,
+    "hash": "b1e3bc9583c774d13ee272289d79df24",
+    "lastModified": "2025-10-18T05:05:11.546Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Settings\\AllRemainingTabs.tsx",
+    "size": 34997,
+    "lines": 864,
+    "hash": "4c8a7dbc8f6c03e2a1a59da11bd1bed2",
+    "lastModified": "2025-10-18T05:14:14.366Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Settings\\BillingTab.tsx",
+    "size": 13049,
+    "lines": 316,
+    "hash": "7edde5322428fcd48e696192b44da66c",
+    "lastModified": "2025-10-18T05:12:31.400Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Settings\\ClinicalDocTab.tsx",
+    "size": 13704,
+    "lines": 314,
+    "hash": "6eff41a1900ea2bd4d85b5d7f4a0f2b8",
+    "lastModified": "2025-10-18T05:10:49.825Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Settings\\PracticeSettingsFinal.tsx",
+    "size": 12949,
+    "lines": 329,
+    "hash": "2ba493d3bfb850bdc7646478a09bc0aa",
+    "lastModified": "2025-10-18T06:01:09.789Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Settings\\PracticeSettingsNew.tsx",
+    "size": 16404,
+    "lines": 406,
+    "hash": "58f8af4539dab65a936adeb29f1087f2",
+    "lastModified": "2025-10-20T03:45:02.885Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Settings\\ReminderSettings.tsx",
+    "size": 15749,
+    "lines": 405,
+    "hash": "6ff8d4f9609bd4e5ed76028e1ee5bbeb",
+    "lastModified": "2025-10-18T01:25:54.841Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Settings\\SchedulingTab.tsx",
+    "size": 12099,
+    "lines": 292,
+    "hash": "8065f355ee05fa711c1603cb78da68bd",
+    "lastModified": "2025-10-18T05:11:45.177Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Supervision\\SupervisionHoursDashboard.tsx",
+    "size": 8657,
+    "lines": 218,
+    "hash": "84fa6f55c6a0249f5b3e9eaa53a26cb0",
+    "lastModified": "2025-10-18T03:53:32.247Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Supervision\\SupervisionSessionForm.tsx",
+    "size": 29152,
+    "lines": 765,
+    "hash": "0da121fef1340b07ea693b64854b8a6c",
+    "lastModified": "2025-10-18T03:52:53.822Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Supervision\\SupervisionSessionsList.tsx",
+    "size": 13997,
+    "lines": 330,
+    "hash": "5aac5d2eeb660932ca9b97141322bedf",
+    "lastModified": "2025-10-18T03:51:31.116Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Telehealth\\TelehealthSession.tsx",
+    "size": 10799,
+    "lines": 320,
+    "hash": "fa8d2e305918b93dd847c0afe9920869",
+    "lastModified": "2025-10-20T03:45:39.234Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Telehealth\\VideoSession.tsx",
+    "size": 31464,
+    "lines": 798,
+    "hash": "4c2848de6b88069d6f0a79fc640137af",
+    "lastModified": "2025-10-20T03:52:10.498Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\UnlockRequests\\UnlockRequestManagement.tsx",
+    "size": 16927,
+    "lines": 416,
+    "hash": "9ee3060ff40c52c94d629c76656bc78d",
+    "lastModified": "2025-10-18T05:49:08.663Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Users\\UserDetail.tsx",
+    "size": 16884,
+    "lines": 344,
+    "hash": "ca08f07840f5869fe066bd1cbd246aea",
+    "lastModified": "2025-10-20T03:55:27.842Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Users\\UserForm.tsx",
+    "size": 19327,
+    "lines": 438,
+    "hash": "a612687595768c3b86e2d2ec67a60732",
+    "lastModified": "2025-10-20T02:58:59.361Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\pages\\Users\\UserList.tsx",
+    "size": 17940,
+    "lines": 388,
+    "hash": "617d1944ab9f4e66ea5aba74ddb6238a",
+    "lastModified": "2025-10-20T03:55:30.100Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\types\\google-maps.d.ts",
+    "size": 121,
+    "lines": 9,
+    "hash": "200f4a956d7218358c6e5d9de0ee44b7",
+    "lastModified": "2025-10-21T01:40:29.947Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\types\\index.ts",
+    "size": 6121,
+    "lines": 284,
+    "hash": "937b3bf715f6ba2beee4a62b0bdaeaf5",
+    "lastModified": "2025-10-20T00:34:51.113Z"
+  },
+  {
+    "category": "FRONTEND",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\frontend\\src\\vite-env.d.ts",
+    "size": 193,
+    "lines": 11,
+    "hash": "64eb4437d5a68fb3bcfbf57c8f97efbb",
+    "lastModified": "2025-10-18T01:25:55.222Z"
+  },
+  {
+    "category": "DATABASE",
+    "path": "c:\\Users\\Elize\\mentalspace-ehr-v2\\packages\\database\\prisma\\schema.prisma",
+    "size": 80486,
+    "lines": 2471,
+    "hash": "0dedcf332184ae241604b3b0aa890c0e",
+    "lastModified": "2025-10-20T04:20:42.821Z"
+  }
+]

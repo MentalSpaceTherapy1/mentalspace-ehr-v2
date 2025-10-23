@@ -102,3 +102,5 @@ task-registration-result.json
 cloudfront-*.json
 dns-records.json
 deployment-logs.txt
+nul
+*.tar.gz

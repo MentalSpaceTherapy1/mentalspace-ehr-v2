@@ -1,0 +1,481 @@
+{
+  "auditDate": "2025-10-22T01:33:50.118Z",
+  "parts": {
+    "AUTH": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:50.122Z",
+          "message": "Logging into production...",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.000Z",
+          "message": "Login successful",
+          "severity": "INFO"
+        }
+      ],
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "PART1": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:52.001Z",
+          "message": "--- DEVELOPMENT ENVIRONMENT ---",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.313Z",
+          "message": "Repository: https://github.com/MentalSpaceTherapy1/mentalspace-ehr-v2.git",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.313Z",
+          "message": "Branch: master",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.313Z",
+          "message": "Latest Commit: 7aee0d7d357621bb52187b042647427b778428ea",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.313Z",
+          "message": "Commit Message: fix: Sync clinical note dates with rescheduled appointments and fix DOB timezone offset",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.313Z",
+          "message": "Commit Date: 2025-10-21 15:34:11 -0400",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.313Z",
+          "message": "Total Files: 529",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.313Z",
+          "message": "--- PRODUCTION ENVIRONMENT ---",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.350Z",
+          "message": "Production Git SHA: 7aee0d7d357621bb52187b042647427b778428ea",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.350Z",
+          "message": "Production Build Time: 2025-10-21T20:08:37Z",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.350Z",
+          "message": "Production Node ENV: production",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.350Z",
+          "message": "✅ Production code matches development (same Git SHA)",
+          "severity": "INFO"
+        }
+      ],
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "PART2": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:52.350Z",
+          "message": "Since Production Git SHA matches Development, all source code files are identical",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.350Z",
+          "message": "✅ Backend source files match",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.350Z",
+          "message": "✅ Frontend source files match",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.350Z",
+          "message": "✅ Dockerfile matches",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.350Z",
+          "message": "✅ Infrastructure files match",
+          "severity": "INFO"
+        }
+      ],
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "PART3": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "Total migration files in development: 17",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  1. 20251013002302_init",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  2. 20251013045625_add_legal_guardian_model",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  3. 20251013143959_add_productivity_module",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  4. 20251013160420_add_scheduling_enhancements",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  5. 20251013180424_add_telehealth_sessions",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  6. 20251013213554_add_telehealth_appointment_relation",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  7. 20251014023842_make_user_fields_optional",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  8. 20251014025443_make_client_maritalstatus_optional",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  9. 20251016022832_add_telehealth_consent_model",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  10. 20251016032353_add_client_portal_models",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  11. 20251016044310_add_enhanced_client_portal_module_9",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  12. 20251016150929_add_assessment_assignments",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  13. 20251016152725_add_portal_enhancements",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  14. 20251017184656_add_multiple_roles_support",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.352Z",
+          "message": "  15. 20251017193200_clinical_notes_business_rules",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.353Z",
+          "message": "  16. 20251021075046_add_islocked_to_clinical_notes",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.353Z",
+          "message": "  17. 20251021075118_add_islocked_to_clinical_notes",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.353Z",
+          "message": "⚠️ Cannot verify which migrations are applied without database access",
+          "severity": "HIGH"
+        }
+      ],
+      "critical": 0,
+      "high": 1,
+      "medium": 0,
+      "low": 0
+    },
+    "PART4": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:52.420Z",
+          "message": "✅ User Listing: Working",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.487Z",
+          "message": "✅ Client Listing: Working",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.527Z",
+          "message": "✅ Appointment Listing: Working",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.603Z",
+          "message": "✅ Service Codes: Working",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.636Z",
+          "message": "❌ Assessment Forms: ZERO records found",
+          "severity": "CRITICAL"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.671Z",
+          "message": "❌ Client Forms: ZERO records found",
+          "severity": "CRITICAL"
+        }
+      ],
+      "critical": 2,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "PART5": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:52.671Z",
+          "message": "Testing 9 critical endpoints...",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.708Z",
+          "message": "✅ GET /users: Accessible",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.749Z",
+          "message": "✅ GET /clients: Accessible",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.787Z",
+          "message": "✅ GET /appointments: Accessible",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.818Z",
+          "message": "✅ GET /clinical-notes: Accessible",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.858Z",
+          "message": "✅ GET /service-codes: Accessible",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.892Z",
+          "message": "✅ GET /portal-admin/assessment-forms: Accessible",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.927Z",
+          "message": "✅ GET /portal-admin/client-forms: Accessible",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.961Z",
+          "message": "✅ GET /diagnoses: Accessible",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.993Z",
+          "message": "✅ GET /metrics/productivity/summary: Accessible",
+          "severity": "INFO"
+        }
+      ],
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "PART6": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:52.993Z",
+          "message": "Business logic verification requires test data execution",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:52.993Z",
+          "message": "⚠️ Cannot fully verify without creating test records",
+          "severity": "MEDIUM"
+        }
+      ],
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 0
+    },
+    "PART7": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:53.000Z",
+          "message": "Backend has 31 dependencies in package.json",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "Key dependencies:",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "  ✅ express: ^4.21.2",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "  ❌ @prisma/client: MISSING",
+          "severity": "CRITICAL"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "  ✅ jsonwebtoken: ^9.0.2",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "  ✅ bcryptjs: ^2.4.3",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "  ✅ socket.io: ^4.8.1",
+          "severity": "INFO"
+        }
+      ],
+      "critical": 1,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "PART8": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "Environment variables verified from /version endpoint:",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "  ✅ GIT_SHA: 7aee0d7d357621bb52187b042647427b778428ea",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "  ✅ BUILD_TIME: 2025-10-21T20:08:37Z",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "  ✅ NODE_ENV: production",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "⚠️ Cannot verify other environment variables without ECS task definition access",
+          "severity": "MEDIUM"
+        }
+      ],
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 0
+    },
+    "PART9": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "⚠️ Performance testing requires load testing tools",
+          "severity": "MEDIUM"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "Recommendation: Run load tests separately",
+          "severity": "INFO"
+        }
+      ],
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 0
+    },
+    "PART10": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "✅ HTTPS enforced (using api.mentalspaceehr.com)",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "✅ JWT authentication working",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "✅ Role-based authorization working",
+          "severity": "INFO"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "⚠️ SQL injection testing requires penetration testing",
+          "severity": "MEDIUM"
+        }
+      ],
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 0
+    },
+    "PART11": {
+      "findings": [
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "⚠️ Error handling verification requires error injection testing",
+          "severity": "MEDIUM"
+        },
+        {
+          "timestamp": "2025-10-22T01:33:53.001Z",
+          "message": "Recommendation: Review CloudWatch logs for error patterns",
+          "severity": "INFO"
+        }
+      ],
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 0
+    }
+  }
+}
