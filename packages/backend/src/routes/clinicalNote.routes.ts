@@ -5,7 +5,6 @@ import {
   getClinicalNoteById,
   createClinicalNote,
   updateClinicalNote,
-  signClinicalNote,
   cosignClinicalNote,
   deleteClinicalNote,
   getNotesForCosigning,
@@ -22,6 +21,7 @@ import {
   validateNoteData,
   getValidationSummaryForNoteType,
 } from '../controllers/clinicalNote.controller';
+import { signClinicalNote } from '../controllers/signature.controller';
 
 const router = Router();
 

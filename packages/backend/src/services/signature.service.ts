@@ -273,6 +273,81 @@ export async function revokeSignature(
 }
 
 /**
+ * Sign a clinical note - comprehensive workflow
+ */
+export async function signNote(request: CreateSignatureEventRequest) {
+  try {
+    // Verify note exists and user has permission
+    const note = await prisma.clinicalNote.findUnique({
+      where: { id: request.noteId },
+      select: {
+        id: true,
+        noteType: true,
+        clinicianId: true,
+        cosignerId: true,
+        status: true,
+        isSigned: true,
+        signedAt: true,
+      },
+    });
+
+    if (!note) {
+      throw new Error('Clinical note not found');
+    }
+
+    // Check if note is already signed (for AUTHOR signatures)
+    if (request.signatureType === 'AUTHOR' && note.isSigned) {
+      throw new Error('Note is already signed. Use AMENDMENT signature type to modify.');
+    }
+
+    // Verify user has permission to sign
+    if (request.signatureType === 'AUTHOR' && note.clinicianId !== request.userId) {
+      throw new Error('Only the note author can provide the initial signature');
+    }
+
+    if (request.signatureType === 'COSIGN' && note.cosignerId !== request.userId) {
+      throw new Error('Only the assigned supervisor can co-sign this note');
+    }
+
+    // Create signature event
+    const signatureEvent = await createSignatureEvent(request);
+
+    // Update note status based on signature type
+    if (request.signatureType === 'AUTHOR') {
+      await prisma.clinicalNote.update({
+        where: { id: request.noteId },
+        data: {
+          isSigned: true,
+          signedAt: new Date(),
+          status: note.cosignerId ? 'PENDING_COSIGN' : 'FINAL',
+        },
+      });
+    } else if (request.signatureType === 'COSIGN') {
+      await prisma.clinicalNote.update({
+        where: { id: request.noteId },
+        data: {
+          isCosigned: true,
+          cosignedAt: new Date(),
+          status: 'FINAL',
+        },
+      });
+    }
+
+    logger.info('Note signed successfully', {
+      noteId: request.noteId,
+      userId: request.userId,
+      signatureType: request.signatureType,
+      signatureEventId: signatureEvent.id,
+    });
+
+    return signatureEvent;
+  } catch (error) {
+    logger.error('Error signing note', { error, request });
+    throw error;
+  }
+}
+
+/**
  * Set user's signature PIN
  */
 export async function setSignaturePin(userId: string, pin: string): Promise<void> {

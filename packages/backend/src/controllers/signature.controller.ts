@@ -283,6 +283,134 @@ export const revokeSignature = async (req: Request, res: Response) => {
 };
 
 /**
+ * POST /api/v1/clinical-notes/:id/sign
+ * Sign a clinical note with PIN or password authentication
+ */
+export const signClinicalNote = async (req: Request, res: Response) => {
+  try {
+    const { id: noteId } = req.params;
+    const userId = (req as any).user.userId;
+    const { method, credential, signatureType } = req.body;
+
+    // Validate input
+    if (!method || !credential) {
+      return res.status(400).json({
+        success: false,
+        message: 'Authentication method and credential are required',
+      });
+    }
+
+    if (!['PIN', 'PASSWORD'].includes(method)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid authentication method',
+      });
+    }
+
+    if (!['AUTHOR', 'COSIGN', 'AMENDMENT'].includes(signatureType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid signature type',
+      });
+    }
+
+    // Verify credential
+    const prisma = (await import('../services/database')).default;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        signaturePin: true,
+        signaturePassword: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Verify authentication credential
+    const bcrypt = await import('bcryptjs');
+    let isAuthenticated = false;
+
+    if (method === 'PIN') {
+      if (!user.signaturePin) {
+        return res.status(400).json({
+          success: false,
+          message: 'No signature PIN configured. Please set up your PIN in profile settings.',
+        });
+      }
+      isAuthenticated = await bcrypt.compare(credential, user.signaturePin);
+    } else {
+      if (!user.signaturePassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'No signature password configured. Please set up your password in profile settings.',
+        });
+      }
+      isAuthenticated = await bcrypt.compare(credential, user.signaturePassword);
+    }
+
+    if (!isAuthenticated) {
+      logger.warn('Failed signature authentication attempt', {
+        userId,
+        method,
+        noteId,
+      });
+
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid PIN or password',
+      });
+    }
+
+    // Get client IP and user agent for audit trail
+    const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+                      req.socket.remoteAddress ||
+                      'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    // Create signature event
+    const signatureEvent = await SignatureService.signNote({
+      noteId,
+      userId,
+      signatureType,
+      authMethod: method,
+      ipAddress,
+      userAgent,
+    });
+
+    logger.info('Clinical note signed', {
+      noteId,
+      userId,
+      signatureType,
+      signatureEventId: signatureEvent.id,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Note signed successfully',
+      data: signatureEvent,
+    });
+  } catch (error: any) {
+    logger.error('Error signing clinical note', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to sign note',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * GET /api/v1/users/signature-status
  * Check if user has signature PIN or password configured
  */
