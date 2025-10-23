@@ -6,6 +6,7 @@ import UserList from './pages/Users/UserList';
 import UserForm from './pages/Users/UserForm';
 import UserDetail from './pages/Users/UserDetail';
 import PracticeSettings from './pages/Settings/PracticeSettingsFinal';
+import UserProfile from './pages/UserProfile';
 import ClientList from './pages/Clients/ClientList';
 import ClientForm from './pages/Clients/ClientForm';
 import ClientDetail from './pages/Clients/ClientDetail';
@@ -537,6 +538,14 @@ function App() {
           element={
             <PrivateRoute>
               <PracticeSettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <UserProfile />
             </PrivateRoute>
           }
         />
