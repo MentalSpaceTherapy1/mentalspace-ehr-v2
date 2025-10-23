@@ -32,7 +32,7 @@ export async function getApplicableAttestation(
       where: { id: userId },
       select: {
         id: true,
-        role: true,
+        roles: true,
         licenseState: true,
       },
     });
@@ -45,7 +45,7 @@ export async function getApplicableAttestation(
     let attestationRole = 'CLINICIAN';
     if (signatureType === 'COSIGN') {
       attestationRole = 'SUPERVISOR';
-    } else if (user.role === 'ADMINISTRATOR') {
+    } else if (user.roles.includes('ADMINISTRATOR')) {
       attestationRole = 'ADMIN';
     }
 

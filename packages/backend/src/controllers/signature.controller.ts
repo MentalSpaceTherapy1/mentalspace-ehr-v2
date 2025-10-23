@@ -196,14 +196,14 @@ export const getNoteSignatures = async (req: Request, res: Response) => {
     // Check permissions: must be clinician, cosigner, or client's provider
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: { roles: true },
     });
 
     const hasAccess =
       note.clinicianId === userId ||
       note.cosignerId === userId ||
-      user.role === 'ADMINISTRATOR' ||
-      user.role === 'SUPERVISOR';
+      user?.roles.includes('ADMINISTRATOR') ||
+      user?.roles.includes('SUPERVISOR');
 
     if (!hasAccess) {
       return res.status(403).json({
@@ -242,10 +242,10 @@ export const revokeSignature = async (req: Request, res: Response) => {
     const prisma = (await import('../services/database')).default;
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: { roles: true },
     });
 
-    if (user.role !== 'ADMINISTRATOR') {
+    if (!user?.roles.includes('ADMINISTRATOR')) {
       return res.status(403).json({
         success: false,
         message: 'Only administrators can revoke signatures',
@@ -322,7 +322,7 @@ export const signClinicalNote = async (req: Request, res: Response) => {
         id: true,
         signaturePin: true,
         signaturePassword: true,
-        role: true,
+        roles: true,
       },
     });
 
