@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import userController from '../controllers/user.controller';
+import * as signatureController from '../controllers/signature.controller';
 import { validateBody } from '../middleware/validate';
 import { authenticate, authorize } from '../middleware/auth';
 import {
@@ -145,6 +146,36 @@ router.post(
 router.post(
   '/force-password-change',
   userController.forcePasswordChange
+);
+
+/**
+ * @route   POST /api/v1/users/signature-pin
+ * @desc    Set or update signature PIN
+ * @access  Authenticated user
+ */
+router.post(
+  '/signature-pin',
+  signatureController.setSignaturePin
+);
+
+/**
+ * @route   POST /api/v1/users/signature-password
+ * @desc    Set or update signature password
+ * @access  Authenticated user
+ */
+router.post(
+  '/signature-password',
+  signatureController.setSignaturePassword
+);
+
+/**
+ * @route   GET /api/v1/users/signature-status
+ * @desc    Check if user has signature PIN or password configured
+ * @access  Authenticated user
+ */
+router.get(
+  '/signature-status',
+  signatureController.getSignatureStatus
 );
 
 export default router;

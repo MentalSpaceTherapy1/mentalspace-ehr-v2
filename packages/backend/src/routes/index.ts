@@ -31,6 +31,7 @@ import supervisionRoutes from './supervision.routes';
 import unlockRequestRoutes from './unlockRequest.routes';
 import practiceSettingsRoutes from './practiceSettings.routes';
 import aiRoutes from './ai.routes';
+import signatureRoutes from './signature.routes';
 
 const router = Router();
 
@@ -97,5 +98,8 @@ router.use('/practice-settings', practiceSettingsRoutes);
 
 // AI routes (AI-powered clinical features)
 router.use('/ai', aiRoutes);
+
+// Signature routes (Phase 1.4: Electronic Signatures)
+router.use('/signatures', signatureRoutes);
 
 export default router;

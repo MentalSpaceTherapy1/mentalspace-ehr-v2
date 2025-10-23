@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import UnlockRequestModal from '../../components/UnlockRequestModal';
 import ReturnForRevisionModal from '../../components/ClinicalNotes/ReturnForRevisionModal';
+import { SignatureModal } from '../../components/ClinicalNotes/SignatureModal';
 
 interface ClinicalNote {
   id: string;
@@ -86,7 +87,6 @@ export default function ClinicalNoteDetail() {
   const [showCosignModal, setShowCosignModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
-  const [signature, setSignature] = useState('');
 
 
   const { data: noteData, isLoading } = useQuery({
@@ -98,28 +98,26 @@ export default function ClinicalNoteDetail() {
   });
 
   const signMutation = useMutation({
-    mutationFn: async () => {
-      return api.post(`/clinical-notes/${noteId}/sign`, { signature });
+    mutationFn: async (authData: { pin?: string; password?: string }) => {
+      return api.post(`/clinical-notes/${noteId}/sign`, authData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       setShowSignModal(false);
-      setSignature('');
     },
   });
 
   const cosignMutation = useMutation({
-    mutationFn: async () => {
-      return api.post(`/clinical-notes/${noteId}/cosign`, { signature });
+    mutationFn: async (authData: { pin?: string; password?: string }) => {
+      return api.post(`/clinical-notes/${noteId}/cosign`, authData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       setShowCosignModal(false);
-      setSignature('');
     },
   });
 
@@ -164,12 +162,12 @@ export default function ClinicalNoteDetail() {
   const canReturn = note?.status === 'PENDING_COSIGN';
   const canDelete = note?.status === 'DRAFT';
 
-  const handleSign = () => {
-    signMutation.mutate();
+  const handleSign = async (authData: { pin?: string; password?: string }) => {
+    await signMutation.mutateAsync(authData);
   };
 
-  const handleCosign = () => {
-    cosignMutation.mutate();
+  const handleCosign = async (authData: { pin?: string; password?: string }) => {
+    await cosignMutation.mutateAsync(authData);
   };
 
   const handleDelete = () => {
@@ -506,98 +504,26 @@ export default function ClinicalNoteDetail() {
         </div>
       </div>
 
-      {/* Sign Modal */}
-      {showSignModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Sign Clinical Note</h2>
-            <p className="text-gray-600 mb-6">
-              By signing this note, you confirm that all information is accurate and complete. Once signed, the note cannot be edited.
-            </p>
-
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Electronic Signature *
-              </label>
-              <input
-                type="text"
-                value={signature}
-                onChange={(e) => setSignature(e.target.value)}
-                placeholder="Type your full name"
-                className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-              />
-            </div>
-
-            {signMutation.isError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {(signMutation.error as any)?.response?.data?.message || 'Failed to sign note'}
-              </div>
-            )}
-
-            <div className="flex items-center justify-end space-x-3">
-              <button
-                onClick={() => setShowSignModal(false)}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSign}
-                disabled={!signature || signMutation.isPending}
-                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {signMutation.isPending ? 'Signing...' : 'Sign Note'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Sign Modal - Phase 1.4: Electronic Signatures */}
+      {showSignModal && note && (
+        <SignatureModal
+          open={showSignModal}
+          onClose={() => setShowSignModal(false)}
+          onSign={handleSign}
+          noteType={note.noteType}
+          signatureType="AUTHOR"
+        />
       )}
 
-      {/* Cosign Modal */}
-      {showCosignModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Co-Sign Clinical Note</h2>
-            <p className="text-gray-600 mb-6">
-              As the supervisor, you are verifying and approving this clinical note. Once co-signed, the note will be locked.
-            </p>
-
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Electronic Signature *
-              </label>
-              <input
-                type="text"
-                value={signature}
-                onChange={(e) => setSignature(e.target.value)}
-                placeholder="Type your full name"
-                className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-              />
-            </div>
-
-            {cosignMutation.isError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {(cosignMutation.error as any)?.response?.data?.message || 'Failed to co-sign note'}
-              </div>
-            )}
-
-            <div className="flex items-center justify-end space-x-3">
-              <button
-                onClick={() => setShowCosignModal(false)}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCosign}
-                disabled={!signature || cosignMutation.isPending}
-                className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {cosignMutation.isPending ? 'Co-Signing...' : 'Co-Sign Note'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Cosign Modal - Phase 1.4: Electronic Signatures */}
+      {showCosignModal && note && (
+        <SignatureModal
+          open={showCosignModal}
+          onClose={() => setShowCosignModal(false)}
+          onSign={handleCosign}
+          noteType={note.noteType}
+          signatureType="COSIGN"
+        />
       )}
 
       {/* Unlock Request Modal */}

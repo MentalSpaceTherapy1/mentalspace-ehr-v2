@@ -112,6 +112,11 @@ model User {
   digitalSignature String? // base64
   signatureDate    DateTime?
 
+  // Phase 1.4: Signature Authentication
+  signaturePin      String? // Encrypted 4-6 digit PIN
+  signaturePassword String? // Separate from login password (hashed)
+  signatureBiometric String? // Fingerprint hash (future)
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -131,6 +136,9 @@ model User {
   alertsAsSupervisor  ComplianceAlert[]    @relation("AlertSupervisor")
   alertsAsAdmin       ComplianceAlert[]    @relation("AlertAdmin")
   performanceGoals    PerformanceGoal[]    @relation("PerformanceGoals")
+
+  // Phase 1.4: Electronic Signatures
+  signatureEvents SignatureEvent[] @relation("UserSignatureEvents")
 
   // Client Portal Integration (Phase 9) - Therapist/Admin interactions
   sessionReviewsReceived     SessionReview[]           @relation("SessionReviewClinician")
@@ -1061,6 +1069,9 @@ model ClinicalNote {
   diagnosesLastUpdated       Diagnosis[]             @relation("DiagnosisLastUpdatedNote")
   diagnosisHistoryEntries    DiagnosisHistory[]
   clinicalNoteDiagnoses      ClinicalNoteDiagnosis[]
+
+  // Phase 1.4: Electronic Signatures
+  signatureEvents SignatureEvent[] @relation("NoteSignatureEvents")
 
   // Unique constraint: One note per appointment per note type
   @@unique([appointmentId, noteType])
@@ -2528,4 +2539,52 @@ model PerformanceGoal {
 
   @@index([userId, status])
   @@map("performance_goals")
+}
+
+// ============================================================================
+// PHASE 1.4: LEGAL ELECTRONIC SIGNATURES & ATTESTATIONS
+// ============================================================================
+
+model SignatureAttestation {
+  id              String   @id @default(uuid())
+  role            String   // CLINICIAN, SUPERVISOR, ADMIN
+  noteType        String   // INTAKE, PROGRESS, TREATMENT_PLAN, etc.
+  jurisdiction    String   // State code (GA, FL, etc.)
+  payerId         String?  // Specific payer if needed
+  attestationText String   @db.Text // Legal language
+  isActive        Boolean  @default(true)
+  effectiveDate   DateTime
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  signatureEvents SignatureEvent[] @relation("AttestationSignatureEvents")
+
+  @@index([role, noteType, jurisdiction, isActive])
+  @@map("signature_attestations")
+}
+
+model SignatureEvent {
+  id             String   @id @default(uuid())
+  noteId         String
+  note           ClinicalNote @relation("NoteSignatureEvents", fields: [noteId], references: [id])
+  userId         String
+  user           User @relation("UserSignatureEvents", fields: [userId], references: [id])
+  signatureType  String   // AUTHOR, COSIGN, AMENDMENT
+  attestationId  String
+  attestation    SignatureAttestation @relation("AttestationSignatureEvents", fields: [attestationId], references: [id])
+  signedAt       DateTime @default(now())
+  ipAddress      String
+  userAgent      String
+  authMethod     String   // PASSWORD, PIN, BIOMETRIC, MFA
+  signatureData  String?  // Base64 image if drawn
+  isValid        Boolean  @default(true)
+  revokedAt      DateTime?
+  revokedBy      String?
+  revokedReason  String?
+
+  @@index([noteId, signatureType])
+  @@index([userId])
+  @@map("signature_events")
 }

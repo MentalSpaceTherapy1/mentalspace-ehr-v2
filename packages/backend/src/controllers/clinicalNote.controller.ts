@@ -5,6 +5,7 @@ import { ClinicalNotesValidationService } from '../services/clinical-notes-valid
 import prisma from '../lib/prisma';
 import { AppointmentEligibilityService } from '../services/appointment-eligibility.service';
 import { DiagnosisInheritanceService } from '../services/diagnosis-inheritance.service';
+import * as SignatureService from '../services/signature.service';
 
 // Note types enum
 export const NOTE_TYPES = {
@@ -440,6 +441,7 @@ export const updateClinicalNote = async (req: Request, res: Response) => {
 export const signClinicalNote = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const { pin, password } = req.body; // Phase 1.4: Signature authentication
     const userId = (req as any).user.userId;
 
     const note = await prisma.clinicalNote.findUnique({
@@ -470,6 +472,21 @@ export const signClinicalNote = async (req: Request, res: Response) => {
       });
     }
 
+    // PHASE 1.4: Verify signature authentication
+    const isAuthValid = await SignatureService.verifySignatureAuth({
+      userId,
+      pin,
+      password,
+    });
+
+    if (!isAuthValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid signature PIN or password',
+        errorCode: 'INVALID_SIGNATURE_AUTH',
+      });
+    }
+
     // PHASE 1.3: Validate note before signing
     const validationResult = await NoteValidationService.validateNote(note.noteType, note);
     if (!validationResult.isValid) {
@@ -486,6 +503,19 @@ export const signClinicalNote = async (req: Request, res: Response) => {
       (new Date().getTime() - new Date(note.sessionDate).getTime()) / (1000 * 60 * 60 * 24)
     );
     const completedOnTime = daysToComplete <= 7; // 7-day rule
+
+    // PHASE 1.4: Create signature event
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    await SignatureService.createSignatureEvent({
+      noteId: id,
+      userId,
+      signatureType: 'AUTHOR',
+      authMethod: pin ? 'PIN' : 'PASSWORD',
+      ipAddress,
+      userAgent,
+    });
 
     const updatedNote = await prisma.clinicalNote.update({
       where: { id },
@@ -532,7 +562,7 @@ export const signClinicalNote = async (req: Request, res: Response) => {
 export const cosignClinicalNote = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { supervisorComments } = req.body;
+    const { supervisorComments, pin, password } = req.body; // Phase 1.4: Signature authentication
     const supervisorId = (req as any).user.userId;
 
     const note = await prisma.clinicalNote.findUnique({
@@ -568,6 +598,34 @@ export const cosignClinicalNote = async (req: Request, res: Response) => {
         message: 'Note is not pending co-signature',
       });
     }
+
+    // PHASE 1.4: Verify signature authentication
+    const isAuthValid = await SignatureService.verifySignatureAuth({
+      userId: supervisorId,
+      pin,
+      password,
+    });
+
+    if (!isAuthValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid signature PIN or password',
+        errorCode: 'INVALID_SIGNATURE_AUTH',
+      });
+    }
+
+    // PHASE 1.4: Create signature event
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    await SignatureService.createSignatureEvent({
+      noteId: id,
+      userId: supervisorId,
+      signatureType: 'COSIGN',
+      authMethod: pin ? 'PIN' : 'PASSWORD',
+      ipAddress,
+      userAgent,
+    });
 
     const updatedNote = await prisma.clinicalNote.update({
       where: { id },
