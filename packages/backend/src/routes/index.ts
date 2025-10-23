@@ -32,6 +32,7 @@ import unlockRequestRoutes from './unlockRequest.routes';
 import practiceSettingsRoutes from './practiceSettings.routes';
 import aiRoutes from './ai.routes';
 import signatureRoutes from './signature.routes';
+import amendmentRoutes from './amendment.routes';
 
 const router = Router();
 
@@ -101,5 +102,8 @@ router.use('/ai', aiRoutes);
 
 // Signature routes (Phase 1.4: Electronic Signatures)
 router.use('/signatures', signatureRoutes);
+
+// Amendment routes (Phase 1.5: Amendment History System)
+router.use('/', amendmentRoutes);
 
 export default router;
