@@ -22,6 +22,7 @@ import {
   getValidationSummaryForNoteType,
 } from '../controllers/clinicalNote.controller';
 import { signClinicalNote } from '../controllers/signature.controller';
+import { checkBillingReadiness } from '../controllers/billingHold.controller';
 
 const router = Router();
 
@@ -81,6 +82,9 @@ router.post('/:id/resubmit-for-review', resubmitForReview);
 router.get('/validation-rules/:noteType', getValidationRulesForNoteType);
 router.post('/validate', validateNoteData);
 router.get('/validation-summary/:noteType', getValidationSummaryForNoteType);
+
+// Phase 2.1: Billing readiness check
+router.get('/:id/billing-readiness', checkBillingReadiness);
 
 // Delete note (draft only)
 router.delete('/:id', deleteClinicalNote);

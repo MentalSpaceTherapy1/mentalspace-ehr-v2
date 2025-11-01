@@ -1078,8 +1078,9 @@ model ClinicalNote {
   signatureEvents SignatureEvent[] @relation("NoteSignatureEvents")
 
   // Phase 1.5: Amendment History
-  amendments NoteAmendment[] @relation("NoteAmendments")
-  versions   NoteVersion[]   @relation("NoteVersions")
+  amendments   NoteAmendment[] @relation("NoteAmendments")
+  versions     NoteVersion[]   @relation("NoteVersions")
+  billingHolds BillingHold[]
 
   // Unique constraint: One note per appointment per note type
   @@unique([appointmentId, noteType])
@@ -2662,4 +2663,101 @@ model NoteVersion {
 
   @@index([noteId, versionNumber])
   @@map("note_versions")
+}
+
+// ============================================================================
+// PHASE 2.1: PAYER POLICY ENGINE & BILLING READINESS
+// ============================================================================
+
+model Payer {
+  id              String      @id @default(uuid())
+  name            String
+  payerType       String // COMMERCIAL, MEDICAID, MEDICARE, EAP, SELF_PAY
+  requiresPreAuth Boolean     @default(false)
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  rules           PayerRule[]
+
+  @@index([payerType])
+  @@index([isActive])
+  @@map("payers")
+}
+
+model PayerRule {
+  id      String @id @default(uuid())
+  payerId String
+  payer   Payer  @relation(fields: [payerId], references: [id], onDelete: Cascade)
+
+  // Rule conditions
+  clinicianCredential String // LMFT, LCSW, LPC, LAMFT, LAPC, etc.
+  placeOfService      String // OFFICE, TELEHEALTH, HOME, etc.
+  serviceType         String // PSYCHOTHERAPY, INTAKE, ASSESSMENT, etc.
+
+  // Supervision requirements
+  supervisionRequired        Boolean @default(false)
+  cosignRequired             Boolean @default(false)
+  incidentToBillingAllowed   Boolean @default(false)
+  renderingClinicianOverride Boolean @default(false) // Bill under supervisor instead
+
+  // Timeframe requirements
+  cosignTimeframeDays Int? // Must cosign within X days
+  noteCompletionDays  Int? // Must complete note within X days of session
+
+  // Validation rules
+  diagnosisRequired        Boolean @default(true)
+  treatmentPlanRequired    Boolean @default(true)
+  medicalNecessityRequired Boolean @default(true)
+  priorAuthRequired        Boolean @default(false)
+
+  // Disallowed scenarios
+  isProhibited      Boolean @default(false) // This combination is not allowed
+  prohibitionReason String? // Why this combination is prohibited
+
+  // Effective dates
+  effectiveDate   DateTime
+  terminationDate DateTime?
+  isActive        Boolean   @default(true)
+
+  // Metadata
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  createdBy    String?
+  billingHolds BillingHold[]
+
+  @@index([payerId])
+  @@index([clinicianCredential])
+  @@index([serviceType])
+  @@index([isActive])
+  @@index([effectiveDate, terminationDate])
+  @@map("payer_rules")
+}
+
+model BillingHold {
+  id          String       @id @default(uuid())
+  noteId      String
+  note        ClinicalNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  holdReason  String // MISSING_COSIGN, PAYER_RULE_VIOLATION, MISSING_DIAGNOSIS, etc.
+  holdDetails String       @db.Text // Detailed explanation of the hold
+
+  // Related payer rule (if applicable)
+  payerRuleId String?
+  payerRule   PayerRule? @relation(fields: [payerRuleId], references: [id], onDelete: SetNull)
+
+  // Hold tracking
+  holdPlacedAt DateTime  @default(now())
+  holdPlacedBy String // "SYSTEM" or userId
+  resolvedAt   DateTime?
+  resolvedBy   String?
+  isActive     Boolean   @default(true)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([noteId])
+  @@index([isActive])
+  @@index([holdReason])
+  @@index([holdPlacedAt])
+  @@map("billing_holds")
 }

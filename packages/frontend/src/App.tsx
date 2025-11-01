@@ -33,6 +33,14 @@ import VideoSession from './pages/Telehealth/VideoSession';
 import BillingDashboard from './pages/Billing/BillingDashboard';
 import ChargesPage from './pages/Billing/ChargesPage';
 import PaymentsPage from './pages/Billing/PaymentsPage';
+import PayerList from './pages/Billing/PayerList';
+import PayerForm from './pages/Billing/PayerForm';
+import PayerRuleList from './pages/Billing/PayerRuleList';
+import PayerRuleForm from './pages/Billing/PayerRuleForm';
+import BillingHoldsList from './pages/Billing/BillingHoldsList';
+import BillingReadinessChecker from './pages/Billing/BillingReadinessChecker';
+import PayerRuleImporter from './pages/Billing/PayerRuleImporter';
+import PayerDashboard from './pages/Billing/PayerDashboard';
 import ClinicianDashboard from './pages/Productivity/ClinicianDashboard';
 import SupervisorDashboard from './pages/Productivity/SupervisorDashboard';
 import AdministratorDashboard from './pages/Productivity/AdministratorDashboard';
@@ -498,6 +506,86 @@ function App() {
           element={
             <PrivateRoute>
               <PaymentsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payers"
+          element={
+            <PrivateRoute>
+              <PayerList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payers/new"
+          element={
+            <PrivateRoute>
+              <PayerForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payers/:id/edit"
+          element={
+            <PrivateRoute>
+              <PayerForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payers/:payerId/rules"
+          element={
+            <PrivateRoute>
+              <PayerRuleList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payers/:payerId/rules/new"
+          element={
+            <PrivateRoute>
+              <PayerRuleForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payers/:payerId/rules/:id/edit"
+          element={
+            <PrivateRoute>
+              <PayerRuleForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payers/:payerId/rules/import"
+          element={
+            <PrivateRoute>
+              <PayerRuleImporter />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/holds"
+          element={
+            <PrivateRoute>
+              <BillingHoldsList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/readiness"
+          element={
+            <PrivateRoute>
+              <BillingReadinessChecker />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/billing/payer-dashboard"
+          element={
+            <PrivateRoute>
+              <PayerDashboard />
             </PrivateRoute>
           }
         />

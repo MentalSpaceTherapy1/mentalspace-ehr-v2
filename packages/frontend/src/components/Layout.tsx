@@ -10,6 +10,7 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notesMenuOpen, setNotesMenuOpen] = useState(false);
+  const [billingMenuOpen, setBillingMenuOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleLogout = () => {
@@ -44,7 +45,22 @@ export default function Layout({ children }: LayoutProps) {
         { path: '/notes/my-notes', label: 'My Notes' },
       ]
     },
-    { path: '/billing', icon: '💰', label: 'Billing', color: 'from-teal-500 to-cyan-500' },
+    {
+      path: '/billing',
+      icon: '💰',
+      label: 'Billing',
+      color: 'from-teal-500 to-cyan-500',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/billing', label: 'Billing Dashboard' },
+        { path: '/billing/payer-dashboard', label: 'Payer Dashboard' },
+        { path: '/billing/payers', label: 'Payer Management' },
+        { path: '/billing/holds', label: 'Billing Holds' },
+        { path: '/billing/readiness', label: 'Readiness Checker' },
+        { path: '/billing/charges', label: 'Charges' },
+        { path: '/billing/payments', label: 'Payments' },
+      ]
+    },
     { path: '/reports', icon: '📈', label: 'Reports', color: 'from-sky-500 to-blue-600' },
     { path: '/telehealth/session/demo', icon: '📹', label: 'Telehealth', color: 'from-blue-600 to-indigo-600' },
     { path: '/portal/dashboard', icon: '🌐', label: 'Client Portal', color: 'from-emerald-500 to-teal-500' },
@@ -107,7 +123,11 @@ export default function Layout({ children }: LayoutProps) {
                 <button
                   onClick={() => {
                     if (item.hasSubmenu) {
-                      setNotesMenuOpen(!notesMenuOpen);
+                      if (item.path === '/notes') {
+                        setNotesMenuOpen(!notesMenuOpen);
+                      } else if (item.path === '/billing') {
+                        setBillingMenuOpen(!billingMenuOpen);
+                      }
                     } else {
                       navigate(item.path);
                     }
@@ -123,12 +143,14 @@ export default function Layout({ children }: LayoutProps) {
                     <span className="text-sm">{item.label}</span>
                   </div>
                   {item.hasSubmenu && (
-                    <span className="text-sm">{notesMenuOpen ? '▼' : '▶'}</span>
+                    <span className="text-sm">
+                      {(item.path === '/notes' && notesMenuOpen) || (item.path === '/billing' && billingMenuOpen) ? '▼' : '▶'}
+                    </span>
                   )}
                 </button>
 
                 {/* Submenu */}
-                {item.hasSubmenu && notesMenuOpen && (
+                {item.hasSubmenu && ((item.path === '/notes' && notesMenuOpen) || (item.path === '/billing' && billingMenuOpen)) && (
                   <div className="ml-8 mt-2 space-y-1">
                     {item.submenu.map((subItem: any) => (
                       <button
@@ -136,7 +158,7 @@ export default function Layout({ children }: LayoutProps) {
                         onClick={() => navigate(subItem.path)}
                         className={`w-full flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                           location.pathname === subItem.path
-                            ? 'bg-amber-100 text-amber-800'
+                            ? (item.path === '/notes' ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800')
                             : 'text-gray-600 hover:bg-gray-100'
                         }`}
                       >

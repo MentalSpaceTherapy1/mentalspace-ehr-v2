@@ -33,6 +33,9 @@ import practiceSettingsRoutes from './practiceSettings.routes';
 import aiRoutes from './ai.routes';
 import signatureRoutes from './signature.routes';
 import amendmentRoutes from './amendment.routes';
+import payerRoutes from './payer.routes';
+import payerRuleRoutes from './payerRule.routes';
+import billingHoldRoutes from './billingHold.routes';
 
 const router = Router();
 
@@ -105,5 +108,14 @@ router.use('/signatures', signatureRoutes);
 
 // Amendment routes (Phase 1.5: Amendment History System)
 router.use('/', amendmentRoutes);
+
+// Payer routes (Phase 2.1: Payer Policy Engine)
+router.use('/payers', payerRoutes);
+
+// Payer Rule routes (Phase 2.1: Payer Policy Engine)
+router.use('/payer-rules', payerRuleRoutes);
+
+// Billing Hold routes (Phase 2.1: Payer Policy Engine)
+router.use('/billing-holds', billingHoldRoutes);
 
 export default router;

@@ -93,7 +93,11 @@
       "Bash(do echo \"=== $dir ===\")",
       "Bash(ls:*)",
       "Bash(npx prisma format:*)",
-      "Bash(do echo \"=== Revision $rev ===\")"
+      "Bash(do echo \"=== Revision $rev ===\")",
+      "Bash(export TEST_EMAIL=\"brendajb@chctherapy.com\")",
+      "Bash(export TEST_PASSWORD=\"38MoreYears!\")",
+      "Bash(pkill:*)",
+      "Bash(winpty npx prisma migrate dev --name add_phase_2_1_payer_policy_engine --create-only)"
     ],
     "deny": [],
     "ask": []
