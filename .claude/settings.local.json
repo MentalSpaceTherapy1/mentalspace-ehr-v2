@@ -97,7 +97,14 @@
       "Bash(export TEST_EMAIL=\"brendajb@chctherapy.com\")",
       "Bash(export TEST_PASSWORD=\"38MoreYears!\")",
       "Bash(pkill:*)",
-      "Bash(winpty npx prisma migrate dev --name add_phase_2_1_payer_policy_engine --create-only)"
+      "Bash(winpty npx prisma migrate dev --name add_phase_2_1_payer_policy_engine --create-only)",
+      "Bash(nul)",
+      "Bash(temp_index.html)",
+      "Bash(start http://localhost:5176)",
+      "Bash(where:*)",
+      "Bash(npx:*)",
+      "Bash(git clone:*)",
+      "Bash(claude mcp add:*)"
     ],
     "deny": [],
     "ask": []
