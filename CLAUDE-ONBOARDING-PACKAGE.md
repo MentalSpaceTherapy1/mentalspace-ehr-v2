@@ -532,15 +532,15 @@ PayerRule (1) ----< (*) BillingHold
 DATABASE_URL=postgresql://mentalspace_admin:MentalSpace2024!SecurePwd@mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432/mentalspace_ehr
 
 # Server
-PORT=3000
-NODE_ENV=production
+PORT=3001
+NODE_ENV=development
 
 # JWT
 JWT_SECRET=<your-jwt-secret>
 JWT_EXPIRES_IN=24h
 
-# CORS
-CORS_ORIGIN=https://mentalspaceehr.com,https://www.mentalspaceehr.com
+# CORS (for local development)
+CORS_ORIGIN=http://localhost:5175
 
 # Admin User (for initial setup)
 ADMIN_EMAIL=brendajb@chctherapy.com
@@ -549,7 +549,11 @@ ADMIN_PASSWORD=<admin-password>
 
 #### Frontend `.env` (packages/frontend/.env)
 ```env
-VITE_API_URL=https://api.mentalspaceehr.com/api/v1
+# API URL (local development)
+VITE_API_URL=http://localhost:3001/api/v1
+
+# For production build, use:
+# VITE_API_URL=https://api.mentalspaceehr.com/api/v1
 ```
 
 ### Installation Steps
@@ -853,8 +857,8 @@ You've helped build a comprehensive EHR system with:
 ### Common Tasks
 ```bash
 # Start dev servers
-cd packages/backend && npm run dev  # Backend on :3000
-cd packages/frontend && npm run dev  # Frontend on :5173
+cd packages/backend && npm run dev  # Backend on :3001
+cd packages/frontend && npm run dev  # Frontend on :5175
 
 # Database operations
 cd packages/database
