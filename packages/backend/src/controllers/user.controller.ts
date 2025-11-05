@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import userService from '../services/user.service';
+import authService from '../services/auth.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { UserRole } from '@mentalspace/shared';
+import { ValidationError } from '../utils/errors';
 
 export class UserController {
   /**
@@ -216,6 +218,46 @@ export class UserController {
     const userId = req.user!.userId;
     const { newPassword } = req.body;
     const result = await userService.forcePasswordChange(userId, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  });
+
+  /**
+   * Unlock user account (admin only)
+   * POST /api/v1/users/:id/unlock
+   */
+  unlockAccount = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.params.id;
+    const adminId = req.user!.userId;
+
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const result = await authService.unlockAccount(userId, adminId);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  });
+
+  /**
+   * Force user to change password on next login (admin only)
+   * POST /api/v1/users/:id/force-password-change
+   */
+  forceUserPasswordChange = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.params.id;
+    const adminId = req.user!.userId;
+
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const result = await authService.forcePasswordChange(userId, adminId);
 
     res.status(200).json({
       success: true,

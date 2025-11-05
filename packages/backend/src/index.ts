@@ -6,6 +6,8 @@ import { startAllProductivityJobs } from './jobs/productivityJobs';
 import { initializeComplianceCronJobs } from './services/compliance.service';
 import { initializeSocketIO } from './socket';
 import { notificationScheduler } from './services/notifications/scheduler';
+import { processRemindersJob, retryFailedRemindersJob } from './jobs/processReminders.job';
+import { startWaitlistJobs, stopWaitlistJobs } from './jobs/processWaitlist.job';
 
 const PORT = config.port;
 
@@ -32,6 +34,17 @@ prisma.$connect()
 
     // Start notification scheduler (appointment reminders)
     notificationScheduler.startReminderJob();
+
+    // Start Module 3 reminder jobs (automated SMS/Email reminders)
+    logger.info('🔔 Starting Module 3 reminder processing jobs...');
+    processRemindersJob.start();
+    retryFailedRemindersJob.start();
+    logger.info('✅ Module 3 reminder jobs started');
+
+    // Start Module 3 Phase 2.2 waitlist automation jobs
+    logger.info('⏳ Starting Module 3 Phase 2.2 waitlist automation jobs...');
+    startWaitlistJobs();
+    logger.info('✅ Waitlist automation jobs started');
   })
   .catch((error) => {
     logger.error('❌ Database connection failed', { error: error.message });
@@ -46,6 +59,12 @@ const gracefulShutdown = async (signal: string) => {
 
   // Stop cron jobs
   notificationScheduler.stopReminderJob();
+  processRemindersJob.stop();
+  retryFailedRemindersJob.stop();
+  logger.info('🔔 Module 3 reminder jobs stopped');
+
+  stopWaitlistJobs();
+  logger.info('⏳ Waitlist automation jobs stopped');
 
   server.close(async () => {
     logger.info('HTTP server closed');

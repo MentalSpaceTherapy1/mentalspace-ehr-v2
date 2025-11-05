@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import * as SignatureService from '../services/signature.service';
 import logger from '../utils/logger';
+import prisma from '../services/database';
+import bcrypt from 'bcryptjs';
 
 /**
  * GET /api/v1/signatures/attestation/:noteType
@@ -63,7 +65,6 @@ export const setSignaturePin = async (req: Request, res: Response) => {
     }
 
     // Verify current password before allowing PIN change
-    const prisma = (await import('../services/database')).default;
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { password: true },
@@ -76,7 +77,6 @@ export const setSignaturePin = async (req: Request, res: Response) => {
       });
     }
 
-    const bcrypt = await import('bcryptjs');
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
 
     if (!isPasswordValid) {
@@ -113,16 +113,7 @@ export const setSignaturePassword = async (req: Request, res: Response) => {
     const userId = (req as any).user.userId;
     const { signaturePassword, currentPassword } = req.body;
 
-    // Validate password strength (min 8 chars)
-    if (signaturePassword.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message: 'Signature password must be at least 8 characters',
-      });
-    }
-
     // Verify current password before allowing signature password change
-    const prisma = (await import('../services/database')).default;
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { password: true },
@@ -135,7 +126,6 @@ export const setSignaturePassword = async (req: Request, res: Response) => {
       });
     }
 
-    const bcrypt = await import('bcryptjs');
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
 
     if (!isPasswordValid) {
@@ -173,7 +163,6 @@ export const getNoteSignatures = async (req: Request, res: Response) => {
     const userId = (req as any).user.userId;
 
     // Verify user has access to this note
-    const prisma = (await import('../services/database')).default;
     const note = await prisma.clinicalNote.findUnique({
       where: { id },
       select: {
@@ -239,7 +228,6 @@ export const revokeSignature = async (req: Request, res: Response) => {
     const { reason } = req.body;
 
     // Verify admin permission
-    const prisma = (await import('../services/database')).default;
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { roles: true },
@@ -315,7 +303,6 @@ export const signClinicalNote = async (req: Request, res: Response) => {
     }
 
     // Verify credential
-    const prisma = (await import('../services/database')).default;
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -334,7 +321,6 @@ export const signClinicalNote = async (req: Request, res: Response) => {
     }
 
     // Verify authentication credential
-    const bcrypt = await import('bcryptjs');
     let isAuthenticated = false;
 
     if (method === 'PIN') {
@@ -418,7 +404,6 @@ export const getSignatureStatus = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.userId;
 
-    const prisma = (await import('../services/database')).default;
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {

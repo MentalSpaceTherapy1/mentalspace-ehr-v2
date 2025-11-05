@@ -1,17 +1,27 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../lib/api';
+import MFAVerificationScreen from '../components/Auth/MFAVerificationScreen';
+import AccountLockedScreen from '../components/Auth/AccountLockedScreen';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showMFAVerification, setShowMFAVerification] = useState(false);
+  const [isAccountLocked, setIsAccountLocked] = useState(false);
+  const [lockedUntil, setLockedUntil] = useState<string | undefined>();
+  const [sessionMessage, setSessionMessage] = useState(
+    location.state?.message || ''
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSessionMessage('');
     setLoading(true);
 
     try {
@@ -20,19 +30,92 @@ export default function Login() {
         password,
       });
 
-      // Store token in localStorage
-      localStorage.setItem('token', response.data.data.tokens.accessToken);
-      localStorage.setItem('refreshToken', response.data.data.tokens.refreshToken);
+      // Check if MFA is required
+      if (response.data.data.requiresMfa) {
+        setShowMFAVerification(true);
+        setLoading(false);
+        return;
+      }
+
+      // Store token in localStorage (session-based auth)
+      localStorage.setItem('token', response.data.data.session.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
+
+      // Check for password expiration warning
+      if (response.data.data.passwordExpiresIn !== undefined) {
+        const daysUntilExpiry = response.data.data.passwordExpiresIn;
+        if (daysUntilExpiry <= 7) {
+          // Show warning banner in dashboard
+          localStorage.setItem('passwordExpiryWarning', daysUntilExpiry.toString());
+        }
+      }
 
       // Redirect to dashboard
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      const errorData = err.response?.data;
+
+      // Handle account locked error
+      if (errorData?.code === 'ACCOUNT_LOCKED' || errorData?.message?.includes('locked')) {
+        setIsAccountLocked(true);
+        setLockedUntil(errorData?.lockedUntil);
+        setLoading(false);
+        return;
+      }
+
+      // Handle other errors
+      setError(errorData?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleMFASuccess = (token: string) => {
+    // Store the token after successful MFA
+    localStorage.setItem('token', token);
+
+    // Fetch and store user data
+    api.get('/auth/me').then(response => {
+      localStorage.setItem('user', JSON.stringify(response.data.data));
+      navigate('/dashboard');
+    }).catch(() => {
+      setError('Failed to fetch user data');
+      setShowMFAVerification(false);
+    });
+  };
+
+  const handleMFACancel = () => {
+    setShowMFAVerification(false);
+    setPassword('');
+  };
+
+  const handleBackToLogin = () => {
+    setIsAccountLocked(false);
+    setPassword('');
+    setError('');
+  };
+
+  // Show account locked screen
+  if (isAccountLocked) {
+    return (
+      <AccountLockedScreen
+        lockedUntil={lockedUntil}
+        email={email}
+        onBackToLogin={handleBackToLogin}
+      />
+    );
+  }
+
+  // Show MFA verification screen
+  if (showMFAVerification) {
+    return (
+      <MFAVerificationScreen
+        email={email}
+        onSuccess={handleMFASuccess}
+        onCancel={handleMFACancel}
+      />
+    );
+  }
 
 
   return (
@@ -92,6 +175,12 @@ export default function Login() {
                 placeholder="••••••••"
               />
             </div>
+
+            {sessionMessage && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+                {sessionMessage}
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">

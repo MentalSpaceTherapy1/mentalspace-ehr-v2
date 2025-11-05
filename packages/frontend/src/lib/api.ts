@@ -14,6 +14,14 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
+    // DEBUG: Log the actual request being made
+    console.log('[API REQUEST]', {
+      url: config.url,
+      baseURL: config.baseURL,
+      fullURL: config.baseURL + config.url,
+      method: config.method
+    });
+
     // Use portal token for portal routes (/portal/ or /portal-auth), regular token for EHR routes
     const isPortalRoute = config.url?.includes('/portal/') || config.url?.includes('/portal-');
     const token = isPortalRoute

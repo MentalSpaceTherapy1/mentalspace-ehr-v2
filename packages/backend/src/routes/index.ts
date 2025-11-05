@@ -27,6 +27,7 @@ import clientAssessmentsRoutes from './clientAssessments.routes';
 import adminRoutes from './admin.routes';
 import reportsRoutes from './reports.routes';
 import diagnosisRoutes from './diagnosis.routes';
+import clientDiagnosisRoutes from './client-diagnosis.routes';
 import supervisionRoutes from './supervision.routes';
 import unlockRequestRoutes from './unlockRequest.routes';
 import practiceSettingsRoutes from './practiceSettings.routes';
@@ -36,6 +37,16 @@ import amendmentRoutes from './amendment.routes';
 import payerRoutes from './payer.routes';
 import payerRuleRoutes from './payerRule.routes';
 import billingHoldRoutes from './billingHold.routes';
+import priorAuthorizationRoutes from './priorAuthorization.routes';
+import sessionRoutes from './session.routes';
+import mfaRoutes from './mfa.routes';
+import clientRelationshipRoutes from './clientRelationship.routes';
+import duplicateDetectionRoutes from './duplicateDetection.routes';
+import appointmentTypeRoutes from './appointmentType.routes';
+import groupSessionRoutes from './groupSession.routes';
+import availabilityRoutes from './availability.routes';
+import timeOffRoutes from './timeOff.routes';
+import waitlistMatchingRoutes from './waitlistMatching.routes';
 
 const router = Router();
 
@@ -49,6 +60,12 @@ router.use('/', versionRoutes);
 router.use('/auth', authRoutes);
 router.use('/portal-auth', portalAuthRoutes);
 router.use('/users', userRoutes);
+
+// Session management routes (Module 1: Authentication & User Management)
+router.use('/sessions', sessionRoutes);
+
+// MFA routes (Module 1: Optional Multi-Factor Authentication)
+router.use('/mfa', mfaRoutes);
 
 // Client Portal Management routes (EHR-side) - MUST come before general /clients routes
 // Forms: /api/v1/clients/library, /api/v1/clients/:clientId/forms/*
@@ -91,6 +108,9 @@ router.use('/reports', reportsRoutes);
 // Diagnosis routes (Clinical Notes Business Rules)
 router.use('/diagnoses', diagnosisRoutes);
 
+// Client Diagnosis routes (Module 2: Client Management)
+router.use('/', clientDiagnosisRoutes);
+
 // Supervision routes (Phase 5)
 router.use('/supervision', supervisionRoutes);
 
@@ -117,5 +137,29 @@ router.use('/payer-rules', payerRuleRoutes);
 
 // Billing Hold routes (Phase 2.1: Payer Policy Engine)
 router.use('/billing-holds', billingHoldRoutes);
+
+// Prior Authorization routes (Module 2: Prior Authorizations)
+router.use('/prior-authorizations', priorAuthorizationRoutes);
+
+// Client Relationship routes (Module 2: Client Relationships & Providers)
+router.use('/client-relationships', clientRelationshipRoutes);
+
+// Duplicate Detection routes (Module 2: Client Management)
+router.use('/', duplicateDetectionRoutes);
+
+// Appointment Type routes (Module 3: Scheduling & Calendar Management)
+router.use('/appointment-types', appointmentTypeRoutes);
+
+// Group Session routes (Module 3 Phase 2: Group Appointment Management)
+router.use('/group-sessions', groupSessionRoutes);
+
+// Provider Availability routes (Module 3 Phase 2.3: Provider Availability & Time-Off)
+router.use('/provider-availability', availabilityRoutes);
+
+// Time-Off Request routes (Module 3 Phase 2.3: Provider Availability & Time-Off)
+router.use('/time-off', timeOffRoutes);
+
+// Waitlist Matching routes (Module 3 Phase 2.2: Waitlist Automation)
+router.use('/waitlist-matching', waitlistMatchingRoutes);
 
 export default router;

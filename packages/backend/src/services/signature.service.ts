@@ -376,9 +376,25 @@ export async function setSignaturePin(userId: string, pin: string): Promise<void
  */
 export async function setSignaturePassword(userId: string, password: string): Promise<void> {
   try {
-    // Validate password (min 8 characters)
-    if (password.length < 8) {
-      throw new Error('Signature password must be at least 8 characters');
+    // Validate password strength (HIPAA-compliant requirements)
+    if (password.length < 12) {
+      throw new Error('Signature password must be at least 12 characters');
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      throw new Error('Signature password must contain at least one uppercase letter');
+    }
+
+    if (!/[a-z]/.test(password)) {
+      throw new Error('Signature password must contain at least one lowercase letter');
+    }
+
+    if (!/[0-9]/.test(password)) {
+      throw new Error('Signature password must contain at least one number');
+    }
+
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      throw new Error('Signature password must contain at least one special character');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

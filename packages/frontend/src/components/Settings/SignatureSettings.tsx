@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, Check, Edit } from '@mui/icons-material';
 import api from '../../lib/api';
+import PasswordStrengthIndicator, { isPasswordStrong } from '../Auth/PasswordStrengthIndicator';
 
 export const SignatureSettings: React.FC = () => {
   const [hasPin, setHasPin] = useState(false);
@@ -88,8 +89,13 @@ export const SignatureSettings: React.FC = () => {
     setErrorMessage('');
 
     // Validate password
-    if (!newSignaturePassword || newSignaturePassword.length < 8) {
-      setErrorMessage('Signature password must be at least 8 characters');
+    if (!newSignaturePassword) {
+      setErrorMessage('Signature password is required');
+      return;
+    }
+
+    if (!isPasswordStrong(newSignaturePassword)) {
+      setErrorMessage('Password does not meet all security requirements. Please check the requirements below.');
       return;
     }
 
@@ -324,6 +330,12 @@ export const SignatureSettings: React.FC = () => {
                       ),
                     }}
                   />
+
+                  {newSignaturePassword && (
+                    <Box sx={{ mt: 2, mb: 2 }}>
+                      <PasswordStrengthIndicator password={newSignaturePassword} />
+                    </Box>
+                  )}
 
                   <TextField
                     fullWidth

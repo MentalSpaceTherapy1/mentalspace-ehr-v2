@@ -12,6 +12,10 @@
     "install:all": "npm install --workspace=packages/backend && npm install --workspace=packages/frontend && npm install --workspace=packages/shared && npm install --workspace=packages/database && npm install --workspace=infrastructure",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "cdk:deploy": "npm run cdk deploy --workspace=infrastructure",
@@ -34,10 +38,12 @@
   "author": "MentalSpace Team",
   "license": "PROPRIETARY",
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/node": "^20.12.0",
     "@typescript-eslint/eslint-plugin": "^7.5.0",
     "@typescript-eslint/parser": "^7.5.0",
     "eslint": "^8.57.0",
+    "playwright": "^1.56.1",
     "prettier": "^3.2.5",
     "typescript": "^5.4.3"
   },

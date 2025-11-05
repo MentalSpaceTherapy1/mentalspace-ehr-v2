@@ -9,8 +9,11 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [clientsMenuOpen, setClientsMenuOpen] = useState(false);
+  const [appointmentsMenuOpen, setAppointmentsMenuOpen] = useState(false);
   const [notesMenuOpen, setNotesMenuOpen] = useState(false);
   const [billingMenuOpen, setBillingMenuOpen] = useState(false);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleLogout = () => {
@@ -18,6 +21,24 @@ export default function Layout({ children }: LayoutProps) {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     navigate('/login');
+  };
+
+  const handleMenuItemClick = (item: any) => {
+    if (item.hasSubmenu) {
+      if (item.path === '/clients') {
+        setClientsMenuOpen(!clientsMenuOpen);
+      } else if (item.path === '/appointments') {
+        setAppointmentsMenuOpen(!appointmentsMenuOpen);
+      } else if (item.path === '/notes') {
+        setNotesMenuOpen(!notesMenuOpen);
+      } else if (item.path === '/billing') {
+        setBillingMenuOpen(!billingMenuOpen);
+      } else if (item.path === '/settings') {
+        setSettingsMenuOpen(!settingsMenuOpen);
+      }
+    } else {
+      navigate(item.path);
+    }
   };
 
   const getProductivityPath = () => {
@@ -32,8 +53,30 @@ export default function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { path: '/dashboard', icon: '🏠', label: 'Dashboard', color: 'from-blue-500 to-cyan-500' },
-    { path: '/clients', icon: '🧑‍⚕️', label: 'Clients', color: 'from-purple-500 to-pink-500' },
-    { path: '/appointments', icon: '📅', label: 'Appointments', color: 'from-green-500 to-emerald-500' },
+    {
+      path: '/clients',
+      icon: '🧑‍⚕️',
+      label: 'Clients',
+      color: 'from-purple-500 to-pink-500',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/clients', label: 'Client List' },
+        { path: '/clients/duplicates', label: 'Duplicate Detection' },
+      ]
+    },
+    {
+      path: '/appointments',
+      icon: '📅',
+      label: 'Appointments',
+      color: 'from-green-500 to-emerald-500',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/appointments', label: 'Calendar' },
+        { path: '/appointments/waitlist', label: 'Waitlist' },
+        { path: '/appointments/time-off', label: 'Time-Off Requests' },
+      ]
+    },
+    { path: '/groups', icon: '👥', label: 'Group Sessions', color: 'from-cyan-500 to-blue-500' },
     {
       path: '/notes',
       icon: '📝',
@@ -67,7 +110,19 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/supervision', icon: '👨‍🏫', label: 'Supervision', color: 'from-rose-500 to-red-500' },
     { path: getProductivityPath(), icon: '📊', label: 'Productivity', color: 'from-violet-500 to-fuchsia-500' },
     { path: '/users', icon: '👥', label: 'Users', color: 'from-indigo-500 to-purple-500' },
-    { path: '/settings', icon: '⚙️', label: 'Settings', color: 'from-gray-500 to-slate-600' },
+    {
+      path: '/settings',
+      icon: '⚙️',
+      label: 'Settings',
+      color: 'from-gray-500 to-slate-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/settings', label: 'Practice Settings' },
+        { path: '/settings/availability', label: 'Provider Availability' },
+        { path: '/settings/appointment-types', label: 'Appointment Types' },
+        { path: '/settings/reminders', label: 'Reminder Settings' },
+      ]
+    },
   ];
 
   const isActive = (path: string) => {
@@ -121,17 +176,7 @@ export default function Layout({ children }: LayoutProps) {
             {navItems.map((item: any) => (
               <div key={item.path}>
                 <button
-                  onClick={() => {
-                    if (item.hasSubmenu) {
-                      if (item.path === '/notes') {
-                        setNotesMenuOpen(!notesMenuOpen);
-                      } else if (item.path === '/billing') {
-                        setBillingMenuOpen(!billingMenuOpen);
-                      }
-                    } else {
-                      navigate(item.path);
-                    }
-                  }}
+                  onClick={() => handleMenuItemClick(item)}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 ${
                     isActive(item.path)
                       ? `bg-gradient-to-r ${item.color} text-white shadow-lg`
@@ -144,13 +189,21 @@ export default function Layout({ children }: LayoutProps) {
                   </div>
                   {item.hasSubmenu && (
                     <span className="text-sm">
-                      {(item.path === '/notes' && notesMenuOpen) || (item.path === '/billing' && billingMenuOpen) ? '▼' : '▶'}
+                      {(item.path === '/clients' && clientsMenuOpen) ||
+                       (item.path === '/appointments' && appointmentsMenuOpen) ||
+                       (item.path === '/notes' && notesMenuOpen) ||
+                       (item.path === '/billing' && billingMenuOpen) ||
+                       (item.path === '/settings' && settingsMenuOpen) ? '▼' : '▶'}
                     </span>
                   )}
                 </button>
 
                 {/* Submenu */}
-                {item.hasSubmenu && ((item.path === '/notes' && notesMenuOpen) || (item.path === '/billing' && billingMenuOpen)) && (
+                {item.hasSubmenu && ((item.path === '/clients' && clientsMenuOpen) ||
+                                     (item.path === '/appointments' && appointmentsMenuOpen) ||
+                                     (item.path === '/notes' && notesMenuOpen) ||
+                                     (item.path === '/billing' && billingMenuOpen) ||
+                                     (item.path === '/settings' && settingsMenuOpen)) && (
                   <div className="ml-8 mt-2 space-y-1">
                     {item.submenu.map((subItem: any) => (
                       <button

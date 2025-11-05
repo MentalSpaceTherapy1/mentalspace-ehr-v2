@@ -6,10 +6,14 @@ import UserList from './pages/Users/UserList';
 import UserForm from './pages/Users/UserForm';
 import UserDetail from './pages/Users/UserDetail';
 import PracticeSettings from './pages/Settings/PracticeSettingsFinal';
+import MFASettings from './pages/Settings/MFASettings';
+import SessionManagement from './pages/Settings/SessionManagement';
 import UserProfile from './pages/UserProfile';
 import ClientList from './pages/Clients/ClientList';
 import ClientForm from './pages/Clients/ClientForm';
 import ClientDetail from './pages/Clients/ClientDetail';
+import ClientDiagnosesPage from './pages/Clients/ClientDiagnosesPage';
+import DuplicateDetectionPage from './pages/Clients/DuplicateDetectionPage';
 import ClinicalNoteDetail from './pages/ClinicalNotes/ClinicalNoteDetail';
 import ClinicalNotesPage from './pages/ClinicalNotes/ClinicalNotesPage';
 import ComplianceDashboard from './pages/ClinicalNotes/ComplianceDashboard';
@@ -27,8 +31,10 @@ import AppointmentsCalendar from './pages/Appointments/AppointmentsCalendar';
 import NewAppointment from './pages/Appointments/NewAppointment';
 import Waitlist from './pages/Appointments/Waitlist';
 import ClinicianSchedule from './pages/Appointments/ClinicianSchedule';
-import TimeOffRequests from './pages/Appointments/TimeOffRequests';
+import TimeOffRequests from './pages/TimeOff/TimeOffRequestsPage';
 import ReminderSettings from './pages/Settings/ReminderSettings';
+import AppointmentTypes from './pages/Settings/AppointmentTypes';
+import ProviderAvailability from './pages/Settings/ProviderAvailability';
 import VideoSession from './pages/Telehealth/VideoSession';
 import BillingDashboard from './pages/Billing/BillingDashboard';
 import ChargesPage from './pages/Billing/ChargesPage';
@@ -69,6 +75,8 @@ import UnlockRequestManagement from './pages/UnlockRequests/UnlockRequestManagem
 import EditNoteRouter from './pages/ClinicalNotes/EditNoteRouter';
 import SmartNoteCreator from './pages/ClinicalNotes/SmartNoteCreator';
 import LandingPage from './pages/Landing/LandingPage';
+import GroupSessionsPage from './pages/Groups/GroupSessionsPage';
+import GroupDetailsPage from './pages/Groups/GroupDetailsPage';
 
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -254,6 +262,22 @@ function App() {
           }
         />
         <Route
+          path="/clients/:clientId/diagnoses"
+          element={
+            <PrivateRoute>
+              <ClientDiagnosesPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients/duplicates"
+          element={
+            <PrivateRoute>
+              <DuplicateDetectionPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/appointments"
           element={
             <PrivateRoute>
@@ -298,6 +322,38 @@ function App() {
           element={
             <PrivateRoute>
               <ReminderSettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/settings/appointment-types"
+          element={
+            <PrivateRoute>
+              <AppointmentTypes />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/settings/availability"
+          element={
+            <PrivateRoute>
+              <ProviderAvailability />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/groups"
+          element={
+            <PrivateRoute>
+              <GroupSessionsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/groups/:id"
+          element={
+            <PrivateRoute>
+              <GroupDetailsPage />
             </PrivateRoute>
           }
         />
@@ -634,6 +690,22 @@ function App() {
           element={
             <PrivateRoute>
               <UserProfile />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile/mfa-settings"
+          element={
+            <PrivateRoute>
+              <MFASettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile/sessions"
+          element={
+            <PrivateRoute>
+              <SessionManagement />
             </PrivateRoute>
           }
         />

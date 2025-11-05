@@ -164,7 +164,76 @@ model User {
   // Clinical Notes Business Rules
   diagnosisHistoryEntries DiagnosisHistory[] @relation("DiagnosisHistoryUser")
 
+  // Client Diagnoses Relations
+  diagnosesCreated  ClientDiagnosis[] @relation("DiagnosedBy")
+  diagnosesReviewed ClientDiagnosis[] @relation("LastReviewedBy")
+
+  // Module 2: Client Relationships & Providers
+  clientRelationshipsCreated ClientRelationship[] @relation("RelationshipCreator")
+  clientProvidersAsInternal  ClientProvider[]     @relation("InternalProvider")
+  clientProvidersCreated     ClientProvider[]     @relation("CreatedByUser")
+
+  // Prior Authorization Relations (Module 2)
+  priorAuthsRequested  PriorAuthorization[] @relation("RequestingProvider")
+  priorAuthsPerforming PriorAuthorization[] @relation("PerformingProvider")
+  priorAuthsCreated    PriorAuthorization[] @relation("AuthCreator")
+
+  // Phase 1: Authentication & User Management - Security Features
+  // Account Lockout
+  failedLoginAttempts Int       @default(0)
+  accountLockedUntil  DateTime?
+
+  // Password Policies
+  passwordChangedAt DateTime @default(now())
+  passwordHistory   String[] @default([])
+
+  // MFA (Optional)
+  mfaSecret      String?
+  mfaBackupCodes String[]  @default([])
+  mfaMethod      String?
+  mfaEnabledAt   DateTime?
+
+  // Relations
+  sessions           Session[]            @relation
+  duplicatesReviewed PotentialDuplicate[] @relation("DuplicateReviewer")
+
+  // Module 3 Phase 2: Group Appointments
+  groupsAsFacilitator   GroupSession[] @relation("GroupFacilitator")
+  groupsAsCoFacilitator GroupSession[] @relation("GroupCoFacilitator")
+  screenedMembers       GroupMember[]
+
+  // Module 3 Phase 2: Provider Availability & Time-Off
+  availability       ProviderAvailability[]
+  timeOffAsProvider  TimeOffRequest[]       @relation("TimeOffProvider")
+  timeOffAsRequester TimeOffRequest[]       @relation("TimeOffRequester")
+  timeOffAsApprover  TimeOffRequest[]       @relation("TimeOffApprover")
+  timeOffAsCoverage  TimeOffRequest[]       @relation("TimeOffCoverage")
+
   @@map("users")
+}
+
+// ============================================================================
+// AUTHENTICATION & SESSION MANAGEMENT (Phase 1)
+// ============================================================================
+
+model Session {
+  id            String   @id @default(uuid())
+  userId        String
+  token         String   @unique
+  refreshToken  String?  @unique
+  ipAddress     String
+  userAgent     String
+  deviceTrusted Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+  lastActivity  DateTime @default(now())
+  isActive      Boolean  @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([token])
+  @@map("sessions")
 }
 
 // ============================================================================
@@ -309,6 +378,9 @@ model PracticeSettings {
   updatedAt      DateTime @updatedAt
   lastModifiedBy String
 
+  // Module 3: Reminder Configuration Relation
+  reminderConfig ReminderConfiguration?
+
   @@map("practice_settings")
 }
 
@@ -447,20 +519,22 @@ model Client {
   lastModifiedBy String
 
   // Relations
-  emergencyContacts  EmergencyContact[]
-  legalGuardians     LegalGuardian[]
-  insuranceInfo      InsuranceInformation[]
-  appointments       Appointment[]
-  clinicalNotes      ClinicalNote[]
-  treatmentPlans     TreatmentPlan[]
-  diagnoses          Diagnosis[]
-  medications        Medication[]
-  documents          ClientDocument[]
-  charges            ChargeEntry[]
-  payments           PaymentRecord[]
-  statements         ClientStatement[]
-  portalAccount      PortalAccount?
-  telehealthConsents TelehealthConsent[]
+  emergencyContacts   EmergencyContact[]
+  legalGuardians      LegalGuardian[]
+  insuranceInfo       InsuranceInformation[]
+  priorAuthorizations PriorAuthorization[]
+  appointments        Appointment[]
+  clinicalNotes       ClinicalNote[]
+  treatmentPlans      TreatmentPlan[]
+  diagnoses           Diagnosis[]
+  clientDiagnoses     ClientDiagnosis[]
+  medications         Medication[]
+  documents           ClientDocument[]
+  charges             ChargeEntry[]
+  payments            PaymentRecord[]
+  statements          ClientStatement[]
+  portalAccount       PortalAccount?
+  telehealthConsents  TelehealthConsent[]
 
   // Client Portal Relations (Phase 9) - Client-generated data visible to therapist
   insuranceCards          InsuranceCard[]
@@ -490,7 +564,45 @@ model Client {
   journalEntries          JournalEntry[]           @relation("ClientJournalEntry")
   sessionSummaries        SessionSummary[]         @relation("ClientSessionSummary")
 
+  // Module 2: Client Relationships & Providers
+  relationshipsAsClient1 ClientRelationship[] @relation("Client1Relationships")
+  relationshipsAsClient2 ClientRelationship[] @relation("Client2Relationships")
+  providers              ClientProvider[]
+
+  // Module 2: Duplicate Detection
+  duplicatesAsClient1 PotentialDuplicate[] @relation("Client1Duplicates")
+  duplicatesAsClient2 PotentialDuplicate[] @relation("Client2Duplicates")
+  mergedIntoId        String?              @db.Uuid
+  mergedAt            DateTime?
+  isMerged            Boolean              @default(false)
+
+  // Module 3 Phase 2: Group Appointments
+  groupMemberships GroupMember[]
+
   @@map("clients")
+}
+
+model PotentialDuplicate {
+  id              String    @id @default(uuid())
+  client1Id       String
+  client2Id       String
+  matchType       String // EXACT, PHONETIC, FUZZY, PARTIAL_DOB, ADDRESS
+  confidenceScore Float // 0.0 to 1.0
+  matchFields     String[] // e.g., ['name', 'dob', 'phone']
+  status          String // PENDING, MERGED, DISMISSED, NEEDS_REVIEW
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  resolutionNotes String?   @db.Text
+  createdAt       DateTime  @default(now())
+
+  client1  Client @relation("Client1Duplicates", fields: [client1Id], references: [id])
+  client2  Client @relation("Client2Duplicates", fields: [client2Id], references: [id])
+  reviewer User?  @relation("DuplicateReviewer", fields: [reviewedBy], references: [id])
+
+  @@unique([client1Id, client2Id])
+  @@index([status])
+  @@index([confidenceScore])
+  @@map("potential_duplicates")
 }
 
 model EmergencyContact {
@@ -592,7 +704,64 @@ model InsuranceInformation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relations
+  authorizationsRequired Boolean              @default(false)
+  priorAuthorizations    PriorAuthorization[]
+
   @@map("insurance_information")
+}
+
+// ============================================================================
+// PHASE 2: CLIENT DIAGNOSES (Module 2)
+// ============================================================================
+
+model ClientDiagnosis {
+  id       String @id @default(uuid())
+  clientId String
+
+  // Diagnosis Information
+  diagnosisType     String // PRIMARY, SECONDARY, RULE_OUT, HISTORICAL, PROVISIONAL
+  icd10Code         String? @db.VarChar(10)
+  dsm5Code          String? @db.VarChar(10)
+  diagnosisName     String  @db.VarChar(500)
+  diagnosisCategory String? // Mood Disorders, Anxiety Disorders, etc.
+
+  // Clinical Details
+  severitySpecifier String? // MILD, MODERATE, SEVERE, EXTREME
+  courseSpecifier   String? // IN_REMISSION, PARTIAL_REMISSION, RECURRENT, etc.
+  onsetDate         DateTime?
+  remissionDate     DateTime?
+
+  // Provider Information
+  dateDiagnosed    DateTime  @default(now())
+  diagnosedById    String
+  lastReviewedDate DateTime?
+  lastReviewedById String?
+
+  // Status
+  status          String    @default("ACTIVE") // ACTIVE, RESOLVED, RULE_OUT_REJECTED
+  dateResolved    DateTime?
+  resolutionNotes String?   @db.Text
+
+  // Clinical Notes
+  supportingEvidence         String? @db.Text
+  differentialConsiderations String? @db.Text
+
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client         Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  diagnosedBy    User   @relation("DiagnosedBy", fields: [diagnosedById], references: [id])
+  lastReviewedBy User?  @relation("LastReviewedBy", fields: [lastReviewedById], references: [id])
+
+  @@index([clientId])
+  @@index([icd10Code])
+  @@index([dsm5Code])
+  @@index([status])
+  @@index([diagnosisType])
+  @@map("client_diagnoses")
 }
 
 // ============================================================================
@@ -661,11 +830,29 @@ model Appointment {
   chargeAmount  Decimal? @db.Decimal(10, 2)
   billingStatus String   @default("Not Billed")
 
-  // Reminders
+  // Reminders (Enhanced for Module 3 Phase 1)
+  reminders AppointmentReminder[]
+
+  // Keep existing flags for backward compatibility
   emailReminderSent Boolean   @default(false)
   emailReminderDate DateTime?
   smsReminderSent   Boolean   @default(false)
   smsReminderDate   DateTime?
+
+  // New confirmation tracking (Module 3)
+  confirmedAt        DateTime?
+  confirmedBy        String? // USER, CLIENT_SMS, CLIENT_PORTAL, CLIENT_VOICE
+  confirmationMethod String? // SMS_REPLY, PORTAL_CLICK, VOICE_RESPONSE, MANUAL
+
+  // No-Show Risk Prediction (Module 3)
+  noShowRiskScore   Float? // 0.0 to 1.0
+  noShowRiskLevel   String? // LOW, MEDIUM, HIGH
+  noShowRiskFactors String[] // ["history", "weather", "late_booking"]
+  riskCalculatedAt  DateTime?
+
+  // Appointment Type Enhancement (Module 3)
+  appointmentTypeId  String?
+  appointmentTypeObj AppointmentType? @relation(fields: [appointmentTypeId], references: [id])
 
   // Recurring
   isRecurring          Boolean   @default(false)
@@ -697,6 +884,15 @@ model Appointment {
   sessionReview  SessionReview?
   preSessionPrep PreSessionPrep?
   sessionSummary SessionSummary?
+
+  // Module 3: Scheduling Relations
+  noShowPredictionLogs NoShowPredictionLog[]
+
+  // Module 3 Phase 2: Group Appointments
+  groupSessionId String?
+  groupSession   GroupSession?     @relation("GroupSessions", fields: [groupSessionId], references: [id])
+  isGroupSession Boolean           @default(false)
+  attendance     GroupAttendance[]
 
   @@map("appointments")
 }
@@ -897,12 +1093,28 @@ model WaitlistEntry {
   notifiedDate       DateTime?
   notificationMethod String?
 
-  status String @default("Active") // 'Active', 'Scheduled', 'Cancelled', 'Expired'
+  status String @default("Active") // 'Active', 'Offered', 'Scheduled', 'Removed', 'Cancelled', 'Expired'
 
   scheduledAppointmentId String?
   scheduledDate          DateTime?
 
   notes String?
+
+  // Module 3 Phase 2.2: Waitlist Automation Fields
+  priorityScore       Float   @default(0.5) // 0.0 to 1.0 - Calculated priority score
+  preferredProviderId String? // Specific provider preference
+  insuranceId         String? // Insurance information for matching
+  maxWaitDays         Int? // Maximum days willing to wait
+
+  // Matching tracking
+  lastOfferDate    DateTime? // Last time a slot was offered
+  offerCount       Int       @default(0) // Total offers made
+  declinedOffers   Int       @default(0) // Number of declined offers
+  autoMatchEnabled Boolean   @default(true) // Allow automated matching
+
+  // Notification tracking
+  notificationsSent Int       @default(0) // Total notifications sent
+  lastNotification  DateTime? // Last notification timestamp
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -1746,6 +1958,9 @@ model ClientDocument {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relations
+  relationshipConsents ClientRelationship[]
 
   @@map("client_documents")
 }
@@ -2760,4 +2975,502 @@ model BillingHold {
   @@index([holdReason])
   @@index([holdPlacedAt])
   @@map("billing_holds")
+}
+
+// ============================================================================
+// MODULE 2: CLIENT RELATIONSHIPS & PROVIDERS
+// ============================================================================
+
+model ClientRelationship {
+  id        String @id @default(uuid())
+  client1Id String
+  client2Id String
+
+  // Relationship Information
+  relationshipType    String // PARENT, CHILD, SPOUSE, SIBLING, GUARDIAN, EMERGENCY_CONTACT
+  relationshipDetails String? @db.Text
+  isPrimary           Boolean @default(false)
+
+  // Permissions & Access
+  isEmergencyContact      Boolean @default(false)
+  isAuthorizedContact     Boolean @default(false)
+  canScheduleAppointments Boolean @default(false)
+  canAccessPortal         Boolean @default(false)
+  canReceiveInformation   Boolean @default(false)
+  canMakeMedicalDecisions Boolean @default(false)
+  specificLimitations     String? @db.Text
+
+  // ROI & Consent
+  roiSigned         Boolean   @default(false)
+  roiSignedDate     DateTime?
+  roiExpirationDate DateTime?
+  consentDocumentId String?
+
+  // Dates
+  relationshipStartDate DateTime  @default(now())
+  relationshipEndDate   DateTime?
+  isActive              Boolean   @default(true)
+
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String
+
+  // Relations
+  client1         Client          @relation("Client1Relationships", fields: [client1Id], references: [id], onDelete: Cascade)
+  client2         Client          @relation("Client2Relationships", fields: [client2Id], references: [id], onDelete: Cascade)
+  consentDocument ClientDocument? @relation(fields: [consentDocumentId], references: [id])
+  creator         User            @relation("RelationshipCreator", fields: [createdBy], references: [id])
+
+  @@unique([client1Id, client2Id, relationshipType])
+  @@index([client1Id])
+  @@index([client2Id])
+  @@index([relationshipType])
+  @@index([isActive])
+  @@map("client_relationships")
+}
+
+model ClientProvider {
+  id       String @id @default(uuid())
+  clientId String
+
+  // Provider Information
+  providerType          String // PRIMARY_THERAPIST, PSYCHIATRIST, CASE_MANAGER, PCP, SPECIALIST
+  providerId            String?
+  externalProviderName  String? @db.VarChar(255)
+  externalProviderNPI   String? @db.VarChar(10)
+  externalProviderPhone String? @db.VarChar(20)
+  externalProviderFax   String? @db.VarChar(20)
+  externalProviderEmail String? @db.VarChar(255)
+  specialty             String? @db.VarChar(255)
+
+  // ROI & Communication
+  roiSigned             Boolean   @default(false)
+  roiSignedDate         DateTime?
+  roiExpirationDate     DateTime?
+  canReceiveUpdates     Boolean   @default(false)
+  canSendReferrals      Boolean   @default(false)
+  lastCommunicationDate DateTime?
+
+  // Status
+  isActive  Boolean   @default(true)
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String
+
+  // Relations
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  provider User?  @relation("InternalProvider", fields: [providerId], references: [id])
+  creator  User   @relation("CreatedByUser", fields: [createdBy], references: [id])
+
+  @@index([clientId])
+  @@index([providerType])
+  @@index([providerId])
+  @@map("client_providers")
+}
+
+// ============================================================================
+// PHASE 2: PRIOR AUTHORIZATIONS (Module 2)
+// ============================================================================
+
+model PriorAuthorization {
+  id          String @id @default(uuid())
+  clientId    String
+  insuranceId String
+
+  // Authorization Details
+  authorizationNumber String   @unique @db.VarChar(100)
+  authorizationType   String // OUTPATIENT_THERAPY, INPATIENT, ASSESSMENT, MEDICATION_MANAGEMENT
+  cptCodes            String[]
+  diagnosisCodes      String[]
+
+  // Session Tracking
+  sessionsAuthorized Int
+  sessionsUsed       Int    @default(0)
+  sessionsRemaining  Int
+  sessionUnit        String @default("SESSIONS")
+
+  // Dates
+  requestDate  DateTime  @default(now())
+  approvalDate DateTime?
+  startDate    DateTime
+  endDate      DateTime
+  lastUsedDate DateTime?
+
+  // Provider Information
+  requestingProviderId String
+  performingProviderId String?
+
+  // Status
+  status       String // PENDING, APPROVED, DENIED, EXPIRED, EXHAUSTED
+  denialReason String? @db.Text
+
+  // Appeal Information
+  appealStatus String?
+  appealDate   DateTime?
+  appealNotes  String?   @db.Text
+
+  // Documentation
+  documentationSubmitted Boolean  @default(false)
+  clinicalJustification  String?  @db.Text
+  supportingDocuments    String[]
+
+  // Renewal
+  renewalRequested   Boolean   @default(false)
+  renewalRequestDate DateTime?
+  renewedFromId      String?
+  renewedToId        String?
+
+  // Notifications
+  warningsSent Json?
+
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String
+
+  // Relations
+  client             Client               @relation(fields: [clientId], references: [id])
+  insurance          InsuranceInformation @relation(fields: [insuranceId], references: [id])
+  requestingProvider User                 @relation("RequestingProvider", fields: [requestingProviderId], references: [id])
+  performingProvider User?                @relation("PerformingProvider", fields: [performingProviderId], references: [id])
+  renewedFrom        PriorAuthorization?  @relation("AuthRenewal", fields: [renewedFromId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  renewedTo          PriorAuthorization[] @relation("AuthRenewal")
+  creator            User                 @relation("AuthCreator", fields: [createdBy], references: [id])
+
+  @@index([clientId])
+  @@index([insuranceId])
+  @@index([status])
+  @@index([endDate])
+  @@index([sessionsRemaining])
+  @@map("prior_authorizations")
+}
+
+// ============================================================================
+// MODULE 3: SCHEDULING & CALENDAR MANAGEMENT - PHASE 1
+// ============================================================================
+
+// AppointmentReminder - Track all reminder attempts and responses
+model AppointmentReminder {
+  id               String    @id @default(uuid())
+  appointmentId    String
+  reminderType     String // SMS, EMAIL, VOICE, PORTAL
+  scheduledFor     DateTime // When the reminder should be sent
+  sentAt           DateTime?
+  deliveryStatus   String // PENDING, SENT, DELIVERED, FAILED, BOUNCED
+  responseReceived Boolean   @default(false)
+  responseType     String? // CONFIRMED, CANCELLED, RESCHEDULED, NO_RESPONSE
+  responseText     String?   @db.Text
+  failureReason    String?   @db.Text
+  retryCount       Int       @default(0)
+  lastRetryAt      DateTime?
+
+  // Twilio/AWS metadata
+  messageId String? // External provider message ID
+  cost      Float? // Track reminder costs
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@index([scheduledFor])
+  @@index([deliveryStatus])
+  @@index([sentAt])
+  @@map("appointment_reminders")
+}
+
+// ReminderConfiguration - Practice-level reminder settings
+model ReminderConfiguration {
+  id                 String @id @default(uuid())
+  practiceSettingsId String @unique
+
+  // Reminder Schedule
+  enableInitialConfirmation     Boolean @default(true) // Send immediately after booking
+  enableOneWeekReminder         Boolean @default(true)
+  enableTwoDayReminder          Boolean @default(true)
+  enableOneDayReminder          Boolean @default(true)
+  enableDayOfReminder           Boolean @default(true)
+  enablePostAppointmentFollowup Boolean @default(false)
+
+  // Time offsets (in hours before appointment)
+  oneWeekOffset Int @default(168) // 7 days
+  twoDayOffset  Int @default(48)
+  oneDayOffset  Int @default(24)
+  dayOfOffset   Int @default(2) // 2 hours before
+
+  // Channel preferences
+  defaultChannels String[] // ['SMS', 'EMAIL']
+  smsEnabled      Boolean  @default(false)
+  emailEnabled    Boolean  @default(true)
+  voiceEnabled    Boolean  @default(false)
+  portalEnabled   Boolean  @default(true)
+
+  // SMS Configuration (Twilio)
+  twilioAccountSid    String?
+  twilioAuthToken     String? // Encrypted
+  twilioPhoneNumber   String?
+  smsTemplateInitial  String? @db.Text
+  smsTemplateReminder String? @db.Text
+
+  // Email Configuration (AWS SES)
+  sesRegion            String?
+  sesFromEmail         String?
+  sesFromName          String?
+  emailTemplateSubject String?
+  emailTemplateBody    String? @db.Text
+  includeIcsAttachment Boolean @default(true)
+
+  // Voice Configuration (Twilio Voice)
+  voiceScriptUrl  String?
+  voiceFromNumber String?
+
+  // Retry logic
+  maxRetries        Int @default(2)
+  retryDelayMinutes Int @default(60)
+
+  // Operating hours (don't send outside these times)
+  sendStartHour  Int     @default(9) // 9 AM
+  sendEndHour    Int     @default(20) // 8 PM
+  sendOnWeekends Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  practiceSettings PracticeSettings @relation(fields: [practiceSettingsId], references: [id])
+
+  @@map("reminder_configurations")
+}
+
+// AppointmentType - Define appointment types with smart defaults and business rules
+model AppointmentType {
+  id          String  @id @default(uuid())
+  typeName    String  @unique // "Initial Consultation", "Follow-up", "Group Therapy"
+  category    String // INDIVIDUAL, GROUP, FAMILY, COUPLES
+  description String? @db.Text
+
+  // Scheduling defaults
+  defaultDuration Int // Minutes
+  bufferBefore    Int @default(0) // Minutes
+  bufferAfter     Int @default(15) // Minutes
+
+  // Business rules
+  isBillable         Boolean @default(true)
+  requiresAuth       Boolean @default(false) // Prior authorization required
+  requiresSupervisor Boolean @default(false) // Supervision required
+  maxPerDay          Int? // Max appointments of this type per day
+
+  // Billing
+  cptCode     String? // Default CPT code
+  defaultRate Float? // Default charge amount
+
+  // Visual
+  colorCode String? // Hex color for calendar display
+  iconName  String? // Material-UI icon name
+
+  // Availability
+  isActive           Boolean @default(true)
+  allowOnlineBooking Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  appointments  Appointment[]
+  groupSessions GroupSession[]
+
+  @@map("appointment_types")
+}
+
+// NoShowPredictionLog - Track no-show prediction accuracy and model performance
+model NoShowPredictionLog {
+  id            String   @id @default(uuid())
+  appointmentId String
+  predictedRisk Float
+  actualNoShow  Boolean?
+  features      Json // Store features used for prediction
+  modelVersion  String
+  createdAt     DateTime @default(now())
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@index([appointmentId])
+  @@index([createdAt])
+  @@map("noshow_prediction_logs")
+}
+
+// ============================================================================
+// MODULE 3 PHASE 2: GROUP APPOINTMENT MANAGEMENT
+// ============================================================================
+
+model GroupSession {
+  id              String  @id @default(uuid())
+  groupName       String
+  description     String? @db.Text
+  facilitatorId   String
+  coFacilitatorId String?
+
+  // Group details
+  maxCapacity           Int
+  currentEnrollment     Int     @default(0)
+  groupType             String // THERAPY, SUPPORT, EDUCATION, SKILLS
+  isOpenEnrollment      Boolean @default(false)
+  requiresScreening     Boolean @default(true)
+  isTelehealthAvailable Boolean @default(false)
+
+  // Scheduling
+  appointmentTypeId String
+  recurringPattern  String? // WEEKLY, BIWEEKLY
+  dayOfWeek         Int? // 0-6
+  startTime         String? // HH:mm
+  duration          Int?
+
+  // Billing
+  billingType   String // PER_MEMBER, FLAT_RATE
+  ratePerMember Float?
+
+  // Status
+  status    String // ACTIVE, FULL, CLOSED, ARCHIVED
+  startDate DateTime
+  endDate   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facilitator     User            @relation("GroupFacilitator", fields: [facilitatorId], references: [id])
+  coFacilitator   User?           @relation("GroupCoFacilitator", fields: [coFacilitatorId], references: [id])
+  appointmentType AppointmentType @relation(fields: [appointmentTypeId], references: [id])
+  members         GroupMember[]
+  sessions        Appointment[]   @relation("GroupSessions")
+
+  @@index([facilitatorId])
+  @@index([status])
+  @@index([groupType])
+  @@map("group_sessions")
+}
+
+model GroupMember {
+  id       String @id @default(uuid())
+  groupId  String
+  clientId String
+
+  enrollmentDate DateTime  @default(now())
+  exitDate       DateTime?
+  status         String // ACTIVE, ON_HOLD, EXITED
+  exitReason     String?
+
+  attendanceCount Int       @default(0)
+  absenceCount    Int       @default(0)
+  lastAttendance  DateTime?
+
+  screenedBy     String?
+  screeningDate  DateTime?
+  screeningNotes String?   @db.Text
+  approved       Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group      GroupSession      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  client     Client            @relation(fields: [clientId], references: [id])
+  screener   User?             @relation(fields: [screenedBy], references: [id])
+  attendance GroupAttendance[]
+
+  @@unique([groupId, clientId])
+  @@index([groupId])
+  @@index([clientId])
+  @@index([status])
+  @@map("group_members")
+}
+
+model GroupAttendance {
+  id            String @id @default(uuid())
+  groupMemberId String
+  appointmentId String
+
+  attended    Boolean   @default(false)
+  checkedInAt DateTime?
+  notes       String?   @db.Text
+
+  createdAt DateTime @default(now())
+
+  member      GroupMember @relation(fields: [groupMemberId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@unique([groupMemberId, appointmentId])
+  @@index([appointmentId])
+  @@index([groupMemberId])
+  @@map("group_attendance")
+}
+
+// ============================================================================
+// MODULE 3 PHASE 2.3: PROVIDER AVAILABILITY & TIME-OFF MANAGEMENT
+// ============================================================================
+
+model ProviderAvailability {
+  id         String @id @default(uuid())
+  providerId String
+
+  // Schedule
+  dayOfWeek Int // 0-6 (Sunday-Saturday)
+  startTime String // HH:mm
+  endTime   String // HH:mm
+
+  // Location (using officeLocationId as string for now)
+  officeLocationId      String?
+  isTelehealthAvailable Boolean @default(false)
+
+  // Limits
+  maxAppointments Int?
+
+  // Overrides
+  effectiveDate DateTime?
+  expiryDate    DateTime?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  provider User @relation(fields: [providerId], references: [id])
+
+  @@index([providerId, dayOfWeek])
+  @@map("provider_availability")
+}
+
+model TimeOffRequest {
+  id         String @id @default(uuid())
+  providerId String
+
+  // Request details
+  startDate DateTime
+  endDate   DateTime
+  reason    String // VACATION, SICK, CONFERENCE, PERSONAL
+  notes     String?  @db.Text
+
+  // Approval
+  status       String // PENDING, APPROVED, DENIED
+  requestedBy  String
+  approvedBy   String?
+  approvedDate DateTime?
+  denialReason String?   @db.Text
+
+  // Coverage
+  coverageProviderId String?
+  autoReschedule     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  provider         User  @relation("TimeOffProvider", fields: [providerId], references: [id])
+  requester        User  @relation("TimeOffRequester", fields: [requestedBy], references: [id])
+  approver         User? @relation("TimeOffApprover", fields: [approvedBy], references: [id])
+  coverageProvider User? @relation("TimeOffCoverage", fields: [coverageProviderId], references: [id])
+
+  @@index([providerId, startDate, endDate])
+  @@map("time_off_requests")
 }

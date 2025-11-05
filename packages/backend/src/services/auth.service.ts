@@ -4,6 +4,9 @@ import { generateTokenPair, JwtPayload } from '../utils/jwt';
 import { UnauthorizedError, ConflictError, ValidationError } from '../utils/errors';
 import { RegisterInput, LoginInput } from '../utils/validation';
 import { auditLogger } from '../utils/logger';
+import sessionService from './session.service';
+import passwordPolicyService from './passwordPolicy.service';
+import mfaService from './mfa.service';
 
 export class AuthService {
   /**
@@ -67,16 +70,38 @@ export class AuthService {
   }
 
   /**
-   * Login user
+   * Login user with enhanced security
    */
-  async login(data: LoginInput, ipAddress?: string) {
+  async login(data: LoginInput, ipAddress?: string, userAgent?: string) {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email: data.email },
     });
 
     if (!user) {
+      // Log failed login attempt with generic message
+      auditLogger.warn('Failed login attempt - user not found', {
+        email: data.email,
+        ipAddress,
+        action: 'LOGIN_FAILED',
+      });
       throw new UnauthorizedError('Invalid email or password');
+    }
+
+    // Check if account is locked
+    if (user.accountLockedUntil && new Date() < user.accountLockedUntil) {
+      const lockDuration = Math.ceil(
+        (user.accountLockedUntil.getTime() - Date.now()) / (1000 * 60)
+      );
+      auditLogger.warn('Login attempt on locked account', {
+        userId: user.id,
+        email: user.email,
+        ipAddress,
+        action: 'ACCOUNT_LOCKED_LOGIN_ATTEMPT',
+      });
+      throw new UnauthorizedError(
+        `Account is locked due to too many failed login attempts. Please try again in ${lockDuration} minutes.`
+      );
     }
 
     // Check if user is active
@@ -88,35 +113,203 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(data.password, user.password);
 
     if (!isPasswordValid) {
+      // Increment failed login attempts
+      const newFailedAttempts = user.failedLoginAttempts + 1;
+      const updateData: any = {
+        failedLoginAttempts: newFailedAttempts,
+      };
+
+      // Lock account after 5 failed attempts (30-minute lockout)
+      if (newFailedAttempts >= 5) {
+        const lockUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+        updateData.accountLockedUntil = lockUntil;
+
+        auditLogger.warn('Account locked due to failed login attempts', {
+          userId: user.id,
+          email: user.email,
+          ipAddress,
+          failedAttempts: newFailedAttempts,
+          action: 'ACCOUNT_LOCKED',
+        });
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: updateData,
+      });
+
       // Log failed login attempt
       auditLogger.warn('Failed login attempt', {
+        userId: user.id,
         email: data.email,
         ipAddress,
+        failedAttempts: newFailedAttempts,
         action: 'LOGIN_FAILED',
       });
 
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    // Update last login
+    // Password is correct - reset failed login attempts and unlock account
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginDate: new Date() },
+      data: {
+        failedLoginAttempts: 0,
+        accountLockedUntil: null,
+        lastLoginDate: new Date(),
+      },
     });
 
-    // Generate tokens
-    const tokens = generateTokenPair({
-      userId: user.id,
-      email: user.email,
-      roles: user.roles,
-    });
+    // Check password expiration
+    const passwordExpired = passwordPolicyService.checkPasswordExpiration(
+      user.passwordChangedAt
+    );
+    if (passwordExpired) {
+      auditLogger.warn('Login with expired password', {
+        userId: user.id,
+        email: user.email,
+        action: 'PASSWORD_EXPIRED',
+      });
+      throw new UnauthorizedError(
+        'Your password has expired. Please reset your password.'
+      );
+    }
+
+    // Check if MFA is enabled
+    if (user.mfaEnabled) {
+      // Return partial response - MFA verification required
+      auditLogger.info('MFA required for login', {
+        userId: user.id,
+        email: user.email,
+        ipAddress,
+        action: 'MFA_REQUIRED',
+      });
+
+      // Generate temporary token for MFA verification
+      const tempToken = generateTokenPair({
+        userId: user.id,
+        email: user.email,
+        roles: user.roles,
+      });
+
+      return {
+        requiresMfa: true,
+        tempToken: tempToken.accessToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+      };
+    }
+
+    // Check if password change is required
+    if (user.mustChangePassword) {
+      auditLogger.info('Password change required', {
+        userId: user.id,
+        email: user.email,
+        action: 'PASSWORD_CHANGE_REQUIRED',
+      });
+      throw new UnauthorizedError(
+        'You must change your password before continuing. Please use the password reset flow.'
+      );
+    }
+
+    // Check concurrent session limit
+    const canCreateSession = await sessionService.checkConcurrentSessions(user.id);
+    if (!canCreateSession) {
+      auditLogger.warn('Concurrent session limit reached', {
+        userId: user.id,
+        email: user.email,
+        action: 'CONCURRENT_SESSION_BLOCKED',
+      });
+      // Will terminate oldest session automatically
+    }
+
+    // Create session
+    const session = await sessionService.createSession(
+      user.id,
+      ipAddress || 'unknown',
+      userAgent || 'unknown'
+    );
 
     // Log successful login
     auditLogger.info('User logged in', {
       userId: user.id,
       email: user.email,
       ipAddress,
+      sessionId: session.sessionId,
       action: 'LOGIN_SUCCESS',
+    });
+
+    return {
+      requiresMfa: false,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: user.roles,
+        title: user.title,
+        isActive: user.isActive,
+        mfaEnabled: user.mfaEnabled,
+      },
+      session: {
+        token: session.token,
+        sessionId: session.sessionId,
+      },
+    };
+  }
+
+  /**
+   * Complete MFA login step
+   */
+  async completeMFALogin(
+    userId: string,
+    mfaCode: string,
+    ipAddress?: string,
+    userAgent?: string
+  ) {
+    // Verify MFA code
+    const isValid = await mfaService.verifyTOTPForLogin(userId, mfaCode);
+
+    if (!isValid) {
+      // Try backup code
+      const isBackupValid = await mfaService.verifyBackupCode(userId, mfaCode);
+
+      if (!isBackupValid) {
+        auditLogger.warn('MFA verification failed', {
+          userId,
+          ipAddress,
+          action: 'MFA_VERIFICATION_FAILED',
+        });
+        throw new UnauthorizedError('Invalid MFA code');
+      }
+    }
+
+    // Get user
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    // Create session
+    const session = await sessionService.createSession(
+      user.id,
+      ipAddress || 'unknown',
+      userAgent || 'unknown'
+    );
+
+    auditLogger.info('MFA login completed', {
+      userId: user.id,
+      email: user.email,
+      ipAddress,
+      sessionId: session.sessionId,
+      action: 'MFA_LOGIN_SUCCESS',
     });
 
     return {
@@ -128,8 +321,12 @@ export class AuthService {
         roles: user.roles,
         title: user.title,
         isActive: user.isActive,
+        mfaEnabled: user.mfaEnabled,
       },
-      tokens,
+      session: {
+        token: session.token,
+        sessionId: session.sessionId,
+      },
     };
   }
 
@@ -174,7 +371,7 @@ export class AuthService {
   }
 
   /**
-   * Change password
+   * Change password with enhanced security
    */
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     // Get user
@@ -193,13 +390,31 @@ export class AuthService {
       throw new UnauthorizedError('Current password is incorrect');
     }
 
+    // Validate new password against policy
+    const validation = await passwordPolicyService.validatePasswordChange(userId, newPassword, {
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    });
+
+    if (!validation.isValid) {
+      throw new ValidationError(validation.errors.join('. '));
+    }
+
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    // Update password
+    // Add old password to history
+    await passwordPolicyService.addToPasswordHistory(userId, user.password);
+
+    // Update password and reset mustChangePassword flag
     await prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: false,
+        passwordChangedAt: new Date(),
+      },
     });
 
     // Log audit event
@@ -210,6 +425,79 @@ export class AuthService {
     });
 
     return { message: 'Password changed successfully' };
+  }
+
+  /**
+   * Unlock account (admin only)
+   */
+  async unlockAccount(userId: string, adminId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, accountLockedUntil: true },
+    });
+
+    if (!user) {
+      throw new ValidationError('User not found');
+    }
+
+    if (!user.accountLockedUntil || new Date() > user.accountLockedUntil) {
+      throw new ValidationError('Account is not locked');
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        accountLockedUntil: null,
+        failedLoginAttempts: 0,
+      },
+    });
+
+    auditLogger.info('Account unlocked by admin', {
+      userId,
+      adminId,
+      action: 'ACCOUNT_UNLOCKED',
+    });
+
+    return { message: 'Account unlocked successfully' };
+  }
+
+  /**
+   * Check password history
+   */
+  async checkPasswordHistory(userId: string, password: string): Promise<boolean> {
+    return passwordPolicyService.checkPasswordHistory(userId, password);
+  }
+
+  /**
+   * Force password change (admin only)
+   */
+  async forcePasswordChange(userId: string, adminId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    if (!user) {
+      throw new ValidationError('User not found');
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        mustChangePassword: true,
+      },
+    });
+
+    auditLogger.info('Password change forced by admin', {
+      userId,
+      adminId,
+      action: 'PASSWORD_CHANGE_FORCED',
+    });
+
+    // Terminate all user sessions to force re-login
+    await sessionService.terminateAllUserSessions(userId);
+
+    return { message: 'User will be required to change password on next login' };
   }
 
   /**

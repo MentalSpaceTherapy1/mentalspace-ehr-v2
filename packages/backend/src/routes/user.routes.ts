@@ -94,6 +94,17 @@ router.post(
 );
 
 /**
+ * @route   POST /api/v1/users/:id/unlock
+ * @desc    Unlock user account (remove account lockout)
+ * @access  Admin only
+ */
+router.post(
+  '/:id/unlock',
+  authorize('ADMINISTRATOR'),
+  userController.unlockAccount
+);
+
+/**
  * @route   POST /api/v1/users/:id/reset-password
  * @desc    Reset user password
  * @access  Admin only

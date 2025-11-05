@@ -14,7 +14,7 @@ export default function ClientDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'demographics' | 'appointments' | 'clinical-notes' | 'portal' | 'assessments'>('demographics');
+  const [activeTab, setActiveTab] = useState<'demographics' | 'appointments' | 'clinical-notes' | 'diagnoses' | 'portal' | 'assessments'>('demographics');
 
   // Fetch client data
   const { data: clientData, isLoading, error } = useQuery({
@@ -183,6 +183,16 @@ export default function ClientDetail() {
             }`}
           >
             Clinical Notes
+          </button>
+          <button
+            onClick={() => setActiveTab('diagnoses')}
+            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              activeTab === 'diagnoses'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+            }`}
+          >
+            Diagnoses
           </button>
           <button
             onClick={() => setActiveTab('portal')}
@@ -456,6 +466,23 @@ export default function ClientDetail() {
       {activeTab === 'clinical-notes' && (
         <div>
           <ClinicalNotesList clientId={id!} />
+        </div>
+      )}
+
+      {activeTab === 'diagnoses' && (
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">Client Diagnoses</h2>
+            <button
+              onClick={() => navigate(`/clients/${id}/diagnoses`)}
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
+            >
+              Manage Diagnoses
+            </button>
+          </div>
+          <p className="text-gray-600">
+            Click "Manage Diagnoses" to view and edit this client's diagnosis history.
+          </p>
         </div>
       )}
 

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import WaitlistOfferDialog from '../../components/Waitlist/WaitlistOfferDialog';
 
 interface WaitlistEntry {
   id: string;
@@ -17,6 +18,13 @@ interface WaitlistEntry {
   notified: boolean;
   status: string;
   notes?: string;
+  // Module 3 Phase 2.2: Automation fields
+  priorityScore: number;
+  offerCount: number;
+  declinedOffers: number;
+  autoMatchEnabled: boolean;
+  lastOfferDate?: string;
+  notificationsSent: number;
   client: {
     id: string;
     firstName: string;
@@ -40,9 +48,11 @@ export default function Waitlist() {
   const [selectedEntry, setSelectedEntry] = useState<WaitlistEntry | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSlotsModal, setShowSlotsModal] = useState(false);
+  const [showOfferDialog, setShowOfferDialog] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('Active');
   const [filterPriority, setFilterPriority] = useState<string>('');
+  const [matchingStats, setMatchingStats] = useState<any>(null);
 
   const queryClient = useQueryClient();
 
@@ -153,6 +163,57 @@ export default function Waitlist() {
     },
   });
 
+  // Smart matching mutation
+  const smartMatchMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      const response = await api.get(`/waitlist-matching/${entryId}/matches?daysAhead=14`);
+      return response.data.data;
+    },
+    onSuccess: (data) => {
+      setAvailableSlots(data);
+      setShowSlotsModal(true);
+      if (data.length > 0) {
+        toast.success(`Found ${data.length} matching slots!`);
+      } else {
+        toast.error('No matching slots found');
+      }
+    },
+    onError: () => {
+      toast.error('Failed to find matching slots');
+    },
+  });
+
+  // Trigger automatic matching
+  const triggerMatchingMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/waitlist-matching/match-all');
+      return response.data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Matched ${data.data.matched.length} entries!`);
+      queryClient.invalidateQueries({ queryKey: ['waitlist'] });
+      setMatchingStats(data.data.stats);
+    },
+    onError: () => {
+      toast.error('Failed to run matching algorithm');
+    },
+  });
+
+  // Update priority score
+  const updateScoreMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      const response = await api.get(`/waitlist-matching/${entryId}/priority-score`);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Priority score updated');
+      queryClient.invalidateQueries({ queryKey: ['waitlist'] });
+    },
+    onError: () => {
+      toast.error('Failed to update priority score');
+    },
+  });
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'Urgent':
@@ -245,12 +306,19 @@ export default function Waitlist() {
             </select>
           </div>
 
-          <div className="flex items-end">
+          <div className="flex items-end space-x-2">
             <button
               onClick={() => setShowAddModal(true)}
-              className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-lg"
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-lg"
             >
               + Add to Waitlist
+            </button>
+            <button
+              onClick={() => triggerMatchingMutation.mutate()}
+              disabled={triggerMatchingMutation.isPending}
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg disabled:opacity-50"
+            >
+              {triggerMatchingMutation.isPending ? 'Matching...' : 'Run Smart Match'}
             </button>
           </div>
         </div>
@@ -274,7 +342,10 @@ export default function Waitlist() {
                     Priority
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Appointment Type
+                    Score
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Offers
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Preferred Days
@@ -308,8 +379,28 @@ export default function Waitlist() {
                         {entry.priority}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {entry.requestedAppointmentType}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full"
+                            style={{ width: `${(entry.priorityScore || 0.5) * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs font-semibold text-gray-700">
+                          {((entry.priorityScore || 0.5) * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex flex-col">
+                        <span className="text-gray-900 font-medium">{entry.offerCount || 0}</span>
+                        {entry.declinedOffers > 0 && (
+                          <span className="text-red-600 text-xs">
+                            {entry.declinedOffers} declined
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {entry.preferredDays.join(', ')}
@@ -323,42 +414,65 @@ export default function Waitlist() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => {
-                            setSelectedEntry(entry);
-                            findSlotsMutation.mutate(entry.id);
-                          }}
-                          className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs font-semibold"
-                        >
-                          Find Slots
-                        </button>
-                        <select
-                          value={entry.priority}
-                          onChange={(e) =>
-                            updatePriorityMutation.mutate({
-                              entryId: entry.id,
-                              priority: e.target.value,
-                            })
-                          }
-                          className="px-2 py-1 border border-gray-300 rounded text-xs"
-                        >
-                          <option value="Low">Low</option>
-                          <option value="Normal">Normal</option>
-                          <option value="High">High</option>
-                          <option value="Urgent">Urgent</option>
-                        </select>
-                        <button
-                          onClick={() => {
-                            const reason = prompt('Reason for removal:');
-                            if (reason) {
-                              removeMutation.mutate({ entryId: entry.id, reason });
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => {
+                              setSelectedEntry(entry);
+                              smartMatchMutation.mutate(entry.id);
+                            }}
+                            disabled={smartMatchMutation.isPending}
+                            className="px-3 py-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-colors text-xs font-semibold disabled:opacity-50"
+                            title="Smart Match - AI-powered slot matching"
+                          >
+                            Smart Match
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedEntry(entry);
+                              setShowOfferDialog(true);
+                            }}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-semibold"
+                            title="Send manual offer"
+                          >
+                            Send Offer
+                          </button>
+                        </div>
+                        <div className="flex space-x-2">
+                          <select
+                            value={entry.priority}
+                            onChange={(e) =>
+                              updatePriorityMutation.mutate({
+                                entryId: entry.id,
+                                priority: e.target.value,
+                              })
                             }
-                          }}
-                          className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-semibold"
-                        >
-                          Remove
-                        </button>
+                            className="px-2 py-1 border border-gray-300 rounded text-xs flex-1"
+                          >
+                            <option value="Low">Low</option>
+                            <option value="Normal">Normal</option>
+                            <option value="High">High</option>
+                            <option value="Urgent">Urgent</option>
+                          </select>
+                          <button
+                            onClick={() => updateScoreMutation.mutate(entry.id)}
+                            className="px-2 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs font-semibold"
+                            title="Recalculate priority score"
+                          >
+                            ↻
+                          </button>
+                          <button
+                            onClick={() => {
+                              const reason = prompt('Reason for removal:');
+                              if (reason) {
+                                removeMutation.mutate({ entryId: entry.id, reason });
+                              }
+                            }}
+                            className="px-2 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-semibold"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -435,6 +549,16 @@ export default function Waitlist() {
           </div>
         </div>
       )}
+
+      {/* Waitlist Offer Dialog */}
+      <WaitlistOfferDialog
+        entry={selectedEntry}
+        isOpen={showOfferDialog}
+        onClose={() => {
+          setShowOfferDialog(false);
+          setSelectedEntry(null);
+        }}
+      />
     </div>
   );
 }

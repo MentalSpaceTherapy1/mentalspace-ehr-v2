@@ -281,3 +281,46 @@ export interface ClinicalNoteFormData {
   icd10Codes: string[];
   cptCode?: string;
 }
+
+// Client Diagnosis
+export interface ClientDiagnosis {
+  id: string;
+  clientId: string;
+  diagnosisType: 'PRIMARY' | 'SECONDARY' | 'RULE_OUT' | 'HISTORICAL' | 'PROVISIONAL';
+  icd10Code?: string;
+  dsm5Code?: string;
+  diagnosisName: string;
+  diagnosisCategory?: string;
+  severitySpecifier?: 'MILD' | 'MODERATE' | 'SEVERE' | 'EXTREME';
+  courseSpecifier?: string;
+  status: 'ACTIVE' | 'RESOLVED' | 'RULE_OUT_REJECTED';
+  dateDiagnosed: string;
+  onsetDate?: string;
+  remissionDate?: string;
+  dateResolved?: string;
+  resolutionNotes?: string;
+  supportingEvidence?: string;
+  differentialConsiderations?: string;
+  diagnosedById: string;
+  diagnosedBy: User;
+  lastReviewedById?: string;
+  lastReviewedBy?: User;
+  lastReviewedDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ICD10Code {
+  code: string;
+  description: string;
+  category: string;
+}
+
+export interface DiagnosisStats {
+  total: number;
+  active: number;
+  resolved: number;
+  ruleOutRejected: number;
+  byType: Record<string, number>;
+  byCategory: Record<string, number>;
+}

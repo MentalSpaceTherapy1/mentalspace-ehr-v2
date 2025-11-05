@@ -4,7 +4,11 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', 'react/jsx-runtime'],
+  },
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
@@ -24,9 +28,10 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-    hmr: {
-      clientPort: 443, // Use HTTPS port for ngrok
-      host: 'mentalspaceehr.ngrok.app',
-    },
+    // HMR config for ngrok (use when testing with ngrok)
+    // hmr: {
+    //   clientPort: 443,
+    //   host: 'mentalspaceehr.ngrok.app',
+    // },
   },
 });

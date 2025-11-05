@@ -1,0 +1,209 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - img "MentalSpace Therapy" [ref=e9]
+      - navigation [ref=e10]:
+        - button "🏠 Dashboard" [ref=e12] [cursor=pointer]:
+          - generic [ref=e13]:
+            - generic [ref=e14]: 🏠
+            - generic [ref=e15]: Dashboard
+        - button "🧑‍⚕️ Clients ▶" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]:
+            - generic [ref=e19]: 🧑‍⚕️
+            - generic [ref=e20]: Clients
+          - generic [ref=e21]: ▶
+        - button "📅 Appointments ▶" [ref=e23] [cursor=pointer]:
+          - generic [ref=e24]:
+            - generic [ref=e25]: 📅
+            - generic [ref=e26]: Appointments
+          - generic [ref=e27]: ▶
+        - button "👥 Group Sessions" [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]:
+            - generic [ref=e31]: 👥
+            - generic [ref=e32]: Group Sessions
+        - button "📝 Clinical Notes ▶" [ref=e34] [cursor=pointer]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: 📝
+            - generic [ref=e37]: Clinical Notes
+          - generic [ref=e38]: ▶
+        - button "💰 Billing ▶" [ref=e40] [cursor=pointer]:
+          - generic [ref=e41]:
+            - generic [ref=e42]: 💰
+            - generic [ref=e43]: Billing
+          - generic [ref=e44]: ▶
+        - button "📈 Reports" [ref=e46] [cursor=pointer]:
+          - generic [ref=e47]:
+            - generic [ref=e48]: 📈
+            - generic [ref=e49]: Reports
+        - button "📹 Telehealth" [ref=e51] [cursor=pointer]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: 📹
+            - generic [ref=e54]: Telehealth
+        - button "🌐 Client Portal" [ref=e56] [cursor=pointer]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: 🌐
+            - generic [ref=e59]: Client Portal
+        - button "👨‍🏫 Supervision" [ref=e61] [cursor=pointer]:
+          - generic [ref=e62]:
+            - generic [ref=e63]: 👨‍🏫
+            - generic [ref=e64]: Supervision
+        - button "📊 Productivity" [ref=e66] [cursor=pointer]:
+          - generic [ref=e67]:
+            - generic [ref=e68]: 📊
+            - generic [ref=e69]: Productivity
+        - button "👥 Users" [ref=e71] [cursor=pointer]:
+          - generic [ref=e72]:
+            - generic [ref=e73]: 👥
+            - generic [ref=e74]: Users
+        - button "⚙️ Settings ▶" [ref=e76] [cursor=pointer]:
+          - generic [ref=e77]:
+            - generic [ref=e78]: ⚙️
+            - generic [ref=e79]: Settings
+          - generic [ref=e80]: ▶
+      - generic [ref=e82]:
+        - generic [ref=e83]:
+          - generic [ref=e85]: SA
+          - generic [ref=e86]:
+            - paragraph [ref=e87]: Super Admin
+            - paragraph
+        - button "👤 My Profile" [ref=e88] [cursor=pointer]:
+          - generic [ref=e89]: 👤
+          - text: My Profile
+        - button "🚪 Logout" [ref=e90] [cursor=pointer]:
+          - generic [ref=e91]: 🚪
+          - text: Logout
+  - generic [ref=e92]:
+    - banner [ref=e93]:
+      - generic [ref=e94]:
+        - generic [ref=e95]:
+          - button [ref=e96] [cursor=pointer]:
+            - img [ref=e97]
+          - heading "Group Sessions" [level=2] [ref=e100]
+        - generic [ref=e101]:
+          - button "🔔" [ref=e102] [cursor=pointer]: 🔔
+          - searchbox "Search..." [ref=e105]
+          - generic [ref=e107] [cursor=pointer]: SA
+    - main [ref=e108]:
+      - generic [ref=e109]:
+        - generic [ref=e110]:
+          - generic [ref=e111]:
+            - heading "👥 Group Sessions" [level=1] [ref=e112]:
+              - generic [ref=e113]: 👥
+              - text: Group Sessions
+            - button "➕ Create Group" [active] [ref=e114] [cursor=pointer]:
+              - generic [ref=e115]: ➕
+              - text: Create Group
+          - paragraph [ref=e116]: Manage group therapy sessions and enrollment
+        - generic [ref=e118]:
+          - generic [ref=e119]: "Status Filter:"
+          - combobox [ref=e120]:
+            - option "All Groups"
+            - option "Active" [selected]
+            - option "Full"
+            - option "Closed"
+            - option "Archived"
+        - generic [ref=e121]:
+          - generic [ref=e122]: 👥
+          - heading "No Group Sessions Found" [level=3] [ref=e123]
+          - paragraph [ref=e124]: Create your first group session to get started
+          - button "Create Group Session" [ref=e125] [cursor=pointer]
+        - generic [ref=e127]:
+          - heading "Create Group Session" [level=2] [ref=e129]
+          - generic [ref=e131]:
+            - generic [ref=e132]:
+              - generic [ref=e133]: Group Name *
+              - textbox [ref=e134]
+            - generic [ref=e135]:
+              - generic [ref=e136]: Description
+              - textbox [ref=e137]
+            - generic [ref=e138]:
+              - generic [ref=e139]: Group Type *
+              - combobox [ref=e140]:
+                - option "Group Therapy" [selected]
+                - option "Support Group"
+                - option "Psychoeducation"
+                - option "Skills Training"
+            - generic [ref=e141]:
+              - generic [ref=e142]: Appointment Type *
+              - combobox [ref=e143]:
+                - option "Select Type" [selected]
+                - option "Group Therapy (90853)"
+                - option "Psychoeducational Group (90853)"
+                - option "Skills Training Group (90853)"
+                - option "Support Group (90853)"
+            - generic [ref=e144]:
+              - generic [ref=e145]: Facilitator *
+              - combobox [ref=e146]:
+                - option "Select Facilitator" [selected]
+            - generic [ref=e147]:
+              - generic [ref=e148]: Co-Facilitator (Optional)
+              - combobox [ref=e149]:
+                - option "None" [selected]
+            - generic [ref=e150]:
+              - generic [ref=e151]: Max Capacity *
+              - spinbutton [ref=e152]: "12"
+            - generic [ref=e153]:
+              - generic [ref=e154]: Status
+              - combobox [ref=e155]:
+                - option "Active" [selected]
+                - option "Full"
+                - option "Closed"
+                - option "Archived"
+            - heading "📅 Schedule" [level=3] [ref=e157]:
+              - generic [ref=e158]: 📅
+              - text: Schedule
+            - generic [ref=e159]:
+              - generic [ref=e160]: Recurring Pattern
+              - combobox [ref=e161]:
+                - option "Weekly" [selected]
+                - option "Bi-weekly"
+            - generic [ref=e162]:
+              - generic [ref=e163]: Day of Week
+              - combobox [ref=e164]:
+                - option "Sunday"
+                - option "Monday" [selected]
+                - option "Tuesday"
+                - option "Wednesday"
+                - option "Thursday"
+                - option "Friday"
+                - option "Saturday"
+            - generic [ref=e165]:
+              - generic [ref=e166]: Start Time
+              - textbox [ref=e167]: 10:00
+            - generic [ref=e168]:
+              - generic [ref=e169]: Duration (minutes)
+              - spinbutton [ref=e170]: "90"
+            - generic [ref=e171]:
+              - generic [ref=e172]: Start Date *
+              - textbox [ref=e173]: 2025-11-04
+            - generic [ref=e174]:
+              - generic [ref=e175]: End Date (Optional)
+              - textbox [ref=e176]
+            - heading "💰 Billing" [level=3] [ref=e178]:
+              - generic [ref=e179]: 💰
+              - text: Billing
+            - generic [ref=e180]:
+              - generic [ref=e181]: Billing Type
+              - combobox [ref=e182]:
+                - option "Per Member" [selected]
+                - option "Flat Rate"
+            - generic [ref=e183]:
+              - generic [ref=e184]: Rate Per Member
+              - spinbutton [ref=e185]: "0"
+            - generic [ref=e186]:
+              - generic [ref=e187] [cursor=pointer]:
+                - checkbox "Open Enrollment" [ref=e188]
+                - generic [ref=e189]: Open Enrollment
+              - generic [ref=e190] [cursor=pointer]:
+                - checkbox "Requires Screening" [checked] [ref=e191]
+                - generic [ref=e192]: Requires Screening
+              - generic [ref=e193] [cursor=pointer]:
+                - checkbox "Telehealth Available" [ref=e194]
+                - generic [ref=e195]: Telehealth Available
+          - generic [ref=e196]:
+            - button "Cancel" [ref=e197] [cursor=pointer]
+            - button "Save" [ref=e198] [cursor=pointer]
+```

@@ -1,404 +1,446 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Switch,
+  FormControlLabel,
+  TextField,
+  Button,
+  Alert,
+  Divider,
+  Stack,
+  Chip,
+  CircularProgress,
+} from '@mui/material';
+import {
+  Notifications,
+  Sms,
+  Email,
+  Phone,
+  CheckCircle,
+} from '@mui/icons-material';
+import api from '../../lib/api';
 
-interface ReminderSettings {
+interface ReminderConfig {
   id?: string;
-  clinicianId: string;
-  enabled: boolean;
-  emailRemindersEnabled: boolean;
-  emailReminderTimings: number[];
-  emailTemplate?: string;
-  smsRemindersEnabled: boolean;
-  smsReminderTimings: number[];
-  smsTemplate?: string;
-  requireConfirmation: boolean;
-  includeRescheduleLink: boolean;
-  includeCancelLink: boolean;
-  includeTelehealthLink: boolean;
+  practiceSettingsId?: string;
+  enableInitialConfirmation: boolean;
+  enableOneWeekReminder: boolean;
+  enableTwoDayReminder: boolean;
+  enableOneDayReminder: boolean;
+  enableDayOfReminder: boolean;
+  enablePostAppointmentFollowup: boolean;
+  oneWeekOffset: number;
+  twoDayOffset: number;
+  oneDayOffset: number;
+  dayOfOffset: number;
+  defaultChannels: string[];
+  smsEnabled: boolean;
+  emailEnabled: boolean;
+  voiceEnabled: boolean;
+  portalEnabled: boolean;
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioPhoneNumber?: string;
+  smsTemplateInitial?: string;
+  smsTemplateReminder?: string;
+  sesRegion?: string;
+  sesFromEmail?: string;
+  sesFromName?: string;
+  emailTemplateSubject?: string;
+  emailTemplateBody?: string;
+  includeIcsAttachment: boolean;
+  voiceScriptUrl?: string;
+  voiceFromNumber?: string;
+  maxRetries: number;
+  retryDelayMinutes: number;
+  sendStartHour: number;
+  sendEndHour: number;
+  sendOnWeekends: boolean;
 }
 
 export default function ReminderSettings() {
-  const queryClient = useQueryClient();
-  const [selectedClinicianId, setSelectedClinicianId] = useState<string>('');
-
-  const [settings, setSettings] = useState<ReminderSettings>({
-    clinicianId: '',
-    enabled: true,
-    emailRemindersEnabled: true,
-    emailReminderTimings: [24, 2],
-    emailTemplate: '',
-    smsRemindersEnabled: false,
-    smsReminderTimings: [24, 2],
-    smsTemplate: '',
-    requireConfirmation: false,
-    includeRescheduleLink: true,
-    includeCancelLink: true,
-    includeTelehealthLink: true,
+  const [config, setConfig] = useState<ReminderConfig>({
+    enableInitialConfirmation: true,
+    enableOneWeekReminder: true,
+    enableTwoDayReminder: true,
+    enableOneDayReminder: true,
+    enableDayOfReminder: true,
+    enablePostAppointmentFollowup: false,
+    oneWeekOffset: 168,
+    twoDayOffset: 48,
+    oneDayOffset: 24,
+    dayOfOffset: 2,
+    defaultChannels: ['SMS', 'EMAIL'],
+    smsEnabled: false,
+    emailEnabled: true,
+    voiceEnabled: false,
+    portalEnabled: true,
+    includeIcsAttachment: true,
+    maxRetries: 2,
+    retryDelayMinutes: 60,
+    sendStartHour: 9,
+    sendEndHour: 20,
+    sendOnWeekends: false,
   });
-
-  // Fetch clinicians
-  const { data: clinicians } = useQuery({
-    queryKey: ['clinicians'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/users?role=CLINICIAN', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data.data;
-    },
-  });
-
-  // Fetch reminder settings
-  const { data: currentSettings, isLoading } = useQuery({
-    queryKey: ['reminderSettings', selectedClinicianId],
-    enabled: !!selectedClinicianId,
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `/reminders/settings/${selectedClinicianId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      return response.data.data;
-    },
-  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (currentSettings) {
-      setSettings(currentSettings);
+    loadConfig();
+  }, []);
+
+  const loadConfig = async () => {
+    try {
+      const response = await api.get('/reminders/config');
+      if (response.data.data) {
+        setConfig(response.data.data);
+      }
+    } catch (error: any) {
+      setErrorMessage('Failed to load reminder configuration');
+      console.error('Error loading config:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [currentSettings]);
+  };
 
-  // Save settings mutation
-  const saveSettingsMutation = useMutation({
-    mutationFn: async (data: ReminderSettings) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/reminders/settings', data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-    onSuccess: () => {
-      toast.success('Reminder settings saved successfully!');
-      queryClient.invalidateQueries({ queryKey: ['reminderSettings'] });
-    },
-    onError: () => {
-      toast.error('Failed to save reminder settings');
-    },
-  });
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await api.put('/reminders/config', config);
+      setSuccessMessage('Reminder settings saved successfully');
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } catch (error: any) {
+      setErrorMessage(error.response?.data?.message || 'Failed to save settings');
+      setTimeout(() => setErrorMessage(''), 5000);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const handleSave = () => {
-    if (!selectedClinicianId) {
-      toast.error('Please select a clinician');
+  const handleTestSms = async () => {
+    if (!config.twilioPhoneNumber) {
+      setErrorMessage('Please configure Twilio phone number first');
       return;
     }
 
-    saveSettingsMutation.mutate({
-      ...settings,
-      clinicianId: selectedClinicianId,
-    });
-  };
-
-  const addTiming = (type: 'email' | 'sms') => {
-    const timing = prompt('Enter hours before appointment (e.g., 24, 2, 0.5):');
-    if (timing) {
-      const hours = parseFloat(timing);
-      if (!isNaN(hours) && hours > 0) {
-        if (type === 'email') {
-          setSettings((prev) => ({
-            ...prev,
-            emailReminderTimings: [...prev.emailReminderTimings, hours].sort((a, b) => b - a),
-          }));
-        } else {
-          setSettings((prev) => ({
-            ...prev,
-            smsReminderTimings: [...prev.smsReminderTimings, hours].sort((a, b) => b - a),
-          }));
-        }
-      } else {
-        toast.error('Please enter a valid positive number');
-      }
+    try {
+      setTestingConnection(true);
+      await api.post('/reminders/test-sms', {
+        phoneNumber: config.twilioPhoneNumber,
+        from: config.twilioPhoneNumber,
+      });
+      setSuccessMessage('Test SMS sent successfully!');
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } catch (error: any) {
+      setErrorMessage(error.response?.data?.message || 'Failed to send test SMS');
+      setTimeout(() => setErrorMessage(''), 5000);
+    } finally {
+      setTestingConnection(false);
     }
   };
 
-  const removeTiming = (type: 'email' | 'sms', index: number) => {
-    if (type === 'email') {
-      setSettings((prev) => ({
-        ...prev,
-        emailReminderTimings: prev.emailReminderTimings.filter((_, i) => i !== index),
-      }));
-    } else {
-      setSettings((prev) => ({
-        ...prev,
-        smsReminderTimings: prev.smsReminderTimings.filter((_, i) => i !== index),
-      }));
-    }
-  };
-
-  const formatTiming = (hours: number) => {
-    if (hours >= 24) {
-      const days = hours / 24;
-      return `${days} day${days > 1 ? 's' : ''} before`;
-    } else if (hours >= 1) {
-      return `${hours} hour${hours > 1 ? 's' : ''} before`;
-    } else {
-      const minutes = hours * 60;
-      return `${minutes} minute${minutes > 1 ? 's' : ''} before`;
-    }
-  };
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Reminder Settings</h1>
-        <p className="text-gray-600">Configure appointment reminder preferences</p>
-      </div>
+    <Box sx={{ maxWidth: 1000, mx: 'auto', p: 3 }}>
+      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 4 }}>
+        <Notifications sx={{ fontSize: 40, color: 'primary.main' }} />
+        <Box>
+          <Typography variant="h4" fontWeight="bold">
+            Appointment Reminder Settings
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Configure automated reminders to reduce no-shows
+          </Typography>
+        </Box>
+      </Stack>
 
-      {/* Clinician Selection */}
-      <div className="bg-white rounded-xl shadow-sm border-2 border-purple-100 p-6 mb-6">
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Select Clinician <span className="text-red-500">*</span>
-        </label>
-        <select
-          value={selectedClinicianId}
-          onChange={(e) => setSelectedClinicianId(e.target.value)}
-          className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-        >
-          <option value="">-- Select Clinician --</option>
-          {clinicians?.map((clinician: any) => (
-            <option key={clinician.id} value={clinician.id}>
-              {clinician.title} {clinician.firstName} {clinician.lastName}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {selectedClinicianId && (
-        <>
-          {/* Global Settings */}
-          <div className="bg-white rounded-xl shadow-sm border-2 border-purple-100 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Global Settings</h2>
-            <div className="space-y-4">
-              <label className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={settings.enabled}
-                  onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}
-                  className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                />
-                <span className="text-sm font-semibold text-gray-700">
-                  Enable Appointment Reminders
-                </span>
-              </label>
-            </div>
-          </div>
-
-          {/* Email Reminders */}
-          <div className="bg-white rounded-xl shadow-sm border-2 border-purple-100 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Email Reminders</h2>
-
-            <div className="space-y-4 mb-6">
-              <label className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={settings.emailRemindersEnabled}
-                  onChange={(e) =>
-                    setSettings({ ...settings, emailRemindersEnabled: e.target.checked })
-                  }
-                  className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                />
-                <span className="text-sm font-semibold text-gray-700">Enable Email Reminders</span>
-              </label>
-            </div>
-
-            {settings.emailRemindersEnabled && (
-              <>
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-semibold text-gray-700">Reminder Timings</label>
-                    <button
-                      onClick={() => addTiming('email')}
-                      className="px-3 py-1 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      + Add Timing
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {settings.emailReminderTimings.map((hours, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center space-x-2 bg-purple-100 text-purple-800 px-3 py-1 rounded-full"
-                      >
-                        <span className="text-sm font-semibold">{formatTiming(hours)}</span>
-                        <button
-                          onClick={() => removeTiming('email', index)}
-                          className="text-purple-600 hover:text-purple-900"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email Template (Optional)
-                  </label>
-                  <textarea
-                    value={settings.emailTemplate || ''}
-                    onChange={(e) => setSettings({ ...settings, emailTemplate: e.target.value })}
-                    rows={4}
-                    className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    placeholder="Leave blank for default template. Use HTML for formatting."
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* SMS Reminders */}
-          <div className="bg-white rounded-xl shadow-sm border-2 border-purple-100 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">SMS Reminders</h2>
-
-            <div className="space-y-4 mb-6">
-              <label className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={settings.smsRemindersEnabled}
-                  onChange={(e) =>
-                    setSettings({ ...settings, smsRemindersEnabled: e.target.checked })
-                  }
-                  className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                />
-                <span className="text-sm font-semibold text-gray-700">Enable SMS Reminders</span>
-              </label>
-            </div>
-
-            {settings.smsRemindersEnabled && (
-              <>
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-semibold text-gray-700">Reminder Timings</label>
-                    <button
-                      onClick={() => addTiming('sms')}
-                      className="px-3 py-1 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      + Add Timing
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {settings.smsReminderTimings.map((hours, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center space-x-2 bg-purple-100 text-purple-800 px-3 py-1 rounded-full"
-                      >
-                        <span className="text-sm font-semibold">{formatTiming(hours)}</span>
-                        <button
-                          onClick={() => removeTiming('sms', index)}
-                          className="text-purple-600 hover:text-purple-900"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    SMS Template (Optional)
-                  </label>
-                  <textarea
-                    value={settings.smsTemplate || ''}
-                    onChange={(e) => setSettings({ ...settings, smsTemplate: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    placeholder="Leave blank for default template. Keep it short (160 chars)."
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={settings.requireConfirmation}
-                      onChange={(e) =>
-                        setSettings({ ...settings, requireConfirmation: e.target.checked })
-                      }
-                      className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                    />
-                    <span className="text-sm font-semibold text-gray-700">
-                      Require Confirmation (Reply C to confirm)
-                    </span>
-                  </label>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Additional Options */}
-          <div className="bg-white rounded-xl shadow-sm border-2 border-purple-100 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Additional Options</h2>
-            <div className="space-y-4">
-              <label className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={settings.includeRescheduleLink}
-                  onChange={(e) =>
-                    setSettings({ ...settings, includeRescheduleLink: e.target.checked })
-                  }
-                  className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                />
-                <span className="text-sm font-semibold text-gray-700">
-                  Include Reschedule Link
-                </span>
-              </label>
-
-              <label className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={settings.includeCancelLink}
-                  onChange={(e) =>
-                    setSettings({ ...settings, includeCancelLink: e.target.checked })
-                  }
-                  className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                />
-                <span className="text-sm font-semibold text-gray-700">Include Cancel Link</span>
-              </label>
-
-              <label className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={settings.includeTelehealthLink}
-                  onChange={(e) =>
-                    setSettings({ ...settings, includeTelehealthLink: e.target.checked })
-                  }
-                  className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                />
-                <span className="text-sm font-semibold text-gray-700">
-                  Include Telehealth Join Link
-                </span>
-              </label>
-            </div>
-          </div>
-
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={saveSettingsMutation.isPending}
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-lg disabled:opacity-50"
-            >
-              {saveSettingsMutation.isPending ? 'Saving...' : 'Save Settings'}
-            </button>
-          </div>
-        </>
+      {errorMessage && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErrorMessage('')}>
+          {errorMessage}
+        </Alert>
       )}
-    </div>
+
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccessMessage('')}>
+          {successMessage}
+        </Alert>
+      )}
+
+      {/* Reminder Schedule */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Reminder Schedule
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Choose when to send reminders before appointments
+          </Typography>
+
+          <Stack spacing={2}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.enableInitialConfirmation}
+                  onChange={(e) =>
+                    setConfig({ ...config, enableInitialConfirmation: e.target.checked })
+                  }
+                />
+              }
+              label="Initial confirmation (immediately after booking)"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.enableOneWeekReminder}
+                  onChange={(e) =>
+                    setConfig({ ...config, enableOneWeekReminder: e.target.checked })
+                  }
+                />
+              }
+              label="One week before reminder"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.enableTwoDayReminder}
+                  onChange={(e) =>
+                    setConfig({ ...config, enableTwoDayReminder: e.target.checked })
+                  }
+                />
+              }
+              label="48-hour reminder"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.enableOneDayReminder}
+                  onChange={(e) =>
+                    setConfig({ ...config, enableOneDayReminder: e.target.checked })
+                  }
+                />
+              }
+              label="24-hour reminder"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.enableDayOfReminder}
+                  onChange={(e) =>
+                    setConfig({ ...config, enableDayOfReminder: e.target.checked })
+                  }
+                />
+              }
+              label="Day-of reminder (2 hours before)"
+            />
+          </Stack>
+        </CardContent>
+      </Card>
+
+      {/* SMS Configuration */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+            <Sms color="primary" />
+            <Typography variant="h6">SMS Configuration (Twilio)</Typography>
+            {config.smsEnabled && (
+              <Chip icon={<CheckCircle />} label="Active" color="success" size="small" />
+            )}
+          </Stack>
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={config.smsEnabled}
+                onChange={(e) => setConfig({ ...config, smsEnabled: e.target.checked })}
+              />
+            }
+            label="Enable SMS reminders"
+          />
+
+          {config.smsEnabled && (
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Twilio Account SID"
+                value={config.twilioAccountSid || ''}
+                onChange={(e) =>
+                  setConfig({ ...config, twilioAccountSid: e.target.value })
+                }
+              />
+              <TextField
+                fullWidth
+                label="Twilio Auth Token"
+                type="password"
+                value={config.twilioAuthToken || ''}
+                onChange={(e) =>
+                  setConfig({ ...config, twilioAuthToken: e.target.value })
+                }
+              />
+              <TextField
+                fullWidth
+                label="Twilio Phone Number"
+                value={config.twilioPhoneNumber || ''}
+                onChange={(e) =>
+                  setConfig({ ...config, twilioPhoneNumber: e.target.value })
+                }
+                helperText="Format: +1234567890"
+              />
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="SMS Template"
+                value={config.smsTemplateReminder || ''}
+                onChange={(e) =>
+                  setConfig({ ...config, smsTemplateReminder: e.target.value })
+                }
+                helperText="Use {{clientName}}, {{clinicianName}}, {{date}}, {{time}}"
+              />
+              <Button
+                variant="outlined"
+                onClick={handleTestSms}
+                disabled={testingConnection}
+              >
+                {testingConnection ? 'Sending...' : 'Send Test SMS'}
+              </Button>
+            </Stack>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Email Configuration */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+            <Email color="primary" />
+            <Typography variant="h6">Email Configuration (AWS SES)</Typography>
+            {config.emailEnabled && (
+              <Chip icon={<CheckCircle />} label="Active" color="success" size="small" />
+            )}
+          </Stack>
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={config.emailEnabled}
+                onChange={(e) => setConfig({ ...config, emailEnabled: e.target.checked })}
+              />
+            }
+            label="Enable email reminders"
+          />
+
+          {config.emailEnabled && (
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <TextField
+                fullWidth
+                label="From Email"
+                value={config.sesFromEmail || ''}
+                onChange={(e) => setConfig({ ...config, sesFromEmail: e.target.value })}
+              />
+              <TextField
+                fullWidth
+                label="From Name"
+                value={config.sesFromName || ''}
+                onChange={(e) => setConfig({ ...config, sesFromName: e.target.value })}
+              />
+              <TextField
+                fullWidth
+                label="Email Subject Template"
+                value={config.emailTemplateSubject || ''}
+                onChange={(e) => setConfig({ ...config, emailTemplateSubject: e.target.value })}
+                helperText="Use {{clientName}}, {{clinicianName}}, {{date}}, {{time}}"
+              />
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="Email Body Template"
+                value={config.emailTemplateBody || ''}
+                onChange={(e) => setConfig({ ...config, emailTemplateBody: e.target.value })}
+                helperText="HTML supported. Use {{clientName}}, {{clinicianName}}, {{date}}, {{time}}"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={config.includeIcsAttachment}
+                    onChange={(e) =>
+                      setConfig({ ...config, includeIcsAttachment: e.target.checked })
+                    }
+                  />
+                }
+                label="Include calendar .ics attachment"
+              />
+            </Stack>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Voice Configuration */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+            <Phone color="primary" />
+            <Typography variant="h6">Voice Call Configuration (Twilio)</Typography>
+            {config.voiceEnabled && (
+              <Chip icon={<CheckCircle />} label="Active" color="success" size="small" />
+            )}
+          </Stack>
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={config.voiceEnabled}
+                onChange={(e) => setConfig({ ...config, voiceEnabled: e.target.checked })}
+              />
+            }
+            label="Enable voice call reminders"
+          />
+
+          {config.voiceEnabled && (
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Voice Script URL (TwiML)"
+                value={config.voiceScriptUrl || ''}
+                onChange={(e) => setConfig({ ...config, voiceScriptUrl: e.target.value })}
+                helperText="URL to your TwiML script"
+              />
+              <TextField
+                fullWidth
+                label="Voice From Number"
+                value={config.voiceFromNumber || ''}
+                onChange={(e) => setConfig({ ...config, voiceFromNumber: e.target.value })}
+                helperText="Format: +1234567890"
+              />
+            </Stack>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <Button
+        variant="contained"
+        size="large"
+        onClick={handleSave}
+        disabled={saving}
+        fullWidth
+        sx={{ mb: 2 }}
+      >
+        {saving ? 'Saving...' : 'Save Reminder Settings'}
+      </Button>
+    </Box>
   );
 }

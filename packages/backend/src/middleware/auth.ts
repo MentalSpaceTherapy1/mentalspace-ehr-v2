@@ -2,20 +2,27 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyToken, JwtPayload } from '../utils/jwt';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import { enforceSessionTimeout } from './sessionTimeout';
+import sessionService from '../services/session.service';
+import prisma from '../services/database';
 
-// Extend Express Request type to include user
+// Extend Express Request type to include user and session
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      user?: JwtPayload & { userId: string; roles: string[] };
+      session?: {
+        sessionId: string;
+        token: string;
+      };
     }
   }
 }
 
 /**
- * Middleware to authenticate requests using JWT
+ * Middleware to authenticate requests using session-based authentication
+ * Falls back to JWT for backward compatibility
  */
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
@@ -32,15 +39,59 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
     const token = parts[1];
 
-    // Verify token and extract payload
-    const payload = verifyToken(token);
+    // Try session-based authentication first
+    const sessionData = await sessionService.validateSession(token);
 
-    // Attach user to request
-    req.user = payload;
+    if (sessionData) {
+      // Session is valid - fetch user data
+      const user = await prisma.user.findUnique({
+        where: { id: sessionData.userId },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          roles: true,
+          isActive: true,
+          mfaEnabled: true,
+        },
+      });
 
-    enforceSessionTimeout(req, res);
+      if (!user) {
+        throw new UnauthorizedError('User not found');
+      }
 
-    next();
+      if (!user.isActive) {
+        throw new UnauthorizedError('Account is disabled');
+      }
+
+      // Attach user and session to request
+      req.user = {
+        userId: user.id,
+        email: user.email,
+        roles: user.roles,
+      } as any;
+
+      req.session = {
+        sessionId: sessionData.sessionId,
+        token: token,
+      };
+
+      // Update session activity (handled by session service)
+      await sessionService.updateActivity(sessionData.sessionId);
+
+      return next();
+    }
+
+    // Fallback to JWT authentication for backward compatibility
+    try {
+      const payload = verifyToken(token);
+      req.user = payload;
+      enforceSessionTimeout(req, res);
+      return next();
+    } catch (jwtError) {
+      throw new UnauthorizedError('Invalid or expired session');
+    }
   } catch (error) {
     next(error);
   }
@@ -80,7 +131,7 @@ export const authorize = (...allowedRoles: string[]) => {
 /**
  * Optional authentication - attaches user if token is valid, but doesn't fail if missing
  */
-export const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -88,9 +139,47 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction) =>
       const parts = authHeader.split(' ');
       if (parts.length === 2 && parts[0] === 'Bearer') {
         const token = parts[1];
-        const payload = verifyToken(token);
-        req.user = payload;
-        enforceSessionTimeout(req, res);
+
+        // Try session-based authentication first
+        const sessionData = await sessionService.validateSession(token);
+
+        if (sessionData) {
+          const user = await prisma.user.findUnique({
+            where: { id: sessionData.userId },
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              roles: true,
+              isActive: true,
+            },
+          });
+
+          if (user && user.isActive) {
+            req.user = {
+              userId: user.id,
+              email: user.email,
+              roles: user.roles,
+            } as any;
+
+            req.session = {
+              sessionId: sessionData.sessionId,
+              token: token,
+            };
+
+            await sessionService.updateActivity(sessionData.sessionId);
+          }
+        } else {
+          // Fallback to JWT
+          try {
+            const payload = verifyToken(token);
+            req.user = payload;
+            enforceSessionTimeout(req, res);
+          } catch {
+            // Ignore JWT errors for optional auth
+          }
+        }
       }
     }
 

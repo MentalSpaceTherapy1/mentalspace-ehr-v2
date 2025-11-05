@@ -6,18 +6,18 @@ const prisma = new PrismaClient();
 
 async function createAdminUser() {
   try {
-    console.log('Creating admin user: ejoseph@chctherapy.com\n');
+    console.log('Creating admin user: superadmin@mentalspace.com\n');
 
     // Hash the password
-    const hashedPassword = await bcrypt.hash('Bing@@0912', 10);
+    const hashedPassword = await bcrypt.hash('Password123!', 10);
 
     // Create the user
     const user = await prisma.user.create({
       data: {
-        email: 'ejoseph@chctherapy.com',
+        email: 'superadmin@mentalspace.com',
         password: hashedPassword,
-        firstName: 'Elizabeth',
-        lastName: 'Joseph',
+        firstName: 'Super',
+        lastName: 'Admin',
         roles: ['ADMINISTRATOR'],
         isActive: true,
         emailNotifications: true,
@@ -40,9 +40,9 @@ async function createAdminUser() {
     console.log(`  Roles: ${user.roles.join(', ')}`);
     console.log(`  Active: ${user.isActive}`);
     console.log('');
-    console.log('You can now log in at https://mentalspaceehr.com');
+    console.log('You can now log in at http://localhost:3001');
     console.log(`  Email: ${user.email}`);
-    console.log('  Password: Bing@@0912');
+    console.log('  Password: Password123!');
 
   } catch (error) {
     console.error('❌ Error creating user:', error.message);

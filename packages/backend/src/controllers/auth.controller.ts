@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import authService from '../services/auth.service';
+import sessionService from '../services/session.service';
 import { asyncHandler } from '../utils/asyncHandler';
+import { ValidationError } from '../utils/errors';
 
 export class AuthController {
   /**
@@ -18,16 +20,50 @@ export class AuthController {
   });
 
   /**
-   * Login user
+   * Login user with enhanced security (session + optional MFA)
    * POST /api/v1/auth/login
    */
   login = asyncHandler(async (req: Request, res: Response) => {
-    const ipAddress = req.ip;
-    const result = await authService.login(req.body, ipAddress);
+    const ipAddress = req.ip || 'unknown';
+    const userAgent = req.get('user-agent') || 'unknown';
+    const result = await authService.login(req.body, ipAddress, userAgent);
+
+    // Check if MFA is required
+    if (result.requiresMfa) {
+      res.status(200).json({
+        success: true,
+        message: 'MFA verification required',
+        requiresMfa: true,
+        tempToken: result.tempToken,
+        user: result.user,
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        data: result,
+      });
+    }
+  });
+
+  /**
+   * Complete MFA login step
+   * POST /api/v1/auth/mfa/verify
+   */
+  completeMFALogin = asyncHandler(async (req: Request, res: Response) => {
+    const { userId, mfaCode } = req.body;
+    const ipAddress = req.ip || 'unknown';
+    const userAgent = req.get('user-agent') || 'unknown';
+
+    if (!userId || !mfaCode) {
+      throw new ValidationError('User ID and MFA code are required');
+    }
+
+    const result = await authService.completeMFALogin(userId, mfaCode, ipAddress, userAgent);
 
     res.status(200).json({
       success: true,
-      message: 'Login successful',
+      message: 'MFA verification successful',
       data: result,
     });
   });
@@ -63,13 +99,15 @@ export class AuthController {
   });
 
   /**
-   * Logout user
+   * Logout user (terminate current session)
    * POST /api/v1/auth/logout
    */
   logout = asyncHandler(async (req: Request, res: Response) => {
-    // In a stateless JWT setup, logout is typically handled client-side
-    // by removing the token. Here we just return success.
-    // In future, we could implement token blacklisting if needed.
+    const sessionId = req.session?.sessionId;
+
+    if (sessionId) {
+      await sessionService.terminateSession(sessionId);
+    }
 
     res.status(200).json({
       success: true,
