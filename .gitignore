@@ -58,6 +58,7 @@ $RECYCLE.BIN/
 .classpath
 .settings/
 .history/
+.claude/*.local.json
 
 # Prisma
 packages/database/prisma/migrations/*.sql
