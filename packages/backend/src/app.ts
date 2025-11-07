@@ -13,7 +13,8 @@ import routes from './routes';
 const app: Application = express();
 
 // Trust proxy - required for ngrok and load balancers
-app.set('trust proxy', true);
+// Set to 1 to trust the first proxy (safer than 'true')
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());

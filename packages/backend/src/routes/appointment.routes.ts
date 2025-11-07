@@ -13,6 +13,14 @@ import {
   markNoShow,
   deleteAppointment,
   getOrCreateAppointment,
+  getProviderComparison,
+  quickReschedule,
+  validateTimeSlot,
+  getRoomView,
+  bulkUpdateStatus,
+  bulkCancelAppointments,
+  bulkDeleteAppointments,
+  bulkAssignRoom,
 } from '../controllers/appointment.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireClientAccess } from '../middleware/clientAccess';
@@ -27,6 +35,20 @@ router.get(
   '/',
   authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'BILLING_STAFF'),
   getAllAppointments
+);
+
+// Get provider comparison view (must be before /:id to avoid route collision)
+router.get(
+  '/provider-comparison',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
+  getProviderComparison
+);
+
+// Get room view for resource scheduling (must be before /:id to avoid route collision)
+router.get(
+  '/room-view',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
+  getRoomView
 );
 
 // Get all appointments for a specific client (must be before /:id to avoid route collision)
@@ -75,6 +97,18 @@ router.post('/:id/cancel', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN')
 
 // Reschedule appointment
 router.post('/:id/reschedule', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), rescheduleAppointment);
+
+// Quick reschedule (for drag-and-drop)
+router.post('/:id/quick-reschedule', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), quickReschedule);
+
+// Validate time slot availability (for drag-and-drop preview)
+router.post('/validate-slot', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), validateTimeSlot);
+
+// Bulk operations
+router.post('/bulk/update-status', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), bulkUpdateStatus);
+router.post('/bulk/cancel', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), bulkCancelAppointments);
+router.post('/bulk/assign-room', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), bulkAssignRoom);
+router.delete('/bulk/delete', authorize('ADMINISTRATOR', 'SUPERVISOR'), bulkDeleteAppointments);
 
 // Mark as no-show
 router.post('/:id/no-show', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), markNoShow);

@@ -1166,3 +1166,841 @@ export const getOrCreateAppointment = async (req: Request, res: Response) => {
     });
   }
 };
+
+// ============================================================================
+// PHASE 3: DRAG-AND-DROP RESCHEDULING
+// ============================================================================
+
+/**
+ * Quick reschedule for drag-and-drop operations
+ * Validates and updates appointment time/date/clinician in one operation
+ */
+export const quickReschedule = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { appointmentDate, startTime, endTime, clinicianId } = req.body;
+    const userId = (req as any).user?.userId;
+
+    // Validate required fields
+    if (!appointmentDate || !startTime || !endTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'appointmentDate, startTime, and endTime are required',
+      });
+    }
+
+    // Check appointment access
+    if (!(await ensureAppointmentAccess(req, id))) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
+    const existingAppointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        client: true,
+        clinician: true,
+      },
+    });
+
+    if (!existingAppointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
+    // Use existing clinician if not specified
+    const targetClinicianId = clinicianId || existingAppointment.clinicianId;
+
+    // Parse dates
+    const newDate = new Date(appointmentDate);
+    if (isNaN(newDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format',
+      });
+    }
+
+    // Check for conflicts at new time
+    const conflicts = await prisma.appointment.findMany({
+      where: {
+        id: { not: id },
+        clinicianId: targetClinicianId,
+        appointmentDate: newDate,
+        status: {
+          in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
+        },
+        OR: [
+          {
+            AND: [
+              { startTime: { lte: startTime } },
+              { endTime: { gt: startTime } },
+            ],
+          },
+          {
+            AND: [
+              { startTime: { lt: endTime } },
+              { endTime: { gte: endTime } },
+            ],
+          },
+          {
+            AND: [
+              { startTime: { gte: startTime } },
+              { endTime: { lte: endTime } },
+            ],
+          },
+        ],
+      },
+      include: {
+        client: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Scheduling conflict detected at new time',
+        conflicts: conflicts.map((c) => ({
+          id: c.id,
+          clientName: `${c.client.firstName} ${c.client.lastName}`,
+          startTime: c.startTime,
+          endTime: c.endTime,
+        })),
+      });
+    }
+
+    // Calculate duration
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    const duration = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+
+    // Update appointment
+    const appointment = await prisma.appointment.update({
+      where: { id },
+      data: {
+        appointmentDate: newDate,
+        startTime,
+        endTime,
+        duration,
+        clinicianId: targetClinicianId,
+        status: 'RESCHEDULED',
+        statusUpdatedDate: new Date(),
+        statusUpdatedBy: userId,
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+        appointmentTypeObj: {
+          select: {
+            typeName: true,
+            colorCode: true,
+          },
+        },
+      },
+    });
+
+    // Sync linked clinical notes with the rescheduled appointment date
+    await prisma.clinicalNote.updateMany({
+      where: { appointmentId: id },
+      data: {
+        sessionDate: newDate,
+        dueDate: calculateNoteDueDate(newDate),
+      },
+    });
+
+    auditLogger.info('Appointment quick rescheduled', {
+      userId,
+      appointmentId: id,
+      action: 'APPOINTMENT_QUICK_RESCHEDULE',
+      from: {
+        date: existingAppointment.appointmentDate,
+        startTime: existingAppointment.startTime,
+        clinicianId: existingAppointment.clinicianId,
+      },
+      to: {
+        date: newDate,
+        startTime,
+        clinicianId: targetClinicianId,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Appointment rescheduled successfully',
+      data: appointment,
+    });
+  } catch (error) {
+    logControllerError('quickReschedule', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reschedule appointment',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Validate if a time slot is available for an appointment
+ * Used for drag-and-drop preview/validation before committing
+ */
+export const validateTimeSlot = async (req: Request, res: Response) => {
+  try {
+    const { appointmentId, appointmentDate, startTime, endTime, clinicianId } = req.body;
+
+    if (!appointmentDate || !startTime || !endTime || !clinicianId) {
+      return res.status(400).json({
+        success: false,
+        message: 'appointmentDate, startTime, endTime, and clinicianId are required',
+      });
+    }
+
+    // Parse date
+    const newDate = new Date(appointmentDate);
+    if (isNaN(newDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format',
+      });
+    }
+
+    // Check for conflicts
+    const whereClause: any = {
+      clinicianId,
+      appointmentDate: newDate,
+      status: {
+        in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
+      },
+      OR: [
+        {
+          AND: [
+            { startTime: { lte: startTime } },
+            { endTime: { gt: startTime } },
+          ],
+        },
+        {
+          AND: [
+            { startTime: { lt: endTime } },
+            { endTime: { gte: endTime } },
+          ],
+        },
+        {
+          AND: [
+            { startTime: { gte: startTime } },
+            { endTime: { lte: endTime } },
+          ],
+        },
+      ],
+    };
+
+    // Exclude the appointment being moved
+    if (appointmentId) {
+      whereClause.id = { not: appointmentId };
+    }
+
+    const conflicts = await prisma.appointment.findMany({
+      where: whereClause,
+      include: {
+        client: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    const isAvailable = conflicts.length === 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        isAvailable,
+        conflicts: conflicts.map((c) => ({
+          id: c.id,
+          clientName: `${c.client.firstName} ${c.client.lastName}`,
+          startTime: c.startTime,
+          endTime: c.endTime,
+          status: c.status,
+        })),
+      },
+    });
+  } catch (error) {
+    logControllerError('validateTimeSlot', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to validate time slot',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+// ============================================================================
+// PHASE 3: MULTI-SELECT BULK OPERATIONS
+// ============================================================================
+
+/**
+ * Bulk update appointment statuses
+ * Allows updating multiple appointments at once
+ */
+export const bulkUpdateStatus = async (req: Request, res: Response) => {
+  try {
+    const { appointmentIds, status, notes } = req.body;
+    const userId = (req as any).user?.userId;
+
+    if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'appointmentIds array is required',
+      });
+    }
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: 'status is required',
+      });
+    }
+
+    // Validate status
+    const validStatuses = ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION', 'COMPLETED', 'NO_SHOW', 'CANCELLED', 'RESCHEDULED'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+      });
+    }
+
+    // Update all appointments
+    const updateData: any = {
+      status,
+      statusUpdatedDate: new Date(),
+      statusUpdatedBy: userId,
+    };
+
+    if (notes) {
+      updateData.appointmentNotes = notes;
+    }
+
+    const result = await prisma.appointment.updateMany({
+      where: {
+        id: { in: appointmentIds },
+      },
+      data: updateData,
+    });
+
+    auditLogger.info('Bulk status update', {
+      userId,
+      appointmentCount: result.count,
+      newStatus: status,
+      action: 'BULK_STATUS_UPDATE',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Updated ${result.count} appointments`,
+      data: {
+        updatedCount: result.count,
+      },
+    });
+  } catch (error) {
+    logControllerError('bulkUpdateStatus', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update appointments',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Bulk cancel appointments
+ * Cancels multiple appointments at once
+ */
+export const bulkCancelAppointments = async (req: Request, res: Response) => {
+  try {
+    const { appointmentIds, cancellationReason, cancellationNotes } = req.body;
+    const userId = (req as any).user?.userId;
+
+    if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'appointmentIds array is required',
+      });
+    }
+
+    // Update all appointments
+    const result = await prisma.appointment.updateMany({
+      where: {
+        id: { in: appointmentIds },
+      },
+      data: {
+        status: 'CANCELLED',
+        cancellationReason: cancellationReason || 'Bulk cancellation',
+        cancellationNotes,
+        cancelledDate: new Date(),
+        statusUpdatedDate: new Date(),
+        statusUpdatedBy: userId,
+      },
+    });
+
+    auditLogger.info('Bulk cancellation', {
+      userId,
+      appointmentCount: result.count,
+      reason: cancellationReason,
+      action: 'BULK_CANCEL',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Cancelled ${result.count} appointments`,
+      data: {
+        cancelledCount: result.count,
+      },
+    });
+  } catch (error) {
+    logControllerError('bulkCancelAppointments', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel appointments',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Bulk delete appointments
+ * Deletes multiple appointments at once (hard delete)
+ */
+export const bulkDeleteAppointments = async (req: Request, res: Response) => {
+  try {
+    const { appointmentIds } = req.body;
+    const userId = (req as any).user?.userId;
+
+    if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'appointmentIds array is required',
+      });
+    }
+
+    // Delete associated reminders first
+    await prisma.appointmentReminder.deleteMany({
+      where: {
+        appointmentId: { in: appointmentIds },
+      },
+    });
+
+    // Delete appointments
+    const result = await prisma.appointment.deleteMany({
+      where: {
+        id: { in: appointmentIds },
+      },
+    });
+
+    auditLogger.info('Bulk deletion', {
+      userId,
+      appointmentCount: result.count,
+      action: 'BULK_DELETE',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Deleted ${result.count} appointments`,
+      data: {
+        deletedCount: result.count,
+      },
+    });
+  } catch (error) {
+    logControllerError('bulkDeleteAppointments', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete appointments',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Bulk assign room to appointments
+ * Assigns a room to multiple appointments at once
+ */
+export const bulkAssignRoom = async (req: Request, res: Response) => {
+  try {
+    const { appointmentIds, room } = req.body;
+    const userId = (req as any).user?.userId;
+
+    if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'appointmentIds array is required',
+      });
+    }
+
+    if (!room) {
+      return res.status(400).json({
+        success: false,
+        message: 'room is required',
+      });
+    }
+
+    // Update all appointments
+    const result = await prisma.appointment.updateMany({
+      where: {
+        id: { in: appointmentIds },
+      },
+      data: {
+        room,
+      },
+    });
+
+    auditLogger.info('Bulk room assignment', {
+      userId,
+      appointmentCount: result.count,
+      room,
+      action: 'BULK_ASSIGN_ROOM',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Assigned room "${room}" to ${result.count} appointments`,
+      data: {
+        updatedCount: result.count,
+      },
+    });
+  } catch (error) {
+    logControllerError('bulkAssignRoom', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to assign room',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+// ============================================================================
+// PHASE 3: ROOM VIEW (RESOURCE SCHEDULING)
+// ============================================================================
+
+/**
+ * Get appointments grouped by room for resource scheduling
+ * Displays which rooms are occupied and when
+ */
+export const getRoomView = async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate, viewType = 'day' } = req.query;
+
+    // Validation
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'startDate and endDate are required',
+      });
+    }
+
+    // Parse dates
+    const start = new Date(startDate as string);
+    const end = new Date(endDate as string);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format',
+      });
+    }
+
+    // Fetch all appointments within date range that have a room assigned
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        appointmentDate: {
+          gte: start,
+          lte: end,
+        },
+        room: {
+          not: null,
+        },
+        status: {
+          not: 'CANCELLED',
+        },
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+        appointmentTypeObj: {
+          select: {
+            typeName: true,
+            colorCode: true,
+            category: true,
+          },
+        },
+      },
+      orderBy: [
+        { appointmentDate: 'asc' },
+        { startTime: 'asc' },
+      ],
+    });
+
+    // Get unique rooms
+    const rooms = [...new Set(appointments.map((apt) => apt.room).filter((room): room is string => room !== null))].sort();
+
+    // Group appointments by room
+    const roomSchedules = rooms.map((room) => {
+      const roomAppts = appointments.filter((appt) => appt.room === room);
+
+      return {
+        room,
+        appointments: roomAppts.map((appt) => ({
+          id: appt.id,
+          clientName: `${appt.client.firstName} ${appt.client.lastName}`,
+          clientId: appt.client.id,
+          clinicianName: `${appt.clinician.firstName} ${appt.clinician.lastName}`,
+          clinicianId: appt.clinician.id,
+          appointmentDate: appt.appointmentDate,
+          startTime: appt.startTime,
+          endTime: appt.endTime,
+          duration: appt.duration,
+          status: appt.status,
+          appointmentType: appt.appointmentType,
+          serviceLocation: appt.serviceLocation,
+          colorCode: appt.appointmentTypeObj?.colorCode || '#3b82f6',
+          confirmedAt: appt.confirmedAt,
+        })),
+        totalAppointments: roomAppts.length,
+        occupancyRate: calculateRoomOccupancy(roomAppts, start, end),
+      };
+    });
+
+    // Calculate summary statistics
+    const summary = {
+      totalRooms: rooms.length,
+      totalAppointments: appointments.length,
+      dateRange: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      viewType,
+      averageOccupancy:
+        roomSchedules.length > 0
+          ? roomSchedules.reduce((sum, r) => sum + r.occupancyRate, 0) / roomSchedules.length
+          : 0,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        summary,
+        roomSchedules,
+      },
+    });
+  } catch (error) {
+    logControllerError('getRoomView', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch room view',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Helper function to calculate room occupancy rate
+ */
+function calculateRoomOccupancy(appointments: any[], startDate: Date, endDate: Date): number {
+  if (appointments.length === 0) return 0;
+
+  // Calculate total available time in minutes (assuming 8 AM to 8 PM, 12 hours = 720 minutes per day)
+  const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const totalAvailableMinutes = daysDiff * 720; // 12 hours per day
+
+  // Calculate total occupied time
+  const totalOccupiedMinutes = appointments.reduce((sum, appt) => sum + appt.duration, 0);
+
+  // Return occupancy as a percentage
+  return Math.round((totalOccupiedMinutes / totalAvailableMinutes) * 100);
+}
+
+// ============================================================================
+// PHASE 3: PROVIDER COMPARISON VIEW
+// ============================================================================
+
+/**
+ * Get appointments for multiple providers within a date range
+ * Used for side-by-side provider schedule comparison
+ */
+export const getProviderComparison = async (req: Request, res: Response) => {
+  try {
+    const { providerIds, startDate, endDate, viewType = 'day' } = req.query;
+
+    // Validation
+    if (!providerIds || !startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'providerIds, startDate, and endDate are required',
+      });
+    }
+
+    // Parse provider IDs
+    const providerIdArray = Array.isArray(providerIds)
+      ? providerIds
+      : (providerIds as string).split(',');
+
+    // Parse dates
+    const start = new Date(startDate as string);
+    const end = new Date(endDate as string);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format',
+      });
+    }
+
+    // Fetch all provider information first (so we have data even if they have no appointments)
+    const providers = await prisma.user.findMany({
+      where: {
+        id: { in: providerIdArray as string[] },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        title: true,
+      },
+    });
+
+    // Create a map for easy lookup
+    const providerMap = new Map(providers.map(p => [p.id, p]));
+
+    // Fetch appointments for all providers
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        clinicianId: { in: providerIdArray as string[] },
+        appointmentDate: {
+          gte: start,
+          lte: end,
+        },
+        status: {
+          not: 'CANCELLED',
+        },
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            dateOfBirth: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+        appointmentTypeObj: {
+          select: {
+            typeName: true,
+            colorCode: true,
+            category: true,
+          },
+        },
+      },
+      orderBy: [
+        { appointmentDate: 'asc' },
+        { startTime: 'asc' },
+      ],
+    });
+
+    // Group appointments by provider
+    const providerSchedules = providerIdArray.map(providerId => {
+      const providerAppts = appointments.filter(appt => appt.clinicianId === providerId);
+      const provider = providerMap.get(providerId as string);
+
+      return {
+        providerId,
+        provider: provider || null,
+        appointments: providerAppts.map(appt => ({
+          id: appt.id,
+          clientName: `${appt.client.firstName} ${appt.client.lastName}`,
+          clientId: appt.client.id,
+          appointmentDate: appt.appointmentDate,
+          startTime: appt.startTime,
+          endTime: appt.endTime,
+          duration: appt.duration,
+          status: appt.status,
+          appointmentType: appt.appointmentType,
+          serviceLocation: appt.serviceLocation,
+          room: appt.room,
+          colorCode: appt.appointmentTypeObj?.colorCode || '#3b82f6',
+          confirmedAt: appt.confirmedAt,
+          noShowRiskLevel: appt.noShowRiskLevel,
+        })),
+        totalAppointments: providerAppts.length,
+        confirmedCount: providerAppts.filter(a => a.confirmedAt).length,
+        pendingCount: providerAppts.filter(a => !a.confirmedAt).length,
+      };
+    });
+
+    // Calculate summary statistics
+    const summary = {
+      totalProviders: providerIdArray.length,
+      totalAppointments: appointments.length,
+      dateRange: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      viewType,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        summary,
+        providerSchedules,
+      },
+    });
+  } catch (error) {
+    logControllerError('getProviderComparison', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch provider comparison',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};

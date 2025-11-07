@@ -72,6 +72,9 @@ export default function Layout({ children }: LayoutProps) {
       hasSubmenu: true,
       submenu: [
         { path: '/appointments', label: 'Calendar' },
+        { path: '/appointments/ai-assistant', label: '✨ AI Scheduling Assistant' },
+        { path: '/appointments/provider-comparison', label: 'Provider Comparison' },
+        { path: '/appointments/room-view', label: 'Room View' },
         { path: '/appointments/waitlist', label: 'Waitlist' },
         { path: '/appointments/time-off', label: 'Time-Off Requests' },
       ]
@@ -105,6 +108,7 @@ export default function Layout({ children }: LayoutProps) {
       ]
     },
     { path: '/reports', icon: '📈', label: 'Reports', color: 'from-sky-500 to-blue-600' },
+    { path: '/analytics', icon: '📊', label: 'Analytics', color: 'from-indigo-500 to-purple-600' },
     { path: '/telehealth/session/demo', icon: '📹', label: 'Telehealth', color: 'from-blue-600 to-indigo-600' },
     { path: '/portal/dashboard', icon: '🌐', label: 'Client Portal', color: 'from-emerald-500 to-teal-500' },
     { path: '/supervision', icon: '👨‍🏫', label: 'Supervision', color: 'from-rose-500 to-red-500' },
