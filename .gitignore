@@ -7,6 +7,12 @@ node_modules/
 coverage/
 .nyc_output/
 .test-token-cache.json
+playwright-report/
+test-results/
+tests/screenshots/
+*.spec.ts-snapshots/
+test-*.png
+test-login-payload.json
 
 # Production
 build/
@@ -55,6 +61,8 @@ $RECYCLE.BIN/
 
 # Prisma
 packages/database/prisma/migrations/*.sql
+*.prisma.backup*
+ai-scheduling-models.prisma
 
 # TypeScript
 *.tsbuildinfo
