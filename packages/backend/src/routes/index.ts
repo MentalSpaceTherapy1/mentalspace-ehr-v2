@@ -47,6 +47,9 @@ import groupSessionRoutes from './groupSession.routes';
 import availabilityRoutes from './availability.routes';
 import timeOffRoutes from './timeOff.routes';
 import waitlistMatchingRoutes from './waitlistMatching.routes';
+import analyticsRoutes from './analytics.routes';
+import aiSchedulingRoutes from './aiScheduling.routes';
+import outcomeMeasureRoutes from './outcomeMeasure.routes';
 
 const router = Router();
 
@@ -161,5 +164,14 @@ router.use('/time-off', timeOffRoutes);
 
 // Waitlist Matching routes (Module 3 Phase 2.2: Waitlist Automation)
 router.use('/waitlist-matching', waitlistMatchingRoutes);
+
+// Analytics routes (Module 3 Phase 3.2: Scheduling Analytics)
+router.use('/analytics', analyticsRoutes);
+
+// AI Scheduling routes (Module 3 Phase 4: AI Scheduling Assistant)
+router.use('/ai-scheduling', aiSchedulingRoutes);
+
+// Outcome Measure routes (Module 4 Phase 2.3: Outcome Measures Integration)
+router.use('/outcome-measures', outcomeMeasureRoutes);
 
 export default router;

@@ -209,6 +209,17 @@ model User {
   timeOffAsApprover  TimeOffRequest[]       @relation("TimeOffApprover")
   timeOffAsCoverage  TimeOffRequest[]       @relation("TimeOffCoverage")
 
+  // Module 3 Phase 4: AI Scheduling Assistant
+  schedulingSuggestionsAsProvider          SchedulingSuggestion[]         @relation("SuggestionProvider")
+  schedulingSuggestionsAsSuggestedProvider SchedulingSuggestion[]         @relation("SuggestedProvider")
+  providerCompatibilityScores              ProviderClientCompatibility[]  @relation("CompatibilityProvider")
+  schedulingPatternsAsProvider             SchedulingPattern[]            @relation("PatternProvider")
+  schedulingPatternsAsResolver             SchedulingPattern[]            @relation("PatternResolver")
+  nlpSchedulingLogs                        NaturalLanguageSchedulingLog[]
+
+  // Module 4 Phase 2.3: Outcome Measures
+  outcomeMeasuresAdministered OutcomeMeasure[] @relation("OutcomeMeasureAdministrator")
+
   @@map("users")
 }
 
@@ -579,6 +590,14 @@ model Client {
   // Module 3 Phase 2: Group Appointments
   groupMemberships GroupMember[]
 
+  // Module 3 Phase 4: AI Scheduling Assistant
+  schedulingSuggestions SchedulingSuggestion[]
+  compatibilityScores   ProviderClientCompatibility[]
+  schedulingPatterns    SchedulingPattern[]
+
+  // Module 4 Phase 2.3: Outcome Measures
+  outcomeMeasures OutcomeMeasure[]
+
   @@map("clients")
 }
 
@@ -893,6 +912,12 @@ model Appointment {
   groupSession   GroupSession?     @relation("GroupSessions", fields: [groupSessionId], references: [id])
   isGroupSession Boolean           @default(false)
   attendance     GroupAttendance[]
+
+  // Module 3 Phase 4: AI Scheduling Assistant - NLP Created Appointments
+  nlpSchedulingLogs NaturalLanguageSchedulingLog[] @relation("NLPCreatedAppointment")
+
+  // Module 4 Phase 2.3: Outcome Measures
+  outcomeMeasures OutcomeMeasure[]
 
   @@map("appointments")
 }
@@ -1294,6 +1319,9 @@ model ClinicalNote {
   versions     NoteVersion[]   @relation("NoteVersions")
   billingHolds BillingHold[]
 
+  // Phase 2.3: Outcome Measures
+  outcomeMeasures OutcomeMeasure[]
+
   // Unique constraint: One note per appointment per note type
   @@unique([appointmentId, noteType])
   @@map("clinical_notes")
@@ -1474,6 +1502,71 @@ model ClinicalNoteDiagnosis {
   @@index([noteId])
   @@index([diagnosisId])
   @@map("clinical_note_diagnoses")
+}
+
+// ============================================================================
+// PHASE 2.3: OUTCOME MEASURES INTEGRATION
+// ============================================================================
+
+enum OutcomeMeasureType {
+  PHQ9 // Patient Health Questionnaire-9 (Depression)
+  GAD7 // Generalized Anxiety Disorder-7
+  PCL5 // PTSD Checklist for DSM-5
+}
+
+enum OutcomeSeverity {
+  MINIMAL
+  MILD
+  MODERATE
+  MODERATELY_SEVERE
+  SEVERE
+}
+
+model OutcomeMeasure {
+  id       String @id @default(uuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  // Administration details
+  measureType      OutcomeMeasureType
+  administeredById String
+  administeredBy   User               @relation("OutcomeMeasureAdministrator", fields: [administeredById], references: [id])
+  administeredDate DateTime           @default(now())
+
+  // Clinical note association (optional - can be standalone or linked to a note)
+  clinicalNoteId String?
+  clinicalNote   ClinicalNote? @relation(fields: [clinicalNoteId], references: [id], onDelete: SetNull)
+
+  // Appointment association (optional)
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  // Responses stored as JSON
+  // Format: { "q1": 2, "q2": 1, "q3": 3, ... }
+  // Each question number maps to the selected response value
+  responses Json
+
+  // Scoring
+  totalScore    Int
+  severity      OutcomeSeverity
+  severityLabel String // "Minimal depression", "Moderate anxiety", etc.
+
+  // Clinical interpretation
+  clinicalNotes String? // Clinician's notes about the results
+
+  // Metadata
+  completionTime Int? // Time taken to complete in seconds
+  wasCompleted   Boolean @default(true) // False if partially completed
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([measureType])
+  @@index([administeredDate])
+  @@index([clinicalNoteId])
+  @@map("outcome_measures")
 }
 
 // ============================================================================
@@ -3284,6 +3377,10 @@ model AppointmentType {
   appointments  Appointment[]
   groupSessions GroupSession[]
 
+  // Module 3 Phase 4: AI Scheduling Assistant
+  schedulingSuggestions SchedulingSuggestion[]
+  schedulingPatterns    SchedulingPattern[]
+
   @@map("appointment_types")
 }
 
@@ -3473,4 +3570,193 @@ model TimeOffRequest {
 
   @@index([providerId, startDate, endDate])
   @@map("time_off_requests")
+}
+
+// ============================================================================
+// MODULE 3 PHASE 4: AI SCHEDULING ASSISTANT
+// ============================================================================
+
+// SchedulingSuggestion - Stores AI-generated scheduling recommendations
+model SchedulingSuggestion {
+  id             String @id @default(uuid())
+  requestId      String // Links related suggestions together
+  suggestionType String // OPTIMAL_SLOT, ALTERNATIVE_PROVIDER, LOAD_BALANCE, EFFICIENCY_IMPROVEMENT
+
+  // Request context
+  clientId          String?
+  providerId        String?
+  appointmentTypeId String?
+  requestedDate     DateTime?
+  requestedTime     String?
+  flexibility       Int? // How many days flexible (0-30)
+
+  // Suggestion details
+  suggestedProviderId String
+  suggestedDate       DateTime
+  suggestedTime       String
+  suggestedDuration   Int
+  alternativeSlots    Json? // Array of alternative time slots
+
+  // Scoring
+  compatibilityScore Float // 0.0 to 1.0
+  loadBalanceScore   Float // 0.0 to 1.0
+  efficiencyScore    Float // 0.0 to 1.0
+  overallScore       Float // 0.0 to 1.0
+  confidenceLevel    String // LOW, MEDIUM, HIGH
+
+  // Reasoning
+  reasoning String @db.Text // Explanation for the suggestion
+  factors   Json // Factors considered in the suggestion
+
+  // Tracking
+  wasAccepted          Boolean? // Did user accept this suggestion?
+  acceptedAt           DateTime?
+  declinedReason       String?
+  createdAppointmentId String? // If accepted, link to created appointment
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client            Client?          @relation(fields: [clientId], references: [id])
+  provider          User?            @relation("SuggestionProvider", fields: [providerId], references: [id])
+  suggestedProvider User             @relation("SuggestedProvider", fields: [suggestedProviderId], references: [id])
+  appointmentType   AppointmentType? @relation(fields: [appointmentTypeId], references: [id])
+
+  @@index([requestId])
+  @@index([clientId])
+  @@index([providerId])
+  @@index([suggestedProviderId])
+  @@index([overallScore])
+  @@index([createdAt])
+  @@map("scheduling_suggestions")
+}
+
+// ProviderClientCompatibility - Stores compatibility scores between providers and clients
+model ProviderClientCompatibility {
+  id         String @id @default(uuid())
+  providerId String
+  clientId   String
+
+  // Compatibility scores (0.0 to 1.0)
+  overallScore      Float
+  specialtyMatch    Float // Provider specialty matches client needs
+  availabilityMatch Float // Provider availability matches client preferences
+  experienceMatch   Float // Provider experience level matches client needs
+  insuranceMatch    Float // Provider accepts client's insurance
+  locationMatch     Float // Distance/location convenience
+  styleMatch        Float // Therapy style/approach compatibility
+
+  // Historical data
+  appointmentCount  Int       @default(0)
+  noShowCount       Int       @default(0)
+  cancellationCount Int       @default(0)
+  completionRate    Float     @default(0.0)
+  lastAppointment   DateTime?
+
+  // Factors
+  factors Json // Detailed factors that influenced the score
+
+  // Calculation metadata
+  lastCalculated     DateTime @default(now())
+  calculationVersion String   @default("1.0")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  provider User   @relation("CompatibilityProvider", fields: [providerId], references: [id])
+  client   Client @relation(fields: [clientId], references: [id])
+
+  @@unique([providerId, clientId])
+  @@index([providerId])
+  @@index([clientId])
+  @@index([overallScore])
+  @@map("provider_client_compatibility")
+}
+
+// SchedulingPattern - Tracks recognized patterns and inefficiencies
+model SchedulingPattern {
+  id          String @id @default(uuid())
+  patternType String // INEFFICIENCY, OPTIMIZATION, TREND, ANOMALY
+  severity    String // LOW, MEDIUM, HIGH, CRITICAL
+  category    String // NO_SHOW_CLUSTER, UNDERUTILIZATION, OVERBOOKING, GAP_TIME, PREFERENCE_MISMATCH
+
+  // Detection details
+  providerId        String?
+  clientId          String?
+  appointmentTypeId String?
+  timeRange         Json // { startDate, endDate }
+  affectedDates     Json // Array of dates where pattern was detected
+
+  // Pattern description
+  title       String
+  description String @db.Text
+  metrics     Json // Quantitative metrics about the pattern
+
+  // Recommendations
+  recommendation  String @db.Text
+  estimatedImpact String // Time saved, revenue increase, efficiency gain
+
+  // Status
+  status     String    @default("ACTIVE") // ACTIVE, RESOLVED, IGNORED
+  resolvedAt DateTime?
+  resolvedBy String?
+  resolution String?   @db.Text
+
+  // Detection metadata
+  detectedAt DateTime @default(now())
+  confidence Float // 0.0 to 1.0
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  provider        User?            @relation("PatternProvider", fields: [providerId], references: [id])
+  client          Client?          @relation(fields: [clientId], references: [id])
+  appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id])
+  resolver        User?            @relation("PatternResolver", fields: [resolvedBy], references: [id])
+
+  @@index([providerId])
+  @@index([clientId])
+  @@index([patternType])
+  @@index([severity])
+  @@index([status])
+  @@index([detectedAt])
+  @@map("scheduling_patterns")
+}
+
+// NaturalLanguageSchedulingLog - Logs NLP scheduling requests and parsing results
+model NaturalLanguageSchedulingLog {
+  id          String @id @default(uuid())
+  userId      String
+  requestText String @db.Text // Original natural language request
+
+  // Parsing results
+  parsedIntent   String // SCHEDULE, RESCHEDULE, CANCEL, FIND_SLOT, CHECK_AVAILABILITY
+  parsedEntities Json // Extracted entities (provider, client, date, time, duration)
+  confidence     Float // Parsing confidence 0.0 to 1.0
+  parsingSuccess Boolean
+
+  // Execution
+  executionStatus      String // PENDING, SUCCESS, FAILED, CLARIFICATION_NEEDED
+  clarificationNeeded  String? @db.Text // What needs clarification
+  executedAction       String? // What action was taken
+  createdAppointmentId String? // If an appointment was created
+
+  // Performance
+  parsingTimeMs   Int // Time taken to parse
+  executionTimeMs Int? // Time taken to execute
+
+  // Feedback
+  userFeedback  String? // HELPFUL, NOT_HELPFUL, INCORRECT
+  feedbackNotes String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  user               User         @relation(fields: [userId], references: [id])
+  createdAppointment Appointment? @relation("NLPCreatedAppointment", fields: [createdAppointmentId], references: [id])
+
+  @@index([userId])
+  @@index([parsedIntent])
+  @@index([parsingSuccess])
+  @@index([createdAt])
+  @@map("nlp_scheduling_logs")
 }

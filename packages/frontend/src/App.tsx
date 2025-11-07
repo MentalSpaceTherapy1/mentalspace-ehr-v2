@@ -31,6 +31,8 @@ import AppointmentsCalendar from './pages/Appointments/AppointmentsCalendar';
 import NewAppointment from './pages/Appointments/NewAppointment';
 import Waitlist from './pages/Appointments/Waitlist';
 import ClinicianSchedule from './pages/Appointments/ClinicianSchedule';
+import ProviderComparisonView from './pages/Appointments/ProviderComparisonView';
+import RoomView from './pages/Appointments/RoomView';
 import TimeOffRequests from './pages/TimeOff/TimeOffRequestsPage';
 import ReminderSettings from './pages/Settings/ReminderSettings';
 import AppointmentTypes from './pages/Settings/AppointmentTypes';
@@ -51,6 +53,7 @@ import ClinicianDashboard from './pages/Productivity/ClinicianDashboard';
 import SupervisorDashboard from './pages/Productivity/SupervisorDashboard';
 import AdministratorDashboard from './pages/Productivity/AdministratorDashboard';
 import ReportsDashboard from './pages/Reports/ReportsDashboard';
+import AnalyticsDashboard from './pages/Analytics/AnalyticsDashboard';
 import PortalLayout from './components/PortalLayout';
 import PortalLogin from './pages/Portal/PortalLogin';
 import PortalRegister from './pages/Portal/PortalRegister';
@@ -77,6 +80,8 @@ import SmartNoteCreator from './pages/ClinicalNotes/SmartNoteCreator';
 import LandingPage from './pages/Landing/LandingPage';
 import GroupSessionsPage from './pages/Groups/GroupSessionsPage';
 import GroupDetailsPage from './pages/Groups/GroupDetailsPage';
+import AISchedulingAssistant from './pages/AISchedulingAssistant';
+import OutcomeMeasuresPage from './pages/OutcomeMeasures/OutcomeMeasuresPage';
 
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -270,6 +275,14 @@ function App() {
           }
         />
         <Route
+          path="/clients/:clientId/outcome-measures"
+          element={
+            <PrivateRoute>
+              <OutcomeMeasuresPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/clients/duplicates"
           element={
             <PrivateRoute>
@@ -287,6 +300,14 @@ function App() {
         />
         <Route
           path="/appointments/new"
+          element={
+            <PrivateRoute>
+              <NewAppointment />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/appointments/:id/edit"
           element={
             <PrivateRoute>
               <NewAppointment />
@@ -314,6 +335,30 @@ function App() {
           element={
             <PrivateRoute>
               <TimeOffRequests />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/appointments/provider-comparison"
+          element={
+            <PrivateRoute>
+              <ProviderComparisonView />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/appointments/room-view"
+          element={
+            <PrivateRoute>
+              <RoomView />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/appointments/ai-assistant"
+          element={
+            <PrivateRoute>
+              <AISchedulingAssistant />
             </PrivateRoute>
           }
         />
@@ -746,6 +791,14 @@ function App() {
           element={
             <PrivateRoute>
               <ReportsDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <PrivateRoute>
+              <AnalyticsDashboard />
             </PrivateRoute>
           }
         />

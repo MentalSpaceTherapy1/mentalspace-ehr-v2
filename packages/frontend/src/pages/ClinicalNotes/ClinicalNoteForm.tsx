@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import ICD10Autocomplete from '../../components/ClinicalNotes/ICD10Autocomplete';
 import CPTCodeAutocomplete from '../../components/ClinicalNotes/CPTCodeAutocomplete';
+import OutcomeMeasuresSection from '../../components/ClinicalNotes/OutcomeMeasuresSection';
 
 interface Appointment {
   id: string;
@@ -437,10 +438,25 @@ export default function ClinicalNoteForm() {
             </div>
           </div>
 
+          {/* Outcome Measures */}
+          {clientId && (
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3">4</span>
+                Outcome Measures
+              </h2>
+              <OutcomeMeasuresSection
+                clientId={clientId}
+                clinicalNoteId={noteId}
+                sessionDate={sessionDate}
+              />
+            </div>
+          )}
+
           {/* Diagnosis & Billing */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3">4</span>
+              <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3">5</span>
               Diagnosis & Billing
             </h2>
 
