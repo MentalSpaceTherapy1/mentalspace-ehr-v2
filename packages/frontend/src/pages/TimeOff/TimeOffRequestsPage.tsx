@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import TimeOffRequestDialog from '../../components/Availability/TimeOffRequestDialog';
-import axios from 'axios';
 import { format } from 'date-fns';
 import api from '../../lib/api';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface TimeOffRequest {
   id: string;
@@ -84,12 +81,7 @@ export default function TimeOffRequestsPage() {
         params.providerId = user.id;
       }
 
-      const response = await axios.get(`${API_URL}/api/v1/time-off`, {
-        params,
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get('/time-off', { params });
 
       if (response.data.success) {
         setRequests(response.data.data || []);
@@ -107,17 +99,9 @@ export default function TimeOffRequestsPage() {
       setError(null);
       setSuccess(null);
 
-      const response = await axios.post(
-        `${API_URL}/api/v1/time-off/${requestId}/approve`,
-        {
-          approvedBy: user?.id,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
+      const response = await api.post(`/time-off/${requestId}/approve`, {
+        approvedBy: user?.id,
+      });
 
       if (response.data.success) {
         setSuccess('Time-off request approved successfully');
@@ -151,18 +135,10 @@ export default function TimeOffRequestsPage() {
       setError(null);
       setSuccess(null);
 
-      const response = await axios.post(
-        `${API_URL}/api/v1/time-off/${selectedRequest}/deny`,
-        {
-          approvedBy: user?.id,
-          denialReason,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
+      const response = await api.post(`/time-off/${selectedRequest}/deny`, {
+        approvedBy: user?.id,
+        denialReason,
+      });
 
       if (response.data.success) {
         setSuccess('Time-off request denied');
@@ -185,14 +161,7 @@ export default function TimeOffRequestsPage() {
       setError(null);
       setSuccess(null);
 
-      const response = await axios.delete(
-        `${API_URL}/api/v1/time-off/${requestId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
+      const response = await api.delete(`/time-off/${requestId}`);
 
       if (response.data.success) {
         setSuccess('Time-off request deleted successfully');

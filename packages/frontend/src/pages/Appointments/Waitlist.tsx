@@ -270,6 +270,12 @@ export default function Waitlist() {
           >
             🔔 Reminders
           </button>
+          <button
+            onClick={() => navigate('/appointments/ai-assistant')}
+            className="px-6 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold"
+          >
+            ✨ AI Assistant
+          </button>
         </div>
       </div>
 

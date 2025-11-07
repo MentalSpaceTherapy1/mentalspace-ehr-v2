@@ -43,6 +43,14 @@ const STATUS_COLORS: Record<string, string> = {
   RESCHEDULED: '#EC4899', // pink
 };
 
+// Helper function to convert 24-hour time to 12-hour format with AM/PM
+function formatTime12Hour(time24: string): string {
+  const [hours, minutes] = time24.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
 export default function AppointmentsCalendar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -137,6 +145,100 @@ export default function AppointmentsCalendar() {
     },
   });
 
+  // Quick reschedule mutation (for drag-and-drop)
+  const quickRescheduleMutation = useMutation({
+    mutationFn: async ({
+      id,
+      appointmentDate,
+      startTime,
+      endTime,
+    }: {
+      id: string;
+      appointmentDate: string;
+      startTime: string;
+      endTime: string;
+    }) => {
+      const response = await api.post(`/appointments/${id}/quick-reschedule`, {
+        appointmentDate,
+        startTime,
+        endTime,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      alert('Appointment rescheduled successfully!');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to reschedule appointment';
+      alert(`Error: ${errorMessage}`);
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+
+  // Handle event drop (drag-and-drop rescheduling)
+  const handleEventDrop = (dropInfo: any) => {
+    const event = dropInfo.event;
+    const newStart = dropInfo.event.start;
+    const newEnd = dropInfo.event.end;
+
+    if (!newStart || !newEnd) {
+      dropInfo.revert();
+      alert('Invalid date/time');
+      return;
+    }
+
+    // Format date and times
+    const appointmentDate = newStart.toISOString().split('T')[0];
+    const startTime = `${newStart.getHours().toString().padStart(2, '0')}:${newStart.getMinutes().toString().padStart(2, '0')}`;
+    const endTime = `${newEnd.getHours().toString().padStart(2, '0')}:${newEnd.getMinutes().toString().padStart(2, '0')}`;
+
+    // Confirm the reschedule
+    if (confirm(`Reschedule this appointment to ${appointmentDate} at ${startTime}?`)) {
+      quickRescheduleMutation.mutate({
+        id: event.id,
+        appointmentDate,
+        startTime,
+        endTime,
+      });
+    } else {
+      dropInfo.revert();
+    }
+  };
+
+  // Handle event resize (changing duration)
+  const handleEventResize = (resizeInfo: any) => {
+    const event = resizeInfo.event;
+    const newStart = resizeInfo.event.start;
+    const newEnd = resizeInfo.event.end;
+
+    if (!newStart || !newEnd) {
+      resizeInfo.revert();
+      alert('Invalid date/time');
+      return;
+    }
+
+    // Format date and times
+    const appointmentDate = newStart.toISOString().split('T')[0];
+    const startTime = `${newStart.getHours().toString().padStart(2, '0')}:${newStart.getMinutes().toString().padStart(2, '0')}`;
+    const endTime = `${newEnd.getHours().toString().padStart(2, '0')}:${newEnd.getMinutes().toString().padStart(2, '0')}`;
+
+    // Calculate new duration
+    const duration = Math.round((newEnd.getTime() - newStart.getTime()) / (1000 * 60));
+
+    // Confirm the resize
+    if (confirm(`Change appointment duration to ${duration} minutes?`)) {
+      quickRescheduleMutation.mutate({
+        id: event.id,
+        appointmentDate,
+        startTime,
+        endTime,
+      });
+    } else {
+      resizeInfo.revert();
+    }
+  };
+
   // Quick action handlers
   const handleCheckIn = () => {
     if (selectedAppointment) {
@@ -184,6 +286,18 @@ export default function AppointmentsCalendar() {
                 📅 Calendar
               </button>
               <button
+                onClick={() => navigate('/appointments/provider-comparison')}
+                className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold"
+              >
+                👥 Provider Comparison
+              </button>
+              <button
+                onClick={() => navigate('/appointments/room-view')}
+                className="px-6 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold"
+              >
+                🚪 Room View
+              </button>
+              <button
                 onClick={() => navigate('/appointments/waitlist')}
                 className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold"
               >
@@ -207,6 +321,25 @@ export default function AppointmentsCalendar() {
               >
                 🔔 Reminders
               </button>
+              <button
+                onClick={() => navigate('/appointments/ai-assistant')}
+                className="px-6 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold"
+              >
+                ✨ AI Assistant
+              </button>
+            </div>
+          </div>
+
+          {/* Drag-and-Drop Info */}
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl shadow-lg p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">✨</span>
+              <div>
+                <h3 className="font-semibold text-green-800">Drag-and-Drop Rescheduling Enabled</h3>
+                <p className="text-sm text-green-700">
+                  Simply drag appointments to new time slots to reschedule them instantly. You can also resize appointments by dragging the edges.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -324,8 +457,8 @@ export default function AppointmentsCalendar() {
               dayMaxEvents={true}
               weekends={true}
               height="auto"
-              slotMinTime="07:00:00"
-              slotMaxTime="20:00:00"
+              slotMinTime="00:00:00"
+              slotMaxTime="24:00:00"
               allDaySlot={false}
               nowIndicator={true}
               eventTimeFormat={{
@@ -333,6 +466,10 @@ export default function AppointmentsCalendar() {
                 minute: '2-digit',
                 meridiem: true,
               }}
+              eventDrop={handleEventDrop}
+              eventResize={handleEventResize}
+              eventDurationEditable={true}
+              eventStartEditable={true}
             />
           )}
         </div>
@@ -386,7 +523,7 @@ export default function AppointmentsCalendar() {
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Time</label>
-                      <p>{selectedAppointment.startTime} - {selectedAppointment.endTime}</p>
+                      <p>{formatTime12Hour(selectedAppointment.startTime)} - {formatTime12Hour(selectedAppointment.endTime)}</p>
                     </div>
                   </div>
 

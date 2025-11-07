@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import TimePicker from '../../components/TimePicker';
@@ -7,6 +7,7 @@ import TimePicker from '../../components/TimePicker';
 export default function NewAppointment() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { id: appointmentId } = useParams();
   const [searchParams] = useSearchParams();
   const preselectedDateParam = searchParams.get('date');
   const preselectedClientId = searchParams.get('clientId');
@@ -134,6 +135,46 @@ export default function NewAppointment() {
     },
   });
 
+  // Fetch existing appointment if editing
+  const { data: existingAppointment, isLoading: loadingAppointment } = useQuery({
+    queryKey: ['appointment', appointmentId],
+    queryFn: async () => {
+      const response = await api.get(`/appointments/${appointmentId}`);
+      return response.data.data;
+    },
+    enabled: !!appointmentId,
+  });
+
+  // Pre-populate form when editing existing appointment
+  useEffect(() => {
+    if (existingAppointment && appointmentId) {
+      setFormData({
+        clientId: existingAppointment.clientId || '',
+        clinicianId: existingAppointment.userId || '',
+        appointmentDate: existingAppointment.date || '',
+        startTime: existingAppointment.startTime || '09:00',
+        endTime: existingAppointment.endTime || '10:00',
+        duration: existingAppointment.duration || 60,
+        appointmentType: existingAppointment.appointmentType || 'Therapy Session',
+        serviceLocation: existingAppointment.serviceLocation || 'Office',
+        cptCode: existingAppointment.cptCode || '',
+        timezone: existingAppointment.timezone || 'America/New_York',
+        notes: existingAppointment.notes || '',
+        isRecurring: false,
+        recurrenceFrequency: 'weekly',
+        recurrenceDaysOfWeek: [],
+        recurrenceEndDate: '',
+        recurrenceCount: 0,
+      });
+
+      // Set client search if client exists
+      if (existingAppointment.client) {
+        setClientSearch(`${existingAppointment.client.firstName} ${existingAppointment.client.lastName}`);
+        setSelectedClientData(existingAppointment.client);
+      }
+    }
+  }, [existingAppointment, appointmentId]);
+
   // Auto-calculate end time when start time or duration changes
   useEffect(() => {
     if (formData.startTime && formData.duration) {
@@ -150,14 +191,22 @@ export default function NewAppointment() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.startTime, formData.duration]);
 
-  // Create appointment mutation
+  // Create/Update appointment mutation
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await api.post('/appointments', data);
-      return response.data;
+      if (appointmentId) {
+        // Update existing appointment
+        const response = await api.put(`/appointments/${appointmentId}`, data);
+        return response.data;
+      } else {
+        // Create new appointment
+        const response = await api.post('/appointments', data);
+        return response.data;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
       navigate('/appointments');
     },
     onError: (error: any) => {
@@ -271,9 +320,11 @@ export default function NewAppointment() {
             Back to Calendar
           </button>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
-            Schedule New Appointment
+            {appointmentId ? 'Edit Appointment' : 'Schedule New Appointment'}
           </h1>
-          <p className="text-gray-600">Create a new appointment for a client</p>
+          <p className="text-gray-600">
+            {appointmentId ? 'Update the appointment details' : 'Create a new appointment for a client'}
+          </p>
         </div>
 
         {/* Form */}
