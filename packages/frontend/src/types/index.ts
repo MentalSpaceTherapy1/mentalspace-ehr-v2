@@ -324,3 +324,47 @@ export interface DiagnosisStats {
   byType: Record<string, number>;
   byCategory: Record<string, number>;
 }
+
+// ============================================================================
+// MODULE 6 PHASE 2: AI TRANSCRIPTION TYPES
+// ============================================================================
+
+export interface SessionTranscript {
+  id: string;
+  sessionId: string;
+  speakerLabel: string; // 'CLINICIAN', 'CLIENT', or 'UNKNOWN'
+  text: string;
+  startTime: number; // Seconds from session start
+  endTime: number; // Seconds from session start
+  confidence: number; // 0.0 to 1.0
+  isPartial: boolean;
+  itemType: string;
+  vocabulary?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TranscriptionStatus {
+  transcriptionEnabled: boolean;
+  transcriptionConsent: boolean;
+  transcriptionStartedAt?: string;
+  transcriptionStoppedAt?: string;
+  transcriptionStatus?: string; // 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'DISABLED'
+  transcriptionJobId?: string;
+  transcriptionError?: string;
+  transcriptCount?: number;
+  isActive?: boolean;
+}
+
+export interface TranscriptionUpdate {
+  sessionId: string;
+  transcript: SessionTranscript;
+  isPartial: boolean;
+  timestamp: string;
+}
+
+export interface TranscriptionOptions {
+  includePartial?: boolean;
+  limit?: number;
+  offset?: number;
+}

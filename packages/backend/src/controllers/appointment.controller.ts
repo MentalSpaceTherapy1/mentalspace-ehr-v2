@@ -33,8 +33,12 @@ const ensureAppointmentAccess = async (
 
 
 // Appointment validation schemas
-const createAppointmentSchema = z.object({
-  clientId: z.string().uuid('Invalid client ID'),
+const baseAppointmentSchema = z.object({
+  // Group appointment support: either clientId (individual) or clientIds (group)
+  clientId: z.string().uuid('Invalid client ID').optional(),
+  isGroupAppointment: z.boolean().default(false),
+  clientIds: z.array(z.string().uuid('Invalid client ID')).min(2, 'Group appointments require at least 2 clients').optional(),
+
   clinicianId: z.string().uuid('Invalid clinician ID'),
   appointmentDate: z.string().datetime('Invalid appointment date'),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid start time format (HH:MM)'),
@@ -50,7 +54,22 @@ const createAppointmentSchema = z.object({
   appointmentNotes: z.string().optional(),
 });
 
-const updateAppointmentSchema = createAppointmentSchema.partial().omit({
+const createAppointmentSchema = baseAppointmentSchema.refine(
+  (data) => {
+    // Either clientId or clientIds must be provided
+    if (data.isGroupAppointment) {
+      return data.clientIds && data.clientIds.length >= 2;
+    } else {
+      return !!data.clientId;
+    }
+  },
+  {
+    message: 'Either clientId (individual) or clientIds (group with 2+ clients) is required',
+    path: ['clientId'],
+  }
+);
+
+const updateAppointmentSchema = baseAppointmentSchema.partial().omit({
   clientId: true,
   clinicianId: true
 });
@@ -86,7 +105,7 @@ const recurrencePatternSchema = z.object({
   message: 'Either endDate or count must be provided',
 });
 
-const createRecurringAppointmentSchema = createAppointmentSchema.extend({
+const createRecurringAppointmentSchema = baseAppointmentSchema.extend({
   isRecurring: z.literal(true),
   recurrencePattern: recurrencePatternSchema,
 });
@@ -243,6 +262,18 @@ export const getAppointmentById = async (req: Request, res: Response) => {
             licenseNumber: true,
           },
         },
+        appointmentClients: {
+          include: {
+            client: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -276,9 +307,30 @@ export const getAppointmentById = async (req: Request, res: Response) => {
 export const createAppointment = async (req: Request, res: Response) => {
   try {
     const validatedData = createAppointmentSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
 
-    await assertCanAccessClient(req.user, { clientId: validatedData.clientId });
+    // Extract userId with proper fallback and validation
+    const userId = (req as any).user?.userId || (req as any).user?.id;
+    if (!userId) {
+      console.error('User authentication context missing:', {
+        reqUser: (req as any).user,
+        headers: req.headers.authorization ? 'Present' : 'Missing'
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'User authentication context missing. Please log in again.'
+      });
+    }
+
+    // Validate client access based on appointment type
+    if (validatedData.isGroupAppointment && validatedData.clientIds) {
+      // For group appointments, validate access to all clients
+      for (const clientId of validatedData.clientIds) {
+        await assertCanAccessClient(req.user, { clientId });
+      }
+    } else {
+      // For individual appointments, validate single client access
+      await assertCanAccessClient(req.user, { clientId: validatedData.clientId });
+    }
 
     // Check for scheduling conflicts
     const conflicts = await prisma.appointment.findMany({
@@ -313,9 +365,10 @@ export const createAppointment = async (req: Request, res: Response) => {
       });
     }
 
-
+    // Create appointment data
     const appointmentData: Prisma.AppointmentUncheckedCreateInput = {
-      clientId: validatedData.clientId,
+      // For group appointments, clientId is null (clients linked via AppointmentClient junction)
+      clientId: validatedData.isGroupAppointment ? null : validatedData.clientId,
       clinicianId: validatedData.clinicianId,
       appointmentDate: new Date(validatedData.appointmentDate),
       startTime: validatedData.startTime,
@@ -331,41 +384,106 @@ export const createAppointment = async (req: Request, res: Response) => {
       icdCodes: validatedData.icdCodes || [],
       cptCode: validatedData.cptCode || null,
       appointmentNotes: validatedData.appointmentNotes,
+      isGroupAppointment: validatedData.isGroupAppointment || false,
     };
 
-    const appointment = await prisma.appointment.create({
-      data: appointmentData,
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+    // Use transaction to create appointment and AppointmentClient records atomically
+    const appointment = await prisma.$transaction(async (tx) => {
+      // Create the appointment
+      const newAppointment = await tx.appointment.create({
+        data: appointmentData,
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          clinician: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              title: true,
+            },
           },
         },
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
+      });
+
+      // If group appointment, create AppointmentClient records
+      if (validatedData.isGroupAppointment && validatedData.clientIds) {
+        await tx.appointmentClient.createMany({
+          data: validatedData.clientIds.map((clientId, index) => ({
+            appointmentId: newAppointment.id,
+            clientId,
+            isPrimary: index === 0, // First client is primary for billing
+          })),
+        });
+
+        // Fetch appointment with all clients for response
+        return await tx.appointment.findUnique({
+          where: { id: newAppointment.id },
+          include: {
+            client: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+            clinician: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                title: true,
+              },
+            },
+            appointmentClients: {
+              include: {
+                client: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
+                },
+              },
+            },
           },
-        },
-      },
+        });
+      }
+
+      return newAppointment;
     });
 
     // Audit log
-    auditLogger.info('Appointment created', {
-      userId,
-      appointmentId: appointment.id,
-      clientId: appointment.clientId,
-      action: 'APPOINTMENT_CREATED',
-    });
+    if (validatedData.isGroupAppointment && validatedData.clientIds) {
+      auditLogger.info('Group appointment created', {
+        userId,
+        appointmentId: appointment?.id,
+        clientIds: validatedData.clientIds,
+        clientCount: validatedData.clientIds.length,
+        action: 'GROUP_APPOINTMENT_CREATED',
+      });
+    } else {
+      auditLogger.info('Appointment created', {
+        userId,
+        appointmentId: appointment?.id,
+        clientId: appointment?.clientId,
+        action: 'APPOINTMENT_CREATED',
+      });
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Appointment created successfully',
+      message: validatedData.isGroupAppointment
+        ? `Group appointment created successfully with ${validatedData.clientIds?.length} clients`
+        : 'Appointment created successfully',
       data: appointment,
     });
   } catch (error) {

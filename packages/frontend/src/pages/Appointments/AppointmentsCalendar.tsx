@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface Appointment {
   id: string;
-  clientId: string;
+  clientId?: string;
   clinicianId: string;
   appointmentDate: string;
   startTime: string;
@@ -19,7 +19,8 @@ interface Appointment {
   appointmentType: string;
   serviceLocation: string;
   status: string;
-  client: {
+  isGroupAppointment?: boolean;
+  client?: {
     id: string;
     firstName: string;
     lastName: string;
@@ -90,7 +91,9 @@ export default function AppointmentsCalendar() {
   // Transform appointments to calendar events
   const events = appointments?.map((apt: Appointment) => ({
     id: apt.id,
-    title: `${apt.client.firstName} ${apt.client.lastName} - ${apt.appointmentType}`,
+    title: apt.isGroupAppointment
+      ? `👥 Group - ${apt.appointmentType}`
+      : `${apt.client?.firstName} ${apt.client?.lastName} - ${apt.appointmentType}`,
     start: `${apt.appointmentDate.split('T')[0]}T${apt.startTime}`,
     end: `${apt.appointmentDate.split('T')[0]}T${apt.endTime}`,
     backgroundColor: STATUS_COLORS[apt.status] || '#6B7280',

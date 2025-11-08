@@ -12,6 +12,7 @@ import ConsultationNoteForm from './Forms/ConsultationNoteForm';
 import ContactNoteForm from './Forms/ContactNoteForm';
 import TerminationNoteForm from './Forms/TerminationNoteForm';
 import MiscellaneousNoteForm from './Forms/MiscellaneousNoteForm';
+import GroupTherapyNoteForm from './Forms/GroupTherapyNoteForm';
 
 // Import appointment quick create modal
 import AppointmentQuickCreate from '../../components/ClinicalNotes/AppointmentQuickCreate';
@@ -23,6 +24,7 @@ const APPOINTMENT_REQUIRED_NOTE_TYPES = [
   'cancellation-note',
   'consultation-note',
   'contact-note',
+  'group-therapy',
 ];
 
 const NOTE_TYPES = [
@@ -90,6 +92,14 @@ const NOTE_TYPES = [
     color: 'from-gray-500 to-gray-600',
     borderColor: 'border-gray-300',
   },
+  {
+    type: 'group-therapy',
+    displayName: 'Group Therapy Note',
+    description: 'Document group therapy sessions with attendance tracking',
+    icon: '👥',
+    color: 'from-teal-500 to-cyan-600',
+    borderColor: 'border-teal-300',
+  },
 ];
 
 interface Appointment {
@@ -100,6 +110,7 @@ interface Appointment {
   appointmentType: string;
   status: string;
   serviceLocation: string;
+  isGroupAppointment?: boolean;
 }
 
 export default function SmartNoteCreator() {
@@ -126,9 +137,24 @@ export default function SmartNoteCreator() {
     const noteTypeParam = searchParams.get('noteType');
     const appointmentIdParam = searchParams.get('appointmentId');
 
-    // If appointment is provided, preselect it and stay on note type selection
+    // If appointment is provided, preselect it and check if it's a group appointment
     if (appointmentIdParam) {
       setSelectedAppointmentId(appointmentIdParam);
+
+      // Fetch appointment details to check if it's a group appointment
+      api.get(`/appointments/${appointmentIdParam}`)
+        .then((response) => {
+          const appointment = response.data.data;
+
+          // Auto-detect group appointments and suggest Group Therapy Note
+          if (appointment.isGroupAppointment && !noteTypeParam) {
+            setSelectedNoteType('group-therapy');
+            setStep('form');
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch appointment details:', err);
+        });
     }
 
     if (noteTypeParam) {
@@ -222,6 +248,13 @@ export default function SmartNoteCreator() {
 
   const handleSelectAppointment = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
+
+    // Check if this is a group appointment and auto-suggest Group Therapy Note
+    const appointment = appointments.find(apt => apt.id === appointmentId);
+    if (appointment?.isGroupAppointment && !selectedNoteType) {
+      setSelectedNoteType('group-therapy');
+    }
+
     setStep('form');
   };
 
@@ -289,6 +322,8 @@ export default function SmartNoteCreator() {
         return <TerminationNoteForm key={formKey} />;
       case 'miscellaneous-note':
         return <MiscellaneousNoteForm key={formKey} />;
+      case 'group-therapy':
+        return <GroupTherapyNoteForm key={formKey} />;
       default:
         return null;
     }
@@ -409,7 +444,13 @@ export default function SmartNoteCreator() {
                       This client doesn't have any appointments in a valid status.
                     </p>
                     <button
-                      onClick={() => setShowQuickCreateModal(true)}
+                      onClick={() => {
+                        if (clientId) {
+                          setShowQuickCreateModal(true);
+                        } else {
+                          navigate('/appointments/new');
+                        }
+                      }}
                       className="mt-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold rounded-lg transition-colors"
                     >
                       Create New Appointment
@@ -502,11 +543,18 @@ export default function SmartNoteCreator() {
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
-                        <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-full p-3 text-white text-2xl">
-                          📅
+                        <div className={`bg-gradient-to-r ${appointment.isGroupAppointment ? 'from-teal-500 to-cyan-600' : 'from-purple-500 to-blue-500'} rounded-full p-3 text-white text-2xl`}>
+                          {appointment.isGroupAppointment ? '👥' : '📅'}
                         </div>
                         <div>
-                          <h3 className="text-lg font-bold text-gray-800">{formatDate(appointment.appointmentDate)}</h3>
+                          <div className="flex items-center space-x-2">
+                            <h3 className="text-lg font-bold text-gray-800">{formatDate(appointment.appointmentDate)}</h3>
+                            {appointment.isGroupAppointment && (
+                              <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs font-bold rounded-full border border-teal-300">
+                                GROUP
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600">{appointment.startTime} - {appointment.endTime}</p>
                         </div>
                       </div>
@@ -524,11 +572,24 @@ export default function SmartNoteCreator() {
                         <p className="text-gray-800">{appointment.serviceLocation}</p>
                       </div>
                     </div>
+                    {appointment.isGroupAppointment && (
+                      <div className="mt-3 pt-3 border-t border-teal-200">
+                        <p className="text-sm text-teal-700 font-medium">
+                          💡 Group Therapy Note will be suggested for this appointment
+                        </p>
+                      </div>
+                    )}
                   </button>
                 ))}
 
                   <button
-                    onClick={() => setShowQuickCreateModal(true)}
+                    onClick={() => {
+                      if (clientId) {
+                        setShowQuickCreateModal(true);
+                      } else {
+                        navigate('/appointments/new');
+                      }
+                    }}
                     className="w-full bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 rounded-xl shadow-md p-6 text-left border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 transform hover:scale-[1.01]"
                   >
                     <div className="flex items-center justify-between">
@@ -539,7 +600,7 @@ export default function SmartNoteCreator() {
                         <div>
                           <h3 className="text-lg font-bold text-gray-800">Create New Appointment</h3>
                           <p className="text-sm text-gray-600">
-                            Quick inline appointment creation
+                            {clientId ? 'Quick inline appointment creation' : 'Navigate to appointments page'}
                           </p>
                         </div>
                       </div>

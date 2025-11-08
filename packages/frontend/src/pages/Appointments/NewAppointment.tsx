@@ -59,11 +59,15 @@ export default function NewAppointment() {
     recurrenceDaysOfWeek: [] as string[], // ['Monday', 'Wednesday']
     recurrenceEndDate: '',
     recurrenceCount: 0,
+    // Group appointment support
+    isGroupAppointment: false,
+    clientIds: [] as string[], // For group appointments
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [clientSearch, setClientSearch] = useState('');
   const [selectedClientData, setSelectedClientData] = useState<any>(null);
+  const [selectedClientsData, setSelectedClientsData] = useState<any[]>([]); // For group appointments
 
   // Fetch preselected client if clientId is in URL
   const { data: preselectedClient } = useQuery({
@@ -247,7 +251,16 @@ export default function NewAppointment() {
 
     // Validation
     const newErrors: Record<string, string> = {};
-    if (!formData.clientId) newErrors.clientId = 'Client is required';
+
+    // Client validation: different for individual vs group
+    if (formData.isGroupAppointment) {
+      if (!formData.clientIds || formData.clientIds.length < 2) {
+        newErrors.clientId = 'Select at least 2 clients for group appointment';
+      }
+    } else {
+      if (!formData.clientId) newErrors.clientId = 'Client is required';
+    }
+
     if (!formData.clinicianId) newErrors.clinicianId = 'Clinician is required';
     if (!formData.cptCode) newErrors.cptCode = 'Service Code (CPT Code) is required';
     if (!formData.appointmentDate) newErrors.appointmentDate = 'Date is required';
@@ -287,6 +300,11 @@ export default function NewAppointment() {
     delete submitData.recurrenceDaysOfWeek;
     delete submitData.recurrenceEndDate;
     delete submitData.recurrenceCount;
+
+    // For individual appointments, remove clientIds to avoid backend validation error
+    if (!formData.isGroupAppointment) {
+      delete submitData.clientIds;
+    }
 
     // Handle recurring appointments vs single appointments
     if (formData.isRecurring) {
@@ -329,61 +347,189 @@ export default function NewAppointment() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
+          {/* Appointment Type Toggle: Individual / Group */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl p-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
+              Appointment Type
+            </label>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData({
+                    ...formData,
+                    isGroupAppointment: false,
+                    clientIds: [],
+                    clientId: ''
+                  });
+                  setSelectedClientsData([]);
+                  setSelectedClientData(null);
+                  setClientSearch('');
+                }}
+                className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-200 ${
+                  !formData.isGroupAppointment
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
+                }`}
+              >
+                Individual
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData({
+                    ...formData,
+                    isGroupAppointment: true,
+                    clientId: '',
+                    clientIds: []
+                  });
+                  setSelectedClientData(null);
+                  setSelectedClientsData([]);
+                  setClientSearch('');
+                }}
+                className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                  formData.isGroupAppointment
+                    ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
+                }`}
+              >
+                👥 Group
+              </button>
+            </div>
+          </div>
+
           {/* Client Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Client <span className="text-red-500">*</span>
+              {formData.isGroupAppointment ? 'Clients (Select 2+)' : 'Client'} <span className="text-red-500">*</span>
             </label>
-            {formData.clientId && selectedClientData ? (
-              <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-2 border-purple-300 rounded-xl p-4 mb-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-gray-900">
-                      {selectedClientData.firstName} {selectedClientData.lastName}
-                    </div>
-                    <div className="text-sm text-gray-600">{selectedClientData.email}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, clientId: '' });
-                      setClientSearch('');
-                      setSelectedClientData(null);
-                    }}
-                    className="text-purple-600 hover:text-purple-800 font-medium text-sm"
-                  >
-                    Change
-                  </button>
-                </div>
-              </div>
-            ) : (
+            {/* Individual Appointment: Single client selection */}
+            {!formData.isGroupAppointment && (
               <>
-                <input
-                  type="text"
-                  placeholder="Search for client by name..."
-                  value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
-                />
-                {clientSearch.length > 2 && clients && clients.length > 0 && (
-                  <div className="max-h-48 overflow-y-auto bg-white border-2 border-purple-200 rounded-xl">
-                    {clients.map((client: any) => (
+                {formData.clientId && selectedClientData ? (
+                  <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-2 border-purple-300 rounded-xl p-4 mb-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-gray-900">
+                          {selectedClientData.firstName} {selectedClientData.lastName}
+                        </div>
+                        <div className="text-sm text-gray-600">{selectedClientData.email}</div>
+                      </div>
                       <button
-                        key={client.id}
                         type="button"
                         onClick={() => {
-                          setFormData({ ...formData, clientId: client.id });
-                          setClientSearch(`${client.firstName} ${client.lastName}`);
-                          setSelectedClientData(client);
+                          setFormData({ ...formData, clientId: '' });
+                          setClientSearch('');
+                          setSelectedClientData(null);
                         }}
-                        className={`w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors ${
-                          formData.clientId === client.id ? 'bg-purple-100' : ''
-                        }`}
+                        className="text-purple-600 hover:text-purple-800 font-medium text-sm"
                       >
-                        <div className="font-semibold">{client.firstName} {client.lastName}</div>
-                        <div className="text-sm text-gray-600">{client.email}</div>
+                        Change
                       </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Search for client by name..."
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
+                    />
+                    {clientSearch.length > 2 && clients && clients.length > 0 && (
+                      <div className="max-h-48 overflow-y-auto bg-white border-2 border-purple-200 rounded-xl">
+                        {clients.map((client: any) => (
+                          <button
+                            key={client.id}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, clientId: client.id });
+                              setClientSearch(`${client.firstName} ${client.lastName}`);
+                              setSelectedClientData(client);
+                            }}
+                            className={`w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors ${
+                              formData.clientId === client.id ? 'bg-purple-100' : ''
+                            }`}
+                          >
+                            <div className="font-semibold">{client.firstName} {client.lastName}</div>
+                            <div className="text-sm text-gray-600">{client.email}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Group Appointment: Multi-client selection */}
+            {formData.isGroupAppointment && (
+              <>
+                {/* Selected Clients Display */}
+                {selectedClientsData.length > 0 && (
+                  <div className="space-y-2 mb-4">
+                    {selectedClientsData.map((client) => (
+                      <div
+                        key={client.id}
+                        className="bg-gradient-to-r from-teal-100 to-cyan-100 border-2 border-teal-300 rounded-xl p-3 flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-semibold text-gray-900">
+                            {client.firstName} {client.lastName}
+                          </div>
+                          <div className="text-sm text-gray-600">{client.email}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedClients = selectedClientsData.filter(c => c.id !== client.id);
+                            const updatedClientIds = updatedClients.map(c => c.id);
+                            setSelectedClientsData(updatedClients);
+                            setFormData({ ...formData, clientIds: updatedClientIds });
+                          }}
+                          className="text-teal-600 hover:text-teal-800 font-medium text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     ))}
+                    <div className="text-sm text-gray-600 font-semibold">
+                      {selectedClientsData.length} client{selectedClientsData.length !== 1 ? 's' : ''} selected
+                    </div>
+                  </div>
+                )}
+
+                {/* Client Search */}
+                <input
+                  type="text"
+                  placeholder="Search to add clients to group..."
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 mb-2"
+                />
+                {clientSearch.length > 2 && clients && clients.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto bg-white border-2 border-teal-200 rounded-xl">
+                    {clients
+                      .filter((client: any) => !formData.clientIds.includes(client.id))
+                      .map((client: any) => (
+                        <button
+                          key={client.id}
+                          type="button"
+                          onClick={() => {
+                            const updatedClients = [...selectedClientsData, client];
+                            const updatedClientIds = updatedClients.map(c => c.id);
+                            setSelectedClientsData(updatedClients);
+                            setFormData({ ...formData, clientIds: updatedClientIds });
+                            setClientSearch('');
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-teal-50 transition-colors"
+                        >
+                          <div className="font-semibold">{client.firstName} {client.lastName}</div>
+                          <div className="text-sm text-gray-600">{client.email}</div>
+                        </button>
+                      ))
+                    }
                   </div>
                 )}
               </>

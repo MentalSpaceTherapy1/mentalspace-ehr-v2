@@ -1,10 +1,20 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Clock, Video, Mic, Volume2 } from 'lucide-react';
+import { Clock, Video, Mic, Volume2, CheckCircle, AlertTriangle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../../lib/api';
+import ConsentSigningModal from './ConsentSigningModal';
 
 interface WaitingRoomProps {
   appointmentId: string;
   onSessionStart: () => void;
+}
+
+interface ConsentStatus {
+  isValid: boolean;
+  expirationDate: Date | null;
+  daysTillExpiration: number | null;
+  requiresRenewal: boolean;
+  consentType: string;
+  consentGiven: boolean;
 }
 
 export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRoomProps) {
@@ -14,6 +24,86 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
   const [deviceTestComplete, setDeviceTestComplete] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Consent state
+  const [consentStatus, setConsentStatus] = useState<ConsentStatus | null>(null);
+  const [consentLoading, setConsentLoading] = useState(true);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [showConsentDetails, setShowConsentDetails] = useState(false);
+  const [clientId, setClientId] = useState<string | null>(null);
+
+  // Fetch consent status on mount
+  useEffect(() => {
+    const fetchConsentStatus = async () => {
+      try {
+        setConsentLoading(true);
+
+        // First, get appointment to find client ID
+        const appointmentResponse = await api.get(`/appointments/${appointmentId}`);
+        const appointment = appointmentResponse.data.data;
+        const clientIdFromAppointment = appointment.clientId;
+
+        setClientId(clientIdFromAppointment);
+
+        // Check consent status
+        const consentResponse = await api.get(
+          `/telehealth-consent/validate?clientId=${clientIdFromAppointment}`
+        );
+
+        const hasValidConsent = consentResponse.data.data.hasValidConsent;
+
+        // Get detailed consent info
+        const consentsResponse = await api.get(
+          `/telehealth-consent/client/${clientIdFromAppointment}`
+        );
+
+        const consents = consentsResponse.data.data;
+        const georgiaConsent = consents.find(
+          (c: any) => c.consentType === 'Georgia_Telehealth' && c.isActive
+        );
+
+        if (georgiaConsent && georgiaConsent.consentGiven) {
+          const expirationDate = new Date(georgiaConsent.expirationDate);
+          const today = new Date();
+          const daysTillExpiration = Math.ceil(
+            (expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          setConsentStatus({
+            isValid: hasValidConsent,
+            expirationDate,
+            daysTillExpiration,
+            requiresRenewal: daysTillExpiration <= 30,
+            consentType: georgiaConsent.consentType,
+            consentGiven: georgiaConsent.consentGiven,
+          });
+        } else {
+          // No consent found or not signed
+          setConsentStatus({
+            isValid: false,
+            expirationDate: null,
+            daysTillExpiration: null,
+            requiresRenewal: false,
+            consentType: 'Georgia_Telehealth',
+            consentGiven: false,
+          });
+        }
+
+        // Show modal if no valid consent
+        if (!hasValidConsent) {
+          setShowConsentModal(true);
+        }
+      } catch (error) {
+        console.error('Failed to fetch consent status:', error);
+        // On error, show consent modal to be safe
+        setShowConsentModal(true);
+      } finally {
+        setConsentLoading(false);
+      }
+    };
+
+    fetchConsentStatus();
+  }, [appointmentId]);
 
   // Poll session status
   useEffect(() => {
@@ -35,8 +125,15 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
     return () => clearInterval(interval);
   }, [appointmentId, onSessionStart]);
 
-  // Test camera and microphone
+  // Test camera and microphone (blocked if no consent)
   const testDevices = async () => {
+    // Block if no valid consent
+    if (!consentStatus?.isValid) {
+      alert('Please sign the telehealth consent form before testing devices');
+      setShowConsentModal(true);
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -58,6 +155,83 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
     }
   };
 
+  // Handle consent signed
+  const handleConsentSigned = () => {
+    setShowConsentModal(false);
+    // Refresh consent status
+    window.location.reload();
+  };
+
+  // Handle consent decline
+  const handleConsentDecline = () => {
+    alert('Telehealth consent is required to join the session. Returning to dashboard.');
+    window.location.href = '/dashboard';
+  };
+
+  // Get consent status badge
+  const getConsentBadge = () => {
+    if (consentLoading) {
+      return (
+        <div className="flex items-center space-x-2 text-gray-600">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+          <span className="text-sm">Checking consent...</span>
+        </div>
+      );
+    }
+
+    if (!consentStatus) return null;
+
+    if (consentStatus.isValid && !consentStatus.requiresRenewal) {
+      return (
+        <div className="flex items-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-lg">
+          <CheckCircle className="w-5 h-5" />
+          <div>
+            <div className="font-medium">Consent Valid</div>
+            <div className="text-xs">
+              Expires {consentStatus.expirationDate?.toLocaleDateString()}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (consentStatus.requiresRenewal) {
+      return (
+        <div className="flex items-center space-x-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg">
+          <AlertTriangle className="w-5 h-5" />
+          <div>
+            <div className="font-medium">Consent Expires Soon</div>
+            <div className="text-xs">
+              {consentStatus.daysTillExpiration} days remaining
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!consentStatus.consentGiven) {
+      return (
+        <div className="flex items-center space-x-2 bg-red-100 text-red-800 px-4 py-2 rounded-lg">
+          <XCircle className="w-5 h-5" />
+          <div>
+            <div className="font-medium">No Consent on File</div>
+            <div className="text-xs">Consent required to continue</div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center space-x-2 bg-red-100 text-red-800 px-4 py-2 rounded-lg">
+        <XCircle className="w-5 h-5" />
+        <div>
+          <div className="font-medium">Consent Expired</div>
+          <div className="text-xs">Renewal required</div>
+        </div>
+      </div>
+    );
+  };
+
   // Cleanup stream on unmount
   useEffect(() => {
     return () => {
@@ -74,18 +248,79 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full">
-        {/* Main Card */}
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white">
-            <h1 className="text-3xl font-bold mb-2">Virtual Waiting Room</h1>
-            <p className="text-blue-100">Your therapist will join shortly</p>
-          </div>
+    <>
+      {/* Consent Modal */}
+      {clientId && (
+        <ConsentSigningModal
+          clientId={clientId}
+          consentType="Georgia_Telehealth"
+          onConsentSigned={handleConsentSigned}
+          onDecline={handleConsentDecline}
+          isOpen={showConsentModal}
+        />
+      )}
 
-          {/* Content */}
-          <div className="p-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          {/* Main Card */}
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white">
+              <h1 className="text-3xl font-bold mb-2">Virtual Waiting Room</h1>
+              <p className="text-blue-100">Your therapist will join shortly</p>
+            </div>
+
+            {/* Content */}
+            <div className="p-8">
+              {/* Consent Status Card */}
+              <div className="mb-6">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">{getConsentBadge()}</div>
+                    <button
+                      onClick={() => setShowConsentDetails(!showConsentDetails)}
+                      className="ml-4 text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                      {showConsentDetails ? (
+                        <ChevronUp className="w-5 h-5" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Consent Details (Collapsible) */}
+                  {showConsentDetails && consentStatus && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                      <div className="text-sm text-gray-700">
+                        <strong>Consent Type:</strong> {consentStatus.consentType.replace('_', ' ')}
+                      </div>
+                      {consentStatus.expirationDate && (
+                        <div className="text-sm text-gray-700">
+                          <strong>Expiration Date:</strong>{' '}
+                          {consentStatus.expirationDate.toLocaleDateString()}
+                        </div>
+                      )}
+                      {consentStatus.requiresRenewal && (
+                        <button
+                          onClick={() => setShowConsentModal(true)}
+                          className="w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Renew Consent Now
+                        </button>
+                      )}
+                      {!consentStatus.isValid && (
+                        <button
+                          onClick={() => setShowConsentModal(true)}
+                          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Sign Consent Form
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             {/* Waiting Time */}
             <div className="flex items-center justify-center mb-8">
               <div className="bg-blue-50 rounded-2xl px-8 py-4 flex items-center space-x-4">
@@ -210,17 +445,18 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
                   </li>
                 </ul>
               </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Loading Animation */}
-        <div className="mt-8 flex items-center justify-center space-x-2">
-          <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-          <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-          <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          {/* Loading Animation */}
+          <div className="mt-8 flex items-center justify-center space-x-2">
+            <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

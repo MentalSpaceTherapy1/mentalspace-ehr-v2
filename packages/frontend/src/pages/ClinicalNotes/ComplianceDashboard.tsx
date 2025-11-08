@@ -114,7 +114,7 @@ export default function ComplianceDashboard() {
               <p className="text-gray-600">Track and manage your clinical documentation compliance</p>
             </div>
             <button
-              onClick={() => navigate('/clients')}
+              onClick={() => navigate('/clinical-notes/new')}
               className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
             >
               + New Clinical Note

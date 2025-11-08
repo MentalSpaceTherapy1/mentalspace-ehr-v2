@@ -1,42 +1,167 @@
-import React, { useState } from 'react';
-import {
-  useToggleLocalMute,
-  useLocalVideo,
-  useContentShareState,
-  useContentShareControls,
-} from 'amazon-chime-sdk-component-library-react';
+import React, { useState, useEffect } from 'react';
+import Video, { Room, LocalVideoTrack, LocalAudioTrack } from 'twilio-video';
 import {
   Mic,
   MicOff,
-  Video,
+  Video as VideoIcon,
   VideoOff,
   MonitorUp,
   MonitorX,
   Circle,
   PhoneOff,
   Settings,
+  AlertTriangle,
 } from 'lucide-react';
+import EmergencyModal from './EmergencyModal';
+
+interface EmergencyContact {
+  name: string;
+  phone: string;
+  relationship: string;
+}
 
 interface VideoControlsProps {
+  room: Room | null;
+  localAudioTrack: LocalAudioTrack | null;
+  localVideoTrack: LocalVideoTrack | null;
+  sessionId?: string;
+  clientName?: string;
+  emergencyContact?: EmergencyContact;
   onEndCall: () => void;
   onStartRecording?: (consent: boolean) => Promise<void>;
   onStopRecording?: () => void;
   isRecording?: boolean;
   userRole: 'clinician' | 'client';
+  onToggleMute?: (isMuted: boolean) => void;
+  onToggleVideo?: (isVideoOff: boolean) => void;
+  onToggleScreenShare?: (isSharing: boolean) => void;
+  onEmergencyActivated?: (data: {
+    emergencyNotes: string;
+    emergencyResolution: 'CONTINUED' | 'ENDED_IMMEDIATELY' | 'FALSE_ALARM';
+    emergencyContactNotified: boolean;
+  }) => Promise<void>;
 }
 
 export default function VideoControls({
+  room,
+  localAudioTrack,
+  localVideoTrack,
+  sessionId,
+  clientName,
+  emergencyContact,
   onEndCall,
   onStartRecording,
   onStopRecording,
   isRecording = false,
   userRole,
+  onToggleMute,
+  onToggleVideo,
+  onToggleScreenShare,
+  onEmergencyActivated,
 }: VideoControlsProps) {
-  const { muted, toggleMute } = useToggleLocalMute();
-  const { isVideoEnabled, toggleVideo } = useLocalVideo();
-  const { isLocalUserSharing } = useContentShareState();
-  const { toggleContentShare } = useContentShareControls();
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showRecordingConsent, setShowRecordingConsent] = useState(false);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const [screenTrack, setScreenTrack] = useState<LocalVideoTrack | null>(null);
+
+  // Keyboard shortcut for emergency button (Ctrl+E or Cmd+E)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e' && userRole === 'clinician') {
+        e.preventDefault();
+        setShowEmergencyModal(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [userRole]);
+
+  // Toggle audio mute/unmute
+  const toggleMute = () => {
+    if (localAudioTrack) {
+      if (isMuted) {
+        localAudioTrack.enable();
+        setIsMuted(false);
+        onToggleMute?.(false);
+      } else {
+        localAudioTrack.disable();
+        setIsMuted(true);
+        onToggleMute?.(true);
+      }
+    }
+  };
+
+  // Toggle video on/off
+  const toggleVideo = () => {
+    if (localVideoTrack) {
+      if (isVideoOff) {
+        localVideoTrack.enable();
+        setIsVideoOff(false);
+        onToggleVideo?.(false);
+      } else {
+        localVideoTrack.disable();
+        setIsVideoOff(true);
+        onToggleVideo?.(true);
+      }
+    }
+  };
+
+  // Toggle screen share
+  const toggleScreenShare = async () => {
+    if (!room) {
+      console.warn('Cannot share screen: No active room');
+      return;
+    }
+
+    if (isScreenSharing && screenTrack) {
+      // Stop screen sharing
+      try {
+        room.localParticipant.unpublishTrack(screenTrack);
+        screenTrack.stop();
+        setScreenTrack(null);
+        setIsScreenSharing(false);
+        onToggleScreenShare?.(false);
+      } catch (error) {
+        console.error('Failed to stop screen share:', error);
+      }
+    } else {
+      // Start screen sharing
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30 },
+          },
+        });
+
+        const screenVideoTrack = stream.getVideoTracks()[0];
+        const newScreenTrack = new Video.LocalVideoTrack(screenVideoTrack);
+
+        await room.localParticipant.publishTrack(newScreenTrack);
+
+        setScreenTrack(newScreenTrack);
+        setIsScreenSharing(true);
+        onToggleScreenShare?.(true);
+
+        // Handle when user stops sharing via browser UI
+        screenVideoTrack.onended = () => {
+          if (room) {
+            room.localParticipant.unpublishTrack(newScreenTrack);
+          }
+          newScreenTrack.stop();
+          setScreenTrack(null);
+          setIsScreenSharing(false);
+          onToggleScreenShare?.(false);
+        };
+      } catch (error) {
+        console.error('Failed to start screen share:', error);
+      }
+    }
+  };
 
   const handleStartRecording = async () => {
     setShowRecordingConsent(true);
@@ -55,6 +180,23 @@ export default function VideoControls({
     }
   };
 
+  const handleEmergencyResolved = async (data: {
+    emergencyNotes: string;
+    emergencyResolution: 'CONTINUED' | 'ENDED_IMMEDIATELY' | 'FALSE_ALARM';
+    emergencyContactNotified: boolean;
+  }) => {
+    if (onEmergencyActivated) {
+      await onEmergencyActivated(data);
+    }
+
+    // If ending immediately, trigger end call
+    if (data.emergencyResolution === 'ENDED_IMMEDIATELY') {
+      setTimeout(() => {
+        onEndCall();
+      }, 500);
+    }
+  };
+
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 bg-gray-900 bg-opacity-95 backdrop-blur-sm border-t border-gray-700">
@@ -65,14 +207,15 @@ export default function VideoControls({
               {/* Microphone */}
               <button
                 onClick={toggleMute}
-                className={`p-4 rounded-full transition-all ${
-                  muted
+                disabled={!localAudioTrack}
+                className={`p-4 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isMuted
                     ? 'bg-red-600 hover:bg-red-700'
                     : 'bg-gray-700 hover:bg-gray-600'
                 }`}
-                title={muted ? 'Unmute' : 'Mute'}
+                title={isMuted ? 'Unmute' : 'Mute'}
               >
-                {muted ? (
+                {isMuted ? (
                   <MicOff className="w-6 h-6 text-white" />
                 ) : (
                   <Mic className="w-6 h-6 text-white" />
@@ -82,31 +225,33 @@ export default function VideoControls({
               {/* Video */}
               <button
                 onClick={toggleVideo}
-                className={`p-4 rounded-full transition-all ${
-                  !isVideoEnabled
+                disabled={!localVideoTrack}
+                className={`p-4 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isVideoOff
                     ? 'bg-red-600 hover:bg-red-700'
                     : 'bg-gray-700 hover:bg-gray-600'
                 }`}
-                title={isVideoEnabled ? 'Turn off camera' : 'Turn on camera'}
+                title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
               >
-                {isVideoEnabled ? (
-                  <Video className="w-6 h-6 text-white" />
-                ) : (
+                {isVideoOff ? (
                   <VideoOff className="w-6 h-6 text-white" />
+                ) : (
+                  <VideoIcon className="w-6 h-6 text-white" />
                 )}
               </button>
 
               {/* Screen Share */}
               <button
-                onClick={() => toggleContentShare()}
-                className={`p-4 rounded-full transition-all ${
-                  isLocalUserSharing
+                onClick={toggleScreenShare}
+                disabled={!room}
+                className={`p-4 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isScreenSharing
                     ? 'bg-blue-600 hover:bg-blue-700'
                     : 'bg-gray-700 hover:bg-gray-600'
                 }`}
-                title={isLocalUserSharing ? 'Stop sharing' : 'Share screen'}
+                title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
               >
-                {isLocalUserSharing ? (
+                {isScreenSharing ? (
                   <MonitorX className="w-6 h-6 text-white" />
                 ) : (
                   <MonitorUp className="w-6 h-6 text-white" />
@@ -149,6 +294,20 @@ export default function VideoControls({
 
             {/* Right controls */}
             <div className="flex items-center space-x-3">
+              {/* Emergency Button (Clinician only) */}
+              {userRole === 'clinician' && (
+                <button
+                  onClick={() => setShowEmergencyModal(true)}
+                  className="p-4 rounded-full bg-red-600 hover:bg-red-700 transition-all animate-pulse hover:animate-none border-2 border-red-400"
+                  title="Emergency (Ctrl+E or Cmd+E)"
+                  style={{
+                    boxShadow: '0 0 15px rgba(239, 68, 68, 0.5)',
+                  }}
+                >
+                  <AlertTriangle className="w-6 h-6 text-white" />
+                </button>
+              )}
+
               {/* Settings */}
               <button
                 className="p-4 rounded-full bg-gray-700 hover:bg-gray-600 transition-all"
@@ -195,6 +354,18 @@ export default function VideoControls({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Emergency Modal */}
+      {showEmergencyModal && userRole === 'clinician' && (
+        <EmergencyModal
+          open={showEmergencyModal}
+          onClose={() => setShowEmergencyModal(false)}
+          clientName={clientName || 'Unknown Client'}
+          sessionId={sessionId || ''}
+          emergencyContact={emergencyContact}
+          onEmergencyResolved={handleEmergencyResolved}
+        />
       )}
     </>
   );

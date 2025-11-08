@@ -8,6 +8,9 @@ import { initializeSocketIO } from './socket';
 import { notificationScheduler } from './services/notifications/scheduler';
 import { processRemindersJob, retryFailedRemindersJob } from './jobs/processReminders.job';
 import { startWaitlistJobs, stopWaitlistJobs } from './jobs/processWaitlist.job';
+import { startNoteReminderJob } from './jobs/processNoteReminders.job';
+import { startReminderJobs } from './jobs/clinicalNoteReminderJob';
+import { startConsentExpirationReminderJob } from './jobs/consentExpirationReminders.job';
 
 const PORT = config.port;
 
@@ -45,6 +48,21 @@ prisma.$connect()
     logger.info('⏳ Starting Module 3 Phase 2.2 waitlist automation jobs...');
     startWaitlistJobs();
     logger.info('✅ Waitlist automation jobs started');
+
+    // Start Module 4 Phase 2.4 clinical note reminders
+    logger.info('📧 Starting Module 4 Phase 2.4 clinical note reminder job...');
+    startNoteReminderJob();
+    logger.info('✅ Clinical note reminder job started');
+
+    // Start Module 4 Phase 2.5 email reminder system
+    logger.info('✉️ Starting Module 4 Phase 2.5 email reminder system...');
+    startReminderJobs();
+    logger.info('✅ Email reminder system started');
+
+    // Start Module 6 telehealth consent expiration reminders
+    logger.info('📋 Starting Module 6 telehealth consent expiration reminders...');
+    startConsentExpirationReminderJob();
+    logger.info('✅ Consent expiration reminder job started');
   })
   .catch((error) => {
     logger.error('❌ Database connection failed', { error: error.message });

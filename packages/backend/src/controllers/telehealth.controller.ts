@@ -196,3 +196,61 @@ export const stopRecording = async (req: Request, res: Response) => {
     });
   }
 };
+
+const emergencySchema = z.object({
+  sessionId: z.string().uuid('Invalid session ID'),
+  emergencyNotes: z.string().min(10, 'Emergency notes must be at least 10 characters'),
+  emergencyResolution: z.enum(['CONTINUED', 'ENDED_IMMEDIATELY', 'FALSE_ALARM']),
+  emergencyContactNotified: z.boolean(),
+});
+
+export const activateEmergency = async (req: Request, res: Response) => {
+  try {
+    const validatedData = emergencySchema.parse(req.body);
+    const userId = (req as any).user?.userId;
+
+    const session = await telehealthService.activateEmergency({
+      ...validatedData,
+      userId,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Emergency protocol activated successfully',
+      data: session,
+    });
+  } catch (error: any) {
+    logger.error('Error activating emergency protocol', {
+      errorMessage: error.message,
+      errorName: error.name,
+      errorCode: error.code || error.$metadata?.httpStatusCode,
+    });
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to activate emergency protocol',
+    });
+  }
+};
+
+export const getEmergencyContact = async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+
+    const emergencyContact = await telehealthService.getClientEmergencyContact(sessionId);
+
+    res.status(200).json({
+      success: true,
+      data: emergencyContact,
+    });
+  } catch (error: any) {
+    logger.error('Error getting emergency contact', {
+      errorMessage: error.message,
+      errorName: error.name,
+      errorCode: error.code || error.$metadata?.httpStatusCode,
+    });
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to get emergency contact',
+    });
+  }
+};

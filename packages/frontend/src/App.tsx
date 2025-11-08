@@ -27,6 +27,7 @@ import ConsultationNoteForm from './pages/ClinicalNotes/Forms/ConsultationNoteFo
 import ContactNoteForm from './pages/ClinicalNotes/Forms/ContactNoteForm';
 import TerminationNoteForm from './pages/ClinicalNotes/Forms/TerminationNoteForm';
 import MiscellaneousNoteForm from './pages/ClinicalNotes/Forms/MiscellaneousNoteForm';
+import GroupTherapyNoteForm from './pages/ClinicalNotes/Forms/GroupTherapyNoteForm';
 import AppointmentsCalendar from './pages/Appointments/AppointmentsCalendar';
 import NewAppointment from './pages/Appointments/NewAppointment';
 import Waitlist from './pages/Appointments/Waitlist';
@@ -35,6 +36,7 @@ import ProviderComparisonView from './pages/Appointments/ProviderComparisonView'
 import RoomView from './pages/Appointments/RoomView';
 import TimeOffRequests from './pages/TimeOff/TimeOffRequestsPage';
 import ReminderSettings from './pages/Settings/ReminderSettings';
+import ClinicalNoteReminderSettings from './pages/Settings/ClinicalNoteReminderSettings';
 import AppointmentTypes from './pages/Settings/AppointmentTypes';
 import ProviderAvailability from './pages/Settings/ProviderAvailability';
 import VideoSession from './pages/Telehealth/VideoSession';
@@ -371,6 +373,14 @@ function App() {
           }
         />
         <Route
+          path="/settings/clinical-note-reminders"
+          element={
+            <PrivateRoute>
+              <ClinicalNoteReminderSettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/settings/appointment-types"
           element={
             <PrivateRoute>
@@ -503,6 +513,22 @@ function App() {
           element={
             <PrivateRoute>
               <MiscellaneousNoteForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clinical-notes/new"
+          element={
+            <PrivateRoute>
+              <SmartNoteCreator />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clinical-notes/new/group-therapy/:appointmentId"
+          element={
+            <PrivateRoute>
+              <GroupTherapyNoteForm />
             </PrivateRoute>
           }
         />

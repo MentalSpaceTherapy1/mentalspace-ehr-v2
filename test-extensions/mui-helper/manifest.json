@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "MUI Testing Helper",
+  "version": "1.0",
+  "description": "Enhances Material-UI components for testing",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:*/*"
+      ],
+      "js": [
+        "mui-helper.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}

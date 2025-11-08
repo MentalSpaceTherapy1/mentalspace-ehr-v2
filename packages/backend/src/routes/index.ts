@@ -50,6 +50,9 @@ import waitlistMatchingRoutes from './waitlistMatching.routes';
 import analyticsRoutes from './analytics.routes';
 import aiSchedulingRoutes from './aiScheduling.routes';
 import outcomeMeasureRoutes from './outcomeMeasure.routes';
+import clinicalNoteReminderRoutes from './clinicalNoteReminder.routes';
+import groupTherapyNoteRoutes from './groupTherapyNote.routes';
+import reminderConfigRoutes from './reminderConfig.routes';
 
 const router = Router();
 
@@ -173,5 +176,14 @@ router.use('/ai-scheduling', aiSchedulingRoutes);
 
 // Outcome Measure routes (Module 4 Phase 2.3: Outcome Measures Integration)
 router.use('/outcome-measures', outcomeMeasureRoutes);
+
+// Clinical Note Reminder routes (Module 4 Phase 2.4: Email Reminder System)
+router.use('/clinical-note-reminders', clinicalNoteReminderRoutes);
+
+// Reminder Configuration routes (Module 4 Phase 2.5: Email Reminder System Configuration)
+router.use('/reminder-config', reminderConfigRoutes);
+
+// Group Therapy Note routes (Module 4 Phase 2.4: Group Therapy Support)
+router.use('/group-therapy-notes', groupTherapyNoteRoutes);
 
 export default router;

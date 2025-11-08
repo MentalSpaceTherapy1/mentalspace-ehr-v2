@@ -6,6 +6,7 @@ import { authenticateSocket } from './middleware/auth';
 import { setupProductivityHandlers } from './handlers/productivity';
 import { setupCollaborationHandlers } from './handlers/collaboration';
 import { setupNotificationHandlers } from './handlers/notifications';
+import { setupTranscriptionHandlers } from './handlers/transcription';
 
 let io: SocketIOServer | null = null;
 
@@ -35,6 +36,7 @@ export function initializeSocketIO(server: HTTPServer): SocketIOServer {
     setupProductivityHandlers(io, socket);
     setupCollaborationHandlers(io, socket);
     setupNotificationHandlers(io, socket);
+    setupTranscriptionHandlers(io, socket);
 
     // Handle disconnection
     socket.on('disconnect', (reason) => {
@@ -58,6 +60,13 @@ export function getIO(): SocketIOServer {
   if (!io) {
     throw new Error('Socket.IO not initialized. Call initializeSocketIO first.');
   }
+  return io;
+}
+
+/**
+ * Get the Socket.IO server instance (alias for compatibility)
+ */
+export function getSocketIO(): SocketIOServer | null {
   return io;
 }
 
