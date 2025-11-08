@@ -99,41 +99,62 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
     // Generate unique room name for Twilio
     const roomName = `telehealth-${data.appointmentId}-${uuidv4().substring(0, 8)}`;
 
-    //Try to create Twilio Video room, but fallback to mock mode if it fails
+    // FORCE MOCK MODE IN DEVELOPMENT - Twilio credentials in .env are placeholders
+    // In production, set TWILIO_MOCK_MODE=false to use real Twilio
+    const forceMockMode = config.nodeEnv === 'development' || process.env.TWILIO_MOCK_MODE !== 'false';
+
     let twilioRoom: any;
     let isMockMode = false;
 
-    try {
-      twilioRoom = await twilioService.createTwilioRoom(roomName, false);
+    if (forceMockMode) {
+      // Use mock mode for development (Twilio credentials are test/demo only)
+      logger.info('Using mock mode for telehealth (development)', {
+        appointmentId: data.appointmentId,
+        reason: 'Development mode or TWILIO_MOCK_MODE enabled',
+      });
 
-      if (!twilioRoom || !twilioRoom.roomSid) {
-        throw new Error('Invalid Twilio room response');
-      }
-    } catch (twilioError: any) {
-      // Check if it's a network/DNS error
-      const isNetworkError = twilioError.message?.includes('getaddrinfo') ||
-                             twilioError.message?.includes('ENOTFOUND') ||
-                             twilioError.message?.includes('EAI_AGAIN') ||
-                             twilioError.code === 'ENOTFOUND';
+      isMockMode = true;
+      twilioRoom = {
+        roomSid: `MOCK-${uuidv4()}`,
+        roomName: roomName,
+        status: 'mock',
+        dateCreated: new Date(),
+        maxParticipants: 10,
+      };
+    } else {
+      // Production: Try to create real Twilio Video room
+      try {
+        twilioRoom = await twilioService.createTwilioRoom(roomName, false);
 
-      if (isNetworkError) {
-        // Use mock mode for development/offline testing
-        logger.warn('Twilio unavailable - using mock mode for telehealth', {
-          appointmentId: data.appointmentId,
-          error: twilioError.message,
-        });
+        if (!twilioRoom || !twilioRoom.roomSid) {
+          throw new Error('Invalid Twilio room response');
+        }
+      } catch (twilioError: any) {
+        // Check if it's a network/DNS error
+        const isNetworkError = twilioError.message?.includes('getaddrinfo') ||
+                               twilioError.message?.includes('ENOTFOUND') ||
+                               twilioError.message?.includes('EAI_AGAIN') ||
+                               twilioError.code === 'ENOTFOUND';
 
-        isMockMode = true;
-        twilioRoom = {
-          roomSid: `MOCK-${uuidv4()}`,
-          roomName: roomName,
-          status: 'mock',
-          dateCreated: new Date(),
-          maxParticipants: 10,
-        };
-      } else {
-        // Re-throw non-network errors
-        throw twilioError;
+        if (isNetworkError) {
+          // Fallback to mock mode if Twilio is unavailable
+          logger.warn('Twilio unavailable - using mock mode for telehealth', {
+            appointmentId: data.appointmentId,
+            error: twilioError.message,
+          });
+
+          isMockMode = true;
+          twilioRoom = {
+            roomSid: `MOCK-${uuidv4()}`,
+            roomName: roomName,
+            status: 'mock',
+            dateCreated: new Date(),
+            maxParticipants: 10,
+          };
+        } else {
+          // Re-throw non-network errors
+          throw twilioError;
+        }
       }
     }
 
@@ -241,25 +262,30 @@ export async function joinTelehealthSession(data: JoinSessionData) {
     // Create identity string for Twilio
     const identity = `${data.userRole}-${data.userName}-${Date.now()}`;
 
-    // Check if this is a mock session
-    const isMockMode = roomSid?.startsWith('MOCK-');
+    // Check if this is a mock session OR if we're in development mode
+    const isMockSession = roomSid?.startsWith('MOCK-');
+    const forceMockMode = config.nodeEnv === 'development' || process.env.TWILIO_MOCK_MODE !== 'false';
+    const useMockToken = isMockSession || forceMockMode;
 
     // Generate Twilio access token or mock token
     let tokenData: any;
 
-    if (isMockMode) {
-      // Use mock token for offline development
-      logger.warn('Using mock token for offline telehealth session', {
+    if (useMockToken) {
+      // Use mock token for development or mock sessions
+      logger.info('Using mock token for telehealth session', {
         sessionId: session.id,
         userRole: data.userRole,
+        reason: isMockSession ? 'Mock session' : 'Development mode',
       });
 
       tokenData = {
         token: `MOCK_TOKEN_${uuidv4()}`,
         identity,
         roomName,
+        isMock: true,
       };
     } else {
+      // Production: Generate real Twilio token
       try {
         tokenData = await twilioService.generateTwilioAccessToken(roomName, identity);
 
@@ -281,6 +307,7 @@ export async function joinTelehealthSession(data: JoinSessionData) {
             token: `MOCK_TOKEN_${uuidv4()}`,
             identity,
             roomName,
+            isMock: true,
           };
         } else {
           throw twilioError;
