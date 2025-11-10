@@ -22,8 +22,12 @@ api.interceptors.request.use(
       method: config.method
     });
 
-    // Use portal token for portal routes (/portal/ or /portal-auth), regular token for EHR routes
-    const isPortalRoute = config.url?.includes('/portal/') || config.url?.includes('/portal-');
+    // Use portal token for portal routes (/portal/, /portal-auth, /tracking/, /self-schedule/, /waitlist/), regular token for EHR routes
+    const isPortalRoute = config.url?.includes('/portal/') ||
+                          config.url?.includes('/portal-') ||
+                          config.url?.includes('/tracking/') ||
+                          config.url?.includes('/self-schedule/') ||
+                          config.url?.includes('/waitlist/');
     const token = isPortalRoute
       ? localStorage.getItem('portalToken')
       : localStorage.getItem('token');
@@ -50,7 +54,11 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       // Check if this is a portal request or EHR request
-      const isPortalRoute = originalRequest.url?.includes('/portal/') || originalRequest.url?.includes('/portal-');
+      const isPortalRoute = originalRequest.url?.includes('/portal/') ||
+                            originalRequest.url?.includes('/portal-') ||
+                            originalRequest.url?.includes('/tracking/') ||
+                            originalRequest.url?.includes('/self-schedule/') ||
+                            originalRequest.url?.includes('/waitlist/');
 
       try {
         if (isPortalRoute) {
