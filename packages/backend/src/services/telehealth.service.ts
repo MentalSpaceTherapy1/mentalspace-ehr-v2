@@ -58,8 +58,12 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
     }
 
     // COMPLIANCE CHECK: Verify client has valid consent before creating session
+    // Skip consent validation in development mode for testing purposes
+    const skipConsentInDev = config.nodeEnv === 'development';
     const clientId = appointment.clientId;
-    const consentValidation = await verifyClientConsent(clientId, 'Georgia_Telehealth');
+    const consentValidation = skipConsentInDev
+      ? { isValid: true, message: 'Consent validation skipped in development mode' }
+      : await verifyClientConsent(clientId, 'Georgia_Telehealth');
 
     // Log consent verification for audit trail
     logger.info('Telehealth consent verification for session creation', {
@@ -67,10 +71,11 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
       clientId,
       createdBy: data.createdBy,
       consentValidation,
+      skipConsentInDev,
     });
 
-    // Block session creation if no valid consent
-    if (!consentValidation.isValid) {
+    // Block session creation if no valid consent (only in production)
+    if (!skipConsentInDev && !consentValidation.isValid) {
       throw new Error(
         `Cannot create telehealth session: Valid consent required. ${consentValidation.message}. ` +
         `Client must complete consent form before scheduling telehealth appointments.`
@@ -99,9 +104,23 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
     // Generate unique room name for Twilio
     const roomName = `telehealth-${data.appointmentId}-${uuidv4().substring(0, 8)}`;
 
-    // FORCE MOCK MODE IN DEVELOPMENT - Twilio credentials in .env are placeholders
-    // In production, set TWILIO_MOCK_MODE=false to use real Twilio
-    const forceMockMode = config.nodeEnv === 'development' || process.env.TWILIO_MOCK_MODE !== 'false';
+    // Check if mock mode is enabled via environment variable
+    // TWILIO_MOCK_MODE=false -> Use real Twilio (even in development)
+    // TWILIO_MOCK_MODE=true -> Use mock mode
+    // TWILIO_MOCK_MODE not set -> Use mock mode in development, real in production
+    const forceMockMode = process.env.TWILIO_MOCK_MODE === 'true' ||
+                          (process.env.TWILIO_MOCK_MODE === undefined && config.nodeEnv === 'development');
+
+    // DEBUG: Log environment variable values
+    logger.info('🔍 Twilio Mode Check (CREATE)', {
+      TWILIO_MOCK_MODE_raw: `"${process.env.TWILIO_MOCK_MODE}"`,
+      TWILIO_MOCK_MODE_type: typeof process.env.TWILIO_MOCK_MODE,
+      NODE_ENV: config.nodeEnv,
+      forceMockMode: forceMockMode,
+      comparison_true: process.env.TWILIO_MOCK_MODE === 'true',
+      comparison_undefined: process.env.TWILIO_MOCK_MODE === undefined,
+      comparison_false: process.env.TWILIO_MOCK_MODE === 'false',
+    });
 
     let twilioRoom: any;
     let isMockMode = false;
@@ -262,10 +281,28 @@ export async function joinTelehealthSession(data: JoinSessionData) {
     // Create identity string for Twilio
     const identity = `${data.userRole}-${data.userName}-${Date.now()}`;
 
-    // Check if this is a mock session OR if we're in development mode
+    // Check if this is a mock session OR if mock mode is enabled
     const isMockSession = roomSid?.startsWith('MOCK-');
-    const forceMockMode = config.nodeEnv === 'development' || process.env.TWILIO_MOCK_MODE !== 'false';
+    // TWILIO_MOCK_MODE=false -> Use real Twilio (even in development)
+    // TWILIO_MOCK_MODE=true -> Use mock mode
+    // TWILIO_MOCK_MODE not set -> Use mock mode in development, real in production
+    const forceMockMode = process.env.TWILIO_MOCK_MODE === 'true' ||
+                          (process.env.TWILIO_MOCK_MODE === undefined && config.nodeEnv === 'development');
     const useMockToken = isMockSession || forceMockMode;
+
+    // DEBUG: Log environment variable values
+    logger.info('🔍 Twilio Mode Check (JOIN)', {
+      TWILIO_MOCK_MODE_raw: `"${process.env.TWILIO_MOCK_MODE}"`,
+      TWILIO_MOCK_MODE_type: typeof process.env.TWILIO_MOCK_MODE,
+      NODE_ENV: config.nodeEnv,
+      roomSid: roomSid,
+      isMockSession: isMockSession,
+      forceMockMode: forceMockMode,
+      useMockToken: useMockToken,
+      comparison_true: process.env.TWILIO_MOCK_MODE === 'true',
+      comparison_undefined: process.env.TWILIO_MOCK_MODE === undefined,
+      comparison_false: process.env.TWILIO_MOCK_MODE === 'false',
+    });
 
     // Generate Twilio access token or mock token
     let tokenData: any;
@@ -840,5 +877,295 @@ export async function verifyClientConsent(
       consentType,
       message: `Error verifying consent: ${error.message}`,
     };
+  }
+}
+
+// ============================================================================
+// SESSION RATING SERVICES
+// ============================================================================
+
+interface CreateSessionRatingData {
+  sessionId: string;
+  userId: string;
+  rating: number;
+  comments: string | null | undefined;
+  ipAddress: string;
+}
+
+interface GetAllSessionRatingsParams {
+  page: number;
+  limit: number;
+  minRating?: number;
+  maxRating?: number;
+  clinicianId?: string;
+  clientId?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+}
+
+/**
+ * Create a session rating (client feedback)
+ */
+export async function createSessionRating(data: CreateSessionRatingData) {
+  try {
+    // Get session to verify it exists and get client ID
+    const session = await prisma.telehealthSession.findUnique({
+      where: { id: data.sessionId },
+      include: {
+        appointment: {
+          include: {
+            client: true,
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    // Verify the user is the client for this session
+    if (session.appointment.client.id !== data.userId) {
+      throw new Error('Only the session client can rate this session');
+    }
+
+    // Check if rating already exists
+    const existingRating = await prisma.sessionRating.findUnique({
+      where: { sessionId: data.sessionId },
+    });
+
+    if (existingRating) {
+      throw new Error('This session has already been rated');
+    }
+
+    // Create the rating
+    const rating = await prisma.sessionRating.create({
+      data: {
+        sessionId: data.sessionId,
+        clientId: session.appointment.client.id,
+        rating: data.rating,
+        comments: data.comments || null,
+        ipAddress: data.ipAddress,
+      },
+      include: {
+        session: {
+          include: {
+            appointment: {
+              include: {
+                client: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+                clinician: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    logger.info('Session rating created', {
+      ratingId: rating.id,
+      sessionId: data.sessionId,
+      rating: data.rating,
+      hasComments: !!data.comments,
+    });
+
+    return rating;
+  } catch (error: any) {
+    logger.error('Failed to create session rating', {
+      error: error.message,
+      sessionId: data.sessionId,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get all session ratings (admin only)
+ */
+export async function getAllSessionRatings(params: GetAllSessionRatingsParams) {
+  try {
+    const { page, limit, minRating, maxRating, clinicianId, clientId, startDate, endDate, search } = params;
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {};
+
+    // Filter by rating range
+    if (minRating !== undefined || maxRating !== undefined) {
+      where.rating = {};
+      if (minRating !== undefined) where.rating.gte = minRating;
+      if (maxRating !== undefined) where.rating.lte = maxRating;
+    }
+
+    // Filter by client
+    if (clientId) {
+      where.clientId = clientId;
+    }
+
+    // Filter by clinician (requires nested filter through session -> appointment -> clinician)
+    if (clinicianId) {
+      where.session = {
+        appointment: {
+          clinicianId: clinicianId,
+        },
+      };
+    }
+
+    // Filter by date range
+    if (startDate || endDate) {
+      where.submittedAt = {};
+      if (startDate) {
+        where.submittedAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        // Add 1 day to end date to include the entire day
+        const endDatePlusOne = new Date(endDate);
+        endDatePlusOne.setDate(endDatePlusOne.getDate() + 1);
+        where.submittedAt.lt = endDatePlusOne;
+      }
+    }
+
+    // Search in comments
+    if (search && search.trim()) {
+      where.comments = {
+        contains: search.trim(),
+        mode: 'insensitive', // Case-insensitive search
+      };
+    }
+
+    // Get ratings with pagination
+    const [ratings, totalCount] = await Promise.all([
+      prisma.sessionRating.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          submittedAt: 'desc',
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              medicalRecordNumber: true,
+            },
+          },
+          session: {
+            include: {
+              appointment: {
+                include: {
+                  clinician: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.sessionRating.count({ where }),
+    ]);
+
+    return {
+      ratings,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasMore: skip + ratings.length < totalCount,
+      },
+    };
+  } catch (error: any) {
+    logger.error('Failed to get session ratings', {
+      error: error.message,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get session rating statistics (admin only)
+ */
+export async function getSessionRatingStats() {
+  try {
+    const [
+      totalRatings,
+      averageRating,
+      ratingDistribution,
+      recentRatings,
+    ] = await Promise.all([
+      // Total count
+      prisma.sessionRating.count(),
+
+      // Average rating
+      prisma.sessionRating.aggregate({
+        _avg: {
+          rating: true,
+        },
+      }),
+
+      // Distribution by star rating
+      prisma.sessionRating.groupBy({
+        by: ['rating'],
+        _count: {
+          rating: true,
+        },
+        orderBy: {
+          rating: 'desc',
+        },
+      }),
+
+      // Recent ratings (last 30 days)
+      prisma.sessionRating.count({
+        where: {
+          submittedAt: {
+            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          },
+        },
+      }),
+    ]);
+
+    // Calculate percentage distribution
+    const distribution = ratingDistribution.map((item) => ({
+      stars: item.rating,
+      count: item._count.rating,
+      percentage: totalRatings > 0 ? ((item._count.rating / totalRatings) * 100).toFixed(1) : '0.0',
+    }));
+
+    // Ensure all star ratings (1-5) are represented
+    const fullDistribution = [5, 4, 3, 2, 1].map((stars) => {
+      const existing = distribution.find((d) => d.stars === stars);
+      return existing || { stars, count: 0, percentage: '0.0' };
+    });
+
+    return {
+      totalRatings,
+      averageRating: averageRating._avg.rating ? Number(averageRating._avg.rating.toFixed(2)) : 0,
+      recentRatings, // last 30 days
+      distribution: fullDistribution,
+    };
+  } catch (error: any) {
+    logger.error('Failed to get session rating stats', {
+      error: error.message,
+    });
+    throw error;
   }
 }

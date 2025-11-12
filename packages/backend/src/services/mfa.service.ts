@@ -4,23 +4,35 @@ import QRCode from 'qrcode';
 import prisma from './database';
 import { auditLogger } from '../utils/logger';
 import { UnauthorizedError, ValidationError } from '../utils/errors';
+import { sendSMS, SMSTemplates, isValidPhoneNumber } from './sms.service';
 
 /**
  * Multi-Factor Authentication (MFA) Service
  *
- * Implements OPTIONAL MFA using TOTP (Time-based One-Time Password)
+ * Implements MFA using TOTP (Time-based One-Time Password) and SMS
  * Users can choose to skip MFA during setup
  *
  * Features:
- * - TOTP generation and verification
+ * - TOTP generation and verification (Google Authenticator, Authy)
+ * - SMS code generation and verification
  * - QR code generation for authenticator apps
  * - Backup codes for account recovery
  * - Enable/disable MFA
+ * - Rate limiting on verification attempts
+ * - Admin MFA reset functionality
  */
 
 export class MFAService {
   private readonly TOTP_WINDOW = 1; // Allow 1 step before/after for clock drift
   private readonly BACKUP_CODES_COUNT = 10;
+  private readonly SMS_CODE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+  private readonly MAX_VERIFICATION_ATTEMPTS = 5;
+  private readonly VERIFICATION_LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+
+  // In-memory store for SMS codes and rate limiting
+  // In production, use Redis for distributed systems
+  private smsCodeStore: Map<string, { code: string; expiresAt: number; attempts: number }> = new Map();
+  private verificationAttempts: Map<string, { count: number; lockedUntil: number | null }> = new Map();
 
   /**
    * Generate MFA secret and QR code for user
@@ -359,12 +371,14 @@ export class MFAService {
    */
   async getMFAStatus(userId: string): Promise<{
     enabled: boolean;
+    method?: string;
     backupCodesCount?: number;
   }> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         mfaEnabled: true,
+        mfaMethod: true,
         mfaBackupCodes: true,
       },
     });
@@ -375,8 +389,320 @@ export class MFAService {
 
     return {
       enabled: user.mfaEnabled,
+      method: user.mfaMethod || undefined,
       backupCodesCount: user.mfaEnabled ? user.mfaBackupCodes?.length || 0 : undefined,
     };
+  }
+
+  /**
+   * Send SMS verification code
+   */
+  async sendSMSCode(userId: string): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        phoneNumber: true,
+        firstName: true,
+        mfaEnabled: true,
+        mfaMethod: true,
+      },
+    });
+
+    if (!user) {
+      throw new ValidationError('User not found');
+    }
+
+    if (!user.phoneNumber) {
+      throw new ValidationError('Phone number not configured for this user');
+    }
+
+    if (!isValidPhoneNumber(user.phoneNumber)) {
+      throw new ValidationError('Invalid phone number format. Please use E.164 format (e.g., +12345678900)');
+    }
+
+    // Check rate limiting
+    const attemptData = this.verificationAttempts.get(userId);
+    if (attemptData?.lockedUntil && Date.now() < attemptData.lockedUntil) {
+      const remainingMinutes = Math.ceil((attemptData.lockedUntil - Date.now()) / (60 * 1000));
+      throw new UnauthorizedError(
+        `Too many verification attempts. Please try again in ${remainingMinutes} minutes.`
+      );
+    }
+
+    // Generate 6-digit code
+    const code = crypto.randomInt(100000, 999999).toString();
+
+    // Store code with expiry
+    this.smsCodeStore.set(userId, {
+      code,
+      expiresAt: Date.now() + this.SMS_CODE_EXPIRY,
+      attempts: 0,
+    });
+
+    // Send SMS
+    const success = await sendSMS({
+      to: user.phoneNumber,
+      body: SMSTemplates.twoFactorCode(code),
+    });
+
+    if (!success) {
+      throw new ValidationError('Failed to send SMS. Please try again later.');
+    }
+
+    auditLogger.info('MFA SMS code sent', {
+      userId,
+      phoneNumber: user.phoneNumber.slice(0, -4) + '****', // Mask phone number
+      action: 'MFA_SMS_SENT',
+    });
+  }
+
+  /**
+   * Verify SMS code
+   */
+  async verifySMSCode(userId: string, code: string): Promise<boolean> {
+    // Check rate limiting
+    this.checkAndUpdateVerificationAttempts(userId);
+
+    const storedData = this.smsCodeStore.get(userId);
+
+    if (!storedData) {
+      auditLogger.warn('SMS code verification failed - no code found', {
+        userId,
+        action: 'MFA_SMS_VERIFICATION_FAILED',
+      });
+      return false;
+    }
+
+    // Check expiry
+    if (Date.now() > storedData.expiresAt) {
+      this.smsCodeStore.delete(userId);
+      auditLogger.warn('SMS code verification failed - code expired', {
+        userId,
+        action: 'MFA_SMS_VERIFICATION_FAILED',
+      });
+      return false;
+    }
+
+    // Check attempts
+    if (storedData.attempts >= 3) {
+      this.smsCodeStore.delete(userId);
+      auditLogger.warn('SMS code verification failed - too many attempts', {
+        userId,
+        action: 'MFA_SMS_VERIFICATION_FAILED',
+      });
+      return false;
+    }
+
+    // Verify code
+    const isValid = storedData.code === code;
+
+    if (isValid) {
+      // Remove used code
+      this.smsCodeStore.delete(userId);
+      // Reset verification attempts
+      this.verificationAttempts.delete(userId);
+
+      auditLogger.info('SMS code verified successfully', {
+        userId,
+        action: 'MFA_SMS_VERIFIED',
+      });
+    } else {
+      // Increment attempts
+      storedData.attempts++;
+      auditLogger.warn('SMS code verification failed - invalid code', {
+        userId,
+        attempts: storedData.attempts,
+        action: 'MFA_SMS_VERIFICATION_FAILED',
+      });
+    }
+
+    return isValid;
+  }
+
+  /**
+   * Enable MFA with method selection (TOTP, SMS, or BOTH)
+   */
+  async enableMFAWithMethod(
+    userId: string,
+    method: 'TOTP' | 'SMS' | 'BOTH',
+    secret: string,
+    verificationCode: string,
+    backupCodes: string[]
+  ): Promise<void> {
+    let isValid = false;
+
+    // Verify based on method
+    if (method === 'TOTP' || method === 'BOTH') {
+      isValid = this.verifyTOTPCode(secret, verificationCode);
+    } else if (method === 'SMS') {
+      isValid = await this.verifySMSCode(userId, verificationCode);
+    }
+
+    if (!isValid) {
+      auditLogger.warn('MFA enablement failed - invalid verification code', {
+        userId,
+        method,
+        action: 'MFA_ENABLE_FAILED',
+      });
+      throw new UnauthorizedError('Invalid verification code');
+    }
+
+    // Hash backup codes before storing
+    const hashedBackupCodes = await Promise.all(
+      backupCodes.map((code) => this.hashBackupCode(code))
+    );
+
+    // Enable MFA for user
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        mfaEnabled: true,
+        mfaSecret: method !== 'SMS' ? secret : null,
+        mfaBackupCodes: hashedBackupCodes,
+        mfaMethod: method,
+        mfaEnabledAt: new Date(),
+      },
+    });
+
+    auditLogger.info('MFA enabled', {
+      userId,
+      method,
+      action: 'MFA_ENABLED',
+    });
+  }
+
+  /**
+   * Check and update verification attempts for rate limiting
+   */
+  private checkAndUpdateVerificationAttempts(userId: string): void {
+    const now = Date.now();
+    const attemptData = this.verificationAttempts.get(userId);
+
+    if (attemptData?.lockedUntil && now < attemptData.lockedUntil) {
+      const remainingMinutes = Math.ceil((attemptData.lockedUntil - now) / (60 * 1000));
+      throw new UnauthorizedError(
+        `Account locked due to too many verification attempts. Please try again in ${remainingMinutes} minutes.`
+      );
+    }
+
+    if (!attemptData || (attemptData.lockedUntil && now >= attemptData.lockedUntil)) {
+      // Reset or initialize
+      this.verificationAttempts.set(userId, { count: 1, lockedUntil: null });
+    } else {
+      attemptData.count++;
+
+      if (attemptData.count >= this.MAX_VERIFICATION_ATTEMPTS) {
+        attemptData.lockedUntil = now + this.VERIFICATION_LOCKOUT_DURATION;
+        auditLogger.warn('User locked out due to too many MFA verification attempts', {
+          userId,
+          action: 'MFA_LOCKOUT',
+        });
+      }
+    }
+  }
+
+  /**
+   * Admin: Reset MFA for user (emergency access)
+   */
+  async adminResetMFA(userId: string, adminId: string, reason: string): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, mfaEnabled: true },
+    });
+
+    if (!user) {
+      throw new ValidationError('User not found');
+    }
+
+    if (!user.mfaEnabled) {
+      throw new ValidationError('MFA is not enabled for this user');
+    }
+
+    // Disable MFA
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        mfaEnabled: false,
+        mfaSecret: null,
+        mfaBackupCodes: [],
+        mfaMethod: null,
+      },
+    });
+
+    // Clear rate limiting
+    this.verificationAttempts.delete(userId);
+    this.smsCodeStore.delete(userId);
+
+    auditLogger.warn('Admin reset MFA', {
+      userId,
+      adminId,
+      reason,
+      action: 'ADMIN_MFA_RESET',
+    });
+  }
+
+  /**
+   * Get all users with MFA status (admin only)
+   */
+  async getAllUsersWithMFAStatus(): Promise<Array<{
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    mfaEnabled: boolean;
+    mfaMethod: string | null;
+    mfaEnabledAt: Date | null;
+    backupCodesCount: number;
+  }>> {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        mfaEnabled: true,
+        mfaMethod: true,
+        mfaEnabledAt: true,
+        mfaBackupCodes: true,
+        isActive: true,
+      },
+      where: {
+        isActive: true,
+      },
+      orderBy: {
+        email: 'asc',
+      },
+    });
+
+    return users.map(user => ({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      mfaEnabled: user.mfaEnabled,
+      mfaMethod: user.mfaMethod,
+      mfaEnabledAt: user.mfaEnabledAt,
+      backupCodesCount: user.mfaBackupCodes?.length || 0,
+    }));
+  }
+
+  /**
+   * Clean up expired SMS codes (call periodically)
+   */
+  cleanupExpiredSMSCodes(): void {
+    const now = Date.now();
+    for (const [userId, data] of this.smsCodeStore.entries()) {
+      if (now > data.expiresAt) {
+        this.smsCodeStore.delete(userId);
+      }
+    }
+
+    // Also clean up verification attempts that are no longer locked
+    for (const [userId, data] of this.verificationAttempts.entries()) {
+      if (data.lockedUntil && now >= data.lockedUntil) {
+        this.verificationAttempts.delete(userId);
+      }
+    }
   }
 }
 

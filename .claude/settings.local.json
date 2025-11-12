@@ -1,17 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell \"Get-Process node | Where-Object {$_Path -like ''*mentalspace-ehr-v2*''} | Select-Object Id, ProcessName, @{Name=''Port'';Expression={(Get-NetTCPConnection -OwningProcess $_Id -ErrorAction SilentlyContinue | Where-Object {$_LocalPort -eq 3001 -or $_LocalPort -eq 5175}).LocalPort}}\")",
-      "Bash(git add:*)",
-      "Bash(git rebase:*)",
-      "Bash(npm run build:*)",
-      "Bash(test:*)",
-      "Bash(npx tsc:*)",
-      "Bash(nul)",
-      "Bash(tasklist:*)",
-      "Bash(npm cache clean:*)",
-      "Bash(npx prisma generate:*)",
-      "Bash(cd:*)"
+      "Bash(ping:*)",
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(del package-lock.json 2)",
+      "Bash(cmd /C \"cd /D \"\"c:\\Users\\Jarvis 2.0\\mentalspace-ehr-v2\\packages\\frontend\"\" && if exist package-lock.json del package-lock.json && if exist node_modules rmdir /S /Q node_modules && npm install\")",
+      "Bash(curl:*)",
+      "Bash(temp.html)",
+      "Bash(del temp.html)",
+      "Bash(npm run prisma:migrate:dev:*)",
+      "Bash(cat:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

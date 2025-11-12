@@ -1,0 +1,249 @@
+// ============================================================================
+// MODULE 9: VENDOR & FINANCIAL ADMINISTRATION (Agent 7)
+// ============================================================================
+
+// User model additions (to be added to main schema):
+// budgetsOwned             Budget[]                 @relation("BudgetOwner")
+// expensesSubmitted        Expense[]                @relation("ExpenseSubmitter")
+// expensesApproved         Expense[]                @relation("ExpenseApprover")
+// purchaseOrdersRequested  PurchaseOrder[]          @relation("PORequestor")
+// purchaseOrdersApproved   PurchaseOrder[]          @relation("POApprover")
+
+// Vendor Category Enum
+enum VendorCategory {
+  CLINICAL_SUPPLIES
+  OFFICE_SUPPLIES
+  IT_SERVICES
+  FACILITIES
+  LEGAL
+  ACCOUNTING
+  HR_SERVICES
+  TRAINING
+  INSURANCE
+  OTHER
+}
+
+// Vendor Model
+model Vendor {
+  id                String   @id @default(uuid())
+  companyName       String
+  contactPerson     String
+
+  // Contact Information
+  phone             String
+  email             String
+  address           Json     // Structured address object
+  website           String?
+
+  // Services
+  servicesProvided  String[]
+  category          VendorCategory
+
+  // Contract
+  contractStart     DateTime?
+  contractEnd       DateTime?
+  contractValue     Decimal?  @db.Decimal(15, 2)
+  paymentTerms      String?
+
+  // Insurance
+  insuranceExpiration DateTime?
+  insuranceCertUrl  String?
+
+  // Performance
+  performanceScore  Int?     // 1-100
+  notes             String?  @db.Text
+
+  // Status
+  isActive          Boolean  @default(true)
+
+  // Relations
+  expenses         Expense[]
+  purchaseOrders   PurchaseOrder[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@index([contractEnd])
+  @@map("vendors")
+}
+
+// Budget Category Enum
+enum BudgetCategory {
+  SALARIES
+  BENEFITS
+  CLINICAL_SUPPLIES
+  OFFICE_SUPPLIES
+  EQUIPMENT
+  FACILITIES
+  IT
+  TRAINING
+  MARKETING
+  PROFESSIONAL_SERVICES
+  INSURANCE
+  OTHER
+}
+
+// Budget Model
+model Budget {
+  id              String   @id @default(uuid())
+  name            String
+  fiscalYear      Int
+
+  // Budget Details
+  department      String?
+  category        BudgetCategory
+
+  // Amounts
+  allocatedAmount Decimal  @db.Decimal(15, 2)
+  spentAmount     Decimal  @default(0) @db.Decimal(15, 2)
+  committedAmount Decimal  @default(0) @db.Decimal(15, 2)
+  remainingAmount Decimal  @default(0) @db.Decimal(15, 2)
+
+  // Period
+  startDate       DateTime
+  endDate         DateTime
+
+  // Ownership
+  ownerId         String
+  owner           User     @relation("BudgetOwner", fields: [ownerId], references: [id])
+
+  // Notes
+  notes           String?  @db.Text
+
+  // Relations
+  expenses        Expense[]
+  purchaseOrders  PurchaseOrder[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([fiscalYear])
+  @@index([category])
+  @@index([department])
+  @@index([ownerId])
+  @@map("budgets")
+}
+
+// Expense Status Enum
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  DENIED
+  PAID
+}
+
+// Expense Model
+model Expense {
+  id              String   @id @default(uuid())
+  description     String
+  category        BudgetCategory
+
+  // Amount
+  amount          Decimal  @db.Decimal(15, 2)
+  taxAmount       Decimal? @db.Decimal(15, 2)
+  totalAmount     Decimal  @db.Decimal(15, 2)
+
+  // Date
+  expenseDate     DateTime
+
+  // Vendor
+  vendorId        String?
+  vendor          Vendor?  @relation(fields: [vendorId], references: [id])
+  vendorName      String?
+
+  // Budget
+  budgetId        String?
+  budget          Budget?  @relation(fields: [budgetId], references: [id])
+  department      String?
+
+  // Submission
+  submittedById   String
+  submittedBy     User     @relation("ExpenseSubmitter", fields: [submittedById], references: [id])
+
+  // Approval
+  status          ExpenseStatus @default(PENDING)
+  approvedById    String?
+  approvedBy      User?    @relation("ExpenseApprover", fields: [approvedById], references: [id])
+  approvalDate    DateTime?
+  approvalNotes   String?
+
+  // Payment
+  paymentMethod   String?
+  receiptUrl      String?
+  reimbursed      Boolean  @default(false)
+  reimbursementDate DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([expenseDate])
+  @@index([submittedById])
+  @@index([approvedById])
+  @@index([vendorId])
+  @@index([budgetId])
+  @@map("expenses")
+}
+
+// Purchase Order Status Enum
+enum POStatus {
+  PENDING
+  APPROVED
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+// Purchase Order Model
+model PurchaseOrder {
+  id              String   @id @default(uuid())
+  poNumber        String   @unique
+
+  // Vendor
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id])
+
+  // Items
+  items           Json     // Array of line items with { description, quantity, unitPrice, total }
+  subtotal        Decimal  @db.Decimal(15, 2)
+  tax             Decimal? @db.Decimal(15, 2)
+  shipping        Decimal? @db.Decimal(15, 2)
+  total           Decimal  @db.Decimal(15, 2)
+
+  // Dates
+  orderDate       DateTime @default(now())
+  expectedDate    DateTime?
+  receivedDate    DateTime?
+
+  // Budget
+  budgetId        String?
+  budget          Budget?  @relation(fields: [budgetId], references: [id])
+  department      String?
+
+  // Approval
+  status          POStatus @default(PENDING)
+  approvedById    String?
+  approvedBy      User?    @relation("POApprover", fields: [approvedById], references: [id])
+  approvalDate    DateTime?
+
+  // Requester
+  requestedById   String
+  requestedBy     User     @relation("PORequestor", fields: [requestedById], references: [id])
+
+  // Notes
+  notes           String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([orderDate])
+  @@index([vendorId])
+  @@index([budgetId])
+  @@index([requestedById])
+  @@index([approvedById])
+  @@map("purchase_orders")
+}

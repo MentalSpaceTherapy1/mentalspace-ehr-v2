@@ -11,6 +11,8 @@ import { startWaitlistJobs, stopWaitlistJobs } from './jobs/processWaitlist.job'
 import { startNoteReminderJob } from './jobs/processNoteReminders.job';
 import { startReminderJobs } from './jobs/clinicalNoteReminderJob';
 import { startConsentExpirationReminderJob } from './jobs/consentExpirationReminders.job';
+import { startReportScheduler } from './services/report-scheduler.service';
+import { startDeliveryRetryProcessor } from './services/delivery-tracker.service';
 
 const PORT = config.port;
 
@@ -63,6 +65,12 @@ prisma.$connect()
     logger.info('📋 Starting Module 6 telehealth consent expiration reminders...');
     startConsentExpirationReminderJob();
     logger.info('✅ Consent expiration reminder job started');
+
+    // Start Module 8 automated report scheduler
+    logger.info('📊 Starting Module 8 automated report scheduler...');
+    startReportScheduler();
+    startDeliveryRetryProcessor();
+    logger.info('✅ Report scheduler and delivery retry processor started');
   })
   .catch((error) => {
     logger.error('❌ Database connection failed', { error: error.message });

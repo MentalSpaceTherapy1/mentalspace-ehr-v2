@@ -7,6 +7,8 @@ import prisma from '../services/database';
 import { Prisma } from '@mentalspace/database';
 import { applyAppointmentScope, assertCanAccessClient } from '../services/accessControl.service';
 import { calculateNoteDueDate } from '../services/compliance.service';
+import * as telehealthService from '../services/telehealth.service';
+import * as waitlistIntegrationService from '../services/waitlist-integration.service';
 // Fixed phoneNumber -> primaryPhone field name
 
 const ensureAppointmentAccess = async (
@@ -384,7 +386,7 @@ export const createAppointment = async (req: Request, res: Response) => {
       icdCodes: validatedData.icdCodes || [],
       cptCode: validatedData.cptCode || null,
       appointmentNotes: validatedData.appointmentNotes,
-      isGroupAppointment: validatedData.isGroupAppointment || false,
+      isGroupSession: validatedData.isGroupAppointment || false,
     };
 
     // Use transaction to create appointment and AppointmentClient records atomically
@@ -477,6 +479,26 @@ export const createAppointment = async (req: Request, res: Response) => {
         clientId: appointment?.clientId,
         action: 'APPOINTMENT_CREATED',
       });
+    }
+
+    // Auto-create telehealth session if service location is Telehealth
+    if (appointment.serviceLocation === 'Telehealth') {
+      try {
+        const telehealthSession = await telehealthService.createTelehealthSession({
+          appointmentId: appointment.id,
+          createdBy: userId,
+        });
+        logger.info('Telehealth session auto-created for appointment', {
+          appointmentId: appointment.id,
+          sessionId: telehealthSession.id,
+        });
+      } catch (telehealthError) {
+        // Log error but don't fail appointment creation
+        logger.error('Failed to auto-create telehealth session', {
+          appointmentId: appointment.id,
+          error: telehealthError instanceof Error ? telehealthError.message : 'Unknown error',
+        });
+      }
     }
 
     res.status(201).json({
@@ -881,6 +903,20 @@ export const cancelAppointment = async (req: Request, res: Response) => {
       appointmentId: id,
       reason: validatedData.cancellationReason,
       action: 'APPOINTMENT_CANCELLED',
+    });
+
+    // Trigger waitlist matching for the freed slot (async, don't block response)
+    waitlistIntegrationService.handleAppointmentCancellation(id, {
+      clinicianId: appointment.clinicianId,
+      appointmentDate: appointment.appointmentDate,
+      startTime: appointment.startTime,
+      endTime: appointment.endTime,
+      appointmentType: appointment.appointmentType,
+    }).catch((error) => {
+      logger.error('Error triggering waitlist after cancellation', {
+        appointmentId: id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     });
 
     res.status(200).json({

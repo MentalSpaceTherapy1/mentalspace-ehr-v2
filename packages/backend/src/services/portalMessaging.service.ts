@@ -1,6 +1,7 @@
 import prisma from './database';
 import logger from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
+import { detectCrisisKeywords } from './crisis-detection.service';
 
 interface SendMessageData {
   clientId: string;
@@ -34,6 +35,21 @@ export async function sendMessage(data: SendMessageData) {
     logger.info('Portal message sent', {
       messageId: message.id,
       clientId: data.clientId,
+    });
+
+    // CRISIS DETECTION: Scan message asynchronously (doesn't block message sending)
+    // This runs in the background and will not throw errors that affect message delivery
+    detectCrisisKeywords(
+      data.message,
+      message.id,
+      data.clientId,
+      threadId
+    ).catch(error => {
+      // Log error but don't fail the message send
+      logger.error('Crisis detection failed for message', {
+        error: error.message,
+        messageId: message.id,
+      });
     });
 
     return message;
@@ -165,6 +181,20 @@ export async function replyToMessage(messageId: string, clientId: string, replyT
       replyId: reply.id,
       originalMessageId: messageId,
       clientId,
+    });
+
+    // CRISIS DETECTION: Scan reply asynchronously (doesn't block reply sending)
+    detectCrisisKeywords(
+      replyText,
+      reply.id,
+      clientId,
+      originalMessage.threadId
+    ).catch(error => {
+      // Log error but don't fail the reply send
+      logger.error('Crisis detection failed for reply', {
+        error: error.message,
+        messageId: reply.id,
+      });
     });
 
     return reply;

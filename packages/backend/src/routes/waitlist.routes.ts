@@ -7,13 +7,37 @@ import {
   bookFromWaitlist,
   removeFromWaitlist,
   updatePriority,
+  getMyWaitlistEntries,
+  getMyWaitlistOffers,
+  acceptWaitlistOffer,
+  declineWaitlistOffer,
 } from '../controllers/waitlist.controller';
-import { authMiddleware } from '../middleware/auth';
+import { authenticateDual } from '../middleware/dualAuth';
 
 const router = Router();
 
-// All routes require authentication
-router.use(authMiddleware);
+// All routes require authentication (accepts both staff AND portal tokens)
+router.use(authenticateDual);
+
+// ============================================================================
+// CLIENT-SPECIFIC ROUTES (Portal clients accessing their own data)
+// ============================================================================
+
+// Get current client's waitlist entries
+router.get('/my-entries', getMyWaitlistEntries);
+
+// Get current client's waitlist offers
+router.get('/my-offers', getMyWaitlistOffers);
+
+// Accept a waitlist offer
+router.post('/:entryId/accept/:offerId', acceptWaitlistOffer);
+
+// Decline a waitlist offer
+router.post('/:entryId/decline/:offerId', declineWaitlistOffer);
+
+// ============================================================================
+// GENERAL ROUTES (Staff admin view and mutations)
+// ============================================================================
 
 // Get all waitlist entries (with filters)
 router.get('/', getWaitlistEntries);

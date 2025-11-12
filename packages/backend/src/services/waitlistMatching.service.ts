@@ -114,7 +114,7 @@ export async function calculatePriorityScore(
 export async function updateAllPriorityScores(): Promise<void> {
   const activeEntries = await prisma.waitlistEntry.findMany({
     where: {
-      status: 'Active',
+      status: 'ACTIVE',
       autoMatchEnabled: true,
     },
     select: { id: true },
@@ -388,7 +388,7 @@ export async function matchWaitlistToSlots(): Promise<{
   // Get active waitlist entries sorted by priority score
   const entries = await prisma.waitlistEntry.findMany({
     where: {
-      status: 'Active',
+      status: 'ACTIVE',
       autoMatchEnabled: true,
     },
     orderBy: [
@@ -462,7 +462,7 @@ export async function sendSlotOffer(
   await prisma.waitlistEntry.update({
     where: { id: matchedSlot.waitlistEntryId },
     data: {
-      status: 'Offered',
+      status: 'OFFERED',
       lastOfferDate: new Date(),
       offerCount: { increment: 1 },
       notificationsSent: { increment: 1 },
@@ -498,9 +498,9 @@ export async function recordOfferResponse(
   };
 
   if (accepted) {
-    updateData.status = 'Scheduled';
+    updateData.status = 'SCHEDULED';
   } else {
-    updateData.status = 'Active';
+    updateData.status = 'ACTIVE';
     updateData.declinedOffers = { increment: 1 };
     if (notes) {
       updateData.notes = notes;
@@ -542,28 +542,28 @@ export async function getMatchingStats(
   const totalEntries = await prisma.waitlistEntry.count({
     where: {
       ...where,
-      status: { in: ['Active', 'Offered', 'Scheduled'] },
+      status: { in: ['ACTIVE', 'OFFERED', 'SCHEDULED'] },
     },
   });
 
   const matched = await prisma.waitlistEntry.count({
     where: {
       ...where,
-      status: { in: ['Offered', 'Scheduled'] },
+      status: { in: ['OFFERED', 'SCHEDULED'] },
     },
   });
 
   const offered = await prisma.waitlistEntry.count({
     where: {
       ...where,
-      status: 'Offered',
+      status: 'OFFERED',
     },
   });
 
   const entries = await prisma.waitlistEntry.findMany({
     where: {
       ...where,
-      status: { in: ['Offered', 'Scheduled'] },
+      status: { in: ['OFFERED', 'SCHEDULED'] },
       priorityScore: { not: null },
     },
     select: { priorityScore: true },

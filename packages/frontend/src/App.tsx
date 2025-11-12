@@ -55,6 +55,8 @@ import ClinicianDashboard from './pages/Productivity/ClinicianDashboard';
 import SupervisorDashboard from './pages/Productivity/SupervisorDashboard';
 import AdministratorDashboard from './pages/Productivity/AdministratorDashboard';
 import ReportsDashboard from './pages/Reports/ReportsDashboard';
+import CustomReportsList from './pages/Reports/CustomReportsList';
+import CustomReportBuilder from './pages/Reports/CustomReportBuilder';
 import AnalyticsDashboard from './pages/Analytics/AnalyticsDashboard';
 import PortalLayout from './components/PortalLayout';
 import PortalLogin from './pages/Portal/PortalLogin';
@@ -84,6 +86,111 @@ import GroupSessionsPage from './pages/Groups/GroupSessionsPage';
 import GroupDetailsPage from './pages/Groups/GroupDetailsPage';
 import AISchedulingAssistant from './pages/AISchedulingAssistant';
 import OutcomeMeasuresPage from './pages/OutcomeMeasures/OutcomeMeasuresPage';
+import SessionRatings from './pages/Admin/SessionRatings';
+import CrisisDetections from './pages/Admin/CrisisDetections';
+import SymptomDiary from './pages/Client/SymptomDiary';
+import SleepDiary from './pages/Client/SleepDiary';
+import ExerciseLog from './pages/Client/ExerciseLog';
+import PortalSelfScheduling from './pages/Portal/PortalSelfScheduling';
+import GuardianPortal from './pages/Guardian/GuardianPortal';
+import RequestAccess from './pages/Guardian/RequestAccess';
+import GuardianVerification from './pages/Admin/GuardianVerification';
+import GuardianConsent from './pages/Guardian/GuardianConsent';
+import SchedulingRules from './pages/Admin/SchedulingRules';
+import WaitlistManagement from './pages/Admin/WaitlistManagement';
+import ClientProgress from './pages/Clinician/ClientProgress';
+import MyWaitlist from './pages/Clinician/MyWaitlist';
+import DashboardList from './pages/Dashboards/DashboardList';
+import DashboardBuilder from './pages/Dashboards/DashboardBuilder';
+
+// Module 9: Credentialing
+import CredentialingDashboard from './pages/Credentialing/CredentialingDashboard';
+import CredentialList from './pages/Credentialing/CredentialList';
+import CredentialForm from './pages/Credentialing/CredentialForm';
+import CredentialVerification from './pages/Credentialing/CredentialVerification';
+import ExpirationAlerts from './pages/Credentialing/ExpirationAlerts';
+import ComplianceReport from './pages/Credentialing/ComplianceReport';
+import ScreeningStatus from './pages/Credentialing/ScreeningStatus';
+import DocumentUpload from './pages/Credentialing/DocumentUpload';
+import CredentialTimeline from './pages/Credentialing/CredentialTimeline';
+
+// Module 9: Training
+import TrainingDashboard from './pages/Training/TrainingDashboard';
+import CourseCatalog from './pages/Training/CourseCatalog';
+import CourseDetails from './pages/Training/CourseDetails';
+import CourseForm from './pages/Training/CourseForm';
+import EnrollmentManager from './pages/Training/EnrollmentManager';
+import TrainingProgress from './pages/Training/TrainingProgress';
+import CEUTracker from './pages/Training/CEUTracker';
+import ComplianceMonitor from './pages/Training/ComplianceMonitor';
+import TrainingCalendar from './pages/Training/TrainingCalendar';
+import CertificateViewer from './pages/Training/CertificateViewer';
+
+// Module 9: Compliance
+import PolicyLibrary from './pages/Compliance/PolicyLibrary';
+import PolicyViewer from './pages/Compliance/PolicyViewer';
+import PolicyForm from './pages/Compliance/PolicyForm';
+import PolicyDistribution from './pages/Compliance/PolicyDistribution';
+import AcknowledgmentForm from './pages/Compliance/AcknowledgmentForm';
+import IncidentReportingForm from './pages/Compliance/IncidentReportingForm';
+import IncidentList from './pages/Compliance/IncidentList';
+import IncidentDetails from './pages/Compliance/IncidentDetails';
+import InvestigationWorkflow from './pages/Compliance/InvestigationWorkflow';
+import ComplianceDashboardPage from './pages/Compliance/ComplianceDashboard';
+import IncidentTrends from './pages/Compliance/IncidentTrends';
+
+// Module 9: HR Functions
+import PerformanceReviewForm from './pages/HR/PerformanceReviewForm';
+import ReviewList from './pages/HR/ReviewList';
+import ReviewViewer from './pages/HR/ReviewViewer';
+import TimeClockInterface from './pages/HR/TimeClockInterface';
+import AttendanceCalendar from './pages/HR/AttendanceCalendar';
+import AttendanceReport from './pages/HR/AttendanceReport';
+import PTORequestForm from './pages/HR/PTORequestForm';
+import PTOCalendar from './pages/HR/PTOCalendar';
+import PTOApproval from './pages/HR/PTOApproval';
+
+// Module 9: Staff Management
+import StaffDirectory from './pages/Staff/StaffDirectory';
+import StaffProfile from './pages/Staff/StaffProfile';
+import EmploymentForm from './pages/Staff/EmploymentForm';
+import OrganizationalChart from './pages/Staff/OrganizationalChart';
+import OnboardingDashboard from './pages/Staff/OnboardingDashboard';
+import OnboardingChecklist from './pages/Staff/OnboardingChecklist';
+import MilestoneTracker from './pages/Staff/MilestoneTracker';
+
+// Module 9: Communication
+import MessagingHub from './pages/Communication/MessagingHub';
+import MessageComposer from './pages/Communication/MessageComposer';
+import MessageThread from './pages/Communication/MessageThread';
+import ChannelList from './pages/Communication/ChannelList';
+import ChannelView from './pages/Communication/ChannelView';
+import DocumentLibrary from './pages/Communication/DocumentLibrary';
+import DocumentUploader from './pages/Communication/DocumentUploader';
+import DocumentViewer from './pages/Communication/DocumentViewer';
+import FolderTree from './pages/Communication/FolderTree';
+
+// Module 9: Vendor & Financial
+import VendorList from './pages/Vendor/VendorList';
+import VendorForm from './pages/Vendor/VendorForm';
+import VendorProfile from './pages/Vendor/VendorProfile';
+import BudgetDashboard from './pages/Finance/BudgetDashboard';
+import BudgetAllocation from './pages/Finance/BudgetAllocation';
+import ExpenseForm from './pages/Finance/ExpenseForm';
+import ExpenseList from './pages/Finance/ExpenseList';
+import ExpenseApproval from './pages/Finance/ExpenseApproval';
+import PurchaseOrderForm from './pages/Finance/PurchaseOrderForm';
+import POList from './pages/Finance/POList';
+import POApproval from './pages/Finance/POApproval';
+
+// Module 9: Reports
+import Module9ReportsDashboard from './pages/Module9Reports/Module9ReportsDashboard';
+import ReportViewer from './pages/Module9Reports/ReportViewer';
+import ReportBuilder from './pages/Module9Reports/ReportBuilder';
+import ExportDialog from './pages/Module9Reports/ExportDialog';
+import DashboardWidgets from './pages/Module9Reports/DashboardWidgets';
+import AnalyticsCharts from './pages/Module9Reports/AnalyticsCharts';
+import AuditLogViewer from './pages/Module9Reports/AuditLogViewer';
 
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -821,10 +928,812 @@ function App() {
           }
         />
         <Route
+          path="/reports/custom"
+          element={
+            <PrivateRoute>
+              <CustomReportsList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/reports/custom/new"
+          element={
+            <PrivateRoute>
+              <CustomReportBuilder />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/reports/custom/:id/edit"
+          element={
+            <PrivateRoute>
+              <CustomReportBuilder />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Module 8: Customizable Dashboards */}
+        <Route
+          path="/dashboards"
+          element={
+            <PrivateRoute>
+              <DashboardList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboards/:id"
+          element={
+            <PrivateRoute>
+              <DashboardBuilder />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/analytics"
           element={
             <PrivateRoute>
               <AnalyticsDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/session-ratings"
+          element={
+            <PrivateRoute>
+              <SessionRatings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/crisis-detections"
+          element={
+            <PrivateRoute>
+              <CrisisDetections />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/client/symptoms"
+          element={
+            <PortalRoute>
+              <SymptomDiary />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/client/sleep"
+          element={
+            <PortalRoute>
+              <SleepDiary />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/client/exercise"
+          element={
+            <PortalRoute>
+              <ExerciseLog />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/schedule"
+          element={
+            <PortalRoute>
+              <PortalSelfScheduling />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/guardian/portal"
+          element={
+            <PrivateRoute>
+              <GuardianPortal />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/guardian/request-access"
+          element={
+            <PrivateRoute>
+              <RequestAccess />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/guardian-verification"
+          element={
+            <PrivateRoute>
+              <GuardianVerification />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/client/guardian-consent"
+          element={
+            <PrivateRoute>
+              <GuardianConsent />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/scheduling-rules"
+          element={
+            <PrivateRoute>
+              <SchedulingRules />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/waitlist-management"
+          element={
+            <PrivateRoute>
+              <WaitlistManagement />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clinician/client-progress"
+          element={
+            <PrivateRoute>
+              <ClientProgress />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clinician/my-waitlist"
+          element={
+            <PrivateRoute>
+              <MyWaitlist />
+            </PrivateRoute>
+          }
+        />
+
+        {/* MODULE 9: CREDENTIALING & LICENSING */}
+        <Route
+          path="/credentialing"
+          element={
+            <PrivateRoute>
+              <CredentialingDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/credentialing/list"
+          element={
+            <PrivateRoute>
+              <CredentialList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/credentialing/new"
+          element={
+            <PrivateRoute>
+              <CredentialForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/credentialing/:id/edit"
+          element={
+            <PrivateRoute>
+              <CredentialForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/credentialing/verification"
+          element={
+            <PrivateRoute>
+              <CredentialVerification />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/credentialing/alerts"
+          element={
+            <PrivateRoute>
+              <ExpirationAlerts />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/credentialing/compliance"
+          element={
+            <PrivateRoute>
+              <ComplianceReport />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/credentialing/screening"
+          element={
+            <PrivateRoute>
+              <ScreeningStatus />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/credentialing/documents"
+          element={
+            <PrivateRoute>
+              <DocumentUpload />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/credentialing/timeline/:id"
+          element={
+            <PrivateRoute>
+              <CredentialTimeline />
+            </PrivateRoute>
+          }
+        />
+
+        {/* MODULE 9: TRAINING & DEVELOPMENT */}
+        <Route
+          path="/training"
+          element={
+            <PrivateRoute>
+              <TrainingDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/catalog"
+          element={
+            <PrivateRoute>
+              <CourseCatalog />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/courses/:id"
+          element={
+            <PrivateRoute>
+              <CourseDetails />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/courses/new"
+          element={
+            <PrivateRoute>
+              <CourseForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/courses/:id/edit"
+          element={
+            <PrivateRoute>
+              <CourseForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/enrollments"
+          element={
+            <PrivateRoute>
+              <EnrollmentManager />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/progress"
+          element={
+            <PrivateRoute>
+              <TrainingProgress />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/ceu"
+          element={
+            <PrivateRoute>
+              <CEUTracker />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/compliance"
+          element={
+            <PrivateRoute>
+              <ComplianceMonitor />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/calendar"
+          element={
+            <PrivateRoute>
+              <TrainingCalendar />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/training/certificates/:id"
+          element={
+            <PrivateRoute>
+              <CertificateViewer />
+            </PrivateRoute>
+          }
+        />
+
+        {/* MODULE 9: COMPLIANCE MANAGEMENT */}
+        <Route
+          path="/compliance"
+          element={
+            <PrivateRoute>
+              <ComplianceDashboardPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/policies"
+          element={
+            <PrivateRoute>
+              <PolicyLibrary />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/policies/:id"
+          element={
+            <PrivateRoute>
+              <PolicyViewer />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/policies/new"
+          element={
+            <PrivateRoute>
+              <PolicyForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/policies/:id/edit"
+          element={
+            <PrivateRoute>
+              <PolicyForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/policies/:id/distribute"
+          element={
+            <PrivateRoute>
+              <PolicyDistribution />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/policies/:id/acknowledge"
+          element={
+            <PrivateRoute>
+              <AcknowledgmentForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/incidents"
+          element={
+            <PrivateRoute>
+              <IncidentList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/incidents/new"
+          element={
+            <PrivateRoute>
+              <IncidentReportingForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/incidents/:id"
+          element={
+            <PrivateRoute>
+              <IncidentDetails />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/incidents/:id/investigate"
+          element={
+            <PrivateRoute>
+              <InvestigationWorkflow />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compliance/trends"
+          element={
+            <PrivateRoute>
+              <IncidentTrends />
+            </PrivateRoute>
+          }
+        />
+
+        {/* MODULE 9: HR FUNCTIONS */}
+        <Route
+          path="/hr/performance"
+          element={
+            <PrivateRoute>
+              <ReviewList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/hr/performance/new"
+          element={
+            <PrivateRoute>
+              <PerformanceReviewForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/hr/performance/:id"
+          element={
+            <PrivateRoute>
+              <ReviewViewer />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/hr/performance/:id/edit"
+          element={
+            <PrivateRoute>
+              <PerformanceReviewForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/hr/timeclock"
+          element={
+            <PrivateRoute>
+              <TimeClockInterface />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/hr/attendance"
+          element={
+            <PrivateRoute>
+              <AttendanceCalendar />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/hr/attendance/report"
+          element={
+            <PrivateRoute>
+              <AttendanceReport />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/hr/pto/request"
+          element={
+            <PrivateRoute>
+              <PTORequestForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/hr/pto/calendar"
+          element={
+            <PrivateRoute>
+              <PTOCalendar />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/hr/pto/approval"
+          element={
+            <PrivateRoute>
+              <PTOApproval />
+            </PrivateRoute>
+          }
+        />
+
+        {/* MODULE 9: STAFF MANAGEMENT */}
+        <Route
+          path="/staff"
+          element={
+            <PrivateRoute>
+              <StaffDirectory />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staff/:id"
+          element={
+            <PrivateRoute>
+              <StaffProfile />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staff/new"
+          element={
+            <PrivateRoute>
+              <EmploymentForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staff/:id/edit"
+          element={
+            <PrivateRoute>
+              <EmploymentForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staff/org-chart"
+          element={
+            <PrivateRoute>
+              <OrganizationalChart />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            <PrivateRoute>
+              <OnboardingDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/onboarding/:id"
+          element={
+            <PrivateRoute>
+              <OnboardingChecklist />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/onboarding/:id/milestones"
+          element={
+            <PrivateRoute>
+              <MilestoneTracker />
+            </PrivateRoute>
+          }
+        />
+
+        {/* MODULE 9: COMMUNICATION & DOCUMENTS */}
+        <Route
+          path="/messages"
+          element={
+            <PrivateRoute>
+              <MessagingHub />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/messages/compose"
+          element={
+            <PrivateRoute>
+              <MessageComposer />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/messages/:id"
+          element={
+            <PrivateRoute>
+              <MessageThread />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/channels"
+          element={
+            <PrivateRoute>
+              <ChannelList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/channels/:id"
+          element={
+            <PrivateRoute>
+              <ChannelView />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <PrivateRoute>
+              <DocumentLibrary />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/documents/upload"
+          element={
+            <PrivateRoute>
+              <DocumentUploader />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/documents/:id"
+          element={
+            <PrivateRoute>
+              <DocumentViewer />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/documents/folders"
+          element={
+            <PrivateRoute>
+              <FolderTree />
+            </PrivateRoute>
+          }
+        />
+
+        {/* MODULE 9: VENDOR & FINANCIAL */}
+        <Route
+          path="/vendors"
+          element={
+            <PrivateRoute>
+              <VendorList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/vendors/new"
+          element={
+            <PrivateRoute>
+              <VendorForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/vendors/:id"
+          element={
+            <PrivateRoute>
+              <VendorProfile />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/vendors/:id/edit"
+          element={
+            <PrivateRoute>
+              <VendorForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/budget"
+          element={
+            <PrivateRoute>
+              <BudgetDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/budget/allocate"
+          element={
+            <PrivateRoute>
+              <BudgetAllocation />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/expenses"
+          element={
+            <PrivateRoute>
+              <ExpenseList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/expenses/new"
+          element={
+            <PrivateRoute>
+              <ExpenseForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/expenses/approval"
+          element={
+            <PrivateRoute>
+              <ExpenseApproval />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/purchase-orders"
+          element={
+            <PrivateRoute>
+              <POList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/purchase-orders/new"
+          element={
+            <PrivateRoute>
+              <PurchaseOrderForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/purchase-orders/approval"
+          element={
+            <PrivateRoute>
+              <POApproval />
+            </PrivateRoute>
+          }
+        />
+
+        {/* MODULE 9: REPORTS & ANALYTICS */}
+        <Route
+          path="/module9/reports"
+          element={
+            <PrivateRoute>
+              <Module9ReportsDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/module9/reports/viewer"
+          element={
+            <PrivateRoute>
+              <ReportViewer />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/module9/reports/builder"
+          element={
+            <PrivateRoute>
+              <ReportBuilder />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/module9/reports/export"
+          element={
+            <PrivateRoute>
+              <ExportDialog />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/module9/dashboards"
+          element={
+            <PrivateRoute>
+              <DashboardWidgets />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/module9/analytics"
+          element={
+            <PrivateRoute>
+              <AnalyticsCharts />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/module9/audit-log"
+          element={
+            <PrivateRoute>
+              <AuditLogViewer />
             </PrivateRoute>
           }
         />

@@ -27,7 +27,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import {
-  VideoCamera as VideoCameraIcon,
+  Videocam as VideoCameraIcon,
   Lock as LockIcon,
   Schedule as ScheduleIcon,
   CloudUpload as CloudUploadIcon,

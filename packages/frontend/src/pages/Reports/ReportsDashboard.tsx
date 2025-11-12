@@ -22,7 +22,7 @@ import {
   useMissingTreatmentPlansReport,
   useClientDemographicsReport,
 } from '../../hooks/useReports';
-import ReportViewModal from '../../components/ReportViewModal';
+import ReportViewModalEnhanced from '../../components/ReportViewModalEnhanced';
 
 type ReportType =
   | 'revenue-clinician'
@@ -133,6 +133,7 @@ export default function ReportsDashboard() {
 
     switch (selectedReport) {
       case 'revenue-clinician':
+        const revenueClinicianData = query.data?.data?.report || query.data?.report || [];
         return {
           ...baseConfig,
           title: 'Revenue by Clinician',
@@ -146,27 +147,37 @@ export default function ReportsDashboard() {
               format: (v: number) => `$${v.toLocaleString()}`,
             },
             {
-              key: 'avgPerSession',
+              key: 'averagePerSession',
               label: 'Avg per Session',
               format: (v: number) => `$${v.toLocaleString()}`,
             },
           ],
-          summary: query.data
+          data: Array.isArray(revenueClinicianData) ? revenueClinicianData : [],
+          summary: Array.isArray(revenueClinicianData) && revenueClinicianData.length > 0
             ? [
                 {
                   label: 'Total Clinicians',
-                  value: query.data.length,
+                  value: revenueClinicianData.length,
                 },
                 {
                   label: 'Total Revenue',
-                  value: `$${query.data.reduce((sum: number, r: any) => sum + r.totalRevenue, 0).toLocaleString()}`,
+                  value: `$${revenueClinicianData.reduce((sum: number, r: any) => sum + (r.totalRevenue || 0), 0).toLocaleString()}`,
                 },
                 {
                   label: 'Total Sessions',
-                  value: query.data.reduce((sum: number, r: any) => sum + r.sessionCount, 0).toLocaleString(),
+                  value: revenueClinicianData.reduce((sum: number, r: any) => sum + (r.sessionCount || 0), 0).toLocaleString(),
                 },
               ]
             : [],
+          chartConfig: {
+            xKey: 'clinicianName',
+            yKeys: [
+              { key: 'totalRevenue', name: 'Total Revenue', color: '#6366f1' },
+              { key: 'sessionCount', name: 'Sessions', color: '#10b981' },
+            ],
+            defaultChartType: 'bar' as const,
+            enabledChartTypes: ['bar' as const, 'line' as const],
+          },
         };
 
       case 'revenue-cpt':
@@ -189,6 +200,16 @@ export default function ReportsDashboard() {
               format: (v: number) => `$${v.toLocaleString()}`,
             },
           ],
+          chartConfig: {
+            xKey: 'cptCode',
+            yKeys: [
+              { key: 'totalRevenue', name: 'Total Revenue', color: '#8b5cf6' },
+            ],
+            nameKey: 'cptCode',
+            valueKey: 'totalRevenue',
+            defaultChartType: 'bar' as const,
+            enabledChartTypes: ['bar' as const, 'donut' as const],
+          },
         };
 
       case 'revenue-payer':
@@ -210,6 +231,13 @@ export default function ReportsDashboard() {
               format: (v: number) => `${v.toFixed(1)}%`,
             },
           ],
+          chartConfig: {
+            xKey: 'payerName',
+            nameKey: 'payerName',
+            valueKey: 'totalRevenue',
+            defaultChartType: 'pie' as const,
+            enabledChartTypes: ['pie' as const, 'donut' as const, 'bar' as const],
+          },
         };
 
       case 'payment-collection':
@@ -258,6 +286,16 @@ export default function ReportsDashboard() {
             { key: 'noShow', label: 'No-Show', format: (v: number) => v.toLocaleString() },
             { key: 'kvrPercent', label: 'KVR %', format: (v: number) => `${v.toFixed(1)}%` },
           ],
+          chartConfig: {
+            xKey: 'clinicianName',
+            yKeys: [
+              { key: 'kept', name: 'Kept', color: '#10b981' },
+              { key: 'cancelled', name: 'Cancelled', color: '#f59e0b' },
+              { key: 'noShow', name: 'No-Show', color: '#ef4444' },
+            ],
+            defaultChartType: 'bar' as const,
+            enabledChartTypes: ['bar' as const],
+          },
         };
 
       case 'sessions-per-day':
@@ -282,6 +320,14 @@ export default function ReportsDashboard() {
               format: (v: number) => v.toLocaleString(),
             },
           ],
+          chartConfig: {
+            xKey: 'date',
+            yKeys: [
+              { key: 'sessionCount', name: 'Sessions', color: '#3b82f6' },
+            ],
+            defaultChartType: 'area' as const,
+            enabledChartTypes: ['area' as const, 'line' as const, 'bar' as const],
+          },
         };
 
       case 'unsigned-notes':
@@ -300,6 +346,14 @@ export default function ReportsDashboard() {
             { key: 'status', label: 'Status' },
             { key: 'daysOverdue', label: 'Days Overdue' },
           ],
+          chartConfig: {
+            xKey: 'clinicianName',
+            yKeys: [
+              { key: 'daysOverdue', name: 'Days Overdue', color: '#ef4444' },
+            ],
+            defaultChartType: 'bar' as const,
+            enabledChartTypes: ['bar' as const],
+          },
         };
 
       case 'missing-treatment-plans':
@@ -334,6 +388,13 @@ export default function ReportsDashboard() {
               format: (v: number) => `${v.toFixed(1)}%`,
             },
           ],
+          chartConfig: {
+            xKey: 'value',
+            nameKey: 'value',
+            valueKey: 'count',
+            defaultChartType: 'pie' as const,
+            enabledChartTypes: ['pie' as const, 'donut' as const, 'bar' as const],
+          },
         };
 
       default:
@@ -344,11 +405,11 @@ export default function ReportsDashboard() {
   const modalConfig = getModalConfig();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center">
-          <BarChart3 className="w-10 h-10 mr-3 text-indigo-600" />
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2 flex items-center">
+          <span className="text-5xl mr-3">📊</span>
           Reports & Analytics
         </h1>
         <p className="text-gray-600 text-lg">
@@ -358,49 +419,57 @@ export default function ReportsDashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-2xl shadow-lg border-2 border-green-200 p-6">
+        <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-2 border-emerald-200 p-6">
           <div className="flex items-center justify-between mb-3">
-            <DollarSign className="w-10 h-10 text-green-600" />
-            <span className="text-2xl">💰</span>
+            <span className="text-5xl">💰</span>
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center">
+              <DollarSign className="w-7 h-7 text-emerald-600" />
+            </div>
           </div>
-          <h3 className="text-sm font-medium text-gray-600 uppercase mb-1">Total Revenue</h3>
-          <p className="text-3xl font-bold text-green-700">
+          <h3 className="text-sm font-bold text-gray-600 uppercase mb-1">Total Revenue</h3>
+          <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
             {statsLoading ? '...' : `$${quickStats?.totalRevenue?.toLocaleString() || '0'}`}
           </p>
           <p className="text-xs text-gray-500 mt-2">This month</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border-2 border-blue-200 p-6">
+        <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-2 border-teal-200 p-6">
           <div className="flex items-center justify-between mb-3">
-            <Activity className="w-10 h-10 text-blue-600" />
-            <span className="text-2xl">📊</span>
+            <span className="text-5xl">📊</span>
+            <div className="w-12 h-12 bg-gradient-to-br from-teal-100 to-cyan-100 rounded-xl flex items-center justify-center">
+              <Activity className="w-7 h-7 text-teal-600" />
+            </div>
           </div>
-          <h3 className="text-sm font-medium text-gray-600 uppercase mb-1">Average KVR</h3>
-          <p className="text-3xl font-bold text-blue-700">
+          <h3 className="text-sm font-bold text-gray-600 uppercase mb-1">Average KVR</h3>
+          <p className="text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
             {statsLoading ? '...' : `${quickStats?.avgKVR?.toFixed(1) || '0'}%`}
           </p>
           <p className="text-xs text-gray-500 mt-2">Keep visit rate</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border-2 border-amber-200 p-6">
+        <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-2 border-amber-200 p-6">
           <div className="flex items-center justify-between mb-3">
-            <FileText className="w-10 h-10 text-amber-600" />
-            <span className="text-2xl">📝</span>
+            <span className="text-5xl">📝</span>
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl flex items-center justify-center">
+              <FileText className="w-7 h-7 text-amber-600" />
+            </div>
           </div>
-          <h3 className="text-sm font-medium text-gray-600 uppercase mb-1">Unsigned Notes</h3>
-          <p className="text-3xl font-bold text-amber-700">
+          <h3 className="text-sm font-bold text-gray-600 uppercase mb-1">Unsigned Notes</h3>
+          <p className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
             {statsLoading ? '...' : quickStats?.unsignedNotes || '0'}
           </p>
           <p className="text-xs text-gray-500 mt-2">Pending signature</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border-2 border-purple-200 p-6">
+        <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-2 border-purple-200 p-6">
           <div className="flex items-center justify-between mb-3">
-            <Users className="w-10 h-10 text-purple-600" />
-            <span className="text-2xl">👥</span>
+            <span className="text-5xl">👥</span>
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
+              <Users className="w-7 h-7 text-purple-600" />
+            </div>
           </div>
-          <h3 className="text-sm font-medium text-gray-600 uppercase mb-1">Active Clients</h3>
-          <p className="text-3xl font-bold text-purple-700">
+          <h3 className="text-sm font-bold text-gray-600 uppercase mb-1">Active Clients</h3>
+          <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             {statsLoading ? '...' : quickStats?.activeClients || '0'}
           </p>
           <p className="text-xs text-gray-500 mt-2">Currently active</p>
@@ -408,14 +477,14 @@ export default function ReportsDashboard() {
       </div>
 
       {/* Revenue Reports */}
-      <div className="bg-white rounded-2xl shadow-xl border-2 border-indigo-100 p-8 mb-8">
+      <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-emerald-100 p-8 mb-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <DollarSign className="w-8 h-8 mr-3 text-green-600" />
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent flex items-center">
+            <span className="text-4xl mr-3">💵</span>
             Revenue Reports
           </h2>
-          <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
-            <Download className="w-4 h-4" />
+          <button className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-bold">
+            <Download className="w-5 h-5" />
             Export All
           </button>
         </div>
@@ -449,9 +518,9 @@ export default function ReportsDashboard() {
       </div>
 
       {/* Productivity Reports */}
-      <div className="bg-white rounded-2xl shadow-xl border-2 border-indigo-100 p-8 mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-          <TrendingUp className="w-8 h-8 mr-3 text-blue-600" />
+      <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-teal-100 p-8 mb-8">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent mb-6 flex items-center">
+          <span className="text-4xl mr-3">📈</span>
           Productivity Reports
         </h2>
 
@@ -472,9 +541,9 @@ export default function ReportsDashboard() {
       </div>
 
       {/* Compliance Reports */}
-      <div className="bg-white rounded-2xl shadow-xl border-2 border-indigo-100 p-8 mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-          <CheckCircle className="w-8 h-8 mr-3 text-amber-600" />
+      <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-amber-100 p-8 mb-8">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-6 flex items-center">
+          <span className="text-4xl mr-3">✅</span>
           Compliance Reports
         </h2>
 
@@ -495,9 +564,9 @@ export default function ReportsDashboard() {
       </div>
 
       {/* Demographics Reports */}
-      <div className="bg-white rounded-2xl shadow-xl border-2 border-indigo-100 p-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-          <Users className="w-8 h-8 mr-3 text-purple-600" />
+      <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-purple-100 p-8">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-6 flex items-center">
+          <span className="text-4xl mr-3">👥</span>
           Demographics Reports
         </h2>
 
@@ -512,7 +581,7 @@ export default function ReportsDashboard() {
       </div>
 
       {/* Report View Modal */}
-      {modalConfig && <ReportViewModal {...modalConfig} />}
+      {modalConfig && <ReportViewModalEnhanced {...modalConfig} />}
     </div>
   );
 }
@@ -527,20 +596,21 @@ interface ReportCardProps {
 
 function ReportCard({ icon, title, description, onView }: ReportCardProps) {
   return (
-    <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all">
+    <div className="bg-white border-2 border-emerald-100 rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
       <div className="flex items-start justify-between mb-4">
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-3 rounded-lg">
+        <div className="w-14 h-14 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center shadow-md">
           {icon}
         </div>
+        <span className="text-3xl">📄</span>
       </div>
-      <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-      <p className="text-sm text-gray-600 mb-4">{description}</p>
+      <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
+      <p className="text-sm text-gray-600 mb-4 min-h-[40px]">{description}</p>
       <div className="flex gap-2">
         <button
           onClick={onView}
-          className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium"
+          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-bold"
         >
-          <BarChart3 className="w-4 h-4" />
+          <BarChart3 className="w-5 h-5" />
           View Report
         </button>
       </div>

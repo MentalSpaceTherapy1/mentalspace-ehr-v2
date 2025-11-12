@@ -14,6 +14,20 @@ export default function Layout({ children }: LayoutProps) {
   const [notesMenuOpen, setNotesMenuOpen] = useState(false);
   const [billingMenuOpen, setBillingMenuOpen] = useState(false);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+  const [progressMenuOpen, setProgressMenuOpen] = useState(false);
+  const [guardianMenuOpen, setGuardianMenuOpen] = useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const [clinicianMenuOpen, setClinicianMenuOpen] = useState(false);
+  const [reportsMenuOpen, setReportsMenuOpen] = useState(false);
+  const [analyticsMenuOpen, setAnalyticsMenuOpen] = useState(false);
+  const [credentialingMenuOpen, setCredentialingMenuOpen] = useState(false);
+  const [trainingMenuOpen, setTrainingMenuOpen] = useState(false);
+  const [complianceMenuOpen, setComplianceMenuOpen] = useState(false);
+  const [hrMenuOpen, setHrMenuOpen] = useState(false);
+  const [staffMenuOpen, setStaffMenuOpen] = useState(false);
+  const [communicationMenuOpen, setCommunicationMenuOpen] = useState(false);
+  const [vendorMenuOpen, setVendorMenuOpen] = useState(false);
+  const [module9ReportsMenuOpen, setModule9ReportsMenuOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleLogout = () => {
@@ -35,6 +49,34 @@ export default function Layout({ children }: LayoutProps) {
         setBillingMenuOpen(!billingMenuOpen);
       } else if (item.path === '/settings') {
         setSettingsMenuOpen(!settingsMenuOpen);
+      } else if (item.path === '/progress') {
+        setProgressMenuOpen(!progressMenuOpen);
+      } else if (item.path === '/guardian') {
+        setGuardianMenuOpen(!guardianMenuOpen);
+      } else if (item.path === '/admin-menu') {
+        setAdminMenuOpen(!adminMenuOpen);
+      } else if (item.path === '/clinician-menu') {
+        setClinicianMenuOpen(!clinicianMenuOpen);
+      } else if (item.path === '/reports') {
+        setReportsMenuOpen(!reportsMenuOpen);
+      } else if (item.path === '/analytics') {
+        setAnalyticsMenuOpen(!analyticsMenuOpen);
+      } else if (item.path === '/credentialing') {
+        setCredentialingMenuOpen(!credentialingMenuOpen);
+      } else if (item.path === '/training') {
+        setTrainingMenuOpen(!trainingMenuOpen);
+      } else if (item.path === '/compliance') {
+        setComplianceMenuOpen(!complianceMenuOpen);
+      } else if (item.path === '/hr') {
+        setHrMenuOpen(!hrMenuOpen);
+      } else if (item.path === '/staff') {
+        setStaffMenuOpen(!staffMenuOpen);
+      } else if (item.path === '/communication') {
+        setCommunicationMenuOpen(!communicationMenuOpen);
+      } else if (item.path === '/vendor') {
+        setVendorMenuOpen(!vendorMenuOpen);
+      } else if (item.path === '/module9/reports') {
+        setModule9ReportsMenuOpen(!module9ReportsMenuOpen);
       }
     } else {
       navigate(item.path);
@@ -107,10 +149,80 @@ export default function Layout({ children }: LayoutProps) {
         { path: '/billing/payments', label: 'Payments' },
       ]
     },
-    { path: '/reports', icon: '📈', label: 'Reports', color: 'from-sky-500 to-blue-600' },
-    { path: '/analytics', icon: '📊', label: 'Analytics', color: 'from-indigo-500 to-purple-600' },
+    {
+      path: '/reports',
+      icon: '📈',
+      label: 'Reports',
+      color: 'from-emerald-500 to-teal-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/reports', label: 'Reports Dashboard' },
+        { path: '/reports/custom', label: 'Custom Reports' },
+        { path: '/reports/subscriptions', label: 'Report Subscriptions' },
+      ]
+    },
+    {
+      path: '/analytics',
+      icon: '📊',
+      label: 'Analytics & AI',
+      color: 'from-indigo-500 to-purple-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/dashboards', label: 'Custom Dashboards' },
+        { path: '/predictions', label: 'AI Predictions' },
+      ]
+    },
+    {
+      path: '/progress',
+      icon: '📈',
+      label: 'Progress Tracking',
+      color: 'from-green-500 to-teal-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/client/symptoms', label: 'Symptom Diary' },
+        { path: '/client/sleep', label: 'Sleep Diary' },
+        { path: '/client/exercise', label: 'Exercise Log' },
+      ]
+    },
+    {
+      path: '/guardian',
+      icon: '👨‍👩‍👧',
+      label: 'Guardian Portal',
+      color: 'from-blue-500 to-indigo-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/guardian/portal', label: 'My Dependents' },
+        { path: '/guardian/request-access', label: 'Request Access' },
+      ]
+    },
+    {
+      path: '/admin-menu',
+      icon: '⚙️',
+      label: 'Admin Tools',
+      color: 'from-purple-600 to-pink-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/admin/session-ratings', label: 'Session Ratings' },
+        { path: '/admin/crisis-detections', label: 'Crisis Detections' },
+        { path: '/admin/guardian-verification', label: 'Guardian Verification' },
+        { path: '/admin/scheduling-rules', label: 'Scheduling Rules' },
+        { path: '/admin/waitlist-management', label: 'Waitlist Management' },
+      ]
+    },
+    {
+      path: '/clinician-menu',
+      icon: '👨‍⚕️',
+      label: 'Clinician Tools',
+      color: 'from-teal-500 to-cyan-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/clinician/client-progress', label: 'Client Progress' },
+        { path: '/clinician/my-waitlist', label: 'My Waitlist' },
+      ]
+    },
     { path: '/telehealth/session/demo', icon: '📹', label: 'Telehealth', color: 'from-blue-600 to-indigo-600' },
     { path: '/portal/dashboard', icon: '🌐', label: 'Client Portal', color: 'from-emerald-500 to-teal-500' },
+    { path: '/portal/schedule', icon: '📅', label: 'Self-Schedule', color: 'from-violet-500 to-purple-600' },
     { path: '/supervision', icon: '👨‍🏫', label: 'Supervision', color: 'from-rose-500 to-red-500' },
     { path: getProductivityPath(), icon: '📊', label: 'Productivity', color: 'from-violet-500 to-fuchsia-500' },
     { path: '/users', icon: '👥', label: 'Users', color: 'from-indigo-500 to-purple-500' },
@@ -125,6 +237,118 @@ export default function Layout({ children }: LayoutProps) {
         { path: '/settings/availability', label: 'Provider Availability' },
         { path: '/settings/appointment-types', label: 'Appointment Types' },
         { path: '/settings/reminders', label: 'Reminder Settings' },
+      ]
+    },
+    {
+      path: '/credentialing',
+      icon: '🎓',
+      label: 'Credentialing',
+      color: 'from-blue-600 to-indigo-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/credentialing', label: 'Dashboard' },
+        { path: '/credentialing/list', label: 'Credential List' },
+        { path: '/credentialing/verification', label: 'Verification' },
+        { path: '/credentialing/alerts', label: 'Expiration Alerts' },
+        { path: '/credentialing/compliance', label: 'Compliance Report' },
+        { path: '/credentialing/screening', label: 'Background Screening' },
+        { path: '/credentialing/documents', label: 'Document Upload' },
+      ]
+    },
+    {
+      path: '/training',
+      icon: '📚',
+      label: 'Training',
+      color: 'from-purple-600 to-pink-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/training', label: 'Dashboard' },
+        { path: '/training/catalog', label: 'Course Catalog' },
+        { path: '/training/enrollments', label: 'Enrollments' },
+        { path: '/training/progress', label: 'Progress Tracking' },
+        { path: '/training/ceu', label: 'CEU Tracker' },
+        { path: '/training/compliance', label: 'Compliance Monitor' },
+        { path: '/training/calendar', label: 'Training Calendar' },
+      ]
+    },
+    {
+      path: '/compliance',
+      icon: '✅',
+      label: 'Compliance',
+      color: 'from-green-600 to-emerald-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/compliance', label: 'Dashboard' },
+        { path: '/compliance/policies', label: 'Policy Library' },
+        { path: '/compliance/incidents', label: 'Incident Reports' },
+        { path: '/compliance/trends', label: 'Incident Trends' },
+      ]
+    },
+    {
+      path: '/hr',
+      icon: '👔',
+      label: 'HR Functions',
+      color: 'from-orange-600 to-red-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/hr/performance', label: 'Performance Reviews' },
+        { path: '/hr/timeclock', label: 'Time Clock' },
+        { path: '/hr/attendance', label: 'Attendance Calendar' },
+        { path: '/hr/attendance/report', label: 'Attendance Reports' },
+        { path: '/hr/pto/request', label: 'PTO Requests' },
+        { path: '/hr/pto/calendar', label: 'PTO Calendar' },
+        { path: '/hr/pto/approval', label: 'PTO Approvals' },
+      ]
+    },
+    {
+      path: '/staff',
+      icon: '👨‍💼',
+      label: 'Staff Management',
+      color: 'from-cyan-600 to-blue-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/staff', label: 'Staff Directory' },
+        { path: '/staff/org-chart', label: 'Org Chart' },
+        { path: '/onboarding', label: 'Onboarding Dashboard' },
+      ]
+    },
+    {
+      path: '/communication',
+      icon: '💬',
+      label: 'Communication',
+      color: 'from-teal-600 to-cyan-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/messages', label: 'Messaging Hub' },
+        { path: '/channels', label: 'Channels' },
+        { path: '/documents', label: 'Document Library' },
+      ]
+    },
+    {
+      path: '/vendor',
+      icon: '🏢',
+      label: 'Vendors & Finance',
+      color: 'from-yellow-600 to-orange-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/vendors', label: 'Vendor Management' },
+        { path: '/finance/budget', label: 'Budget Dashboard' },
+        { path: '/finance/expenses', label: 'Expense Management' },
+        { path: '/finance/purchase-orders', label: 'Purchase Orders' },
+      ]
+    },
+    {
+      path: '/module9/reports',
+      icon: '📑',
+      label: 'Module 9 Reports',
+      color: 'from-pink-600 to-rose-600',
+      hasSubmenu: true,
+      submenu: [
+        { path: '/module9/reports', label: 'Reports Dashboard' },
+        { path: '/module9/reports/builder', label: 'Report Builder' },
+        { path: '/module9/dashboards', label: 'Dashboard Widgets' },
+        { path: '/module9/analytics', label: 'Analytics Charts' },
+        { path: '/module9/audit-log', label: 'Audit Log Viewer' },
       ]
     },
   ];
@@ -197,7 +421,21 @@ export default function Layout({ children }: LayoutProps) {
                        (item.path === '/appointments' && appointmentsMenuOpen) ||
                        (item.path === '/notes' && notesMenuOpen) ||
                        (item.path === '/billing' && billingMenuOpen) ||
-                       (item.path === '/settings' && settingsMenuOpen) ? '▼' : '▶'}
+                       (item.path === '/settings' && settingsMenuOpen) ||
+                       (item.path === '/progress' && progressMenuOpen) ||
+                       (item.path === '/guardian' && guardianMenuOpen) ||
+                       (item.path === '/admin-menu' && adminMenuOpen) ||
+                       (item.path === '/clinician-menu' && clinicianMenuOpen) ||
+                       (item.path === '/reports' && reportsMenuOpen) ||
+                       (item.path === '/analytics' && analyticsMenuOpen) ||
+                       (item.path === '/credentialing' && credentialingMenuOpen) ||
+                       (item.path === '/training' && trainingMenuOpen) ||
+                       (item.path === '/compliance' && complianceMenuOpen) ||
+                       (item.path === '/hr' && hrMenuOpen) ||
+                       (item.path === '/staff' && staffMenuOpen) ||
+                       (item.path === '/communication' && communicationMenuOpen) ||
+                       (item.path === '/vendor' && vendorMenuOpen) ||
+                       (item.path === '/module9/reports' && module9ReportsMenuOpen) ? '▼' : '▶'}
                     </span>
                   )}
                 </button>
@@ -207,15 +445,32 @@ export default function Layout({ children }: LayoutProps) {
                                      (item.path === '/appointments' && appointmentsMenuOpen) ||
                                      (item.path === '/notes' && notesMenuOpen) ||
                                      (item.path === '/billing' && billingMenuOpen) ||
-                                     (item.path === '/settings' && settingsMenuOpen)) && (
+                                     (item.path === '/settings' && settingsMenuOpen) ||
+                                     (item.path === '/progress' && progressMenuOpen) ||
+                                     (item.path === '/guardian' && guardianMenuOpen) ||
+                                     (item.path === '/admin-menu' && adminMenuOpen) ||
+                                     (item.path === '/clinician-menu' && clinicianMenuOpen) ||
+                                     (item.path === '/reports' && reportsMenuOpen) ||
+                                     (item.path === '/analytics' && analyticsMenuOpen) ||
+                                     (item.path === '/credentialing' && credentialingMenuOpen) ||
+                                     (item.path === '/training' && trainingMenuOpen) ||
+                                     (item.path === '/compliance' && complianceMenuOpen) ||
+                                     (item.path === '/hr' && hrMenuOpen) ||
+                                     (item.path === '/staff' && staffMenuOpen) ||
+                                     (item.path === '/communication' && communicationMenuOpen) ||
+                                     (item.path === '/vendor' && vendorMenuOpen) ||
+                                     (item.path === '/module9/reports' && module9ReportsMenuOpen)) && (
                   <div className="ml-8 mt-2 space-y-1">
                     {item.submenu.map((subItem: any) => (
                       <button
                         key={subItem.path}
                         onClick={() => navigate(subItem.path)}
                         className={`w-full flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          location.pathname === subItem.path
-                            ? (item.path === '/notes' ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800')
+                          location.pathname === subItem.path || location.pathname.startsWith(subItem.path)
+                            ? (item.path === '/notes' ? 'bg-amber-100 text-amber-800' :
+                               item.path === '/reports' ? 'bg-emerald-100 text-emerald-800' :
+                               item.path === '/analytics' ? 'bg-purple-100 text-purple-800' :
+                               'bg-teal-100 text-teal-800')
                             : 'text-gray-600 hover:bg-gray-100'
                         }`}
                       >

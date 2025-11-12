@@ -402,3 +402,351 @@ export async function updatePriority(
 
   return entry;
 }
+
+/**
+ * Module 7: Join waitlist with validation and automatic priority calculation
+ */
+export async function joinWaitlist(data: {
+  clientId: string;
+  clinicianId?: string;
+  appointmentType: string;
+  preferredDays: string[];
+  preferredTimes: string[];
+  notes?: string;
+  urgencyLevel?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+}) {
+  try {
+    // Validate clinician if specified
+    if (data.clinicianId) {
+      const clinician = await prisma.user.findUnique({
+        where: { id: data.clinicianId },
+        select: { role: true, isActive: true },
+      });
+
+      if (!clinician || !clinician.isActive) {
+        throw new Error('Clinician not found or inactive');
+      }
+
+      if (clinician.role !== 'CLINICIAN' && clinician.role !== 'ADMIN') {
+        throw new Error('Selected user is not a clinician');
+      }
+    }
+
+    // Calculate initial priority
+    const urgencyScore = {
+      URGENT: 30,
+      HIGH: 20,
+      NORMAL: 10,
+      LOW: 0,
+    }[data.urgencyLevel || 'NORMAL'];
+
+    // Flexibility bonus
+    const flexibilityBonus = data.preferredDays.length >= 3 && data.preferredTimes.length >= 2 ? 5 : 0;
+
+    const initialPriority = urgencyScore + flexibilityBonus;
+
+    // Set expiration date (90 days from now)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 90);
+
+    // Create waitlist entry
+    const entry = await prisma.waitlistEntry.create({
+      data: {
+        clientId: data.clientId,
+        clinicianId: data.clinicianId,
+        appointmentType: data.appointmentType,
+        preferredDays: data.preferredDays,
+        preferredTimes: data.preferredTimes,
+        notes: data.notes,
+        priority: initialPriority,
+        expiresAt,
+        status: 'ACTIVE',
+      },
+      include: {
+        client: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        clinician: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    auditLogger.info('Client joined waitlist', {
+      waitlistEntryId: entry.id,
+      clientId: data.clientId,
+      clinicianId: data.clinicianId,
+      priority: initialPriority,
+      action: 'WAITLIST_JOINED',
+    });
+
+    // Send confirmation notification
+    const waitlistNotificationService = await import('./waitlist-notification.service');
+    await waitlistNotificationService.sendWaitlistConfirmation(entry.id);
+
+    return entry;
+  } catch (error) {
+    auditLogger.error('Failed to join waitlist', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      clientId: data.clientId,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Module 7: Calculate dynamic priority score
+ */
+export async function calculatePriority(waitlistEntryId: string): Promise<number> {
+  const entry = await prisma.waitlistEntry.findUnique({
+    where: { id: waitlistEntryId },
+  });
+
+  if (!entry) {
+    throw new Error('Waitlist entry not found');
+  }
+
+  let score = entry.priority; // Base priority (0-35 from urgency + flexibility)
+
+  // Wait time bonus: +1 per 7 days waiting (max +20)
+  const daysWaiting = Math.floor(
+    (Date.now() - entry.joinedAt.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  const waitTimeBonus = Math.min(Math.floor(daysWaiting / 7), 20);
+  score += waitTimeBonus;
+
+  // Decline penalty: -5 per declined offer
+  const declinePenalty = entry.declinedOffers * 5;
+  score -= declinePenalty;
+
+  // Ensure score is non-negative
+  const finalScore = Math.max(0, score);
+
+  // Update the entry
+  await prisma.waitlistEntry.update({
+    where: { id: waitlistEntryId },
+    data: { priority: finalScore },
+  });
+
+  return finalScore;
+}
+
+/**
+ * Module 7: Get waitlist statistics
+ */
+export async function getWaitlistStats() {
+  const [
+    totalActive,
+    totalMatched,
+    totalCancelled,
+    totalExpired,
+    entriesByType,
+    avgWaitTime,
+  ] = await Promise.all([
+    prisma.waitlistEntry.count({ where: { status: 'ACTIVE' } }),
+    prisma.waitlistEntry.count({ where: { status: 'MATCHED' } }),
+    prisma.waitlistEntry.count({ where: { status: 'CANCELLED' } }),
+    prisma.waitlistEntry.count({ where: { status: 'EXPIRED' } }),
+    prisma.waitlistEntry.groupBy({
+      by: ['appointmentType'],
+      where: { status: 'ACTIVE' },
+      _count: true,
+    }),
+    prisma.waitlistEntry.aggregate({
+      where: { status: 'ACTIVE' },
+      _avg: {
+        priority: true,
+      },
+    }),
+  ]);
+
+  // Calculate average wait time for active entries
+  const activeEntries = await prisma.waitlistEntry.findMany({
+    where: { status: 'ACTIVE' },
+    select: { joinedAt: true },
+  });
+
+  const totalWaitDays = activeEntries.reduce((sum, entry) => {
+    const days = Math.floor((Date.now() - entry.joinedAt.getTime()) / (1000 * 60 * 60 * 24));
+    return sum + days;
+  }, 0);
+
+  const averageWaitDays = activeEntries.length > 0 ? totalWaitDays / activeEntries.length : 0;
+
+  // Calculate match rate (matched / (matched + active + cancelled + expired))
+  const totalEntries = totalActive + totalMatched + totalCancelled + totalExpired;
+  const matchRate = totalEntries > 0 ? (totalMatched / totalEntries) * 100 : 0;
+
+  // Priority distribution
+  const priorityRanges = await Promise.all([
+    prisma.waitlistEntry.count({ where: { status: 'ACTIVE', priority: { gte: 0, lt: 20 } } }),
+    prisma.waitlistEntry.count({ where: { status: 'ACTIVE', priority: { gte: 20, lt: 40 } } }),
+    prisma.waitlistEntry.count({ where: { status: 'ACTIVE', priority: { gte: 40, lt: 60 } } }),
+    prisma.waitlistEntry.count({ where: { status: 'ACTIVE', priority: { gte: 60 } } }),
+  ]);
+
+  return {
+    totalActive,
+    totalMatched,
+    totalCancelled,
+    totalExpired,
+    averageWaitDays: Math.round(averageWaitDays * 10) / 10,
+    matchRate: Math.round(matchRate * 10) / 10,
+    entriesByType: entriesByType.map((entry) => ({
+      type: entry.appointmentType,
+      count: entry._count,
+    })),
+    priorityDistribution: {
+      low: priorityRanges[0],      // 0-19
+      normal: priorityRanges[1],   // 20-39
+      high: priorityRanges[2],     // 40-59
+      urgent: priorityRanges[3],   // 60+
+    },
+  };
+}
+
+/**
+ * Module 7: Expire old waitlist entries
+ */
+export async function expireOldEntries(): Promise<number> {
+  try {
+    const now = new Date();
+
+    // Find entries past their expiration date
+    const expiredEntries = await prisma.waitlistEntry.updateMany({
+      where: {
+        status: 'ACTIVE',
+        expiresAt: {
+          lt: now,
+        },
+      },
+      data: {
+        status: 'EXPIRED',
+      },
+    });
+
+    if (expiredEntries.count > 0) {
+      auditLogger.info('Expired old waitlist entries', {
+        count: expiredEntries.count,
+        action: 'WAITLIST_ENTRIES_EXPIRED',
+      });
+    }
+
+    return expiredEntries.count;
+  } catch (error) {
+    auditLogger.error('Error expiring old waitlist entries', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
+  }
+}
+
+/**
+ * Module 7: Update waitlist entry preferences
+ */
+export async function updateWaitlistEntry(
+  waitlistEntryId: string,
+  data: {
+    clinicianId?: string;
+    preferredDays?: string[];
+    preferredTimes?: string[];
+    notes?: string;
+  }
+) {
+  const entry = await prisma.waitlistEntry.update({
+    where: { id: waitlistEntryId },
+    data: {
+      ...(data.clinicianId !== undefined && { clinicianId: data.clinicianId }),
+      ...(data.preferredDays && { preferredDays: data.preferredDays }),
+      ...(data.preferredTimes && { preferredTimes: data.preferredTimes }),
+      ...(data.notes !== undefined && { notes: data.notes }),
+    },
+    include: {
+      client: true,
+      clinician: true,
+    },
+  });
+
+  auditLogger.info('Waitlist entry updated', {
+    waitlistEntryId,
+    action: 'WAITLIST_ENTRY_UPDATED',
+  });
+
+  return entry;
+}
+
+/**
+ * Module 7: Cancel waitlist entry
+ */
+export async function cancelWaitlistEntry(
+  waitlistEntryId: string,
+  reason: string,
+  cancelledBy: string
+) {
+  const entry = await prisma.waitlistEntry.update({
+    where: { id: waitlistEntryId },
+    data: {
+      status: 'CANCELLED',
+      notes: reason,
+    },
+  });
+
+  auditLogger.info('Waitlist entry cancelled', {
+    waitlistEntryId,
+    clientId: entry.clientId,
+    reason,
+    cancelledBy,
+    action: 'WAITLIST_ENTRY_CANCELLED',
+  });
+
+  return entry;
+}
+
+/**
+ * Module 7: Get position in queue
+ */
+export async function getPositionInQueue(waitlistEntryId: string): Promise<number> {
+  const entry = await prisma.waitlistEntry.findUnique({
+    where: { id: waitlistEntryId },
+    select: {
+      priority: true,
+      joinedAt: true,
+      clinicianId: true,
+      appointmentType: true,
+    },
+  });
+
+  if (!entry) {
+    throw new Error('Waitlist entry not found');
+  }
+
+  // Count entries with higher priority or same priority but earlier join date
+  const position = await prisma.waitlistEntry.count({
+    where: {
+      status: 'ACTIVE',
+      appointmentType: entry.appointmentType,
+      OR: [
+        { clinicianId: entry.clinicianId },
+        { clinicianId: null },
+      ],
+      OR: [
+        { priority: { gt: entry.priority } },
+        {
+          AND: [
+            { priority: entry.priority },
+            { joinedAt: { lt: entry.joinedAt } },
+          ],
+        },
+      ],
+    },
+  });
+
+  return position + 1; // Position is 1-indexed
+}

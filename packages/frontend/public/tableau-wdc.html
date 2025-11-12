@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MentalSpace EHR - Tableau Web Data Connector</title>
+    <script src="https://connectors.tableau.com/libs/tableauwdc-2.3.latest.js" type="text/javascript"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #2563eb;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .date-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 25px;
+            font-size: 13px;
+            color: #1e3a8a;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .error {
+            background: #fee2e2;
+            border-left-color: #dc2626;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            color: #6b7280;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>MentalSpace EHR</h1>
+            <p>Tableau Web Data Connector</p>
+        </div>
+
+        <form id="configForm">
+            <div class="form-group">
+                <label for="apiUrl">API Base URL</label>
+                <input
+                    type="text"
+                    id="apiUrl"
+                    name="apiUrl"
+                    placeholder="https://your-domain.com/api/v1"
+                    required
+                >
+                <div class="help-text">Enter your MentalSpace EHR API base URL</div>
+            </div>
+
+            <div class="form-group">
+                <label for="apiToken">API Token</label>
+                <input
+                    type="password"
+                    id="apiToken"
+                    name="apiToken"
+                    placeholder="Your API authentication token"
+                    required
+                >
+                <div class="help-text">Get your API token from MentalSpace EHR settings</div>
+            </div>
+
+            <div class="form-group">
+                <label for="reportType">Report Type</label>
+                <select id="reportType" name="reportType" required>
+                    <option value="">Select a report...</option>
+                    <option value="revenue-by-clinician">Revenue by Clinician</option>
+                    <option value="revenue-by-cpt">Revenue by CPT Code</option>
+                    <option value="revenue-by-payer">Revenue by Payer</option>
+                    <option value="kvr-analysis">KVR Analysis</option>
+                    <option value="client-demographics">Client Demographics</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Date Range (Optional)</label>
+                <div class="date-inputs">
+                    <div>
+                        <input
+                            type="text"
+                            id="startDate"
+                            name="startDate"
+                            placeholder="Start Date (YYYY-MM-DD)"
+                        >
+                    </div>
+                    <div>
+                        <input
+                            type="text"
+                            id="endDate"
+                            name="endDate"
+                            placeholder="End Date (YYYY-MM-DD)"
+                        >
+                    </div>
+                </div>
+                <div class="help-text">Leave empty for current month</div>
+            </div>
+
+            <button type="submit" class="btn">Connect to Tableau</button>
+
+            <div class="error" id="errorBox"></div>
+            <div class="loading" id="loadingBox">Connecting to data source</div>
+        </form>
+
+        <div class="info-box">
+            <strong>How to use:</strong>
+            1. Enter your API credentials<br>
+            2. Select the report type you want to import<br>
+            3. Optionally set a date range<br>
+            4. Click "Connect to Tableau"<br>
+            5. Wait for Tableau to load the data
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const myConnector = tableau.makeConnector();
+
+            // Configuration storage
+            let connectionConfig = {
+                apiUrl: '',
+                apiToken: '',
+                reportType: '',
+                startDate: '',
+                endDate: ''
+            };
+
+            // Define the schema
+            myConnector.getSchema = function(schemaCallback) {
+                const config = JSON.parse(tableau.connectionData);
+
+                fetch(`${config.apiUrl}/tableau/schema/${config.reportType}`, {
+                    headers: {
+                        'Authorization': `Bearer ${config.apiToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        schemaCallback([result.schema]);
+                    } else {
+                        throw new Error(result.message || 'Failed to get schema');
+                    }
+                })
+                .catch(error => {
+                    tableau.abortWithError(`Schema Error: ${error.message}`);
+                });
+            };
+
+            // Download the data
+            myConnector.getData = function(table, doneCallback) {
+                const config = JSON.parse(tableau.connectionData);
+
+                let url = `${config.apiUrl}/tableau/data/${config.reportType}`;
+                const params = new URLSearchParams();
+
+                if (config.startDate) {
+                    params.append('startDate', config.startDate);
+                }
+                if (config.endDate) {
+                    params.append('endDate', config.endDate);
+                }
+
+                if (params.toString()) {
+                    url += `?${params.toString()}`;
+                }
+
+                fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${config.apiToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        table.appendRows(result.data);
+                        doneCallback();
+                    } else {
+                        throw new Error(result.message || 'Failed to fetch data');
+                    }
+                })
+                .catch(error => {
+                    tableau.abortWithError(`Data Error: ${error.message}`);
+                });
+            };
+
+            tableau.registerConnector(myConnector);
+
+            // Form submission
+            document.getElementById('configForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const apiUrl = document.getElementById('apiUrl').value.trim();
+                const apiToken = document.getElementById('apiToken').value.trim();
+                const reportType = document.getElementById('reportType').value;
+                const startDate = document.getElementById('startDate').value.trim();
+                const endDate = document.getElementById('endDate').value.trim();
+
+                // Validation
+                if (!apiUrl || !apiToken || !reportType) {
+                    showError('Please fill in all required fields');
+                    return;
+                }
+
+                // Validate date format if provided
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                if (startDate && !dateRegex.test(startDate)) {
+                    showError('Start date must be in YYYY-MM-DD format');
+                    return;
+                }
+                if (endDate && !dateRegex.test(endDate)) {
+                    showError('End date must be in YYYY-MM-DD format');
+                    return;
+                }
+
+                // Hide error and show loading
+                document.getElementById('errorBox').style.display = 'none';
+                document.getElementById('loadingBox').style.display = 'block';
+
+                // Store configuration
+                const config = {
+                    apiUrl: apiUrl.replace(/\/$/, ''), // Remove trailing slash
+                    apiToken,
+                    reportType,
+                    startDate,
+                    endDate
+                };
+
+                // Test connection
+                fetch(`${config.apiUrl}/tableau/reports`, {
+                    headers: {
+                        'Authorization': `Bearer ${config.apiToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Authentication failed. Please check your API token.');
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    if (result.success) {
+                        // Connection successful
+                        tableau.connectionData = JSON.stringify(config);
+                        tableau.connectionName = `MentalSpace EHR - ${reportType}`;
+                        tableau.submit();
+                    } else {
+                        throw new Error(result.message || 'Connection test failed');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('loadingBox').style.display = 'none';
+                    showError(error.message);
+                });
+            });
+
+            function showError(message) {
+                const errorBox = document.getElementById('errorBox');
+                errorBox.textContent = message;
+                errorBox.style.display = 'block';
+            }
+
+            // Auto-hide error when typing
+            ['apiUrl', 'apiToken', 'reportType', 'startDate', 'endDate'].forEach(id => {
+                document.getElementById(id).addEventListener('input', function() {
+                    document.getElementById('errorBox').style.display = 'none';
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

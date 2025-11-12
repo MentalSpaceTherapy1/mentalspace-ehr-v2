@@ -8,6 +8,10 @@ import {
   stopRecording as stopRecordingLegacy,
   activateEmergency,
   getEmergencyContact,
+  getTwilioStatus,
+  createSessionRating,
+  getAllSessionRatings,
+  getSessionRatingStats,
 } from '../controllers/telehealth.controller';
 // PHASE 2 CONTROLLERS - Commented out until AWS SDK packages are installed
 // import * as recordingController from '../controllers/recording.controller';
@@ -80,6 +84,25 @@ router.post('/sessions/recording/stop/:sessionId', stopRecordingLegacy);
 
 router.post('/sessions/emergency', activateEmergency);
 router.get('/sessions/:sessionId/emergency-contact', getEmergencyContact);
+
+// ============================================================================
+// TWILIO CONFIGURATION STATUS
+// ============================================================================
+
+router.get('/twilio/status', getTwilioStatus);
+
+// ============================================================================
+// SESSION RATINGS
+// ============================================================================
+
+// Client: Submit session rating (POST /sessions/:sessionId/rating)
+router.post('/sessions/:sessionId/rating', createSessionRating);
+
+// Admin only: Get all session ratings with pagination and filters
+router.get('/admin/session-ratings', getAllSessionRatings);
+
+// Admin only: Get session rating statistics
+router.get('/admin/session-ratings/stats', getSessionRatingStats);
 
 // ============================================================================
 // MODULE 6 PHASE 2: AI NOTE GENERATION ENDPOINTS - COMMENTED OUT

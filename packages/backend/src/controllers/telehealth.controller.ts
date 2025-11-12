@@ -254,3 +254,135 @@ export const getEmergencyContact = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getTwilioStatus = async (req: Request, res: Response) => {
+  try {
+    const status = telehealthService.getTwilioStatus();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...status,
+        message: status.configured
+          ? 'Twilio is properly configured and ready to use'
+          : 'Twilio is not fully configured. Some features may use mock mode.',
+        requiredCredentials: [
+          'TWILIO_ACCOUNT_SID',
+          'TWILIO_AUTH_TOKEN',
+          'TWILIO_API_KEY_SID',
+          'TWILIO_API_KEY_SECRET',
+        ],
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error getting Twilio status', {
+      errorMessage: error.message,
+      errorName: error.name,
+    });
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to get Twilio status',
+    });
+  }
+};
+
+// Session Rating Controller
+const sessionRatingSchema = z.object({
+  rating: z.number().min(1).max(5),
+  comments: z.string().max(500).optional().nullable(),
+});
+
+export const createSessionRating = async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const validatedData = sessionRatingSchema.parse(req.body);
+    const userId = (req as any).user?.userId;
+
+    const rating = await telehealthService.createSessionRating({
+      sessionId,
+      userId,
+      rating: validatedData.rating,
+      comments: validatedData.comments,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] as string || 'unknown',
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Session rating submitted successfully',
+      data: rating,
+    });
+  } catch (error: any) {
+    logger.error('Error creating session rating', {
+      errorMessage: error.message,
+      errorName: error.name,
+    });
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to submit session rating',
+    });
+  }
+};
+
+// Admin-only: Get all session ratings
+export const getAllSessionRatings = async (req: Request, res: Response) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      minRating,
+      maxRating,
+      clinicianId,
+      clientId,
+      startDate,
+      endDate,
+      search,
+    } = req.query;
+
+    const ratings = await telehealthService.getAllSessionRatings({
+      page: Number(page),
+      limit: Number(limit),
+      minRating: minRating ? Number(minRating) : undefined,
+      maxRating: maxRating ? Number(maxRating) : undefined,
+      clinicianId: clinicianId as string | undefined,
+      clientId: clientId as string | undefined,
+      startDate: startDate as string | undefined,
+      endDate: endDate as string | undefined,
+      search: search as string | undefined,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: ratings,
+    });
+  } catch (error: any) {
+    logger.error('Error getting session ratings', {
+      errorMessage: error.message,
+      errorName: error.name,
+    });
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to get session ratings',
+    });
+  }
+};
+
+// Admin-only: Get rating statistics
+export const getSessionRatingStats = async (req: Request, res: Response) => {
+  try {
+    const stats = await telehealthService.getSessionRatingStats();
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error: any) {
+    logger.error('Error getting session rating stats', {
+      errorMessage: error.message,
+      errorName: error.name,
+    });
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to get session rating statistics',
+    });
+  }
+};

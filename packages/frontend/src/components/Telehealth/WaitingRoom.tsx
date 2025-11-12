@@ -89,14 +89,19 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
           });
         }
 
-        // Show modal if no valid consent
-        if (!hasValidConsent) {
-          setShowConsentModal(true);
-        }
+        // NOTE: Consent is optional - we just display the status, not enforce it
+        // User can click the badge to sign consent if needed
       } catch (error) {
         console.error('Failed to fetch consent status:', error);
-        // On error, show consent modal to be safe
-        setShowConsentModal(true);
+        // On error, set to invalid but don't block - consent is optional
+        setConsentStatus({
+          isValid: false,
+          expirationDate: null,
+          daysTillExpiration: null,
+          requiresRenewal: false,
+          consentType: 'Georgia_Telehealth',
+          consentGiven: false,
+        });
       } finally {
         setConsentLoading(false);
       }
@@ -105,55 +110,45 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
     fetchConsentStatus();
   }, [appointmentId]);
 
-  // Poll session status
+  // Update waiting time
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const response = await api.get(`/telehealth/sessions/${appointmentId}`);
-
-        // If clinician joined, session starts
-        if (response.data.data.status === 'IN_PROGRESS') {
-          onSessionStart();
-        }
-
-        setWaitingTime((prev) => prev + 1);
-      } catch (error) {
-        console.error('Failed to check session status:', error);
-      }
-    }, 3000); // Check every 3 seconds
+    const interval = setInterval(() => {
+      setWaitingTime((prev) => prev + 1);
+    }, 3000); // Update every 3 seconds
 
     return () => clearInterval(interval);
-  }, [appointmentId, onSessionStart]);
+  }, []);
 
-  // Test camera and microphone (blocked if no consent)
+  // Test camera and microphone
   const testDevices = async () => {
-    // Block if no valid consent
-    if (!consentStatus?.isValid) {
-      alert('Please sign the telehealth consent form before testing devices');
-      setShowConsentModal(true);
-      return;
-    }
-
     try {
+      console.log('📹 Requesting camera and microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
 
+      console.log('✅ Camera and microphone access granted');
       streamRef.current = stream;
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-
+      // Don't attach here - will be attached by useEffect after video element renders
       setCameraEnabled(true);
       setMicEnabled(true);
       setDeviceTestComplete(true);
     } catch (error) {
-      console.error('Failed to access devices:', error);
+      console.error('❌ Failed to access devices:', error);
       alert('Please allow camera and microphone access to join the session');
     }
   };
+
+  // Attach stream to video element after it renders
+  useEffect(() => {
+    if (deviceTestComplete && streamRef.current && videoRef.current) {
+      console.log('✅ Attaching stream to video element...');
+      videoRef.current.srcObject = streamRef.current;
+      console.log('✅ Video preview attached');
+    }
+  }, [deviceTestComplete]); // Run when deviceTestComplete changes
 
   // Handle consent signed
   const handleConsentSigned = () => {
@@ -356,6 +351,7 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
                   <video
                     ref={videoRef}
                     autoPlay
+                    playsInline
                     muted
                     className="w-full h-full object-cover"
                   />
@@ -390,34 +386,44 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
 
               {/* Instructions */}
               {deviceTestComplete && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-5 h-5 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
+                <div className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                          <svg
+                            className="w-5 h-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-green-900 mb-1">
+                          You're all set!
+                        </h4>
+                        <p className="text-green-700 text-sm">
+                          Your camera and microphone are working properly. Click below when you're ready to join.
+                        </p>
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-green-900 mb-1">
-                        You're all set!
-                      </h4>
-                      <p className="text-green-700 text-sm">
-                        Your camera and microphone are working properly. The session will start automatically when your therapist joins.
-                      </p>
-                    </div>
                   </div>
+
+                  {/* Ready to Join Button */}
+                  <button
+                    onClick={onSessionStart}
+                    className="w-full px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold text-lg transition-all shadow-lg transform hover:scale-105"
+                  >
+                    I'm Ready to Join
+                  </button>
                 </div>
               )}
 

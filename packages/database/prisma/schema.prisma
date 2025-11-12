@@ -16,12 +16,29 @@ datasource db {
 // ============================================================================
 
 enum UserRole {
+  SUPER_ADMIN      // Absolute access to everything - bypasses all authorization checks
   ADMINISTRATOR
   SUPERVISOR
   CLINICIAN
   BILLING_STAFF
   FRONT_DESK
   ASSOCIATE
+}
+
+// Module 9: Staff Management Enums
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  TERMINATED
+  SUSPENDED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACTOR
+  INTERN
+  PER_DIEM
 }
 
 model User {
@@ -44,8 +61,7 @@ model User {
   deaNumber         String?
   taxonomyCode      String?
 
-  // Credentials
-  credentials     String[] // Array of credentials
+  // Professional Information
   specialties     String[]
   languagesSpoken String[]
 
@@ -116,6 +132,21 @@ model User {
   signaturePin       String? // Encrypted 4-6 digit PIN
   signaturePassword  String? // Separate from login password (hashed)
   signatureBiometric String? // Fingerprint hash (future)
+
+  // Module 9: Staff Management - Employment Information
+  employeeId       String?           @unique
+  hireDate         DateTime?
+  terminationDate  DateTime?
+  employmentStatus EmploymentStatus? @default(ACTIVE)
+  department       String?
+  jobTitle         String?
+  workLocation     String?
+  employmentType   EmploymentType?
+
+  // Module 9: Organizational Structure
+  managerId    String?
+  manager      User?   @relation("ManagerSubordinates", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  subordinates User[]  @relation("ManagerSubordinates")
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -220,6 +251,60 @@ model User {
   // Module 4 Phase 2.3: Outcome Measures
   outcomeMeasuresAdministered OutcomeMeasure[] @relation("OutcomeMeasureAdministrator")
 
+  // Module 7: Client Portal - Waitlist, Scheduling Rules, and Guardian Access
+  waitlistEntriesAsClinician WaitlistEntry[]        @relation("ClinicianWaitlist")
+  waitlistOffers             WaitlistOffer[]        @relation("ClinicianOffers")
+  schedulingRules            SchedulingRule[]       @relation("ClinicianSchedulingRules")
+  guardianRelationships      GuardianRelationship[] @relation("GuardianRelationships")
+
+  // Module 8: Reporting & Analytics
+  dashboards        Dashboard[]        @relation("UserDashboards")
+  alerts            ThresholdAlert[]   @relation("UserAlerts")
+  reportDefinitions ReportDefinition[] @relation("UserReports")
+  reportVersions    ReportVersion[]    @relation("ReportVersions")
+  schedules         ReportSchedule[]   @relation("UserSchedules")
+  subscriptions     Subscription[]     @relation("UserSubscriptions")
+  distributionLists DistributionList[] @relation("CreatedDistributionLists")
+
+  // Module 9: Credentialing & Licensing (Agent 1)
+  credentials              Credential[]             @relation("UserCredentials")
+
+  // Module 9: Compliance Management (Agent 3)
+  policiesOwned            Policy[]                 @relation("PolicyOwner")
+  policiesApproved         Policy[]                 @relation("PolicyApprover")
+  policyAcknowledgments    PolicyAcknowledgment[]   @relation("PolicyAcknowledgments")
+  incidentsReported        Incident[]               @relation("IncidentReporter")
+  incidentsInvestigating   Incident[]               @relation("IncidentInvestigator")
+
+  // Module 9: Staff Management
+  onboardingChecklist OnboardingChecklist? @relation("UserOnboarding")
+  mentees             OnboardingChecklist[] @relation("OnboardingMentor")
+
+  // Module 9: Training & Development (Agent 2)
+  trainingRecords TrainingRecord[] @relation("UserTrainingRecords")
+
+  // Module 9: Communication & Document Management (Agent 6)
+  messagesSent      Message[]        @relation("MessageSender")
+  channelsCreated   Channel[]        @relation("ChannelCreator")
+  documentsUploaded Document[]       @relation("DocumentUploader")
+  foldersCreated    DocumentFolder[] @relation("FolderCreator")
+
+  // Module 9: Vendor & Financial Administration (Agent 7)
+  budgetsOwned             Budget[]                 @relation("BudgetOwner")
+  expensesSubmitted        Expense[]                @relation("ExpenseSubmitter")
+  expensesApproved         Expense[]                @relation("ExpenseApprover")
+  purchaseOrdersRequested  PurchaseOrder[]          @relation("PORequestor")
+  purchaseOrdersApproved   PurchaseOrder[]          @relation("POApprover")
+
+  // Module 9: HR Functions - Performance Reviews, Time & Attendance, PTO (Agent 4)
+  performanceReviewsAsReviewed  PerformanceReview[] @relation("ReviewedUser")
+  performanceReviewsAsReviewer  PerformanceReview[] @relation("Reviewer")
+  timeAttendanceRecords         TimeAttendance[]    @relation("TimeAttendanceUser")
+  timeAttendanceAsApprover      TimeAttendance[]    @relation("AttendanceApprover")
+  ptoRequests                   PTORequest[]        @relation("PTORequestor")
+  ptoRequestsAsApprover         PTORequest[]        @relation("PTOApprover")
+  ptoBalance                    PTOBalance?         @relation("PTOBalance")
+
   @@map("users")
 }
 
@@ -245,6 +330,45 @@ model Session {
   @@index([userId, isActive])
   @@index([token])
   @@map("sessions")
+}
+
+// ============================================================================
+// MODULE 9: STAFF MANAGEMENT - ONBOARDING
+// ============================================================================
+
+model OnboardingChecklist {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation("UserOnboarding", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Checklist Items - Stored as JSON array of objects
+  // Each item: { id: string, category: string, task: string, completed: boolean, completedAt: DateTime?, completedBy: string?, notes: string? }
+  items Json @default("[]")
+
+  // Onboarding Milestones
+  startDate         DateTime
+  firstDayComplete  Boolean @default(false)
+  firstWeekComplete Boolean @default(false)
+  thirtyDayComplete Boolean @default(false)
+  sixtyDayComplete  Boolean @default(false)
+  ninetyDayComplete Boolean @default(false)
+
+  // Completion Tracking
+  completionDate      DateTime?
+  completionPercentage Int      @default(0) // 0-100
+
+  // Mentor Assignment
+  mentorId String?
+  mentor   User?   @relation("OnboardingMentor", fields: [mentorId], references: [id], onDelete: SetNull)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([mentorId])
+  @@index([completionPercentage])
+  @@map("onboarding_checklists")
 }
 
 // ============================================================================
@@ -546,6 +670,7 @@ model Client {
   statements          ClientStatement[]
   portalAccount       PortalAccount?
   telehealthConsents  TelehealthConsent[]
+  sessionRatings      SessionRating[]        @relation("ClientSessionRatings")
 
   // Client Portal Relations (Phase 9) - Client-generated data visible to therapist
   insuranceCards          InsuranceCard[]
@@ -597,6 +722,14 @@ model Client {
 
   // Module 4 Phase 2.3: Outcome Measures
   outcomeMeasures OutcomeMeasure[]
+
+  // Module 7: Client Portal - Self-Tracking and Guardian Access
+  waitlistEntries            WaitlistEntry[]        @relation("ClientWaitlist")
+  symptomLogs                SymptomLog[]           @relation("ClientSymptomLogs")
+  sleepLogs                  SleepLog[]             @relation("ClientSleepLogs")
+  exerciseLogs               ExerciseLog[]          @relation("ClientExerciseLogs")
+  guardianRelationships      GuardianRelationship[] @relation("MinorRelationships")
+  medicationAdherenceRecords MedicationAdherence[]  @relation("ClientMedicationAdherence")
 
   @@map("clients")
 }
@@ -988,6 +1121,7 @@ model TelehealthSession {
 
   // Relations
   transcripts SessionTranscript[] @relation("SessionTranscripts")
+  rating      SessionRating?      @relation("SessionRating")
 
   // Compliance & Security
   hipaaAuditLog Json? // Audit trail for HIPAA compliance
@@ -1026,6 +1160,29 @@ model SessionTranscript {
   @@index([sessionId])
   @@index([sessionId, startTime])
   @@map("session_transcripts")
+}
+
+// Client Session Ratings (Admin-Only View)
+model SessionRating {
+  id        String            @id @default(uuid())
+  sessionId String            @unique
+  session   TelehealthSession @relation("SessionRating", fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Client Feedback
+  clientId String
+  client   Client @relation("ClientSessionRatings", fields: [clientId], references: [id])
+
+  rating   Int     @db.SmallInt // 1-5 stars
+  comments String? @db.Text // Optional feedback text
+
+  // Metadata
+  submittedAt DateTime @default(now())
+  ipAddress   String? // For audit purposes
+
+  @@index([sessionId])
+  @@index([clientId])
+  @@index([rating])
+  @@map("session_ratings")
 }
 
 // Telehealth Consent Management (Georgia Compliance)
@@ -1138,53 +1295,148 @@ model ScheduleException {
 
 // Waitlist Management
 model WaitlistEntry {
-  id       String @id @default(uuid())
-  clientId String
+  id          String  @id @default(uuid())
+  clientId    String
+  client      Client  @relation("ClientWaitlist", fields: [clientId], references: [id], onDelete: Cascade)
+  clinicianId String?
+  clinician   User?   @relation("ClinicianWaitlist", fields: [clinicianId], references: [id])
 
-  requestedClinicianId  String
-  alternateClinicianIds String[]
+  // Appointment preferences
+  appointmentType String // 'INITIAL_CONSULTATION', 'FOLLOW_UP', 'THERAPY_SESSION'
+  preferredDays   String[] // ['MONDAY', 'TUESDAY', 'WEDNESDAY']
+  preferredTimes  String[] // ['MORNING', 'AFTERNOON', 'EVENING']
 
-  requestedAppointmentType String
-  preferredDays            String[]
-  preferredTimes           String // 'Morning', 'Afternoon', 'Evening', 'Anytime'
+  // Priority and status
+  priority Int            @default(0) // Higher numbers = higher priority
+  status   WaitlistStatus @default(ACTIVE)
+  joinedAt DateTime       @default(now())
 
-  priority String @default("Normal") // 'Urgent', 'High', 'Normal', 'Low'
+  // Notifications
+  notificationsSent Int       @default(0)
+  lastNotifiedAt    DateTime?
 
-  addedDate DateTime @default(now())
-  addedBy   String
+  // Additional info
+  notes     String?
+  expiresAt DateTime?
 
-  notified           Boolean   @default(false)
-  notifiedDate       DateTime?
-  notificationMethod String?
-
-  status String @default("Active") // 'Active', 'Offered', 'Scheduled', 'Removed', 'Cancelled', 'Expired'
-
-  scheduledAppointmentId String?
-  scheduledDate          DateTime?
-
-  notes String?
+  // Legacy fields for backward compatibility
+  requestedClinicianId     String?
+  alternateClinicianIds    String[]
+  requestedAppointmentType String?
+  addedDate                DateTime?
+  addedBy                  String?
+  notified                 Boolean   @default(false)
+  notifiedDate             DateTime?
+  notificationMethod       String?
+  scheduledAppointmentId   String?
+  scheduledDate            DateTime?
 
   // Module 3 Phase 2.2: Waitlist Automation Fields
-  priorityScore       Float   @default(0.5) // 0.0 to 1.0 - Calculated priority score
-  preferredProviderId String? // Specific provider preference
-  insuranceId         String? // Insurance information for matching
-  maxWaitDays         Int? // Maximum days willing to wait
+  priorityScore       Float     @default(0.5)
+  preferredProviderId String?
+  insuranceId         String?
+  maxWaitDays         Int?
+  lastOfferDate       DateTime?
+  offerCount          Int       @default(0)
+  declinedOffers      Int       @default(0)
+  autoMatchEnabled    Boolean   @default(true)
+  lastNotification    DateTime?
 
-  // Matching tracking
-  lastOfferDate    DateTime? // Last time a slot was offered
-  offerCount       Int       @default(0) // Total offers made
-  declinedOffers   Int       @default(0) // Number of declined offers
-  autoMatchEnabled Boolean   @default(true) // Allow automated matching
-
-  // Notification tracking
-  notificationsSent Int       @default(0) // Total notifications sent
-  lastNotification  DateTime? // Last notification timestamp
+  // Relations
+  offers WaitlistOffer[] @relation("WaitlistOffers")
 
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([clientId])
+  @@index([clinicianId])
+  @@index([status])
+  @@index([priority])
   @@map("waitlist_entries")
+}
+
+// Module 7: Waitlist Offer Tracking
+model WaitlistOffer {
+  id              String        @id @default(uuid())
+  waitlistEntryId String
+  waitlistEntry   WaitlistEntry @relation("WaitlistOffers", fields: [waitlistEntryId], references: [id], onDelete: Cascade)
+
+  // Offered slot details
+  clinicianId     String
+  clinician       User     @relation("ClinicianOffers", fields: [clinicianId], references: [id])
+  appointmentDate DateTime
+  startTime       String
+  endTime         String
+  appointmentType String
+
+  // Offer management
+  status      WaitlistOfferStatus @default(PENDING) // PENDING, ACCEPTED, DECLINED, EXPIRED
+  offeredAt   DateTime            @default(now())
+  expiresAt   DateTime // Offer deadline
+  respondedAt DateTime?
+
+  // Response details
+  declineReason String?
+  notes         String?
+
+  // Match quality
+  matchScore   Float    @default(0)
+  matchReasons String[] // ['Preferred clinician', 'Preferred day', etc.]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([waitlistEntryId])
+  @@index([clinicianId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("waitlist_offers")
+}
+
+enum WaitlistOfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+// Module 7: Scheduling Rules for Client Portal
+model SchedulingRule {
+  id          String  @id @default(uuid())
+  clinicianId String? // null means organization-wide rule
+  clinician   User?   @relation("ClinicianSchedulingRules", fields: [clinicianId], references: [id])
+
+  // Booking restrictions
+  maxAdvanceBookingDays   Int @default(30) // How far in advance clients can book
+  minNoticeHours          Int @default(24) // Minimum hours before appointment can be booked
+  cancellationWindowHours Int @default(24) // Hours before appointment when cancellation not allowed
+
+  // Day restrictions
+  allowWeekends Boolean  @default(false)
+  allowedDays   String[] // ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+
+  // Blockout periods
+  blockoutPeriods Json? // [{startDate: '2025-12-24', endDate: '2025-12-26', reason: 'Holiday'}]
+
+  // Slot configuration
+  slotDuration         Int  @default(60) // Minutes per appointment slot
+  bufferTime           Int  @default(0) // Minutes between appointments
+  maxDailyAppointments Int?
+
+  // Automation
+  autoConfirm Boolean @default(false) // Auto-confirm or require clinician approval
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clinicianId])
+  @@index([isActive])
+  @@map("scheduling_rules")
 }
 
 // Appointment Reminder Settings (per clinician)
@@ -1697,6 +1949,13 @@ enum PortalAccountStatus {
   INACTIVE
   LOCKED
   PENDING_VERIFICATION
+}
+
+enum WaitlistStatus {
+  ACTIVE
+  MATCHED
+  CANCELLED
+  EXPIRED
 }
 
 model PortalAccount {
@@ -2792,6 +3051,164 @@ model SessionSummary {
   @@map("session_summaries")
 }
 
+// Module 7: Crisis Detection and Safety Monitoring
+model CrisisDetectionLog {
+  id             String  @id @default(uuid())
+  messageId      String  @unique // References the message that triggered detection
+  userId         String // Who sent the message
+  conversationId String? // Which conversation/session
+
+  // Detection details
+  detectedAt     DateTime @default(now())
+  keywords       String[] // Which keywords triggered the alert
+  severity       String // 'CRITICAL', 'HIGH', 'MEDIUM'
+  messageSnippet String // Excerpt of the message for context
+
+  // Notifications
+  notificationsSent Boolean  @default(false)
+  notifiedUsers     String[] // Array of user IDs who were notified
+
+  // Review
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  reviewNotes   String?
+  falsePositive Boolean   @default(false)
+  actionTaken   String?
+
+  @@index([userId])
+  @@index([conversationId])
+  @@index([severity])
+  @@index([detectedAt])
+  @@index([reviewedBy])
+  @@map("crisis_detection_logs")
+}
+
+// Module 7: Client Self-Tracking - Symptom Logs
+model SymptomLog {
+  id       String   @id @default(uuid())
+  clientId String
+  client   Client   @relation("ClientSymptomLogs", fields: [clientId], references: [id], onDelete: Cascade)
+  loggedAt DateTime @default(now())
+
+  // Symptom tracking
+  symptoms String[] // Array of symptom names
+  severity Int // 1-10 scale
+  triggers String[]
+  notes    String?
+
+  // Context
+  mood        String? // 'VERY_POOR', 'POOR', 'NEUTRAL', 'GOOD', 'VERY_GOOD'
+  duration    String? // How long symptoms lasted
+  medications String[] // Medications taken
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, loggedAt])
+  @@map("symptom_logs")
+}
+
+// Module 7: Client Self-Tracking - Sleep Logs
+model SleepLog {
+  id       String   @id @default(uuid())
+  clientId String
+  client   Client   @relation("ClientSleepLogs", fields: [clientId], references: [id], onDelete: Cascade)
+  logDate  DateTime // The date of the sleep
+
+  // Sleep tracking
+  bedtime      DateTime
+  wakeTime     DateTime
+  hoursSlept   Float // Calculated or manual entry
+  quality      Int // 1-5 scale
+  disturbances String[] // ['NIGHTMARES', 'INSOMNIA', 'WOKE_FREQUENTLY']
+  notes        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, logDate])
+  @@map("sleep_logs")
+}
+
+// Module 7: Client Self-Tracking - Exercise Logs
+model ExerciseLog {
+  id       String   @id @default(uuid())
+  clientId String
+  client   Client   @relation("ClientExerciseLogs", fields: [clientId], references: [id], onDelete: Cascade)
+  loggedAt DateTime @default(now())
+
+  // Exercise tracking
+  activityType String // 'WALKING', 'RUNNING', 'YOGA', 'GYM', 'SPORTS', 'OTHER'
+  duration     Int // Minutes
+  intensity    String // 'LOW', 'MODERATE', 'HIGH'
+  notes        String?
+  mood         String? // Mood after exercise
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, loggedAt])
+  @@map("exercise_logs")
+}
+
+// Module 7: Guardian/Minor Access Control
+model GuardianRelationship {
+  id         String @id @default(uuid())
+  guardianId String
+  guardian   User   @relation("GuardianRelationships", fields: [guardianId], references: [id])
+  minorId    String
+  minor      Client @relation("MinorRelationships", fields: [minorId], references: [id], onDelete: Cascade)
+
+  // Relationship details
+  relationshipType String // 'PARENT', 'LEGAL_GUARDIAN', 'HEALTHCARE_PROXY'
+  accessLevel      String // 'FULL', 'LIMITED', 'VIEW_ONLY'
+
+  // Permissions
+  canScheduleAppointments     Boolean @default(true)
+  canViewRecords              Boolean @default(true)
+  canCommunicateWithClinician Boolean @default(true)
+
+  // Verification
+  verificationStatus    String // 'PENDING', 'VERIFIED', 'REJECTED'
+  verificationDocuments String[] // URLs to uploaded verification
+  verifiedBy            String?
+  verifiedAt            DateTime?
+
+  // Validity period
+  startDate DateTime  @default(now())
+  endDate   DateTime? // When guardian access expires
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([guardianId])
+  @@index([minorId])
+  @@index([verificationStatus])
+  @@map("guardian_relationships")
+}
+
+// Module 7: Medication Adherence Tracking (BACKEND ONLY - NO UI)
+model MedicationAdherence {
+  id             String    @id @default(uuid())
+  clientId       String
+  client         Client    @relation("ClientMedicationAdherence", fields: [clientId], references: [id], onDelete: Cascade)
+  medicationName String
+  dosage         String
+  frequency      String // 'DAILY', 'TWICE_DAILY', 'WEEKLY', etc.
+  prescribedBy   String? // Clinician ID
+  startDate      DateTime
+  endDate        DateTime?
+
+  // Tracking
+  taken        Boolean
+  takenAt      DateTime?
+  missedReason String?
+  notes        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, startDate])
+  @@map("medication_adherence")
+}
+
 // ============================================================================
 // SYSTEM TABLES
 // ============================================================================
@@ -3798,4 +4215,1237 @@ model NaturalLanguageSchedulingLog {
   @@index([parsingSuccess])
   @@index([createdAt])
   @@map("nlp_scheduling_logs")
+}
+
+// ============================================================================
+// MODULE 8: REPORTING & ANALYTICS
+// ============================================================================
+
+// ============================================================================
+// DASHBOARD MODELS (3 models)
+// ============================================================================
+
+// Dashboard Configuration
+model Dashboard {
+  id          String   @id @default(uuid())
+  userId      String // Owner
+  name        String
+  description String?
+  layout      Json // Grid layout configuration (x, y, w, h for each widget)
+  isDefault   Boolean  @default(false)
+  isPublic    Boolean  @default(false)
+  role        String? // If role-based default dashboard
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User     @relation("UserDashboards", fields: [userId], references: [id])
+  widgets Widget[]
+
+  @@index([userId])
+  @@map("dashboards")
+}
+
+// Widget Instance
+model Widget {
+  id          String   @id @default(uuid())
+  dashboardId String
+  widgetType  String // 'KPI_CARD', 'LINE_CHART', 'BAR_CHART', 'TABLE', etc.
+  title       String
+  config      Json // Widget-specific configuration
+  position    Json // Grid position { x, y, w, h }
+  refreshRate Int      @default(60) // Seconds
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardId])
+  @@map("widgets")
+}
+
+// Threshold Alerts
+model ThresholdAlert {
+  id            String    @id @default(uuid())
+  widgetId      String?
+  userId        String
+  metricName    String
+  operator      String
+  threshold     Decimal   @db.Decimal(10, 2)
+  isActive      Boolean   @default(true)
+  lastTriggered DateTime?
+  createdAt     DateTime  @default(now())
+
+  user User @relation("UserAlerts", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("threshold_alerts")
+}
+
+// ============================================================================
+// PREDICTION MODELS (3 models)
+// ============================================================================
+
+// ML Model Definitions
+model PredictionModel {
+  id                 String   @id @default(uuid())
+  modelType          String // 'NO_SHOW', 'DROPOUT', 'REVENUE_FORECAST', 'DEMAND_FORECAST'
+  modelVersion       String
+  algorithm          String
+  features           Json
+  hyperparameters    Json
+  performanceMetrics Json
+  trainedAt          DateTime
+  isActive           Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  trainingJobs TrainingJob[]
+  predictions  Prediction[]
+
+  @@unique([modelType, modelVersion])
+  @@map("prediction_models")
+}
+
+// Model Training Jobs
+model TrainingJob {
+  id              String    @id @default(uuid())
+  modelId         String
+  datasetSize     Int
+  trainTestSplit  Decimal   @db.Decimal(3, 2)
+  validationScore Decimal   @db.Decimal(5, 4)
+  startedAt       DateTime
+  completedAt     DateTime?
+  status          String
+  errorMessage    String?
+
+  model PredictionModel @relation(fields: [modelId], references: [id])
+
+  @@index([modelId])
+  @@map("training_jobs")
+}
+
+// Prediction History
+model Prediction {
+  id             String   @id @default(uuid())
+  modelId        String
+  entityType     String
+  entityId       String
+  predictionType String
+  probability    Decimal  @db.Decimal(5, 4)
+  riskLevel      String
+  features       Json
+  predictedAt    DateTime @default(now())
+
+  model PredictionModel @relation(fields: [modelId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([modelId])
+  @@map("predictions")
+}
+
+// ============================================================================
+// REPORT MODELS (2 models)
+// ============================================================================
+
+// Report Definitions
+model ReportDefinition {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  category    String
+  isPublic    Boolean  @default(false)
+  isTemplate  Boolean  @default(false)
+  queryConfig Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User             @relation("UserReports", fields: [userId], references: [id])
+  versions  ReportVersion[]
+  schedules ReportSchedule[]
+
+  @@index([userId])
+  @@index([category])
+  @@map("report_definitions")
+}
+
+// Report Versioning
+model ReportVersion {
+  id            String   @id @default(uuid())
+  reportId      String
+  versionNumber Int
+  queryConfig   Json
+  changedBy     String
+  changeNote    String?
+  createdAt     DateTime @default(now())
+
+  report        ReportDefinition @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  changedByUser User             @relation("ReportVersions", fields: [changedBy], references: [id])
+
+  @@unique([reportId, versionNumber])
+  @@index([reportId])
+  @@map("report_versions")
+}
+
+// ============================================================================
+// DISTRIBUTION MODELS (4 models)
+// ============================================================================
+
+// Report Schedules
+model ReportSchedule {
+  id                    String    @id @default(uuid())
+  reportId              String
+  reportType            String
+  userId                String
+  frequency             String
+  cronExpression        String?
+  timezone              String    @default("America/New_York")
+  format                String
+  recipients            Json
+  distributionCondition Json?
+  lastRunDate           DateTime?
+  nextRunDate           DateTime
+  status                String    @default("ACTIVE")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  report ReportDefinition? @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User              @relation("UserSchedules", fields: [userId], references: [id])
+  logs   DeliveryLog[]
+
+  @@index([userId])
+  @@index([reportId])
+  @@index([nextRunDate])
+  @@map("report_schedules")
+}
+
+// Subscriptions
+model Subscription {
+  id             String   @id @default(uuid())
+  reportId       String
+  reportType     String
+  userId         String
+  frequency      String
+  format         String
+  deliveryMethod String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation("UserSubscriptions", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([reportId])
+  @@map("subscriptions")
+}
+
+// Delivery Logs
+model DeliveryLog {
+  id           String    @id @default(uuid())
+  scheduleId   String
+  reportId     String
+  recipients   Json
+  format       String
+  status       String
+  attemptCount Int       @default(1)
+  sentAt       DateTime?
+  errorMessage String?
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+
+  schedule ReportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@index([status])
+  @@map("delivery_logs")
+}
+
+// Distribution Lists
+model DistributionList {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  emails      Json
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator User @relation("CreatedDistributionLists", fields: [createdBy], references: [id])
+
+  @@index([createdBy])
+  @@map("distribution_lists")
+}
+
+// ============================================================================
+// MODULE 9: COMPLIANCE MANAGEMENT (Agent 3)
+// ============================================================================
+
+// Policy Category Enum
+enum PolicyCategory {
+  CLINICAL
+  ADMINISTRATIVE
+  HR
+  SAFETY
+  IT
+  FINANCIAL
+  COMPLIANCE
+}
+
+// Policy Status Enum
+enum PolicyStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+// Policy Model
+model Policy {
+  id                String   @id @default(uuid())
+  policyName        String
+  policyNumber      String   @unique
+  category          PolicyCategory
+
+  // Version Control
+  version           String
+  effectiveDate     DateTime
+  reviewDate        DateTime
+  nextReviewDate    DateTime?
+
+  // Ownership
+  ownerId           String
+  owner             User     @relation("PolicyOwner", fields: [ownerId], references: [id])
+  approvedById      String?
+  approvedBy        User?    @relation("PolicyApprover", fields: [approvedById], references: [id])
+  approvalDate      DateTime?
+
+  // Content
+  content           String   @db.Text
+  summary           String?
+  attachments       String[] // Document URLs
+
+  // Distribution
+  distributionList  String[] // User IDs
+  requireAck        Boolean  @default(false)
+  acknowledgments   PolicyAcknowledgment[]
+
+  // Status
+  status            PolicyStatus @default(DRAFT)
+  isActive          Boolean  @default(true)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([effectiveDate])
+  @@map("policies")
+}
+
+// Policy Acknowledgment Model
+model PolicyAcknowledgment {
+  id          String   @id @default(uuid())
+  policyId    String
+  policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation("PolicyAcknowledgments", fields: [userId], references: [id])
+
+  acknowledgedDate DateTime @default(now())
+  signature        String?
+  ipAddress        String?
+
+  @@unique([policyId, userId])
+  @@index([policyId])
+  @@index([userId])
+  @@map("policy_acknowledgments")
+}
+
+// Incident Type Enum
+enum IncidentType {
+  CLINICAL
+  SAFETY
+  SECURITY
+  COMPLIANCE
+  EMPLOYEE
+  EQUIPMENT
+  PATIENT_COMPLAINT
+  MEDICATION_ERROR
+  DOCUMENTATION_ERROR
+  OTHER
+}
+
+// Severity Enum
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// Investigation Status Enum
+enum InvestigationStatus {
+  PENDING
+  IN_PROGRESS
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+// Incident Model
+model Incident {
+  id                String   @id @default(uuid())
+  incidentNumber    String   @unique
+
+  // Basic Information
+  incidentDate      DateTime
+  incidentTime      String?
+  incidentType      IncidentType
+  severity          Severity
+
+  // Location
+  location          String?
+  specificLocation  String?
+
+  // People
+  reportedById      String
+  reportedBy        User     @relation("IncidentReporter", fields: [reportedById], references: [id])
+  involvedParties   String[] // User IDs or names
+  witnesses         String[] // Names or IDs
+
+  // Description
+  description       String   @db.Text
+  immediateAction   String?  @db.Text
+
+  // Investigation
+  investigationStatus InvestigationStatus @default(PENDING)
+  assignedToId      String?
+  assignedTo        User?    @relation("IncidentInvestigator", fields: [assignedToId], references: [id])
+  investigationNotes String? @db.Text
+  rootCause         String?  @db.Text
+
+  // Resolution
+  correctiveActions Json?    // Array of actions
+  preventiveActions Json?    // Array of actions
+  followUpDate      DateTime?
+  resolutionDate    DateTime?
+
+  // Documentation
+  attachments       String[] // Document URLs
+  notifications     Json?    // Who was notified
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([incidentType])
+  @@index([severity])
+  @@index([investigationStatus])
+  @@index([incidentDate])
+  @@map("incidents")
+}
+
+// ============================================================================
+// MODULE 9: TRAINING & DEVELOPMENT (AGENT 2)
+// ============================================================================
+
+// Training Type Enum - Types of training available
+enum TrainingType {
+  HIPAA                 // HIPAA compliance training
+  SAFETY                // Workplace safety training
+  CLINICAL_COMPETENCY   // Clinical skills training
+  TECHNOLOGY            // Technology/systems training
+  COMPLIANCE            // General compliance training
+  SOFT_SKILLS           // Communication, leadership, etc.
+  CEU                   // Continuing Education Units
+  CERTIFICATION         // Professional certifications
+  OTHER                 // Other types of training
+}
+
+// Training Category Enum - Priority/requirement level
+enum TrainingCategory {
+  MANDATORY      // Required by law or policy
+  RECOMMENDED    // Recommended but not required
+  OPTIONAL       // Available for self-improvement
+  CEU_REQUIRED   // Required for license maintenance
+}
+
+// Training Status Enum - Completion status
+enum TrainingStatus {
+  NOT_STARTED  // Not yet started
+  IN_PROGRESS  // Currently in progress
+  COMPLETED    // Successfully completed
+  EXPIRED      // Completed but now expired
+  FAILED       // Did not pass
+}
+
+// Training Record Model - Individual training completion records
+model TrainingRecord {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation("UserTrainingRecords", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Training Information
+  trainingType      TrainingType
+  courseName        String
+  provider          String
+  category          TrainingCategory
+
+  // Dates
+  assignedDate      DateTime?
+  dueDate           DateTime?
+  completionDate    DateTime?
+  expirationDate    DateTime?  // When training expires and needs renewal
+
+  // Credits & Scoring
+  creditsEarned     Decimal?  @db.Decimal(10, 2)
+  creditsRequired   Decimal?  @db.Decimal(10, 2)
+  score             Int?      // Test score if applicable
+  passingScore      Int?      // Minimum required score
+
+  // Status
+  status            TrainingStatus @default(NOT_STARTED)
+  required          Boolean   @default(false)  // Is this training required?
+  complianceMet     Boolean   @default(false)  // Does completion meet compliance requirements?
+
+  // Documentation
+  certificateUrl    String?   // URL to certificate document
+  notes             String?   @db.Text
+  attestedBy        String?   // Who attested to completion
+  attestedDate      DateTime? // When attestation was made
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([required])
+  @@index([expirationDate])
+  @@index([trainingType])
+  @@index([category])
+  @@map("training_records")
+}
+
+// Course Catalog Model - Available training courses
+model Course {
+  id              String   @id @default(uuid())
+  courseName      String
+  provider        String
+  description     String?  @db.Text
+  duration        Int?     // Duration in minutes
+  credits         Decimal? @db.Decimal(10, 2)  // CEU or other credits
+  trainingType    TrainingType
+  category        TrainingCategory
+
+  // Content
+  contentUrl      String?  // URL to course content/LMS
+  materials       String[] // Array of material URLs or references
+
+  // Settings
+  isActive        Boolean   @default(true)
+  passingScore    Int?      // Minimum score to pass if test required
+  expirationMonths Int?     // Expires X months after completion
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([trainingType])
+  @@index([category])
+  @@index([isActive])
+  @@map("courses")
+}
+
+// ============================================================================
+// MODULE 9: CREDENTIALING & LICENSING SYSTEM (Agent 1)
+// ============================================================================
+
+// Credential Type Enum
+enum CredentialType {
+  STATE_LICENSE
+  DEA_LICENSE
+  NPI
+  BOARD_CERTIFICATION
+  MALPRACTICE_INSURANCE
+  LIABILITY_INSURANCE
+  BACKGROUND_CHECK
+  REFERENCE_CHECK
+  OTHER
+}
+
+// Verification Status Enum
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  SUSPENDED
+  REVOKED
+}
+
+// Screening Status Enum
+enum ScreeningStatus {
+  CLEAR
+  FLAGGED
+  PENDING
+  ERROR
+}
+
+// Credential Model
+model Credential {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation("UserCredentials", fields: [userId], references: [id], onDelete: Cascade)
+  credentialType      CredentialType
+  credentialNumber    String
+  issuingAuthority    String
+  issuingState        String?
+  issueDate           DateTime
+  expirationDate      DateTime
+  renewalDate         DateTime?
+
+  // Requirements
+  ceuRequirements     Int?      // Required CEU credits
+  renewalRequirements Json?     // Checklist of renewal requirements
+  verificationStatus  VerificationStatus @default(PENDING)
+  verificationDate    DateTime?
+  verificationMethod  String?
+
+  // OIG/SAM Screening
+  lastScreeningDate   DateTime?
+  screeningStatus     ScreeningStatus @default(CLEAR)
+  screeningNotes      String?
+
+  // Documentation
+  documents           String[]  // Array of document URLs
+  restrictions        String?
+  scope               String?   // Scope of practice
+
+  // Alerts
+  alertsSent          Json?     // Track 90/60/30 day alerts
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([expirationDate])
+  @@index([credentialType])
+  @@index([verificationStatus])
+  @@index([screeningStatus])
+  @@map("credentials")
+}
+// expensesApproved         Expense[]                @relation("ExpenseApprover")
+// purchaseOrdersRequested  PurchaseOrder[]          @relation("PORequestor")
+// purchaseOrdersApproved   PurchaseOrder[]          @relation("POApprover")
+
+// Vendor Category Enum
+enum VendorCategory {
+  CLINICAL_SUPPLIES
+  OFFICE_SUPPLIES
+  IT_SERVICES
+  FACILITIES
+  LEGAL
+  ACCOUNTING
+  HR_SERVICES
+  TRAINING
+  INSURANCE
+  OTHER
+}
+
+// Vendor Model
+model Vendor {
+  id                String   @id @default(uuid())
+  companyName       String
+  contactPerson     String
+
+  // Contact Information
+  phone             String
+  email             String
+  address           Json     // Structured address object
+  website           String?
+
+  // Services
+  servicesProvided  String[]
+  category          VendorCategory
+
+  // Contract
+  contractStart     DateTime?
+  contractEnd       DateTime?
+  contractValue     Decimal?  @db.Decimal(15, 2)
+  paymentTerms      String?
+
+  // Insurance
+  insuranceExpiration DateTime?
+  insuranceCertUrl  String?
+
+  // Performance
+  performanceScore  Int?     // 1-100
+  notes             String?  @db.Text
+
+  // Status
+  isActive          Boolean  @default(true)
+
+  // Relations
+  expenses         Expense[]
+  purchaseOrders   PurchaseOrder[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@index([contractEnd])
+  @@map("vendors")
+}
+
+// Budget Category Enum
+enum BudgetCategory {
+  SALARIES
+  BENEFITS
+  CLINICAL_SUPPLIES
+  OFFICE_SUPPLIES
+  EQUIPMENT
+  FACILITIES
+  IT
+  TRAINING
+  MARKETING
+  PROFESSIONAL_SERVICES
+  INSURANCE
+  OTHER
+}
+
+// Budget Model
+model Budget {
+  id              String   @id @default(uuid())
+  name            String
+  fiscalYear      Int
+
+  // Budget Details
+  department      String?
+  category        BudgetCategory
+
+  // Amounts
+  allocatedAmount Decimal  @db.Decimal(15, 2)
+  spentAmount     Decimal  @default(0) @db.Decimal(15, 2)
+  committedAmount Decimal  @default(0) @db.Decimal(15, 2)
+  remainingAmount Decimal  @default(0) @db.Decimal(15, 2)
+
+  // Period
+  startDate       DateTime
+  endDate         DateTime
+
+  // Ownership
+  ownerId         String
+  owner           User     @relation("BudgetOwner", fields: [ownerId], references: [id])
+
+  // Notes
+  notes           String?  @db.Text
+
+  // Relations
+  expenses        Expense[]
+  purchaseOrders  PurchaseOrder[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([fiscalYear])
+  @@index([category])
+  @@index([department])
+  @@index([ownerId])
+  @@map("budgets")
+}
+
+// Expense Status Enum
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  DENIED
+  PAID
+}
+
+// Expense Model
+model Expense {
+  id              String   @id @default(uuid())
+  description     String
+  category        BudgetCategory
+
+  // Amount
+  amount          Decimal  @db.Decimal(15, 2)
+  taxAmount       Decimal? @db.Decimal(15, 2)
+  totalAmount     Decimal  @db.Decimal(15, 2)
+
+  // Date
+  expenseDate     DateTime
+
+  // Vendor
+  vendorId        String?
+  vendor          Vendor?  @relation(fields: [vendorId], references: [id])
+  vendorName      String?
+
+  // Budget
+  budgetId        String?
+  budget          Budget?  @relation(fields: [budgetId], references: [id])
+  department      String?
+
+  // Submission
+  submittedById   String
+  submittedBy     User     @relation("ExpenseSubmitter", fields: [submittedById], references: [id])
+
+  // Approval
+  status          ExpenseStatus @default(PENDING)
+  approvedById    String?
+  approvedBy      User?    @relation("ExpenseApprover", fields: [approvedById], references: [id])
+  approvalDate    DateTime?
+  approvalNotes   String?
+
+  // Payment
+  paymentMethod   String?
+  receiptUrl      String?
+  reimbursed      Boolean  @default(false)
+  reimbursementDate DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([expenseDate])
+  @@index([submittedById])
+  @@index([approvedById])
+  @@index([vendorId])
+  @@index([budgetId])
+  @@map("expenses")
+}
+
+// Purchase Order Status Enum
+enum POStatus {
+  PENDING
+  APPROVED
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+// Purchase Order Model
+model PurchaseOrder {
+  id              String   @id @default(uuid())
+  poNumber        String   @unique
+
+  // Vendor
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id])
+
+  // Items
+  items           Json     // Array of line items with { description, quantity, unitPrice, total }
+  subtotal        Decimal  @db.Decimal(15, 2)
+  tax             Decimal? @db.Decimal(15, 2)
+  shipping        Decimal? @db.Decimal(15, 2)
+  total           Decimal  @db.Decimal(15, 2)
+
+  // Dates
+  orderDate       DateTime @default(now())
+  expectedDate    DateTime?
+  receivedDate    DateTime?
+
+  // Budget
+  budgetId        String?
+  budget          Budget?  @relation(fields: [budgetId], references: [id])
+  department      String?
+
+  // Approval
+  status          POStatus @default(PENDING)
+  approvedById    String?
+  approvedBy      User?    @relation("POApprover", fields: [approvedById], references: [id])
+  approvalDate    DateTime?
+
+  // Requester
+  requestedById   String
+  requestedBy     User     @relation("PORequestor", fields: [requestedById], references: [id])
+
+  // Notes
+  notes           String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([orderDate])
+  @@index([vendorId])
+  @@index([budgetId])
+  @@index([requestedById])
+  @@index([approvedById])
+  @@map("purchase_orders")
+}
+
+// ============================================================================
+// MODULE 9: COMMUNICATION & DOCUMENT MANAGEMENT
+// ============================================================================
+
+// Message Enums
+enum RecipientType {
+  INDIVIDUAL
+  DEPARTMENT
+  TEAM
+  ALL_STAFF
+  ROLE_BASED
+}
+
+enum MessageType {
+  DIRECT
+  BROADCAST
+  ANNOUNCEMENT
+  ALERT
+  SHIFT_HANDOFF
+}
+
+enum MessagePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// Internal Messaging Model
+model Message {
+  id              String   @id @default(uuid())
+  senderId        String
+  sender          User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  // Recipients
+  recipientType   RecipientType
+  recipientIds    String[] // User IDs or channel IDs
+
+  // Content
+  subject         String?
+  body            String   @db.Text
+  attachments     String[] // File URLs
+
+  // Type
+  messageType     MessageType @default(DIRECT)
+  priority        MessagePriority @default(NORMAL)
+
+  // Status
+  isRead          Boolean  @default(false)
+  readBy          String[] // User IDs who read
+  readAt          Json?    // Map of userId -> timestamp
+
+  // Thread
+  threadId        String?
+  replyToId       String?
+  replyTo         Message? @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         Message[] @relation("MessageReplies")
+
+  // Archival
+  isArchived      Boolean  @default(false)
+  expiresAt       DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([senderId])
+  @@index([threadId])
+  @@index([createdAt])
+  @@index([messageType])
+  @@index([priority])
+  @@map("messages")
+}
+
+// Channel Type Enum
+enum ChannelType {
+  DEPARTMENT
+  TEAM
+  PROJECT
+  GENERAL
+  ANNOUNCEMENTS
+}
+
+// Communication Channel Model
+model Channel {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  channelType     ChannelType
+
+  // Members
+  memberIds       String[] // User IDs
+  adminIds        String[] // Admin user IDs
+
+  // Settings
+  isPrivate       Boolean  @default(false)
+  isArchived      Boolean  @default(false)
+
+  createdById     String
+  createdBy       User     @relation("ChannelCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([channelType])
+  @@index([createdById])
+  @@map("channels")
+}
+
+// Document Category Enum
+enum DocumentCategory {
+  POLICY
+  TRAINING
+  FORM
+  TEMPLATE
+  MEETING_MINUTES
+  REPORT
+  CONTRACT
+  COMPLIANCE
+  OTHER
+}
+
+// Document Model
+model Document {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+
+  // File Information
+  fileUrl         String
+  fileType        String
+  fileSize        Int      // Size in bytes
+
+  // Organization
+  category        DocumentCategory
+  tags            String[]
+  folderId        String?
+  folder          DocumentFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  // Versioning
+  version         String   @default("1.0")
+  parentId        String?
+  parent          Document? @relation("DocumentVersions", fields: [parentId], references: [id], onDelete: SetNull)
+  versions        Document[] @relation("DocumentVersions")
+
+  // Ownership
+  uploadedById    String
+  uploadedBy      User     @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  // Access Control
+  isPublic        Boolean  @default(false)
+  accessList      String[] // User IDs with access
+
+  // Status
+  isArchived      Boolean  @default(false)
+  expiresAt       DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([folderId])
+  @@index([uploadedById])
+  @@index([isArchived])
+  @@map("documents")
+}
+
+// Document Folder Model
+model DocumentFolder {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  parentId        String?
+  parent          DocumentFolder? @relation("SubFolders", fields: [parentId], references: [id], onDelete: Cascade)
+  subfolders      DocumentFolder[] @relation("SubFolders")
+  documents       Document[]
+
+  // Access Control
+  isPublic        Boolean  @default(false)
+  accessList      String[] // User IDs with access
+
+  createdById     String
+  createdBy       User     @relation("FolderCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([createdById])
+  @@map("document_folders")
+}
+
+// ============================================================================
+// MODULE 9: HR FUNCTIONS (Performance Reviews, Time & Attendance, PTO)
+// ============================================================================
+
+// Performance Review Status Enum
+enum ReviewStatus {
+  DRAFT
+  PENDING_SELF_EVAL
+  PENDING_MANAGER_REVIEW
+  PENDING_EMPLOYEE_SIGNATURE
+  COMPLETED
+}
+
+// Performance Review Model
+model PerformanceReview {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation("ReviewedUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewerId      String
+  reviewer        User     @relation("Reviewer", fields: [reviewerId], references: [id])
+
+  // Review Period
+  reviewPeriod    String   // e.g., "Q1 2025", "Annual 2025"
+  reviewDate      DateTime
+  nextReviewDate  DateTime?
+
+  // Ratings (1-5 scale)
+  overallRating   Int
+  goals           Json     // Array of goals with ratings: [{ goal: string, rating: int, progress: string }]
+  competencies    Json     // Array of competencies with ratings: [{ competency: string, rating: int, notes: string }]
+
+  // Feedback
+  strengths       String   @db.Text
+  improvements    String   @db.Text
+  actionPlans     Json     // Array of action items: [{ action: string, dueDate: date, status: string }]
+
+  // Employee Input
+  selfEvaluation  String?  @db.Text
+  employeeComments String? @db.Text
+  employeeSignature String?
+  employeeSignDate DateTime?
+
+  // Manager Input
+  managerComments String?  @db.Text
+  managerSignature String?
+  managerSignDate DateTime?
+
+  // Status
+  status          ReviewStatus @default(DRAFT)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([reviewerId])
+  @@index([reviewDate])
+  @@index([status])
+  @@map("performance_reviews")
+}
+
+// Absence Type Enum
+enum AbsenceType {
+  SICK
+  PTO
+  VACATION
+  PERSONAL
+  FMLA
+  UNPAID
+  BEREAVEMENT
+  JURY_DUTY
+  OTHER
+}
+
+// Time & Attendance Model
+model TimeAttendance {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation("TimeAttendanceUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  date            DateTime
+
+  // Scheduled Time
+  scheduledStart  String?  // HH:MM format
+  scheduledEnd    String?
+
+  // Actual Time
+  actualStart     DateTime?
+  actualEnd       DateTime?
+  breakMinutes    Int?
+
+  // Calculations
+  totalHours      Decimal? @db.Decimal(5, 2)
+  overtimeHours   Decimal? @db.Decimal(5, 2)
+
+  // Absence
+  isAbsent        Boolean  @default(false)
+  absenceType     AbsenceType?
+  absenceReason   String?
+
+  // Approval
+  approvedById    String?
+  approvedBy      User?    @relation("AttendanceApprover", fields: [approvedById], references: [id])
+  approvalDate    DateTime?
+
+  // Notes
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([approvedById])
+  @@map("time_attendance")
+}
+
+// PTO Status Enum
+enum PTOStatus {
+  PENDING
+  APPROVED
+  DENIED
+  CANCELLED
+}
+
+// PTO Request Model
+model PTORequest {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation("PTORequestor", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Request Details
+  requestType     AbsenceType
+  startDate       DateTime
+  endDate         DateTime
+  totalDays       Decimal  @db.Decimal(5, 2)
+
+  // Reason
+  reason          String?  @db.Text
+
+  // Approval
+  status          PTOStatus @default(PENDING)
+  approvedById    String?
+  approvedBy      User?    @relation("PTOApprover", fields: [approvedById], references: [id])
+  approvalDate    DateTime?
+  approvalNotes   String?
+
+  // Coverage
+  coverageNotes   String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([startDate])
+  @@index([approvedById])
+  @@map("pto_requests")
+}
+
+// PTO Balance Model
+model PTOBalance {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation("PTOBalance", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Balances (in days)
+  ptoBalance      Decimal  @default(0) @db.Decimal(6, 2)
+  sickBalance     Decimal  @default(0) @db.Decimal(6, 2)
+  vacationBalance Decimal  @default(0) @db.Decimal(6, 2)
+
+  // Annual Allocation
+  ptoAnnual       Decimal  @default(0) @db.Decimal(6, 2)
+  sickAnnual      Decimal  @default(0) @db.Decimal(6, 2)
+  vacationAnnual  Decimal  @default(0) @db.Decimal(6, 2)
+
+  // Accrual
+  accrualRate     Decimal? @db.Decimal(6, 4) // Days per pay period
+  lastAccrualDate DateTime?
+
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@map("pto_balances")
 }

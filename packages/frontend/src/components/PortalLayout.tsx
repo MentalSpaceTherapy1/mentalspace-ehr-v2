@@ -80,6 +80,42 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
       ),
     },
     {
+      name: 'Self-Schedule',
+      href: '/portal/schedule',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
+      name: 'Symptom Diary',
+      href: '/client/symptoms',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      ),
+    },
+    {
+      name: 'Sleep Diary',
+      href: '/client/sleep',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      ),
+    },
+    {
+      name: 'Exercise Log',
+      href: '/client/exercise',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+    },
+    {
       name: 'Mood Journal',
       href: '/portal/mood',
       icon: (

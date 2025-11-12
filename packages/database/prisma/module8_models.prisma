@@ -1,0 +1,257 @@
+// ============================================================================
+// MODULE 8: REPORTING & ANALYTICS
+// ============================================================================
+
+// ============================================================================
+// DASHBOARD MODELS (3 models)
+// ============================================================================
+
+// Dashboard Configuration
+model Dashboard {
+  id          String   @id @default(uuid())
+  userId      String   // Owner
+  name        String
+  description String?
+  layout      Json     // Grid layout configuration (x, y, w, h for each widget)
+  isDefault   Boolean  @default(false)
+  isPublic    Boolean  @default(false)
+  role        String?  // If role-based default dashboard
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User     @relation("UserDashboards", fields: [userId], references: [id])
+  widgets Widget[]
+
+  @@index([userId])
+  @@map("dashboards")
+}
+
+// Widget Instance
+model Widget {
+  id           String   @id @default(uuid())
+  dashboardId  String
+  widgetType   String   // 'KPI_CARD', 'LINE_CHART', 'BAR_CHART', 'TABLE', etc.
+  title        String
+  config       Json     // Widget-specific configuration
+  position     Json     // Grid position { x, y, w, h }
+  refreshRate  Int      @default(60) // Seconds
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardId])
+  @@map("widgets")
+}
+
+// Threshold Alerts
+model ThresholdAlert {
+  id            String    @id @default(uuid())
+  widgetId      String?
+  userId        String
+  metricName    String
+  operator      String
+  threshold     Decimal   @db.Decimal(10, 2)
+  isActive      Boolean   @default(true)
+  lastTriggered DateTime?
+  createdAt     DateTime  @default(now())
+
+  user User @relation("UserAlerts", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("threshold_alerts")
+}
+
+// ============================================================================
+// PREDICTION MODELS (3 models)
+// ============================================================================
+
+// ML Model Definitions
+model PredictionModel {
+  id                 String   @id @default(uuid())
+  modelType          String   // 'NO_SHOW', 'DROPOUT', 'REVENUE_FORECAST', 'DEMAND_FORECAST'
+  modelVersion       String
+  algorithm          String
+  features           Json
+  hyperparameters    Json
+  performanceMetrics Json
+  trainedAt          DateTime
+  isActive           Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  trainingJobs TrainingJob[]
+  predictions  Prediction[]
+
+  @@unique([modelType, modelVersion])
+  @@map("prediction_models")
+}
+
+// Model Training Jobs
+model TrainingJob {
+  id              String    @id @default(uuid())
+  modelId         String
+  datasetSize     Int
+  trainTestSplit  Decimal   @db.Decimal(3, 2)
+  validationScore Decimal   @db.Decimal(5, 4)
+  startedAt       DateTime
+  completedAt     DateTime?
+  status          String
+  errorMessage    String?
+
+  model PredictionModel @relation(fields: [modelId], references: [id])
+
+  @@index([modelId])
+  @@map("training_jobs")
+}
+
+// Prediction History
+model Prediction {
+  id             String   @id @default(uuid())
+  modelId        String
+  entityType     String
+  entityId       String
+  predictionType String
+  probability    Decimal  @db.Decimal(5, 4)
+  riskLevel      String
+  features       Json
+  predictedAt    DateTime @default(now())
+
+  model PredictionModel @relation(fields: [modelId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([modelId])
+  @@map("predictions")
+}
+
+// ============================================================================
+// REPORT MODELS (2 models)
+// ============================================================================
+
+// Report Definitions
+model ReportDefinition {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  category    String
+  isPublic    Boolean  @default(false)
+  isTemplate  Boolean  @default(false)
+  queryConfig Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User            @relation("UserReports", fields: [userId], references: [id])
+  versions  ReportVersion[]
+  schedules ReportSchedule[]
+
+  @@index([userId])
+  @@index([category])
+  @@map("report_definitions")
+}
+
+// Report Versioning
+model ReportVersion {
+  id            String   @id @default(uuid())
+  reportId      String
+  versionNumber Int
+  queryConfig   Json
+  changedBy     String
+  changeNote    String?
+  createdAt     DateTime @default(now())
+
+  report        ReportDefinition @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  changedByUser User             @relation("ReportVersions", fields: [changedBy], references: [id])
+
+  @@unique([reportId, versionNumber])
+  @@index([reportId])
+  @@map("report_versions")
+}
+
+// ============================================================================
+// DISTRIBUTION MODELS (4 models)
+// ============================================================================
+
+// Report Schedules
+model ReportSchedule {
+  id                    String    @id @default(uuid())
+  reportId              String
+  reportType            String
+  userId                String
+  frequency             String
+  cronExpression        String?
+  timezone              String    @default("America/New_York")
+  format                String
+  recipients            Json
+  distributionCondition Json?
+  lastRunDate           DateTime?
+  nextRunDate           DateTime
+  status                String    @default("ACTIVE")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  report ReportDefinition? @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User              @relation("UserSchedules", fields: [userId], references: [id])
+  logs   DeliveryLog[]
+
+  @@index([userId])
+  @@index([reportId])
+  @@index([nextRunDate])
+  @@map("report_schedules")
+}
+
+// Subscriptions
+model Subscription {
+  id             String   @id @default(uuid())
+  reportId       String
+  reportType     String
+  userId         String
+  frequency      String
+  format         String
+  deliveryMethod String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation("UserSubscriptions", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([reportId])
+  @@map("subscriptions")
+}
+
+// Delivery Logs
+model DeliveryLog {
+  id           String    @id @default(uuid())
+  scheduleId   String
+  reportId     String
+  recipients   Json
+  format       String
+  status       String
+  attemptCount Int       @default(1)
+  sentAt       DateTime?
+  errorMessage String?
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+
+  schedule ReportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@index([status])
+  @@map("delivery_logs")
+}
+
+// Distribution Lists
+model DistributionList {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  emails      Json
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator User @relation("CreatedDistributionLists", fields: [createdBy], references: [id])
+
+  @@index([createdBy])
+  @@map("distribution_lists")
+}

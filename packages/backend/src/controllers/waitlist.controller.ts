@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import * as waitlistService from '../services/waitlist.service';
 import { auditLogger } from '../utils/logger';
+import prisma from '../services/database';
 
 // Validation schemas
 const addToWaitlistSchema = z.object({
@@ -303,6 +304,339 @@ export const updatePriority = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update priority',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+// ============================================================================
+// CLIENT-SPECIFIC ENDPOINTS (Portal clients accessing their own data)
+// ============================================================================
+
+/**
+ * Get current client's waitlist entries
+ */
+export const getMyWaitlistEntries = async (req: Request, res: Response) => {
+  try {
+    // Get clientId from portalAccount (set by authenticateDual middleware)
+    const clientId = (req as any).portalAccount?.clientId;
+
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Client ID not found in authentication context',
+      });
+    }
+
+    // Query waitlist entries for this specific client with relationships
+    const entries = await prisma.waitlistEntry.findMany({
+      where: {
+        clientId,
+        status: 'ACTIVE', // Only show active entries
+      },
+      include: {
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+      },
+      orderBy: {
+        joinedAt: 'desc',
+      },
+    });
+
+    auditLogger.info('Client retrieved their waitlist entries', {
+      clientId,
+      count: entries.length,
+      action: 'VIEW_MY_WAITLIST_ENTRIES',
+    });
+
+    res.status(200).json({
+      success: true,
+      data: entries,
+      count: entries.length,
+    });
+  } catch (error) {
+    logger.error('Get my waitlist entries error:', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve your waitlist entries',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Get current client's waitlist offers
+ */
+export const getMyWaitlistOffers = async (req: Request, res: Response) => {
+  try {
+    // Get clientId from portalAccount (set by authenticateDual middleware)
+    const clientId = (req as any).portalAccount?.clientId;
+
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Client ID not found in authentication context',
+      });
+    }
+
+    // Find active waitlist entries for this client
+    const myEntries = await prisma.waitlistEntry.findMany({
+      where: {
+        clientId,
+        status: 'ACTIVE',
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const entryIds = myEntries.map((e) => e.id);
+
+    if (entryIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        count: 0,
+      });
+    }
+
+    // Find offers for these entries
+    const offers = await prisma.waitlistOffer.findMany({
+      where: {
+        waitlistEntryId: {
+          in: entryIds,
+        },
+        status: 'PENDING', // Only show pending offers
+        expiresAt: {
+          gte: new Date(), // Not expired
+        },
+      },
+      include: {
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+        waitlistEntry: {
+          select: {
+            appointmentType: true,
+          },
+        },
+      },
+      orderBy: {
+        offeredAt: 'desc',
+      },
+    });
+
+    auditLogger.info('Client retrieved their waitlist offers', {
+      clientId,
+      count: offers.length,
+      action: 'VIEW_MY_WAITLIST_OFFERS',
+    });
+
+    res.status(200).json({
+      success: true,
+      data: offers,
+      count: offers.length,
+    });
+  } catch (error) {
+    logger.error('Get my waitlist offers error:', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve your waitlist offers',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Accept a waitlist offer
+ */
+export const acceptWaitlistOffer = async (req: Request, res: Response) => {
+  try {
+    const { entryId, offerId } = req.params;
+    const clientId = (req as any).portalAccount?.clientId;
+
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Client ID not found in authentication context',
+      });
+    }
+
+    // Verify the entry belongs to this client
+    const entry = await prisma.waitlistEntry.findUnique({
+      where: { id: entryId },
+    });
+
+    if (!entry || entry.clientId !== clientId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to accept this offer',
+      });
+    }
+
+    // Get the offer details
+    const offer = await prisma.waitlistOffer.findUnique({
+      where: { id: offerId },
+    });
+
+    if (!offer || offer.waitlistEntryId !== entryId) {
+      return res.status(404).json({
+        success: false,
+        message: 'Offer not found',
+      });
+    }
+
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: 'Offer is no longer available',
+      });
+    }
+
+    if (offer.expiresAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Offer has expired',
+      });
+    }
+
+    // Update offer status
+    await prisma.waitlistOffer.update({
+      where: { id: offerId },
+      data: {
+        status: 'ACCEPTED',
+        respondedAt: new Date(),
+      },
+    });
+
+    // Update waitlist entry status
+    await prisma.waitlistEntry.update({
+      where: { id: entryId },
+      data: {
+        status: 'MATCHED',
+      },
+    });
+
+    // TODO: Create appointment from the offer (implementation depends on appointment service)
+    // This should be done in a transaction with the above updates
+
+    auditLogger.info('Client accepted waitlist offer', {
+      clientId,
+      entryId,
+      offerId,
+      action: 'ACCEPT_WAITLIST_OFFER',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Offer accepted successfully',
+      data: { entryId, offerId },
+    });
+  } catch (error) {
+    logger.error('Accept waitlist offer error:', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to accept offer',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Decline a waitlist offer
+ */
+export const declineWaitlistOffer = async (req: Request, res: Response) => {
+  try {
+    const { entryId, offerId } = req.params;
+    const clientId = (req as any).portalAccount?.clientId;
+
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Client ID not found in authentication context',
+      });
+    }
+
+    // Verify the entry belongs to this client
+    const entry = await prisma.waitlistEntry.findUnique({
+      where: { id: entryId },
+    });
+
+    if (!entry || entry.clientId !== clientId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to decline this offer',
+      });
+    }
+
+    // Get the offer details
+    const offer = await prisma.waitlistOffer.findUnique({
+      where: { id: offerId },
+    });
+
+    if (!offer || offer.waitlistEntryId !== entryId) {
+      return res.status(404).json({
+        success: false,
+        message: 'Offer not found',
+      });
+    }
+
+    if (offer.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: 'Offer is no longer available',
+      });
+    }
+
+    // Update offer status
+    await prisma.waitlistOffer.update({
+      where: { id: offerId },
+      data: {
+        status: 'DECLINED',
+        respondedAt: new Date(),
+      },
+    });
+
+    auditLogger.info('Client declined waitlist offer', {
+      clientId,
+      entryId,
+      offerId,
+      action: 'DECLINE_WAITLIST_OFFER',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Offer declined successfully',
+      data: { entryId, offerId },
+    });
+  } catch (error) {
+    logger.error('Decline waitlist offer error:', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to decline offer',
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }

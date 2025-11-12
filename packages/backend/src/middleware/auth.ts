@@ -23,6 +23,9 @@ declare global {
  * Falls back to JWT for backward compatibility
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+  console.log('[OLD AUTH] authenticate() called for:', req.method, req.url);
+  console.log('[OLD AUTH] Stack trace:', new Error().stack);
+
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
@@ -100,6 +103,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 /**
  * Middleware to authorize specific roles
  * User must have at least ONE of the allowed roles
+ * SUPER_ADMIN always has access to everything
  */
 export const authorize = (...allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -111,6 +115,15 @@ export const authorize = (...allowedRoles: string[]) => {
       // Handle backward compatibility: old tokens may have 'role' instead of 'roles'
       // @ts-ignore - for backward compatibility with old tokens
       const userRoles = req.user.roles || (req.user.role ? [req.user.role] : []);
+
+      // SUPER_ADMIN has absolute access to everything - bypass all role checks
+      const isSuperAdmin = userRoles.some((role: string) =>
+        role === 'SUPER_ADMIN' || role === 'SUPERADMIN'
+      );
+
+      if (isSuperAdmin) {
+        return next();
+      }
 
       // Check if user has any of the allowed roles
       const hasAllowedRole = userRoles.some((role: string) => allowedRoles.includes(role));

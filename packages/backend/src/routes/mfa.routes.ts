@@ -58,4 +58,35 @@ router.post('/verify', authenticate, mfaController.verifyMFA);
  */
 router.post('/backup-codes/regenerate', authenticate, mfaController.regenerateBackupCodes);
 
+/**
+ * @route   POST /api/v1/mfa/send-sms
+ * @desc    Send SMS verification code to user's phone
+ * @access  Private
+ * @note    Requires phone number to be configured in user profile
+ */
+router.post('/send-sms', authenticate, mfaController.sendSMSCode);
+
+/**
+ * @route   POST /api/v1/mfa/enable-with-method
+ * @desc    Enable MFA with method selection (TOTP, SMS, or BOTH)
+ * @access  Private
+ * @body    { method: 'TOTP' | 'SMS' | 'BOTH', secret: string, verificationCode: string, backupCodes: string[] }
+ */
+router.post('/enable-with-method', authenticate, mfaController.enableMFAWithMethod);
+
+/**
+ * @route   GET /api/v1/mfa/admin/users
+ * @desc    Get all users with MFA status (admin only)
+ * @access  Private (Admin/Super Admin only)
+ */
+router.get('/admin/users', authenticate, mfaController.getAllUsersWithMFAStatus);
+
+/**
+ * @route   POST /api/v1/mfa/admin/reset
+ * @desc    Admin reset MFA for user (emergency access)
+ * @access  Private (Admin/Super Admin only)
+ * @body    { targetUserId: string, reason: string }
+ */
+router.post('/admin/reset', authenticate, mfaController.adminResetMFA);
+
 export default router;
