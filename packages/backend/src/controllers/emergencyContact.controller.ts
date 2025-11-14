@@ -93,6 +93,22 @@ export const createEmergencyContact = async (req: Request, res: Response) => {
   try {
     const validatedData = emergencyContactSchema.parse(req.body);
 
+    // Transform the data to match database schema
+    // Frontend sends: firstName, lastName, phoneNumber, canPickup, notes
+    // Database expects: name, phone (no canPickup or notes columns)
+    const dbData = {
+      clientId: validatedData.clientId,
+      name: `${validatedData.firstName} ${validatedData.lastName}`.trim(),
+      relationship: validatedData.relationship,
+      phone: validatedData.phoneNumber,
+      alternatePhone: validatedData.alternatePhone || null,
+      email: validatedData.email || null,
+      address: validatedData.address || null,
+      isPrimary: validatedData.isPrimary,
+      okayToDiscussHealth: false, // Default value, can be added to schema later if needed
+      okayToLeaveMessage: true,   // Default value, can be added to schema later if needed
+    };
+
     // If this contact is marked as primary, unset any other primary contacts for this client
     if (validatedData.isPrimary) {
       await prisma.emergencyContact.updateMany({
@@ -107,7 +123,7 @@ export const createEmergencyContact = async (req: Request, res: Response) => {
     }
 
     const contact = await prisma.emergencyContact.create({
-      data: validatedData as any,
+      data: dbData,
     });
 
     res.status(201).json({
@@ -152,6 +168,27 @@ export const updateEmergencyContact = async (req: Request, res: Response) => {
       });
     }
 
+    // Transform the data to match database schema
+    const dbData: any = {};
+    if (validatedData.firstName !== undefined && validatedData.lastName !== undefined) {
+      dbData.name = `${validatedData.firstName} ${validatedData.lastName}`.trim();
+    } else if (validatedData.firstName !== undefined || validatedData.lastName !== undefined) {
+      // If only one name field is provided, we need to handle it carefully
+      // Parse existing name if needed
+      const parts = existingContact.name.split(' ');
+      const currentFirst = parts[0] || '';
+      const currentLast = parts.slice(1).join(' ') || '';
+      const newFirst = validatedData.firstName !== undefined ? validatedData.firstName : currentFirst;
+      const newLast = validatedData.lastName !== undefined ? validatedData.lastName : currentLast;
+      dbData.name = `${newFirst} ${newLast}`.trim();
+    }
+    if (validatedData.phoneNumber !== undefined) dbData.phone = validatedData.phoneNumber;
+    if (validatedData.relationship !== undefined) dbData.relationship = validatedData.relationship;
+    if (validatedData.alternatePhone !== undefined) dbData.alternatePhone = validatedData.alternatePhone || null;
+    if (validatedData.email !== undefined) dbData.email = validatedData.email || null;
+    if (validatedData.address !== undefined) dbData.address = validatedData.address || null;
+    if (validatedData.isPrimary !== undefined) dbData.isPrimary = validatedData.isPrimary;
+
     // If this contact is being set as primary, unset other primary contacts
     if (validatedData.isPrimary) {
       await prisma.emergencyContact.updateMany({
@@ -168,7 +205,7 @@ export const updateEmergencyContact = async (req: Request, res: Response) => {
 
     const contact = await prisma.emergencyContact.update({
       where: { id },
-      data: validatedData,
+      data: dbData,
     });
 
     res.status(200).json({
