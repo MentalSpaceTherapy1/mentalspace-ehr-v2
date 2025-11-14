@@ -10,8 +10,8 @@ const guardianSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   relationship: z.string().min(1, 'Relationship is required'),
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  email: z.union([z.literal(''), z.string().email()]).transform(val => val === '' ? undefined : val).optional(),
-  address: z.union([z.literal(''), z.string().min(1)]).transform(val => val === '' ? undefined : val).optional(),
+  email: z.string().email().or(z.literal('')).optional(),
+  address: z.string().min(1).or(z.literal('')).optional(),
   isPrimary: z.boolean().default(false),
   notes: z.string().optional(),
 });
@@ -104,8 +104,15 @@ export const createGuardian = async (req: Request, res: Response) => {
       });
     }
 
+    // Convert empty strings to undefined for database
+    const dataToCreate = {
+      ...validatedData,
+      email: validatedData.email === '' ? undefined : validatedData.email,
+      address: validatedData.address === '' ? undefined : validatedData.address,
+    };
+
     const guardian = await prisma.legalGuardian.create({
-      data: validatedData as any,
+      data: dataToCreate as any,
     });
 
     res.status(201).json({
