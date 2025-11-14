@@ -10,8 +10,8 @@ const guardianSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   relationship: z.string().min(1, 'Relationship is required'),
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  email: z.preprocess((val) => val === '' ? undefined : val, z.string().email().optional()),
-  address: z.preprocess((val) => val === '' ? undefined : val, z.string().min(1).optional()),
+  email: z.preprocess((val) => val === '' ? undefined : val, z.optional(z.string().email())),
+  address: z.preprocess((val) => val === '' ? undefined : val, z.optional(z.string().min(1))),
   isPrimary: z.boolean().default(false),
   notes: z.string().optional(),
 });

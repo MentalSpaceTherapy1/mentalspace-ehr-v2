@@ -1,1 +1,1 @@
-{"success":true,"message":"Login successful","data":{"requiresMfa":false,"user":{"id":"245fd0f5-1b4e-4efd-86ca-944cd4899fdf","email":"ejoseph@chctherapy.com","firstName":"Elize","lastName":"Joseph","roles":["ADMINISTRATOR"],"title":"","isActive":true,"mfaEnabled":false},"session":{"token":"E-rbuZpitsC97Nzbk4N28hcbw8v4_zxDkViskJx25t8","sessionId":"e9c96419-54d8-4c81-97e9-0b5296583c1e"}}}
+{"success":false,"message":"Account is locked due to too many failed login attempts. Please try again in 6 minutes.","errorId":"ERR-1763158897749-q5o3x0e66","errorCode":"UNAUTHORIZED"}

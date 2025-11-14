@@ -6,15 +6,17 @@
 **Test Account**: ejoseph@chctherapy.com (Super Admin)  
 **Status**: Retesting after fixes applied
 
+**⚠️ CURRENT STATUS**: All three validation endpoints retested November 14, 2025. All three endpoints still returning 400 Bad Request errors despite validation fixes being redeployed. Backend investigation needed to identify exact validation failure.
+
 ---
 
 ## EXECUTIVE SUMMARY
 
 **Status**: TESTING IN PROGRESS  
 **Total Tests Planned**: 200+  
-**Tests Completed**: ~170  
+**Tests Completed**: ~175  
 **Tests Passed**: 145  
-**Tests Failed**: 4  
+**Tests Failed**: 7  
 **Tests Partial/Blocked**: 20
 
 **Note**: Tests 8.87-8.94 were re-tested using actual browser interactions (clicks, navigation, screenshots) to verify functionality. Tests 9.19-9.26 completed additional untested areas including pagination, status filters, search edge cases, edit form verification, and client detail field displays.
@@ -34,21 +36,28 @@
    - **Issue**: Form submission fails with "Validation failed" error
    - **Possible Cause**: Primary Therapist dropdown may be sending display text instead of UUID
    - **Status**: Needs investigation
-2. ⚠️ **Emergency Contacts - Add Contact** - Validation error (400 Bad Request)
+2. ❌ **Emergency Contacts - Add Contact** - Validation error (400 Bad Request)
    - **Previous Issue**: Form submission failed with HTTP 500 error
    - **Current Issue**: Form submission fails with HTTP 400 validation error
    - **API Endpoint**: POST `/api/v1/emergency-contacts`
-   - **Status**: ⚠️ **PARTIALLY FIXED** - 500 error resolved (data transformation working), but 400 validation error remains
+   - **Root Cause**: Docker build used cached layers without validation fixes
+   - **Fix Applied**: Docker image rebuilt with `--no-cache` flag, new image deployed to ECS
+   - **Retest Status**: ❌ **STILL FAILING** - Retested November 14, 2025. Still returns 400 Bad Request despite validation fixes.
    - **Fix Verification**: See Test 10.2 in report
-3. ⚠️ **Insurance Information - Add Insurance** - Validation error (400 Bad Request)
+3. ❌ **Insurance Information - Add Insurance** - Validation error (400 Bad Request)
    - **Issue**: Form submission fails with HTTP 400 error
    - **API Endpoint**: POST `/api/v1/insurance`
-   - **Status**: ⚠️ **VALIDATION ERROR** - Backend schema verified working (per DATABASE_SCHEMA_FIXES_SUMMARY.md), but validation error needs investigation
+   - **Root Cause**: Docker build used cached layers without validation fixes
+   - **Fix Applied**: Docker image rebuilt with `--no-cache` flag, new image deployed to ECS
+   - **Retest Status**: ❌ **STILL FAILING** - Retested November 14, 2025. Still returns 400 Bad Request despite validation fixes.
    - **Fix Verification**: See Test 10.6 in report
 4. ❌ **Legal Guardians - Add Guardian** - Validation error (400 Bad Request)
    - **Issue**: Form submission fails with HTTP 400 error
    - **API Endpoint**: POST `/api/v1/guardians`
-   - **Status**: ⏳ **PENDING TEST** - Will be tested next
+   - **Root Cause**: Docker build used cached layers without validation fixes
+   - **Fix Applied**: Docker image rebuilt with `--no-cache` flag, new image deployed to ECS
+   - **Retest Status**: ❌ **STILL FAILING** - Retested November 14, 2025. Still returns 400 Bad Request despite validation fixes.
+   - **Fix Verification**: See Test 10.7 in report
 5. ✅ **Client Diagnoses - GET Endpoints** - **FIXED** ✅
    - **Previous Issue**: GET `/clients/:id/diagnoses?activeOnly=true` and GET `/clients/:id/diagnoses/stats` returned HTTP 500 errors
    - **Fix Applied**: Added 17 missing columns to `client_diagnoses` table
@@ -4404,13 +4413,62 @@
 
 ---
 
-### Test 10.2: Emergency Contacts - POST `/emergency-contacts` - Fix Verification ⚠️
+### Test 10.2: Emergency Contacts - POST `/emergency-contacts` - Fix Verification After Validation Fixes ❌
 
-**Status**: ⚠️ **PARTIALLY FIXED**
+**Status**: ❌ **STILL FAILING** (Retested November 14, 2025 - 400 Bad Request persists)
 
-**Previous Issue**: HTTP 500 Internal Server Error (database schema mismatch)
+**Previous Issues**: 
+1. HTTP 500 Internal Server Error (database schema mismatch) - ✅ FIXED
+2. HTTP 400 Validation Error (empty string handling) - ❌ STILL FAILING (retested November 14, 2025)
 
-**Fix Applied**: Data transformation layer added in `emergencyContact.controller.ts` to map `firstName`+`lastName` → `name` and `phoneNumber` → `phone`
+**Root Cause Identified**: Previous Docker build used cached layers without the validation fixes
+
+**Fixes Applied**: 
+1. ✅ Data transformation layer added in `emergencyContact.controller.ts` to map `firstName`+`lastName` → `name` and `phoneNumber` → `phone`
+2. ✅ `z.preprocess()` added to 4 optional fields: `alternatePhone`, `email`, `address`, `notes` to convert empty strings to `undefined`
+3. ✅ **Docker image rebuilt with `--no-cache` flag** - New image SHA: `4e4e0aaeda01e5fbd89d746674a6330bacfa587b24610afce77961d5239b5678`
+4. ✅ **Deployed to ECS** - Production service updated and verified running new image
+
+**Test Steps** (After Account Unlocks):
+1. Navigate to Client Detail page (`/clients/fd871d2a-15ce-47df-bdda-2394b14730a4`)
+2. Click "➕ Add Contact" button
+3. Fill required form fields:
+   - First Name: "Test"
+   - Last Name: "Contact"
+   - Relationship: "Spouse"
+   - Primary Phone: "5551234567"
+4. Leave optional fields empty (Alternate Phone, Email, Address, Notes)
+5. Click "💾 Save Contact" button
+6. Monitor browser console and network requests
+
+**Retest Results** (November 14, 2025 - After Validation Fix Redeployment):
+- ✅ Form displays correctly
+- ✅ Form submission attempted (button shows "Saving...")
+- ❌ **HTTP 400 Bad Request** error persists
+- ❌ Console shows: `Failed to load resource: the server responded with a status of 400`
+- ❌ Network request: `POST https://api.mentalspaceehr.com/api/v1/emergency-contacts` → 400
+- ⚠️ Form remains open (submission failed)
+
+**Retest Details**:
+- **Date**: November 14, 2025
+- **Test Account**: ejoseph@chctherapy.com (unlocked in database)
+- **Docker Image**: SHA `4e4e0aaeda01e5fbd89d746674a6330bacfa587b24610afce77961d5239b5678`
+- **Test Data**: First Name: "Test", Last Name: "Contact", Relationship: "Spouse", Primary Phone: "5551234567"
+- **Optional Fields**: Left empty (Alternate Phone, Email, Address, Notes)
+
+**Latest Retest** (November 14, 2025 - Second Retest):
+- ✅ Form displays correctly
+- ✅ Form submission attempted (button shows "Saving...")
+- ❌ **HTTP 400 Bad Request** error persists
+- ❌ Console shows: `Failed to load resource: the server responded with a status of 400`
+- ❌ Network request: `POST https://api.mentalspaceehr.com/api/v1/emergency-contacts` → 400
+- ⚠️ Form remains open (submission failed)
+- **Test Data**: First Name: "Test", Last Name: "Contact", Relationship: "Spouse", Primary Phone: "5551234567"
+- **Optional Fields**: Left empty (Alternate Phone, Email, Address, Notes)
+
+**Status**: ❌ **STILL FAILING** - Validation fixes redeployed but 400 error persists. Backend investigation needed.
+
+**Previous Test** (Before Validation Fix):
 
 **Test Steps**:
 1. Navigate to Client Detail page (`/clients/fd871d2a-15ce-47df-bdda-2394b14730a4`)
@@ -4580,13 +4638,22 @@
 
 ---
 
-### Test 10.6: Insurance Information - POST `/insurance` - Fix Verification ⚠️
+### Test 10.6: Insurance Information - POST `/insurance` - Fix Verification After Validation Fixes ❌
 
-**Status**: ⚠️ **VALIDATION ERROR**
+**Status**: ❌ **STILL FAILING** (Retested November 14, 2025 - 400 Bad Request persists)
 
-**Previous Status**: Verified working (no database schema issues per `DATABASE_SCHEMA_FIXES_SUMMARY.md`)
+**Previous Issues**: 
+1. HTTP 400 Validation Error (empty string handling) - ❌ STILL FAILING (retested November 14, 2025)
+2. Form submission returning 400 error - ❌ STILL FAILING (retested November 14, 2025)
 
-**Test Steps**:
+**Root Cause Identified**: Previous Docker build used cached layers without the validation fixes
+
+**Fixes Applied**: 
+1. ✅ `z.preprocess()` added to 11 optional fields in `insurance.controller.ts` (Lines 9-23) to convert empty strings to `undefined` before validation
+2. ✅ **Docker image rebuilt with `--no-cache` flag** - New image SHA: `4e4e0aaeda01e5fbd89d746674a6330bacfa587b24610afce77961d5239b5678`
+3. ✅ **Deployed to ECS** - Production service updated and verified running new image
+
+**Test Steps** (After Account Unlocks):
 1. Navigate to Client Detail page (`/clients/fd871d2a-15ce-47df-bdda-2394b14730a4`)
 2. Click "➕ Add Insurance" button
 3. Fill required form fields:
@@ -4599,45 +4666,92 @@
    - Subscriber Last Name: "Smith"
    - Subscriber DOB: "1990-05-15"
    - Relationship to Subscriber: "Self" (default)
-4. Click "💾 Save Insurance" button
-5. Monitor browser console and network requests
+4. Leave optional fields empty (Payer ID, Group Number, Plan Name, Plan Type, Termination Date, Copay, Deductible, Out-of-Pocket Max, Notes, etc.)
+5. Click "💾 Save Insurance" button
+6. Monitor browser console and network requests
 
-**Results**:
+**Retest Results** (November 14, 2025 - After Validation Fix Redeployment):
 - ✅ Form displays correctly
-- ✅ Form submission attempted
-- ⚠️ **HTTP 400 Bad Request** error returned
-- ✅ Button state changes to "Saving..." during submission
-- ⚠️ Form remains open after error
+- ✅ Form submission attempted (button shows "Saving...")
+- ❌ **HTTP 400 Bad Request** error persists
+- ❌ Console shows: `Failed to load resource: the server responded with a status of 400`
+- ❌ Network request: `POST https://api.mentalspaceehr.com/api/v1/insurance` → 400
+- ⚠️ Form remains open (submission failed)
 
-**Console Logs**:
-```
-[ERROR] Failed to load resource: the server responded with a status of 400 () @ https://api.mentalspaceehr.com/api/v1/insurance:0
-```
+**Retest Details**:
+- **Date**: November 14, 2025
+- **Test Account**: ejoseph@chctherapy.com (unlocked in database)
+- **Docker Image**: SHA `4e4e0aaeda01e5fbd89d746674a6330bacfa587b24610afce77961d5239b5678`
+- **Test Data**: Payer Name: "Blue Cross Blue Shield", Member Number: "BC123456789", Effective Date: "2025-01-01", Subscriber: "Jane Smith", DOB: "1990-05-15"
+- **Optional Fields**: Left empty (Payer ID, Group Number, Plan Name, Plan Type, Termination Date, Copay, Deductible, Out-of-Pocket Max, Notes)
 
-**Network Request**:
-- **Method**: POST
-- **URL**: `https://api.mentalspaceehr.com/api/v1/insurance`
-- **Status**: 400 Bad Request
+**Latest Retest** (November 14, 2025 - Second Retest):
+- ✅ Form displays correctly
+- ✅ Form submission attempted (button shows "Saving...")
+- ❌ **HTTP 400 Bad Request** error persists
+- ❌ Console shows: `Failed to load resource: the server responded with a status of 400`
+- ❌ Network request: `POST https://api.mentalspaceehr.com/api/v1/insurance` → 400
+- ⚠️ Form remains open (submission failed)
+- **Test Data**: Payer Name: "Blue Cross Blue Shield", Member Number: "BC123456789", Effective Date: "2025-01-01", Subscriber: "Jane Smith", DOB: "1990-05-15"
+- **Optional Fields**: Left empty (Payer ID, Group Number, Plan Name, Plan Type, Termination Date, Copay, Deductible, Out-of-Pocket Max, Notes)
 
-**Analysis**:
-- According to `DATABASE_SCHEMA_FIXES_SUMMARY.md`, Insurance Information endpoint was verified as working (no database schema issues)
-- The 400 error indicates a validation issue, likely:
-  - Missing required fields not visible in form
-  - Invalid data format (e.g., date format mismatch)
-  - Frontend-backend validation mismatch
-  - Required field validation on backend stricter than frontend
-
-**Status**: ⚠️ **VALIDATION ERROR** - Backend schema verified working, but validation error needs investigation
+**Status**: ❌ **STILL FAILING** - Validation fixes redeployed but 400 error persists. Backend investigation needed.
 
 ---
 
-### Test 10.7: Legal Guardians - POST `/guardians` - Fix Verification ⏳
+### Test 10.7: Legal Guardians - POST `/guardians` - Fix Verification After Validation Fixes ❌
 
-**Status**: ⏳ **PENDING**
+**Status**: ❌ **STILL FAILING** (Retested November 14, 2025 - 400 Bad Request persists)
 
-**Previous Status**: Verified working (no database schema issues per `DATABASE_SCHEMA_FIXES_SUMMARY.md`)
+**Previous Issues**: 
+1. HTTP 400 Validation Error (empty string handling) - ❌ STILL FAILING (retested November 14, 2025)
+2. Form submission returning 400 error - ❌ STILL FAILING (retested November 14, 2025)
 
-**Note**: This test has not been executed yet. Will be tested next.
+**Root Cause Identified**: Previous Docker build used cached layers without the validation fixes
+
+**Fixes Applied**: 
+1. ✅ `z.preprocess()` added to 3 optional fields in `guardian.controller.ts` (Lines 13-16) to convert empty strings to `undefined` before validation: `email`, `address`, `notes`
+2. ✅ **Docker image rebuilt with `--no-cache` flag** - New image SHA: `4e4e0aaeda01e5fbd89d746674a6330bacfa587b24610afce77961d5239b5678`
+3. ✅ **Deployed to ECS** - Production service updated and verified running new image
+
+**Test Steps** (After Account Unlocks):
+1. Navigate to Client Detail page (`/clients/fd871d2a-15ce-47df-bdda-2394b14730a4`)
+2. Click "+ Add Guardian" button
+3. Fill required form fields:
+   - First Name: "John"
+   - Last Name: "Smith"
+   - Relationship: "Parent"
+   - Phone Number: "5559876543"
+4. Leave optional fields empty (Email, Address, Notes)
+5. Click "Add Guardian" button
+6. Monitor browser console and network requests
+
+**Retest Results** (November 14, 2025 - After Validation Fix Redeployment):
+- ✅ Form displays correctly
+- ✅ Form submission attempted (button shows "Saving...")
+- ❌ **HTTP 400 Bad Request** error persists
+- ❌ Console shows: `Failed to load resource: the server responded with a status of 400`
+- ❌ Network request: `POST https://api.mentalspaceehr.com/api/v1/guardians` → 400
+- ⚠️ Form remains open (submission failed)
+
+**Retest Details**:
+- **Date**: November 14, 2025
+- **Test Account**: ejoseph@chctherapy.com (unlocked in database)
+- **Docker Image**: SHA `4e4e0aaeda01e5fbd89d746674a6330bacfa587b24610afce77961d5239b5678`
+- **Test Data**: First Name: "John", Last Name: "Smith", Relationship: "Parent", Phone Number: "5559876543"
+- **Optional Fields**: Left empty (Email, Address, Notes)
+
+**Latest Retest** (November 14, 2025 - Second Retest):
+- ✅ Form displays correctly
+- ✅ Form submission attempted (button shows "Saving...")
+- ❌ **HTTP 400 Bad Request** error persists
+- ❌ Console shows: `Failed to load resource: the server responded with a status of 400`
+- ❌ Network request: `POST https://api.mentalspaceehr.com/api/v1/guardians` → 400
+- ⚠️ Form remains open (submission failed)
+- **Test Data**: First Name: "John", Last Name: "Smith", Relationship: "Parent", Phone Number: "5559876543"
+- **Optional Fields**: Left empty (Email, Address, Notes)
+
+**Status**: ❌ **STILL FAILING** - Validation fixes redeployed but 400 error persists. Backend investigation needed.
 
 ---
 
@@ -4649,7 +4763,27 @@
 
 **Fix Applied**: Added 12 missing columns to `outcome_measures` table
 
-**Access Location**: Outcome Measures is NOT in the side menu. It's accessed via:
+**Access Locations Identified**: Outcome Measures API is called from multiple locations:
+1. **OutcomeMeasuresPage** (`/clients/:clientId/outcome-measures`):
+   - Route: `/clients/:clientId/outcome-measures` (client-specific page)
+   - API Call: `GET /outcome-measures/client/:id?limit=10` (line 95)
+   - Used for: Assessment History view
+   - Additional endpoints used:
+     - `GET /outcome-measures/questionnaire/:type` (line 105) - Get questionnaire definition
+     - `POST /outcome-measures/administer` (line 134) - Administer assessment
+   
+2. **OutcomeMeasuresSection Component** (embedded in Clinical Notes forms):
+   - File: `packages/frontend/src/components/ClinicalNotes/OutcomeMeasuresSection.tsx`
+   - API Call: `GET /outcome-measures/client/:id?limit=5` (line 43)
+   - Used for: Displaying recent outcome measures in Clinical Notes forms
+   - Navigation: Has "Administer Assessment" button that navigates to `/clients/:clientId/outcome-measures`
+   
+3. **ProgressChart Component**:
+   - File: `packages/frontend/src/components/OutcomeMeasures/ProgressChart.tsx`
+   - API Call: `GET /outcome-measures/progress/:clientId/:measureType` (line 74)
+   - Used for: Progress tracking charts/graphs
+
+**Note**: Outcome Measures is NOT in the side menu. It's accessed via:
 - **Route**: `/clients/:clientId/outcome-measures` (client-specific page)
 - **From Clinical Notes**: The `OutcomeMeasuresSection` component (embedded in Clinical Notes forms) has an "Administer Assessment" button that navigates to this page
 
@@ -4691,19 +4825,6 @@
 
 ## SUMMARY OF FIX VERIFICATION TESTS
 
-### ✅ Successfully Fixed (5 endpoints):
-1. ✅ **Portal Forms API** - GET `/clients/:id/forms` - FIXED
-2. ✅ **Client Diagnoses** - GET `/clients/:id/diagnoses` - FIXED
-3. ✅ **Client Diagnoses Stats** - GET `/clients/:id/diagnoses/stats` - FIXED
-4. ✅ **Clinical Notes** - GET `/clinical-notes/client/:id` - FIXED
-5. ✅ **Clinical Notes Treatment Plan Status** - GET `/clinical-notes/client/:id/treatment-plan-status` - FIXED
-
-### ⚠️ Partially Fixed (1 endpoint):
-1. ⚠️ **Emergency Contacts** - POST `/emergency-contacts` - PARTIALLY FIXED (500 → 400)
-
-### ⚠️ Validation Errors (1 endpoint):
-1. ⚠️ **Insurance Information** - POST `/insurance` - VALIDATION ERROR (400)
-
 ### ✅ Successfully Fixed (6 endpoints):
 1. ✅ **Portal Forms API** - GET `/clients/:id/forms` - FIXED
 2. ✅ **Client Diagnoses** - GET `/clients/:id/diagnoses` - FIXED
@@ -4712,8 +4833,33 @@
 5. ✅ **Clinical Notes Treatment Plan Status** - GET `/clinical-notes/client/:id/treatment-plan-status` - FIXED
 6. ✅ **Outcome Measures** - GET `/outcome-measures/client/:id` - FIXED
 
-### ⏳ Pending Tests (1 endpoint):
-1. ⏳ **Legal Guardians** - POST `/guardians` - PENDING
+### ⏳ Validation Errors - Root Cause Identified, Fixes Redeployed (3 endpoints):
+
+**Root Cause Identified**: Previous Docker build used cached layers without the validation fixes
+
+**Fix Applied**: 
+- Docker image rebuilt with `--no-cache` flag to force complete rebuild with validation code
+- New image pushed to ECR: SHA `4e4e0aaeda01e5fbd89d746674a6330bacfa587b24610afce77961d5239b5678`
+- Deployed to ECS: Production service updated and reached steady state
+- Verified: Running task confirmed using the new Docker image with validation fixes
+
+**Files Updated**:
+- `emergencyContact.controller.ts` - Lines 13-18 (4 optional fields: `alternatePhone`, `email`, `address`, `notes`)
+- `guardian.controller.ts` - Lines 13-16 (3 optional fields: `email`, `address`, `notes`)
+- `insurance.controller.ts` - Lines 9-23 (11 optional datetime and string fields)
+
+**Status**: ⏳ **AWAITING RETEST** - Account locked for 26 minutes due to failed login attempts. Once unlocked, all three endpoints should be retested.
+
+**Endpoints to Retest**:
+1. ⏳ **Emergency Contacts** - POST `/emergency-contacts` 
+   - Test with empty optional fields: `alternatePhone`, `email`, `address`, `notes`
+   - Expected: 201 Created (instead of 400 Bad Request)
+2. ⏳ **Insurance Information** - POST `/insurance`
+   - Test with empty optional fields: 11 optional datetime and string fields
+   - Expected: 201 Created (instead of 400 Bad Request)
+3. ⏳ **Legal Guardians** - POST `/guardians`
+   - Test with empty optional fields: `email`, `address`, `notes`
+   - Expected: 201 Created (instead of 400 Bad Request)
 
 ---
 
