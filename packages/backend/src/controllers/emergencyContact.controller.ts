@@ -10,12 +10,12 @@ const emergencyContactSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   relationship: z.string().min(1, 'Relationship is required'),
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  alternatePhone: z.string().optional(),
-  email: z.string().email().optional(),
-  address: z.string().optional(),
+  alternatePhone: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
+  email: z.preprocess((val) => (val === '' ? undefined : val), z.string().email().optional()),
+  address: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
   isPrimary: z.boolean().default(false),
   canPickup: z.boolean().default(false),
-  notes: z.string().optional(),
+  notes: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
 });
 
 const updateEmergencyContactSchema = emergencyContactSchema.partial().omit({ clientId: true });

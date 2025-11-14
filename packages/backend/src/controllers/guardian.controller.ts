@@ -10,10 +10,10 @@ const guardianSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   relationship: z.string().min(1, 'Relationship is required'),
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  email: z.string().email().optional(),
-  address: z.string().optional(),
+  email: z.preprocess((val) => (val === '' ? undefined : val), z.string().email().optional()),
+  address: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
   isPrimary: z.boolean().default(false),
-  notes: z.string().optional(),
+  notes: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
 });
 
 const updateGuardianSchema = guardianSchema.partial().omit({ clientId: true });
