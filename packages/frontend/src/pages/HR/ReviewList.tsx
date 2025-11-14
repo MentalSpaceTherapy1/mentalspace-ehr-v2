@@ -147,7 +147,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
       {/* Quick Stats */}
       {stats && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)',
@@ -168,7 +168,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #2ECC71 0%, #27AE60 100%)',
@@ -189,7 +189,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #F39C12 0%, #E67E22 100%)',
@@ -210,7 +210,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #3498DB 0%, #2980B9 100%)',
@@ -242,7 +242,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
           </Typography>
         </Box>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
               label="Search Employee"
@@ -252,7 +252,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
               size="small"
             />
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Status</InputLabel>
               <Select
@@ -269,7 +269,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
               label="Start Date"
@@ -280,7 +280,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
               size="small"
             />
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
               label="End Date"
@@ -386,7 +386,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
                       </Box>
 
                       <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                           <Box sx={{ textAlign: 'center' }}>
                             <Typography variant="h4" sx={{ color: '#667EEA', fontWeight: 700 }}>
                               {review.overallRating?.toFixed(1) ?? '0.0'}
@@ -397,7 +397,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
                             </Typography>
                           </Box>
                         </Grid>
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                           <Box sx={{ textAlign: 'center' }}>
                             <Typography variant="h4" sx={{ color: '#2ECC71', fontWeight: 700 }}>
                               {review.goals?.filter((g) => g.status === 'COMPLETED').length || 0}
@@ -407,7 +407,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
                             </Typography>
                           </Box>
                         </Grid>
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                           <Box sx={{ textAlign: 'center' }}>
                             <Typography variant="h4" sx={{ color: '#F39C12', fontWeight: 700 }}>
                               {review.categories?.length || 0}

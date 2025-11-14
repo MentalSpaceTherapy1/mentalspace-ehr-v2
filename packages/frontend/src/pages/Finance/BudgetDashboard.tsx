@@ -166,7 +166,7 @@ const BudgetDashboard: React.FC = () => {
 
       {/* Budget Overview Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Paper
             sx={{
               p: 3,
@@ -184,7 +184,7 @@ const BudgetDashboard: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Paper
             sx={{
               p: 3,
@@ -202,7 +202,7 @@ const BudgetDashboard: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Paper
             sx={{
               p: 3,
@@ -220,7 +220,7 @@ const BudgetDashboard: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Paper
             sx={{
               p: 3,
@@ -240,7 +240,7 @@ const BudgetDashboard: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Budget Utilization (Circular Progress) */}
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Card sx={{ boxShadow: 3, height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -295,7 +295,7 @@ const BudgetDashboard: React.FC = () => {
               </Box>
 
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Paper sx={{ p: 2, bgcolor: '#f3e5f5', textAlign: 'center' }}>
                     <Typography variant="h6" color="primary" fontWeight="bold">
                       ${utilization.spent.toLocaleString()}
@@ -305,7 +305,7 @@ const BudgetDashboard: React.FC = () => {
                     </Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Paper sx={{ p: 2, bgcolor: '#e3f2fd', textAlign: 'center' }}>
                     <Typography variant="h6" color="primary" fontWeight="bold">
                       ${utilization.remaining.toLocaleString()}
@@ -321,7 +321,7 @@ const BudgetDashboard: React.FC = () => {
         </Grid>
 
         {/* Category Breakdown (Bar Chart) */}
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Card sx={{ boxShadow: 3, height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -360,7 +360,7 @@ const BudgetDashboard: React.FC = () => {
         </Grid>
 
         {/* Category Details */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Card sx={{ boxShadow: 3 }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -369,7 +369,7 @@ const BudgetDashboard: React.FC = () => {
 
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 {utilization.byCategory.map((category) => (
-                  <Grid item xs={12} md={6} key={category.category}>
+                  <Grid size={{ xs: 12, md: 6 }} key={category.category}>
                     <Paper sx={{ p: 2 }}>
                       <Stack
                         direction="row"

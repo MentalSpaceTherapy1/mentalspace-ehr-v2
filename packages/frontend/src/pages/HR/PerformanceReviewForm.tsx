@@ -233,12 +233,12 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
 
   const renderBasicInfo = () => (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Typography variant="h6" gutterBottom sx={{ color: '#2C3E50', fontWeight: 600 }}>
           Review Period Information
         </Typography>
       </Grid>
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <TextField
           fullWidth
           label="Employee Name"
@@ -247,7 +247,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
           variant="outlined"
         />
       </Grid>
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <TextField
           fullWidth
           label="Employee ID"
@@ -256,7 +256,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
           variant="outlined"
         />
       </Grid>
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <TextField
           fullWidth
           label="Review Period Start"
@@ -267,7 +267,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
           variant="outlined"
         />
       </Grid>
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <TextField
           fullWidth
           label="Review Period End"
@@ -283,7 +283,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
 
   const renderPerformanceRatings = () => (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Typography variant="h6" gutterBottom sx={{ color: '#2C3E50', fontWeight: 600 }}>
           Performance Categories
         </Typography>
@@ -292,7 +292,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
         </Typography>
       </Grid>
       {formData.categories?.map((category, index) => (
-        <Grid item xs={12} key={index}>
+        <Grid size={{ xs: 12 }} key={index}>
           <Card
             sx={{
               background: `linear-gradient(135deg, ${PERFORMANCE_CATEGORIES[index]?.color}15 0%, ${PERFORMANCE_CATEGORIES[index]?.color}05 100%)`,
@@ -358,7 +358,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
 
   const renderGoalsAndAchievements = () => (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
             Goals
@@ -398,7 +398,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
                 sx={{ mb: 2 }}
               />
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="caption" gutterBottom>
                     Status
                   </Typography>
@@ -418,7 +418,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
                     ))}
                   </Stack>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="caption" gutterBottom>
                     Achievement Level: {goal.achievementLevel}%
                   </Typography>
@@ -437,11 +437,11 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
         ))}
       </Grid>
 
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Divider sx={{ my: 2 }} />
       </Grid>
 
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
             Achievements
@@ -477,11 +477,11 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
         ))}
       </Grid>
 
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Divider sx={{ my: 2 }} />
       </Grid>
 
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ color: '#2C3E50', fontWeight: 600 }}>
             Areas for Improvement
@@ -526,13 +526,13 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
 
     return (
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Alert severity="info" sx={{ mb: 3 }}>
             Review this summary before submitting. You can go back to make changes if needed.
           </Alert>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)', color: 'white' }}>
             <CardContent>
               <Typography variant="h3" align="center" sx={{ fontWeight: 700 }}>
@@ -545,7 +545,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #2ECC71 0%, #27AE60 100%)', color: 'white' }}>
             <CardContent>
               <Typography variant="h3" align="center" sx={{ fontWeight: 700 }}>
@@ -558,7 +558,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
           </Card>
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <TextField
             fullWidth
             multiline
@@ -571,7 +571,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
             Supporting Documents
           </Typography>

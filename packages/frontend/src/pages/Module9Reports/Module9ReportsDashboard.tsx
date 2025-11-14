@@ -154,7 +154,7 @@ const Module9ReportsDashboard: React.FC = () => {
           </Typography>
           <Grid container spacing={3}>
             {favoriteReportsList.map(report => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={report.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={report.id}>
                 <ReportCard
                   report={report}
                   isFavorite={true}
@@ -174,7 +174,7 @@ const Module9ReportsDashboard: React.FC = () => {
         </Typography>
         <Grid container spacing={3}>
           {filteredReports.map(report => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={report.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={report.id}>
               <ReportCard
                 report={report}
                 isFavorite={favoriteReports.includes(report.id)}
@@ -195,7 +195,7 @@ const Module9ReportsDashboard: React.FC = () => {
           </Typography>
           <Grid container spacing={2}>
             {recentReports.slice(0, 6).map(report => (
-              <Grid item xs={12} sm={6} md={4} key={report.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={report.id}>
                 <Card
                   sx={{
                     cursor: 'pointer',

@@ -30,7 +30,7 @@ echo ""
 
 echo "Step 4: Tagging and Pushing Image"
 echo "---------------------------------"
-ECR_REPO="$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/mentalspace-backend-$ENV"
+ECR_REPO="$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/mentalspace-backend"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 docker tag mentalspace-backend:latest $ECR_REPO:latest
@@ -75,7 +75,7 @@ echo "📊 Monitor deployment:"
 echo "  aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --region $REGION"
 echo ""
 echo "📝 View logs:"
-echo "  aws logs tail /ecs/mentalspace-backend-$ENV --follow --region $REGION"
+echo "  aws logs tail /ecs/mentalspace-backend --follow --region $REGION"
 echo ""
 echo "🔍 Test health endpoint:"
 echo "  curl http://$ALB_DNS/api/v1/health/live"

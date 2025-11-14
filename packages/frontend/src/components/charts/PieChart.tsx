@@ -127,7 +127,7 @@ export default function PieChart({
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={showPercentage ? (entry) => `${(entry.percent * 100).toFixed(0)}%` : false}
+            label={showPercentage ? (entry: any) => `${((entry.percent as number) * 100).toFixed(0)}%` : false}
             outerRadius={height / 3}
             fill="#8884d8"
             dataKey={valueKey}
@@ -135,7 +135,7 @@ export default function PieChart({
             onClick={onSliceClick}
             onMouseEnter={onPieEnter}
             onMouseLeave={onPieLeave}
-            activeIndex={activeIndex}
+            {...(activeIndex !== undefined && { activeIndex })}
             activeShape={renderActiveShape}
             animationDuration={animate ? 1000 : 0}
           >

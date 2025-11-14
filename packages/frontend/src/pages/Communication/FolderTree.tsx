@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   List,
@@ -45,13 +45,43 @@ interface Folder {
 }
 
 interface FolderTreeProps {
-  folders: Folder[];
-  selectedFolder: string | null;
-  onSelectFolder: (folderId: string) => void;
+  folders?: Folder[];
+  selectedFolder?: string | null;
+  onSelectFolder?: (folderId: string) => void;
 }
 
-const FolderTree: React.FC<FolderTreeProps> = ({ folders, selectedFolder, onSelectFolder }) => {
-  const { createFolder } = useDocuments();
+const FolderTree: React.FC<FolderTreeProps> = ({
+  folders: propFolders,
+  selectedFolder: propSelectedFolder,
+  onSelectFolder: propOnSelectFolder
+}) => {
+  const { createFolder, fetchFolders } = useDocuments();
+  const [folders, setFolders] = useState<Folder[]>(propFolders || []);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(propSelectedFolder || null);
+
+  useEffect(() => {
+    if (!propFolders) {
+      const loadFolders = async () => {
+        try {
+          await fetchFolders();
+          // fetchFolders updates the hook state internally
+        } catch (err) {
+          console.error('Failed to fetch folders:', err);
+        }
+      };
+      loadFolders();
+    } else {
+      setFolders(propFolders);
+    }
+  }, [propFolders, fetchFolders]);
+
+  const handleSelectFolder = (folderId: string | null) => {
+    setSelectedFolder(folderId);
+    if (folderId) {
+      propOnSelectFolder?.(folderId);
+    }
+  };
+
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [contextFolder, setContextFolder] = useState<string | null>(null);
@@ -115,7 +145,7 @@ const FolderTree: React.FC<FolderTreeProps> = ({ folders, selectedFolder, onSele
         >
           <ListItemButton
             selected={isSelected}
-            onClick={() => onSelectFolder(folder.id)}
+            onClick={() => handleSelectFolder(folder.id)}
             sx={{
               pl: 2 + level * 2,
               borderRadius: 2,
@@ -234,7 +264,7 @@ const FolderTree: React.FC<FolderTreeProps> = ({ folders, selectedFolder, onSele
         {/* Root/All Documents */}
         <ListItemButton
           selected={selectedFolder === null}
-          onClick={() => onSelectFolder(null as any)}
+          onClick={() => handleSelectFolder(null)}
           sx={{
             borderRadius: 2,
             mb: 0.5,

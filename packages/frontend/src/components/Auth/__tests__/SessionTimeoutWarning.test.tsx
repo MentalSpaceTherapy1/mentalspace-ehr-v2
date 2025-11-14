@@ -4,7 +4,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SessionTimeoutWarning } from '../SessionTimeoutWarning';
+import SessionTimeoutWarning from '../SessionTimeoutWarning';
 
 // Mock API calls
 const mockExtendSession = jest.fn();

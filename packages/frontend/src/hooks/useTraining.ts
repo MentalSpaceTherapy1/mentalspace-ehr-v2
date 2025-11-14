@@ -83,39 +83,30 @@ export interface TrainingStats {
 
 // Courses
 const fetchCourses = async (filters?: { category?: string; type?: string; format?: string; search?: string }) => {
-  const { data } = await axios.get(`${API_URL}/training/courses`, {
-    params: filters,
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  const res = await api.get(`${API_BASE}/courses`, {
+    params: filters
   });
-  return data;
+  return res.data.data || res.data;
 };
 
 const fetchCourseById = async (courseId: string) => {
-  const { data } = await axios.get(`${API_URL}/training/courses/${courseId}`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-  return data;
+  const res = await api.get(`${API_BASE}/courses/${courseId}`);
+  return res.data.data || res.data;
 };
 
 const createCourse = async (courseData: Partial<Course>) => {
-  const { data } = await axios.post(`${API_URL}/training/courses`, courseData, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-  return data;
+  const res = await api.post(`${API_BASE}/courses`, courseData);
+  return res.data.data || res.data;
 };
 
 const updateCourse = async ({ courseId, courseData }: { courseId: string; courseData: Partial<Course> }) => {
-  const { data } = await axios.put(`${API_URL}/training/courses/${courseId}`, courseData, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-  return data;
+  const res = await api.put(`${API_BASE}/courses/${courseId}`, courseData);
+  return res.data.data || res.data;
 };
 
 const deleteCourse = async (courseId: string) => {
-  const { data } = await axios.delete(`${API_URL}/training/courses/${courseId}`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-  return data;
+  const res = await api.delete(`${API_BASE}/courses/${courseId}`);
+  return res.data.data || res.data;
 };
 
 // Enrollments
@@ -127,64 +118,51 @@ const fetchEnrollments = async (userId?: string) => {
 };
 
 const fetchEnrollmentsByCourse = async (courseId: string) => {
-  const { data } = await axios.get(`${API_URL}/training/courses/${courseId}/enrollments`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-  return data;
+  const res = await api.get(`${API_BASE}/courses/${courseId}/enrollments`);
+  return res.data.data || res.data;
 };
 
 const enrollUser = async ({ userId, courseId }: { userId: string; courseId: string }) => {
-  const { data } = await axios.post(`${API_URL}/training/enrollments`, { userId, courseId }, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-  return data;
+  const res = await api.post(`${API_BASE}/enrollments`, { userId, courseId });
+  return res.data.data || res.data;
 };
 
 const bulkEnroll = async ({ userIds, courseIds }: { userIds: string[]; courseIds: string[] }) => {
-  const { data } = await axios.post(`${API_URL}/training/enrollments/bulk`, { userIds, courseIds }, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-  return data;
+  const res = await api.post(`${API_BASE}/enrollments/bulk`, { userIds, courseIds });
+  return res.data.data || res.data;
 };
 
 const updateEnrollmentProgress = async ({ enrollmentId, progress, score }: { enrollmentId: string; progress: number; score?: number }) => {
-  const { data } = await axios.put(`${API_URL}/training/enrollments/${enrollmentId}`, { progress, score }, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-  return data;
+  const res = await api.put(`${API_BASE}/enrollments/${enrollmentId}`, { progress, score });
+  return res.data.data || res.data;
 };
 
 // CEU Tracking
 const fetchCEURecords = async (userId?: string, year?: number) => {
-  const { data } = await axios.get(`${API_URL}/training/ceu`, {
-    params: { userId, year },
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  const res = await api.get(`${API_BASE}/ceu`, {
+    params: { userId, year }
   });
-  return data;
+  return res.data.data || res.data;
 };
 
 const fetchCEUSummary = async (userId?: string, year?: number) => {
-  const { data } = await axios.get(`${API_URL}/training/ceu/summary`, {
-    params: { userId, year },
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  const res = await api.get(`${API_BASE}/ceu/summary`, {
+    params: { userId, year }
   });
-  return data;
+  return res.data.data || res.data;
 };
 
 // Compliance
 const fetchComplianceStatus = async (departmentId?: string) => {
-  const { data } = await axios.get(`${API_URL}/training/compliance`, {
-    params: { departmentId },
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  const res = await api.get(`${API_BASE}/compliance`, {
+    params: { departmentId }
   });
-  return data;
+  return res.data.data || res.data;
 };
 
 const sendComplianceReminders = async (userIds: string[]) => {
-  const { data } = await axios.post(`${API_URL}/training/compliance/reminders`, { userIds }, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-  });
-  return data;
+  const res = await api.post(`${API_BASE}/compliance/reminders`, { userIds });
+  return res.data.data || res.data;
 };
 
 // Dashboard Stats
@@ -204,11 +182,10 @@ const fetchUpcomingTrainings = async (userId?: string) => {
 
 // Certificates
 const downloadCertificate = async (enrollmentId: string) => {
-  const { data } = await axios.get(`${API_URL}/training/certificates/${enrollmentId}`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+  const res = await api.get(`${API_BASE}/certificates/${enrollmentId}`, {
     responseType: 'blob'
   });
-  return data;
+  return res.data;
 };
 
 // React Query Hooks

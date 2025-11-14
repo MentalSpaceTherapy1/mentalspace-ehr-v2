@@ -520,6 +520,22 @@ function App() {
           }
         />
         <Route
+          path="/group-sessions"
+          element={
+            <PrivateRoute>
+              <GroupSessionsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/group-sessions/:id"
+          element={
+            <PrivateRoute>
+              <GroupDetailsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/telehealth/session/:appointmentId"
           element={
             <PrivateRoute>

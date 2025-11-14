@@ -506,7 +506,7 @@ export default function SchedulingRules() {
 
         {/* Statistics Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{xs: 12, sm: 6, md: 3}}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -533,7 +533,7 @@ export default function SchedulingRules() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{xs: 12, sm: 6, md: 3}}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
@@ -560,7 +560,7 @@ export default function SchedulingRules() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{xs: 12, sm: 6, md: 3}}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -587,7 +587,7 @@ export default function SchedulingRules() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{xs: 12, sm: 6, md: 3}}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
@@ -625,7 +625,7 @@ export default function SchedulingRules() {
               </Typography>
             </Box>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   fullWidth
                   size="small"
@@ -635,7 +635,7 @@ export default function SchedulingRules() {
                   placeholder="Enter clinician name..."
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid size={{xs: 12, md: 4}}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Rule Type</InputLabel>
                   <Select
@@ -649,7 +649,7 @@ export default function SchedulingRules() {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid size={{xs: 12, md: 4}}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Status</InputLabel>
                   <Select
@@ -827,7 +827,7 @@ export default function SchedulingRules() {
             <DialogContent sx={{ pt: 3 }}>
               <Grid container spacing={3}>
                 {/* Rule Type */}
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <FormControl component="fieldset">
                     <FormLabel component="legend">Rule Type</FormLabel>
                     <RadioGroup
@@ -839,7 +839,6 @@ export default function SchedulingRules() {
                           clinicianId: e.target.value === 'org' ? null : prev.clinicianId || '',
                         }))
                       }
-                      disabled={!!editingRule}
                     >
                       <FormControlLabel
                         value="org"
@@ -857,7 +856,7 @@ export default function SchedulingRules() {
 
                 {/* Clinician Selection */}
                 {formData.clinicianId !== null && (
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <Autocomplete
                       options={clinicians}
                       getOptionLabel={(option) =>
@@ -884,7 +883,7 @@ export default function SchedulingRules() {
                   </Grid>
                 )}
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Divider>
                     <Typography variant="body2" color="text.secondary">
                       Booking Window
@@ -893,7 +892,7 @@ export default function SchedulingRules() {
                 </Grid>
 
                 {/* Booking Restrictions */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <TextField
                     fullWidth
                     type="number"
@@ -910,7 +909,7 @@ export default function SchedulingRules() {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <TextField
                     fullWidth
                     type="number"
@@ -927,7 +926,7 @@ export default function SchedulingRules() {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <TextField
                     fullWidth
                     type="number"
@@ -945,7 +944,7 @@ export default function SchedulingRules() {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Divider>
                     <Typography variant="body2" color="text.secondary">
                       Appointment Slots
@@ -954,7 +953,7 @@ export default function SchedulingRules() {
                 </Grid>
 
                 {/* Slot Configuration */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <FormControl fullWidth required>
                     <InputLabel>Slot Duration</InputLabel>
                     <Select
@@ -976,7 +975,7 @@ export default function SchedulingRules() {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <FormControl fullWidth required>
                     <InputLabel>Buffer Time</InputLabel>
                     <Select
@@ -998,7 +997,7 @@ export default function SchedulingRules() {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <TextField
                     fullWidth
                     type="number"
@@ -1018,7 +1017,7 @@ export default function SchedulingRules() {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Divider>
                     <Typography variant="body2" color="text.secondary">
                       Availability Settings
@@ -1027,7 +1026,7 @@ export default function SchedulingRules() {
                 </Grid>
 
                 {/* Allowed Days */}
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <FormLabel component="legend">Allowed Days *</FormLabel>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                     {daysOfWeek.map((day) => (
@@ -1043,7 +1042,7 @@ export default function SchedulingRules() {
                 </Grid>
 
                 {/* Toggles */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <FormControlLabel
                     control={
                       <Switch
@@ -1061,7 +1060,7 @@ export default function SchedulingRules() {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <FormControlLabel
                     control={
                       <Switch
@@ -1079,7 +1078,7 @@ export default function SchedulingRules() {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <FormControlLabel
                     control={
                       <Switch
@@ -1097,7 +1096,7 @@ export default function SchedulingRules() {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Divider>
                     <Typography variant="body2" color="text.secondary">
                       Blockout Periods
@@ -1106,7 +1105,7 @@ export default function SchedulingRules() {
                 </Grid>
 
                 {/* Blockout Periods */}
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   {formData.blockoutPeriods.length > 0 && (
                     <Box sx={{ mb: 2 }}>
                       {formData.blockoutPeriods.map((period, idx) => (
@@ -1124,7 +1123,7 @@ export default function SchedulingRules() {
                   )}
 
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{xs: 12, md: 4}}>
                       <DatePicker
                         label="Start Date"
                         value={newBlockout.startDate}
@@ -1134,7 +1133,7 @@ export default function SchedulingRules() {
                         slotProps={{ textField: { fullWidth: true, size: 'small' } }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{xs: 12, md: 4}}>
                       <DatePicker
                         label="End Date"
                         value={newBlockout.endDate}
@@ -1144,7 +1143,7 @@ export default function SchedulingRules() {
                         slotProps={{ textField: { fullWidth: true, size: 'small' } }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{xs: 12, md: 4}}>
                       <TextField
                         fullWidth
                         size="small"

@@ -239,7 +239,7 @@ const ReportBuilder: React.FC = () => {
             </Typography>
             <Grid container spacing={2}>
               {reportTypes.map((type) => (
-                <Grid item xs={12} sm={6} md={4} key={type.id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={type.id}>
                   <Card
                     onClick={() => setSelectedReportType(type.id)}
                     sx={{
@@ -317,7 +317,7 @@ const ReportBuilder: React.FC = () => {
                     }}
                   >
                     <Grid container spacing={2} sx={{ flex: 1 }}>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <FormControl fullWidth size="small">
                           <InputLabel>Field</InputLabel>
                           <Select
@@ -333,7 +333,7 @@ const ReportBuilder: React.FC = () => {
                           </Select>
                         </FormControl>
                       </Grid>
-                      <Grid item xs={12} sm={3}>
+                      <Grid size={{ xs: 12, sm: 3 }}>
                         <FormControl fullWidth size="small">
                           <InputLabel>Operator</InputLabel>
                           <Select
@@ -349,7 +349,7 @@ const ReportBuilder: React.FC = () => {
                           </Select>
                         </FormControl>
                       </Grid>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField
                           fullWidth
                           size="small"
@@ -358,7 +358,7 @@ const ReportBuilder: React.FC = () => {
                           onChange={(e) => handleUpdateFilter(index, 'value', e.target.value)}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={1}>
+                      <Grid size={{ xs: 12, sm: 1 }}>
                         <IconButton onClick={() => handleRemoveFilter(index)} color="error">
                           <DeleteIcon />
                         </IconButton>
@@ -378,7 +378,7 @@ const ReportBuilder: React.FC = () => {
               Select Columns to Include
             </Typography>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
                   Available Columns
                 </Typography>
@@ -398,7 +398,7 @@ const ReportBuilder: React.FC = () => {
                   ))}
                 </Paper>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
                   Selected Columns (Drag to reorder)
                 </Typography>
@@ -449,7 +449,7 @@ const ReportBuilder: React.FC = () => {
             </Typography>
             <Grid container spacing={2}>
               {chartTypes.map((chart) => (
-                <Grid item xs={12} sm={6} md={3} key={chart.id}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={chart.id}>
                   <Card
                     onClick={() => setSelectedChartType(chart.id)}
                     sx={{
@@ -487,7 +487,7 @@ const ReportBuilder: React.FC = () => {
               Report Details
             </Typography>
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Report Name"
@@ -496,7 +496,7 @@ const ReportBuilder: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   multiline
@@ -514,7 +514,7 @@ const ReportBuilder: React.FC = () => {
               Preview Configuration
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -526,7 +526,7 @@ const ReportBuilder: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -538,7 +538,7 @@ const ReportBuilder: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -548,7 +548,7 @@ const ReportBuilder: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>

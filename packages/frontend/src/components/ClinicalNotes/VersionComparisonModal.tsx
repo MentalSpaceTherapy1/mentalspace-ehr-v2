@@ -161,7 +161,7 @@ export const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             </Alert>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Paper sx={{ p: 2, backgroundColor: '#fff3e0' }}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                     Previous Version
@@ -178,7 +178,7 @@ export const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
                   </Typography>
                 </Paper>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Paper sx={{ p: 2, backgroundColor: '#e8f5e9' }}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                     New Version

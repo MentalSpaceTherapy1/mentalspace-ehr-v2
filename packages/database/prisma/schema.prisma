@@ -16,7 +16,7 @@ datasource db {
 // ============================================================================
 
 enum UserRole {
-  SUPER_ADMIN      // Absolute access to everything - bypasses all authorization checks
+  SUPER_ADMIN // Absolute access to everything - bypasses all authorization checks
   ADMINISTRATOR
   SUPERVISOR
   CLINICIAN
@@ -267,17 +267,17 @@ model User {
   distributionLists DistributionList[] @relation("CreatedDistributionLists")
 
   // Module 9: Credentialing & Licensing (Agent 1)
-  credentials              Credential[]             @relation("UserCredentials")
+  credentials Credential[] @relation("UserCredentials")
 
   // Module 9: Compliance Management (Agent 3)
-  policiesOwned            Policy[]                 @relation("PolicyOwner")
-  policiesApproved         Policy[]                 @relation("PolicyApprover")
-  policyAcknowledgments    PolicyAcknowledgment[]   @relation("PolicyAcknowledgments")
-  incidentsReported        Incident[]               @relation("IncidentReporter")
-  incidentsInvestigating   Incident[]               @relation("IncidentInvestigator")
+  policiesOwned          Policy[]               @relation("PolicyOwner")
+  policiesApproved       Policy[]               @relation("PolicyApprover")
+  policyAcknowledgments  PolicyAcknowledgment[] @relation("PolicyAcknowledgments")
+  incidentsReported      Incident[]             @relation("IncidentReporter")
+  incidentsInvestigating Incident[]             @relation("IncidentInvestigator")
 
   // Module 9: Staff Management
-  onboardingChecklist OnboardingChecklist? @relation("UserOnboarding")
+  onboardingChecklist OnboardingChecklist?  @relation("UserOnboarding")
   mentees             OnboardingChecklist[] @relation("OnboardingMentor")
 
   // Module 9: Training & Development (Agent 2)
@@ -290,20 +290,20 @@ model User {
   foldersCreated    DocumentFolder[] @relation("FolderCreator")
 
   // Module 9: Vendor & Financial Administration (Agent 7)
-  budgetsOwned             Budget[]                 @relation("BudgetOwner")
-  expensesSubmitted        Expense[]                @relation("ExpenseSubmitter")
-  expensesApproved         Expense[]                @relation("ExpenseApprover")
-  purchaseOrdersRequested  PurchaseOrder[]          @relation("PORequestor")
-  purchaseOrdersApproved   PurchaseOrder[]          @relation("POApprover")
+  budgetsOwned            Budget[]        @relation("BudgetOwner")
+  expensesSubmitted       Expense[]       @relation("ExpenseSubmitter")
+  expensesApproved        Expense[]       @relation("ExpenseApprover")
+  purchaseOrdersRequested PurchaseOrder[] @relation("PORequestor")
+  purchaseOrdersApproved  PurchaseOrder[] @relation("POApprover")
 
   // Module 9: HR Functions - Performance Reviews, Time & Attendance, PTO (Agent 4)
-  performanceReviewsAsReviewed  PerformanceReview[] @relation("ReviewedUser")
-  performanceReviewsAsReviewer  PerformanceReview[] @relation("Reviewer")
-  timeAttendanceRecords         TimeAttendance[]    @relation("TimeAttendanceUser")
-  timeAttendanceAsApprover      TimeAttendance[]    @relation("AttendanceApprover")
-  ptoRequests                   PTORequest[]        @relation("PTORequestor")
-  ptoRequestsAsApprover         PTORequest[]        @relation("PTOApprover")
-  ptoBalance                    PTOBalance?         @relation("PTOBalance")
+  performanceReviewsAsReviewed PerformanceReview[] @relation("ReviewedUser")
+  performanceReviewsAsReviewer PerformanceReview[] @relation("Reviewer")
+  timeAttendanceRecords        TimeAttendance[]    @relation("TimeAttendanceUser")
+  timeAttendanceAsApprover     TimeAttendance[]    @relation("AttendanceApprover")
+  ptoRequests                  PTORequest[]        @relation("PTORequestor")
+  ptoRequestsAsApprover        PTORequest[]        @relation("PTOApprover")
+  ptoBalance                   PTOBalance?         @relation("PTOBalance")
 
   @@map("users")
 }
@@ -347,15 +347,15 @@ model OnboardingChecklist {
 
   // Onboarding Milestones
   startDate         DateTime
-  firstDayComplete  Boolean @default(false)
-  firstWeekComplete Boolean @default(false)
-  thirtyDayComplete Boolean @default(false)
-  sixtyDayComplete  Boolean @default(false)
-  ninetyDayComplete Boolean @default(false)
+  firstDayComplete  Boolean  @default(false)
+  firstWeekComplete Boolean  @default(false)
+  thirtyDayComplete Boolean  @default(false)
+  sixtyDayComplete  Boolean  @default(false)
+  ninetyDayComplete Boolean  @default(false)
 
   // Completion Tracking
-  completionDate      DateTime?
-  completionPercentage Int      @default(0) // 0-100
+  completionDate       DateTime?
+  completionPercentage Int       @default(0) // 0-100
 
   // Mentor Assignment
   mentorId String?
@@ -4501,40 +4501,40 @@ enum PolicyStatus {
 
 // Policy Model
 model Policy {
-  id                String   @id @default(uuid())
-  policyName        String
-  policyNumber      String   @unique
-  category          PolicyCategory
+  id           String         @id @default(uuid())
+  policyName   String
+  policyNumber String         @unique
+  category     PolicyCategory
 
   // Version Control
-  version           String
-  effectiveDate     DateTime
-  reviewDate        DateTime
-  nextReviewDate    DateTime?
+  version        String
+  effectiveDate  DateTime
+  reviewDate     DateTime
+  nextReviewDate DateTime?
 
   // Ownership
-  ownerId           String
-  owner             User     @relation("PolicyOwner", fields: [ownerId], references: [id])
-  approvedById      String?
-  approvedBy        User?    @relation("PolicyApprover", fields: [approvedById], references: [id])
-  approvalDate      DateTime?
+  ownerId      String
+  owner        User      @relation("PolicyOwner", fields: [ownerId], references: [id])
+  approvedById String?
+  approvedBy   User?     @relation("PolicyApprover", fields: [approvedById], references: [id])
+  approvalDate DateTime?
 
   // Content
-  content           String   @db.Text
-  summary           String?
-  attachments       String[] // Document URLs
+  content     String   @db.Text
+  summary     String?
+  attachments String[] // Document URLs
 
   // Distribution
-  distributionList  String[] // User IDs
-  requireAck        Boolean  @default(false)
-  acknowledgments   PolicyAcknowledgment[]
+  distributionList String[] // User IDs
+  requireAck       Boolean                @default(false)
+  acknowledgments  PolicyAcknowledgment[]
 
   // Status
-  status            PolicyStatus @default(DRAFT)
-  isActive          Boolean  @default(true)
+  status   PolicyStatus @default(DRAFT)
+  isActive Boolean      @default(true)
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([category])
   @@index([status])
@@ -4544,11 +4544,11 @@ model Policy {
 
 // Policy Acknowledgment Model
 model PolicyAcknowledgment {
-  id          String   @id @default(uuid())
-  policyId    String
-  policy      Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User     @relation("PolicyAcknowledgments", fields: [userId], references: [id])
+  id       String @id @default(uuid())
+  policyId String
+  policy   Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation("PolicyAcknowledgments", fields: [userId], references: [id])
 
   acknowledgedDate DateTime @default(now())
   signature        String?
@@ -4593,48 +4593,48 @@ enum InvestigationStatus {
 
 // Incident Model
 model Incident {
-  id                String   @id @default(uuid())
-  incidentNumber    String   @unique
+  id             String @id @default(uuid())
+  incidentNumber String @unique
 
   // Basic Information
-  incidentDate      DateTime
-  incidentTime      String?
-  incidentType      IncidentType
-  severity          Severity
+  incidentDate DateTime
+  incidentTime String?
+  incidentType IncidentType
+  severity     Severity
 
   // Location
-  location          String?
-  specificLocation  String?
+  location         String?
+  specificLocation String?
 
   // People
-  reportedById      String
-  reportedBy        User     @relation("IncidentReporter", fields: [reportedById], references: [id])
-  involvedParties   String[] // User IDs or names
-  witnesses         String[] // Names or IDs
+  reportedById    String
+  reportedBy      User     @relation("IncidentReporter", fields: [reportedById], references: [id])
+  involvedParties String[] // User IDs or names
+  witnesses       String[] // Names or IDs
 
   // Description
-  description       String   @db.Text
-  immediateAction   String?  @db.Text
+  description     String  @db.Text
+  immediateAction String? @db.Text
 
   // Investigation
   investigationStatus InvestigationStatus @default(PENDING)
-  assignedToId      String?
-  assignedTo        User?    @relation("IncidentInvestigator", fields: [assignedToId], references: [id])
-  investigationNotes String? @db.Text
-  rootCause         String?  @db.Text
+  assignedToId        String?
+  assignedTo          User?               @relation("IncidentInvestigator", fields: [assignedToId], references: [id])
+  investigationNotes  String?             @db.Text
+  rootCause           String?             @db.Text
 
   // Resolution
-  correctiveActions Json?    // Array of actions
-  preventiveActions Json?    // Array of actions
+  correctiveActions Json? // Array of actions
+  preventiveActions Json? // Array of actions
   followUpDate      DateTime?
   resolutionDate    DateTime?
 
   // Documentation
-  attachments       String[] // Document URLs
-  notifications     Json?    // Who was notified
+  attachments   String[] // Document URLs
+  notifications Json? // Who was notified
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([incidentType])
   @@index([severity])
@@ -4649,71 +4649,71 @@ model Incident {
 
 // Training Type Enum - Types of training available
 enum TrainingType {
-  HIPAA                 // HIPAA compliance training
-  SAFETY                // Workplace safety training
-  CLINICAL_COMPETENCY   // Clinical skills training
-  TECHNOLOGY            // Technology/systems training
-  COMPLIANCE            // General compliance training
-  SOFT_SKILLS           // Communication, leadership, etc.
-  CEU                   // Continuing Education Units
-  CERTIFICATION         // Professional certifications
-  OTHER                 // Other types of training
+  HIPAA // HIPAA compliance training
+  SAFETY // Workplace safety training
+  CLINICAL_COMPETENCY // Clinical skills training
+  TECHNOLOGY // Technology/systems training
+  COMPLIANCE // General compliance training
+  SOFT_SKILLS // Communication, leadership, etc.
+  CEU // Continuing Education Units
+  CERTIFICATION // Professional certifications
+  OTHER // Other types of training
 }
 
 // Training Category Enum - Priority/requirement level
 enum TrainingCategory {
-  MANDATORY      // Required by law or policy
-  RECOMMENDED    // Recommended but not required
-  OPTIONAL       // Available for self-improvement
-  CEU_REQUIRED   // Required for license maintenance
+  MANDATORY // Required by law or policy
+  RECOMMENDED // Recommended but not required
+  OPTIONAL // Available for self-improvement
+  CEU_REQUIRED // Required for license maintenance
 }
 
 // Training Status Enum - Completion status
 enum TrainingStatus {
-  NOT_STARTED  // Not yet started
-  IN_PROGRESS  // Currently in progress
-  COMPLETED    // Successfully completed
-  EXPIRED      // Completed but now expired
-  FAILED       // Did not pass
+  NOT_STARTED // Not yet started
+  IN_PROGRESS // Currently in progress
+  COMPLETED // Successfully completed
+  EXPIRED // Completed but now expired
+  FAILED // Did not pass
 }
 
 // Training Record Model - Individual training completion records
 model TrainingRecord {
-  id                String   @id @default(uuid())
-  userId            String
-  user              User     @relation("UserTrainingRecords", fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation("UserTrainingRecords", fields: [userId], references: [id], onDelete: Cascade)
 
   // Training Information
-  trainingType      TrainingType
-  courseName        String
-  provider          String
-  category          TrainingCategory
+  trainingType TrainingType
+  courseName   String
+  provider     String
+  category     TrainingCategory
 
   // Dates
-  assignedDate      DateTime?
-  dueDate           DateTime?
-  completionDate    DateTime?
-  expirationDate    DateTime?  // When training expires and needs renewal
+  assignedDate   DateTime?
+  dueDate        DateTime?
+  completionDate DateTime?
+  expirationDate DateTime? // When training expires and needs renewal
 
   // Credits & Scoring
-  creditsEarned     Decimal?  @db.Decimal(10, 2)
-  creditsRequired   Decimal?  @db.Decimal(10, 2)
-  score             Int?      // Test score if applicable
-  passingScore      Int?      // Minimum required score
+  creditsEarned   Decimal? @db.Decimal(10, 2)
+  creditsRequired Decimal? @db.Decimal(10, 2)
+  score           Int? // Test score if applicable
+  passingScore    Int? // Minimum required score
 
   // Status
-  status            TrainingStatus @default(NOT_STARTED)
-  required          Boolean   @default(false)  // Is this training required?
-  complianceMet     Boolean   @default(false)  // Does completion meet compliance requirements?
+  status        TrainingStatus @default(NOT_STARTED)
+  required      Boolean        @default(false) // Is this training required?
+  complianceMet Boolean        @default(false) // Does completion meet compliance requirements?
 
   // Documentation
-  certificateUrl    String?   // URL to certificate document
-  notes             String?   @db.Text
-  attestedBy        String?   // Who attested to completion
-  attestedDate      DateTime? // When attestation was made
+  certificateUrl String? // URL to certificate document
+  notes          String?   @db.Text
+  attestedBy     String? // Who attested to completion
+  attestedDate   DateTime? // When attestation was made
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -4726,26 +4726,26 @@ model TrainingRecord {
 
 // Course Catalog Model - Available training courses
 model Course {
-  id              String   @id @default(uuid())
-  courseName      String
-  provider        String
-  description     String?  @db.Text
-  duration        Int?     // Duration in minutes
-  credits         Decimal? @db.Decimal(10, 2)  // CEU or other credits
-  trainingType    TrainingType
-  category        TrainingCategory
+  id           String           @id @default(uuid())
+  courseName   String
+  provider     String
+  description  String?          @db.Text
+  duration     Int? // Duration in minutes
+  credits      Decimal?         @db.Decimal(10, 2) // CEU or other credits
+  trainingType TrainingType
+  category     TrainingCategory
 
   // Content
-  contentUrl      String?  // URL to course content/LMS
-  materials       String[] // Array of material URLs or references
+  contentUrl String? // URL to course content/LMS
+  materials  String[] // Array of material URLs or references
 
   // Settings
-  isActive        Boolean   @default(true)
-  passingScore    Int?      // Minimum score to pass if test required
-  expirationMonths Int?     // Expires X months after completion
+  isActive         Boolean @default(true)
+  passingScore     Int? // Minimum score to pass if test required
+  expirationMonths Int? // Expires X months after completion
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([trainingType])
   @@index([category])
@@ -4789,39 +4789,39 @@ enum ScreeningStatus {
 
 // Credential Model
 model Credential {
-  id                  String   @id @default(uuid())
-  userId              String
-  user                User     @relation("UserCredentials", fields: [userId], references: [id], onDelete: Cascade)
-  credentialType      CredentialType
-  credentialNumber    String
-  issuingAuthority    String
-  issuingState        String?
-  issueDate           DateTime
-  expirationDate      DateTime
-  renewalDate         DateTime?
+  id               String         @id @default(uuid())
+  userId           String
+  user             User           @relation("UserCredentials", fields: [userId], references: [id], onDelete: Cascade)
+  credentialType   CredentialType
+  credentialNumber String
+  issuingAuthority String
+  issuingState     String?
+  issueDate        DateTime
+  expirationDate   DateTime
+  renewalDate      DateTime?
 
   // Requirements
-  ceuRequirements     Int?      // Required CEU credits
-  renewalRequirements Json?     // Checklist of renewal requirements
+  ceuRequirements     Int? // Required CEU credits
+  renewalRequirements Json? // Checklist of renewal requirements
   verificationStatus  VerificationStatus @default(PENDING)
   verificationDate    DateTime?
   verificationMethod  String?
 
   // OIG/SAM Screening
-  lastScreeningDate   DateTime?
-  screeningStatus     ScreeningStatus @default(CLEAR)
-  screeningNotes      String?
+  lastScreeningDate DateTime?
+  screeningStatus   ScreeningStatus @default(CLEAR)
+  screeningNotes    String?
 
   // Documentation
-  documents           String[]  // Array of document URLs
-  restrictions        String?
-  scope               String?   // Scope of practice
+  documents    String[] // Array of document URLs
+  restrictions String?
+  scope        String? // Scope of practice
 
   // Alerts
-  alertsSent          Json?     // Track 90/60/30 day alerts
+  alertsSent Json? // Track 90/60/30 day alerts
 
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([expirationDate])
@@ -4830,6 +4830,7 @@ model Credential {
   @@index([screeningStatus])
   @@map("credentials")
 }
+
 // expensesApproved         Expense[]                @relation("ExpenseApprover")
 // purchaseOrdersRequested  PurchaseOrder[]          @relation("PORequestor")
 // purchaseOrdersApproved   PurchaseOrder[]          @relation("POApprover")
@@ -4850,43 +4851,43 @@ enum VendorCategory {
 
 // Vendor Model
 model Vendor {
-  id                String   @id @default(uuid())
-  companyName       String
-  contactPerson     String
+  id            String @id @default(uuid())
+  companyName   String
+  contactPerson String
 
   // Contact Information
-  phone             String
-  email             String
-  address           Json     // Structured address object
-  website           String?
+  phone   String
+  email   String
+  address Json // Structured address object
+  website String?
 
   // Services
-  servicesProvided  String[]
-  category          VendorCategory
+  servicesProvided String[]
+  category         VendorCategory
 
   // Contract
-  contractStart     DateTime?
-  contractEnd       DateTime?
-  contractValue     Decimal?  @db.Decimal(15, 2)
-  paymentTerms      String?
+  contractStart DateTime?
+  contractEnd   DateTime?
+  contractValue Decimal?  @db.Decimal(15, 2)
+  paymentTerms  String?
 
   // Insurance
   insuranceExpiration DateTime?
-  insuranceCertUrl  String?
+  insuranceCertUrl    String?
 
   // Performance
-  performanceScore  Int?     // 1-100
-  notes             String?  @db.Text
+  performanceScore Int? // 1-100
+  notes            String? @db.Text
 
   // Status
-  isActive          Boolean  @default(true)
+  isActive Boolean @default(true)
 
   // Relations
-  expenses         Expense[]
-  purchaseOrders   PurchaseOrder[]
+  expenses       Expense[]
+  purchaseOrders PurchaseOrder[]
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([category])
   @@index([isActive])
@@ -4912,37 +4913,37 @@ enum BudgetCategory {
 
 // Budget Model
 model Budget {
-  id              String   @id @default(uuid())
-  name            String
-  fiscalYear      Int
+  id         String @id @default(uuid())
+  name       String
+  fiscalYear Int
 
   // Budget Details
-  department      String?
-  category        BudgetCategory
+  department String?
+  category   BudgetCategory
 
   // Amounts
-  allocatedAmount Decimal  @db.Decimal(15, 2)
-  spentAmount     Decimal  @default(0) @db.Decimal(15, 2)
-  committedAmount Decimal  @default(0) @db.Decimal(15, 2)
-  remainingAmount Decimal  @default(0) @db.Decimal(15, 2)
+  allocatedAmount Decimal @db.Decimal(15, 2)
+  spentAmount     Decimal @default(0) @db.Decimal(15, 2)
+  committedAmount Decimal @default(0) @db.Decimal(15, 2)
+  remainingAmount Decimal @default(0) @db.Decimal(15, 2)
 
   // Period
-  startDate       DateTime
-  endDate         DateTime
+  startDate DateTime
+  endDate   DateTime
 
   // Ownership
-  ownerId         String
-  owner           User     @relation("BudgetOwner", fields: [ownerId], references: [id])
+  ownerId String
+  owner   User   @relation("BudgetOwner", fields: [ownerId], references: [id])
 
   // Notes
-  notes           String?  @db.Text
+  notes String? @db.Text
 
   // Relations
-  expenses        Expense[]
-  purchaseOrders  PurchaseOrder[]
+  expenses       Expense[]
+  purchaseOrders PurchaseOrder[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([fiscalYear])
   @@index([category])
@@ -4961,47 +4962,47 @@ enum ExpenseStatus {
 
 // Expense Model
 model Expense {
-  id              String   @id @default(uuid())
-  description     String
-  category        BudgetCategory
+  id          String         @id @default(uuid())
+  description String
+  category    BudgetCategory
 
   // Amount
-  amount          Decimal  @db.Decimal(15, 2)
-  taxAmount       Decimal? @db.Decimal(15, 2)
-  totalAmount     Decimal  @db.Decimal(15, 2)
+  amount      Decimal  @db.Decimal(15, 2)
+  taxAmount   Decimal? @db.Decimal(15, 2)
+  totalAmount Decimal  @db.Decimal(15, 2)
 
   // Date
-  expenseDate     DateTime
+  expenseDate DateTime
 
   // Vendor
-  vendorId        String?
-  vendor          Vendor?  @relation(fields: [vendorId], references: [id])
-  vendorName      String?
+  vendorId   String?
+  vendor     Vendor? @relation(fields: [vendorId], references: [id])
+  vendorName String?
 
   // Budget
-  budgetId        String?
-  budget          Budget?  @relation(fields: [budgetId], references: [id])
-  department      String?
+  budgetId   String?
+  budget     Budget? @relation(fields: [budgetId], references: [id])
+  department String?
 
   // Submission
-  submittedById   String
-  submittedBy     User     @relation("ExpenseSubmitter", fields: [submittedById], references: [id])
+  submittedById String
+  submittedBy   User   @relation("ExpenseSubmitter", fields: [submittedById], references: [id])
 
   // Approval
-  status          ExpenseStatus @default(PENDING)
-  approvedById    String?
-  approvedBy      User?    @relation("ExpenseApprover", fields: [approvedById], references: [id])
-  approvalDate    DateTime?
-  approvalNotes   String?
+  status        ExpenseStatus @default(PENDING)
+  approvedById  String?
+  approvedBy    User?         @relation("ExpenseApprover", fields: [approvedById], references: [id])
+  approvalDate  DateTime?
+  approvalNotes String?
 
   // Payment
-  paymentMethod   String?
-  receiptUrl      String?
-  reimbursed      Boolean  @default(false)
+  paymentMethod     String?
+  receiptUrl        String?
+  reimbursed        Boolean   @default(false)
   reimbursementDate DateTime?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([category])
   @@index([status])
@@ -5024,45 +5025,45 @@ enum POStatus {
 
 // Purchase Order Model
 model PurchaseOrder {
-  id              String   @id @default(uuid())
-  poNumber        String   @unique
+  id       String @id @default(uuid())
+  poNumber String @unique
 
   // Vendor
-  vendorId        String
-  vendor          Vendor   @relation(fields: [vendorId], references: [id])
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
 
   // Items
-  items           Json     // Array of line items with { description, quantity, unitPrice, total }
-  subtotal        Decimal  @db.Decimal(15, 2)
-  tax             Decimal? @db.Decimal(15, 2)
-  shipping        Decimal? @db.Decimal(15, 2)
-  total           Decimal  @db.Decimal(15, 2)
+  items    Json // Array of line items with { description, quantity, unitPrice, total }
+  subtotal Decimal  @db.Decimal(15, 2)
+  tax      Decimal? @db.Decimal(15, 2)
+  shipping Decimal? @db.Decimal(15, 2)
+  total    Decimal  @db.Decimal(15, 2)
 
   // Dates
-  orderDate       DateTime @default(now())
-  expectedDate    DateTime?
-  receivedDate    DateTime?
+  orderDate    DateTime  @default(now())
+  expectedDate DateTime?
+  receivedDate DateTime?
 
   // Budget
-  budgetId        String?
-  budget          Budget?  @relation(fields: [budgetId], references: [id])
-  department      String?
+  budgetId   String?
+  budget     Budget? @relation(fields: [budgetId], references: [id])
+  department String?
 
   // Approval
-  status          POStatus @default(PENDING)
-  approvedById    String?
-  approvedBy      User?    @relation("POApprover", fields: [approvedById], references: [id])
-  approvalDate    DateTime?
+  status       POStatus  @default(PENDING)
+  approvedById String?
+  approvedBy   User?     @relation("POApprover", fields: [approvedById], references: [id])
+  approvalDate DateTime?
 
   // Requester
-  requestedById   String
-  requestedBy     User     @relation("PORequestor", fields: [requestedById], references: [id])
+  requestedById String
+  requestedBy   User   @relation("PORequestor", fields: [requestedById], references: [id])
 
   // Notes
-  notes           String?  @db.Text
+  notes String? @db.Text
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([orderDate])
@@ -5103,40 +5104,40 @@ enum MessagePriority {
 
 // Internal Messaging Model
 model Message {
-  id              String   @id @default(uuid())
-  senderId        String
-  sender          User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  senderId String
+  sender   User   @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 
   // Recipients
-  recipientType   RecipientType
-  recipientIds    String[] // User IDs or channel IDs
+  recipientType RecipientType
+  recipientIds  String[] // User IDs or channel IDs
 
   // Content
-  subject         String?
-  body            String   @db.Text
-  attachments     String[] // File URLs
+  subject     String?
+  body        String   @db.Text
+  attachments String[] // File URLs
 
   // Type
-  messageType     MessageType @default(DIRECT)
-  priority        MessagePriority @default(NORMAL)
+  messageType MessageType     @default(DIRECT)
+  priority    MessagePriority @default(NORMAL)
 
   // Status
-  isRead          Boolean  @default(false)
-  readBy          String[] // User IDs who read
-  readAt          Json?    // Map of userId -> timestamp
+  isRead Boolean  @default(false)
+  readBy String[] // User IDs who read
+  readAt Json? // Map of userId -> timestamp
 
   // Thread
-  threadId        String?
-  replyToId       String?
-  replyTo         Message? @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies         Message[] @relation("MessageReplies")
+  threadId  String?
+  replyToId String?
+  replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[] @relation("MessageReplies")
 
   // Archival
-  isArchived      Boolean  @default(false)
-  expiresAt       DateTime?
+  isArchived Boolean   @default(false)
+  expiresAt  DateTime?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([senderId])
   @@index([threadId])
@@ -5157,24 +5158,24 @@ enum ChannelType {
 
 // Communication Channel Model
 model Channel {
-  id              String   @id @default(uuid())
-  name            String
-  description     String?
-  channelType     ChannelType
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  channelType ChannelType
 
   // Members
-  memberIds       String[] // User IDs
-  adminIds        String[] // Admin user IDs
+  memberIds String[] // User IDs
+  adminIds  String[] // Admin user IDs
 
   // Settings
-  isPrivate       Boolean  @default(false)
-  isArchived      Boolean  @default(false)
+  isPrivate  Boolean @default(false)
+  isArchived Boolean @default(false)
 
-  createdById     String
-  createdBy       User     @relation("ChannelCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User   @relation("ChannelCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([channelType])
   @@index([createdById])
@@ -5196,41 +5197,41 @@ enum DocumentCategory {
 
 // Document Model
 model Document {
-  id              String   @id @default(uuid())
-  name            String
-  description     String?
+  id          String  @id @default(uuid())
+  name        String
+  description String?
 
   // File Information
-  fileUrl         String
-  fileType        String
-  fileSize        Int      // Size in bytes
+  fileUrl  String
+  fileType String
+  fileSize Int // Size in bytes
 
   // Organization
-  category        DocumentCategory
-  tags            String[]
-  folderId        String?
-  folder          DocumentFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  category DocumentCategory
+  tags     String[]
+  folderId String?
+  folder   DocumentFolder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   // Versioning
-  version         String   @default("1.0")
-  parentId        String?
-  parent          Document? @relation("DocumentVersions", fields: [parentId], references: [id], onDelete: SetNull)
-  versions        Document[] @relation("DocumentVersions")
+  version  String     @default("1.0")
+  parentId String?
+  parent   Document?  @relation("DocumentVersions", fields: [parentId], references: [id], onDelete: SetNull)
+  versions Document[] @relation("DocumentVersions")
 
   // Ownership
-  uploadedById    String
-  uploadedBy      User     @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User   @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
 
   // Access Control
-  isPublic        Boolean  @default(false)
-  accessList      String[] // User IDs with access
+  isPublic   Boolean  @default(false)
+  accessList String[] // User IDs with access
 
   // Status
-  isArchived      Boolean  @default(false)
-  expiresAt       DateTime?
+  isArchived Boolean   @default(false)
+  expiresAt  DateTime?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([category])
   @@index([folderId])
@@ -5241,23 +5242,23 @@ model Document {
 
 // Document Folder Model
 model DocumentFolder {
-  id              String   @id @default(uuid())
-  name            String
-  description     String?
-  parentId        String?
-  parent          DocumentFolder? @relation("SubFolders", fields: [parentId], references: [id], onDelete: Cascade)
-  subfolders      DocumentFolder[] @relation("SubFolders")
-  documents       Document[]
+  id          String           @id @default(uuid())
+  name        String
+  description String?
+  parentId    String?
+  parent      DocumentFolder?  @relation("SubFolders", fields: [parentId], references: [id], onDelete: Cascade)
+  subfolders  DocumentFolder[] @relation("SubFolders")
+  documents   Document[]
 
   // Access Control
-  isPublic        Boolean  @default(false)
-  accessList      String[] // User IDs with access
+  isPublic   Boolean  @default(false)
+  accessList String[] // User IDs with access
 
-  createdById     String
-  createdBy       User     @relation("FolderCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User   @relation("FolderCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([parentId])
   @@index([createdById])
@@ -5279,43 +5280,43 @@ enum ReviewStatus {
 
 // Performance Review Model
 model PerformanceReview {
-  id              String   @id @default(uuid())
-  userId          String
-  user            User     @relation("ReviewedUser", fields: [userId], references: [id], onDelete: Cascade)
-  reviewerId      String
-  reviewer        User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  id         String @id @default(uuid())
+  userId     String
+  user       User   @relation("ReviewedUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User   @relation("Reviewer", fields: [reviewerId], references: [id])
 
   // Review Period
-  reviewPeriod    String   // e.g., "Q1 2025", "Annual 2025"
-  reviewDate      DateTime
-  nextReviewDate  DateTime?
+  reviewPeriod   String // e.g., "Q1 2025", "Annual 2025"
+  reviewDate     DateTime
+  nextReviewDate DateTime?
 
   // Ratings (1-5 scale)
-  overallRating   Int
-  goals           Json     // Array of goals with ratings: [{ goal: string, rating: int, progress: string }]
-  competencies    Json     // Array of competencies with ratings: [{ competency: string, rating: int, notes: string }]
+  overallRating Int
+  goals         Json // Array of goals with ratings: [{ goal: string, rating: int, progress: string }]
+  competencies  Json // Array of competencies with ratings: [{ competency: string, rating: int, notes: string }]
 
   // Feedback
-  strengths       String   @db.Text
-  improvements    String   @db.Text
-  actionPlans     Json     // Array of action items: [{ action: string, dueDate: date, status: string }]
+  strengths    String @db.Text
+  improvements String @db.Text
+  actionPlans  Json // Array of action items: [{ action: string, dueDate: date, status: string }]
 
   // Employee Input
-  selfEvaluation  String?  @db.Text
-  employeeComments String? @db.Text
+  selfEvaluation    String?   @db.Text
+  employeeComments  String?   @db.Text
   employeeSignature String?
-  employeeSignDate DateTime?
+  employeeSignDate  DateTime?
 
   // Manager Input
-  managerComments String?  @db.Text
+  managerComments  String?   @db.Text
   managerSignature String?
-  managerSignDate DateTime?
+  managerSignDate  DateTime?
 
   // Status
-  status          ReviewStatus @default(DRAFT)
+  status ReviewStatus @default(DRAFT)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([reviewerId])
@@ -5339,40 +5340,40 @@ enum AbsenceType {
 
 // Time & Attendance Model
 model TimeAttendance {
-  id              String   @id @default(uuid())
-  userId          String
-  user            User     @relation("TimeAttendanceUser", fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation("TimeAttendanceUser", fields: [userId], references: [id], onDelete: Cascade)
 
-  date            DateTime
+  date DateTime
 
   // Scheduled Time
-  scheduledStart  String?  // HH:MM format
-  scheduledEnd    String?
+  scheduledStart String? // HH:MM format
+  scheduledEnd   String?
 
   // Actual Time
-  actualStart     DateTime?
-  actualEnd       DateTime?
-  breakMinutes    Int?
+  actualStart  DateTime?
+  actualEnd    DateTime?
+  breakMinutes Int?
 
   // Calculations
-  totalHours      Decimal? @db.Decimal(5, 2)
-  overtimeHours   Decimal? @db.Decimal(5, 2)
+  totalHours    Decimal? @db.Decimal(5, 2)
+  overtimeHours Decimal? @db.Decimal(5, 2)
 
   // Absence
-  isAbsent        Boolean  @default(false)
-  absenceType     AbsenceType?
-  absenceReason   String?
+  isAbsent      Boolean      @default(false)
+  absenceType   AbsenceType?
+  absenceReason String?
 
   // Approval
-  approvedById    String?
-  approvedBy      User?    @relation("AttendanceApprover", fields: [approvedById], references: [id])
-  approvalDate    DateTime?
+  approvedById String?
+  approvedBy   User?     @relation("AttendanceApprover", fields: [approvedById], references: [id])
+  approvalDate DateTime?
 
   // Notes
-  notes           String?
+  notes String?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, date])
   @@index([userId])
@@ -5391,31 +5392,31 @@ enum PTOStatus {
 
 // PTO Request Model
 model PTORequest {
-  id              String   @id @default(uuid())
-  userId          String
-  user            User     @relation("PTORequestor", fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation("PTORequestor", fields: [userId], references: [id], onDelete: Cascade)
 
   // Request Details
-  requestType     AbsenceType
-  startDate       DateTime
-  endDate         DateTime
-  totalDays       Decimal  @db.Decimal(5, 2)
+  requestType AbsenceType
+  startDate   DateTime
+  endDate     DateTime
+  totalDays   Decimal     @db.Decimal(5, 2)
 
   // Reason
-  reason          String?  @db.Text
+  reason String? @db.Text
 
   // Approval
-  status          PTOStatus @default(PENDING)
-  approvedById    String?
-  approvedBy      User?    @relation("PTOApprover", fields: [approvedById], references: [id])
-  approvalDate    DateTime?
-  approvalNotes   String?
+  status        PTOStatus @default(PENDING)
+  approvedById  String?
+  approvedBy    User?     @relation("PTOApprover", fields: [approvedById], references: [id])
+  approvalDate  DateTime?
+  approvalNotes String?
 
   // Coverage
-  coverageNotes   String?  @db.Text
+  coverageNotes String? @db.Text
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -5426,25 +5427,25 @@ model PTORequest {
 
 // PTO Balance Model
 model PTOBalance {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  user            User     @relation("PTOBalance", fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation("PTOBalance", fields: [userId], references: [id], onDelete: Cascade)
 
   // Balances (in days)
-  ptoBalance      Decimal  @default(0) @db.Decimal(6, 2)
-  sickBalance     Decimal  @default(0) @db.Decimal(6, 2)
-  vacationBalance Decimal  @default(0) @db.Decimal(6, 2)
+  ptoBalance      Decimal @default(0) @db.Decimal(6, 2)
+  sickBalance     Decimal @default(0) @db.Decimal(6, 2)
+  vacationBalance Decimal @default(0) @db.Decimal(6, 2)
 
   // Annual Allocation
-  ptoAnnual       Decimal  @default(0) @db.Decimal(6, 2)
-  sickAnnual      Decimal  @default(0) @db.Decimal(6, 2)
-  vacationAnnual  Decimal  @default(0) @db.Decimal(6, 2)
+  ptoAnnual      Decimal @default(0) @db.Decimal(6, 2)
+  sickAnnual     Decimal @default(0) @db.Decimal(6, 2)
+  vacationAnnual Decimal @default(0) @db.Decimal(6, 2)
 
   // Accrual
-  accrualRate     Decimal? @db.Decimal(6, 4) // Days per pay period
+  accrualRate     Decimal?  @db.Decimal(6, 4) // Days per pay period
   lastAccrualDate DateTime?
 
-  updatedAt       DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@map("pto_balances")

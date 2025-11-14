@@ -114,9 +114,16 @@ export default function IncidentReportingForm() {
   };
 
   const handleSubmit = async () => {
+    const { incidentTime, ...incidentData } = formData;
     const incident = await createIncident({
-      ...formData,
+      type: incidentData.type,
+      severity: incidentData.severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+      title: incidentData.title,
+      description: incidentData.description,
+      location: incidentData.location,
       incidentDate: `${formData.incidentDate}T${formData.incidentTime}`,
+      immediateActions: incidentData.immediateActions,
+      photos: incidentData.photos,
       peopleInvolved: formData.peopleInvolved.map(p => ({
         id: p.id,
         name: p.name,
@@ -142,7 +149,7 @@ export default function IncidentReportingForm() {
                 const Icon = type.icon;
                 const isSelected = formData.type === type.value;
                 return (
-                  <Grid item xs={12} sm={6} md={4} key={type.value}>
+                  <Grid size={{xs: 12, sm: 6, md: 4}} key={type.value}>
                     <Card
                       onClick={() => handleChange('type', type.value)}
                       sx={{
@@ -190,7 +197,7 @@ export default function IncidentReportingForm() {
                   {severityLevels.map((level) => {
                     const isSelected = formData.severity === level.value;
                     return (
-                      <Grid item xs={12} sm={6} md={3} key={level.value}>
+                      <Grid size={{xs: 12, sm: 6, md: 3}} key={level.value}>
                         <Paper
                           onClick={() => handleChange('severity', level.value)}
                           sx={{
@@ -237,7 +244,7 @@ export default function IncidentReportingForm() {
               Incident Details
             </Typography>
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   fullWidth
                   label="Incident Title"
@@ -249,7 +256,7 @@ export default function IncidentReportingForm() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   fullWidth
                   type="date"
@@ -262,7 +269,7 @@ export default function IncidentReportingForm() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   fullWidth
                   type="time"
@@ -275,7 +282,7 @@ export default function IncidentReportingForm() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{xs: 12, md: 4}}>
                 <TextField
                   fullWidth
                   label="Location"
@@ -290,7 +297,7 @@ export default function IncidentReportingForm() {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   fullWidth
                   multiline
@@ -416,7 +423,7 @@ export default function IncidentReportingForm() {
             {formData.photos.length > 0 && (
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 {formData.photos.map((photo, idx) => (
-                  <Grid item xs={6} sm={4} md={3} key={idx}>
+                  <Grid size={{xs: 6, sm: 4, md: 3}} key={idx}>
                     <Box
                       sx={{
                         position: 'relative',
@@ -497,7 +504,7 @@ export default function IncidentReportingForm() {
                 </Stack>
 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
+                  <Grid size={{xs: 12, sm: 4}}>
                     <Typography variant="caption" color="text.secondary">
                       Date & Time
                     </Typography>
@@ -505,7 +512,7 @@ export default function IncidentReportingForm() {
                       {new Date(`${formData.incidentDate}T${formData.incidentTime}`).toLocaleString()}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={4}>
+                  <Grid size={{xs: 12, sm: 4}}>
                     <Typography variant="caption" color="text.secondary">
                       Location
                     </Typography>
@@ -513,7 +520,7 @@ export default function IncidentReportingForm() {
                       {formData.location}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={4}>
+                  <Grid size={{xs: 12, sm: 4}}>
                     <Typography variant="caption" color="text.secondary">
                       People Involved
                     </Typography>
@@ -521,7 +528,7 @@ export default function IncidentReportingForm() {
                       {formData.peopleInvolved.length} person(s)
                     </Typography>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <Typography variant="caption" color="text.secondary">
                       Description
                     </Typography>

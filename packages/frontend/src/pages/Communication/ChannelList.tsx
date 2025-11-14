@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -46,17 +46,40 @@ interface Channel {
 }
 
 interface ChannelListProps {
-  channels: Channel[];
-  selectedChannel: string | null;
-  onSelectChannel: (channelId: string) => void;
+  channels?: Channel[];
+  selectedChannel?: string | null;
+  onSelectChannel?: (channelId: string) => void;
 }
 
 const ChannelList: React.FC<ChannelListProps> = ({
-  channels,
-  selectedChannel,
-  onSelectChannel,
+  channels: propChannels,
+  selectedChannel: propSelectedChannel,
+  onSelectChannel: propOnSelectChannel,
 }) => {
-  const { createChannel } = useMessaging();
+  const { createChannel, fetchChannels } = useMessaging();
+  const [channels, setChannels] = useState<Channel[]>(propChannels || []);
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(propSelectedChannel || null);
+
+  useEffect(() => {
+    if (!propChannels) {
+      const loadChannels = async () => {
+        try {
+          await fetchChannels();
+          // fetchChannels updates the hook state internally
+        } catch (err) {
+          console.error('Failed to fetch channels:', err);
+        }
+      };
+      loadChannels();
+    } else {
+      setChannels(propChannels);
+    }
+  }, [propChannels, fetchChannels]);
+
+  const handleSelectChannel = (channelId: string) => {
+    setSelectedChannel(channelId);
+    propOnSelectChannel?.(channelId);
+  };
   const [openDialog, setOpenDialog] = useState(false);
   const [newChannel, setNewChannel] = useState({
     name: '',
@@ -132,7 +155,7 @@ const ChannelList: React.FC<ChannelListProps> = ({
 
       <Grid container spacing={2}>
         {channels.map((channel, index) => (
-          <Grid item xs={12} key={channel.id}>
+          <Grid size={{xs: 12}} key={channel.id}>
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -149,7 +172,7 @@ const ChannelList: React.FC<ChannelListProps> = ({
                     boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                   },
                 }}
-                onClick={() => onSelectChannel(channel.id)}
+                onClick={() => handleSelectChannel(channel.id)}
               >
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>

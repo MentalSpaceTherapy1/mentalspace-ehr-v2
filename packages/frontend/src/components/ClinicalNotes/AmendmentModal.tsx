@@ -217,7 +217,7 @@ export const AmendmentModal: React.FC<AmendmentModalProps> = ({
             <FormGroup>
               <Grid container spacing={2}>
                 {AMENDABLE_FIELDS.map((field) => (
-                  <Grid item xs={12} sm={6} md={4} key={field.name}>
+                  <Grid size={{xs: 12, sm: 6, md: 4}} key={field.name}>
                     <FormControlLabel
                       control={
                         <Checkbox
@@ -252,7 +252,7 @@ export const AmendmentModal: React.FC<AmendmentModalProps> = ({
                       {field.label}
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{xs: 12, md: 6}}>
                         <Typography variant="caption" color="textSecondary">
                           Current Value:
                         </Typography>
@@ -269,7 +269,7 @@ export const AmendmentModal: React.FC<AmendmentModalProps> = ({
                           <Typography variant="body2">{getFieldValue(oldValue)}</Typography>
                         </Box>
                       </Grid>
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{xs: 12, md: 6}}>
                         <Typography variant="caption" color="textSecondary">
                           New Value:
                         </Typography>

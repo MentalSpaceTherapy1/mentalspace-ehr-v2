@@ -593,12 +593,12 @@ export default function ClientProgress() {
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Select a client to view their self-tracking progress
           </Typography>
-          <Autocomplete
+          <Autocomplete<Client>
             sx={{ maxWidth: 500, mx: 'auto' }}
             options={assignedClients || []}
             getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
             loading={loadingClients}
-            onChange={(_, value) => handleClientSelect(value)}
+            onChange={(_, value) => handleClientSelect(value as Client | null)}
             renderInput={(params) => (
               <TextField {...params} label="Search Clients" placeholder="Type to search..." />
             )}
@@ -670,7 +670,7 @@ export default function ClientProgress() {
 
       {/* Overview Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{xs: 12, sm: 6, md: 3}}>
           <Card>
             <CardContent>
               <Typography color="text.secondary" gutterBottom variant="body2">
@@ -712,7 +712,7 @@ export default function ClientProgress() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{xs: 12, sm: 6, md: 3}}>
           <Card>
             <CardContent>
               <Typography color="text.secondary" gutterBottom variant="body2">
@@ -741,7 +741,7 @@ export default function ClientProgress() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{xs: 12, sm: 6, md: 3}}>
           <Card>
             <CardContent>
               <Typography color="text.secondary" gutterBottom variant="body2">
@@ -766,7 +766,7 @@ export default function ClientProgress() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{xs: 12, sm: 6, md: 3}}>
           <Card>
             <CardContent>
               <Typography color="text.secondary" gutterBottom variant="body2">
@@ -804,7 +804,7 @@ export default function ClientProgress() {
       {/* Symptoms Tab */}
       {activeTab === 'symptoms' && (
         <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
+          <Grid size={{xs: 12, md: 8}}>
             <Paper sx={{ p: 3, mb: 3 }}>
               {loadingSymptoms ? (
                 <Skeleton variant="rectangular" height={300} />
@@ -835,7 +835,7 @@ export default function ClientProgress() {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Key Insights
@@ -916,7 +916,7 @@ export default function ClientProgress() {
             </Button>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Recent Symptom Logs
@@ -975,7 +975,7 @@ export default function ClientProgress() {
       {/* Sleep Tab */}
       {activeTab === 'sleep' && (
         <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
+          <Grid size={{xs: 12, md: 8}}>
             <Paper sx={{ p: 3, mb: 3 }}>
               {loadingSleep ? (
                 <Skeleton variant="rectangular" height={300} />
@@ -991,14 +991,14 @@ export default function ClientProgress() {
                 Sleep Calendar Heatmap
               </Typography>
               {sleepHeatmapData.length > 0 ? (
-                <CalendarHeatmap data={sleepHeatmapData} height={200} />
+                <CalendarHeatmap data={sleepHeatmapData} />
               ) : (
                 <Alert severity="info">No sleep heatmap data available</Alert>
               )}
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Sleep Metrics
@@ -1102,7 +1102,7 @@ export default function ClientProgress() {
             </Button>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Recent Sleep Logs
@@ -1159,7 +1159,7 @@ export default function ClientProgress() {
       {/* Exercise Tab */}
       {activeTab === 'exercise' && (
         <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
+          <Grid size={{xs: 12, md: 8}}>
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Weekly Activity
@@ -1213,7 +1213,7 @@ export default function ClientProgress() {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Exercise Stats
@@ -1302,7 +1302,7 @@ export default function ClientProgress() {
             </Button>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Recent Exercise Logs
@@ -1351,7 +1351,7 @@ export default function ClientProgress() {
       {/* Analytics Tab */}
       {activeTab === 'analytics' && (
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{xs: 12, md: 6}}>
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Detected Patterns
@@ -1398,7 +1398,7 @@ export default function ClientProgress() {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{xs: 12, md: 6}}>
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Correlation Matrix
@@ -1444,7 +1444,7 @@ export default function ClientProgress() {
             </Paper>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Health Score Breakdown

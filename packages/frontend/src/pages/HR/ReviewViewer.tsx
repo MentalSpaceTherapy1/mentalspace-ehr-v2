@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -42,11 +43,15 @@ import {
 import SignatureCanvas from 'react-signature-canvas';
 
 interface ReviewViewerProps {
-  reviewId: string;
+  reviewId?: string;
   onClose?: () => void;
 }
 
-const ReviewViewer: React.FC<ReviewViewerProps> = ({ reviewId, onClose }) => {
+const ReviewViewer: React.FC<ReviewViewerProps> = ({ reviewId: propReviewId, onClose }) => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const reviewId = propReviewId || id || '';
+  const handleClose = onClose || (() => navigate('/hr/performance'));
   const { getReview, signReview, loading } = usePerformance();
   const [review, setReview] = useState<PerformanceReview | null>(null);
   const [signDialogOpen, setSignDialogOpen] = useState(false);
@@ -210,7 +215,7 @@ const ReviewViewer: React.FC<ReviewViewerProps> = ({ reviewId, onClose }) => {
 
           {/* Performance Overview */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card sx={{ height: '100%', border: '2px solid #667EEA20' }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom sx={{ color: '#2C3E50', fontWeight: 600 }}>
@@ -236,7 +241,7 @@ const ReviewViewer: React.FC<ReviewViewerProps> = ({ reviewId, onClose }) => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Stack spacing={2} sx={{ height: '100%' }}>
                 <Card sx={{ background: 'linear-gradient(135deg, #2ECC71 0%, #27AE60 100%)', color: 'white' }}>
                   <CardContent>
@@ -307,7 +312,7 @@ const ReviewViewer: React.FC<ReviewViewerProps> = ({ reviewId, onClose }) => {
             </Typography>
             <Grid container spacing={2}>
               {review.categories.map((category, index) => (
-                <Grid item xs={12} md={6} key={index}>
+                <Grid size={{ xs: 12, md: 6 }} key={index}>
                   <Card sx={{ border: '2px solid #E0E0E0' }}>
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -434,7 +439,7 @@ const ReviewViewer: React.FC<ReviewViewerProps> = ({ reviewId, onClose }) => {
             </Typography>
             <Grid container spacing={3}>
               {review.managerComments && (
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Card sx={{ border: '2px solid #667EEA20' }}>
                     <CardContent>
                       <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#667EEA' }}>
@@ -446,7 +451,7 @@ const ReviewViewer: React.FC<ReviewViewerProps> = ({ reviewId, onClose }) => {
                 </Grid>
               )}
               {review.employeeComments && (
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Card sx={{ border: '2px solid #2ECC7120' }}>
                     <CardContent>
                       <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#2ECC71' }}>
@@ -466,7 +471,7 @@ const ReviewViewer: React.FC<ReviewViewerProps> = ({ reviewId, onClose }) => {
               Digital Signatures
             </Typography>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card sx={{ border: '2px solid #9B59B620', minHeight: 200 }}>
                   <CardContent>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#9B59B6' }}>
@@ -492,7 +497,7 @@ const ReviewViewer: React.FC<ReviewViewerProps> = ({ reviewId, onClose }) => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card sx={{ border: '2px solid #E67E2220', minHeight: 200 }}>
                   <CardContent>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#E67E22' }}>

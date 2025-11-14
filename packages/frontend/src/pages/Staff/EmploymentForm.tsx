@@ -58,7 +58,7 @@ const EmploymentForm: React.FC = () => {
             email: data.email,
             phone: data.phone || '',
             department: data.department,
-            title: data.title,
+            title: data.jobTitle,
             employmentType: data.employmentType,
             employmentStatus: data.employmentStatus,
             hireDate: new Date(data.hireDate).toISOString().split('T')[0],
@@ -449,7 +449,7 @@ const EmploymentForm: React.FC = () => {
                         ?.filter((s) => s.id !== id)
                         .map((s) => (
                           <option key={s.id} value={s.id}>
-                            {s.firstName} {s.lastName} - {s.title}
+                            {s.firstName} {s.lastName} - {s.jobTitle}
                           </option>
                         ))}
                     </select>

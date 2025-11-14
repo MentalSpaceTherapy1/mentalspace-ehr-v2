@@ -10,12 +10,12 @@ import {
   Chip,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   ListItemAvatar,
   Avatar,
   TextField,
   Divider,
-  Grid,
   Card,
   CardContent,
   alpha,
@@ -35,15 +35,27 @@ import {
   InsertDriveFile as FileIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDocuments } from '../../hooks/useDocuments';
 import { format } from 'date-fns';
 
 interface DocumentViewerProps {
-  documentId: string;
-  onClose: () => void;
+  documentId?: string;
+  onClose?: () => void;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, onClose }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId: propDocumentId, onClose: propOnClose }) => {
+  const { documentId: paramDocumentId } = useParams<{ documentId: string }>();
+  const documentId = propDocumentId || paramDocumentId || '';
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    if (propOnClose) {
+      propOnClose();
+    } else {
+      navigate(-1);
+    }
+  };
   const { getDocumentVersions } = useDocuments();
   const [tabValue, setTabValue] = useState(0);
   const [shareLink, setShareLink] = useState('');
@@ -121,7 +133,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, onClose }) 
   };
 
   return (
-    <Dialog open onClose={onClose} maxWidth="lg" fullWidth fullScreen>
+    <Dialog open onClose={handleClose} maxWidth="lg" fullWidth fullScreen>
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Header */}
         <Paper
@@ -189,7 +201,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, onClose }) 
               >
                 Share
               </Button>
-              <IconButton onClick={onClose} sx={{ color: 'white' }}>
+              <IconButton onClick={handleClose} sx={{ color: 'white' }}>
                 <CloseIcon />
               </IconButton>
             </Box>
@@ -415,9 +427,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, onClose }) 
                   </Typography>
                   <List>
                     {relatedDocuments.map((doc) => (
-                      <ListItem
+                      <ListItemButton
                         key={doc.id}
-                        button
                         sx={{
                           bgcolor: alpha('#f8fafc', 1),
                           borderRadius: 2,
@@ -434,7 +445,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, onClose }) 
                           </Avatar>
                         </ListItemAvatar>
                         <ListItemText primary={doc.title} secondary={doc.type.toUpperCase()} />
-                      </ListItem>
+                      </ListItemButton>
                     ))}
                   </List>
                 </motion.div>

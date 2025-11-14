@@ -150,7 +150,7 @@ const PurchaseOrderForm: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* PO Header */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Card sx={{ boxShadow: 3, mb: 3 }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -159,7 +159,7 @@ const PurchaseOrderForm: React.FC = () => {
               <Divider sx={{ mb: 3 }} />
 
               <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <FormControl fullWidth required>
                     <InputLabel>Vendor</InputLabel>
                     <Select
@@ -176,7 +176,7 @@ const PurchaseOrderForm: React.FC = () => {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <FormControl fullWidth>
                     <InputLabel>Budget (Optional)</InputLabel>
                     <Select
@@ -194,7 +194,7 @@ const PurchaseOrderForm: React.FC = () => {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     label="Order Date"
@@ -206,7 +206,7 @@ const PurchaseOrderForm: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     label="Delivery Date"
@@ -217,7 +217,7 @@ const PurchaseOrderForm: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Shipping Address"
@@ -228,7 +228,7 @@ const PurchaseOrderForm: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Notes"
@@ -344,7 +344,7 @@ const PurchaseOrderForm: React.FC = () => {
         </Grid>
 
         {/* Summary Sidebar */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Stack spacing={3}>
             {/* Totals Card */}
             <Card

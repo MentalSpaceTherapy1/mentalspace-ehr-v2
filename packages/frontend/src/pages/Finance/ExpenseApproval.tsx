@@ -116,7 +116,7 @@ const ExpenseApproval: React.FC = () => {
 
       {/* Stats */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 3,
@@ -134,7 +134,7 @@ const ExpenseApproval: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 3,
@@ -152,7 +152,7 @@ const ExpenseApproval: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 3,
@@ -173,7 +173,7 @@ const ExpenseApproval: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Pending Expenses List */}
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Card sx={{ boxShadow: 3 }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -234,7 +234,7 @@ const ExpenseApproval: React.FC = () => {
         </Grid>
 
         {/* Expense Details */}
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           {selectedExpense ? (
             <Stack spacing={3}>
               <Card sx={{ boxShadow: 3 }}>
@@ -245,7 +245,7 @@ const ExpenseApproval: React.FC = () => {
                   <Divider sx={{ mb: 3 }} />
 
                   <Grid container spacing={2}>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                           <DescriptionIcon color="primary" />
@@ -259,7 +259,7 @@ const ExpenseApproval: React.FC = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Paper sx={{ p: 2, bgcolor: '#f3e5f5' }}>
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                           <MoneyIcon color="primary" />
@@ -273,7 +273,7 @@ const ExpenseApproval: React.FC = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Paper sx={{ p: 2, bgcolor: '#e3f2fd' }}>
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                           <CalendarIcon color="primary" />
@@ -287,7 +287,7 @@ const ExpenseApproval: React.FC = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Paper sx={{ p: 2, bgcolor: '#fff3e0' }}>
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                           <PersonIcon color="primary" />
@@ -302,7 +302,7 @@ const ExpenseApproval: React.FC = () => {
                     </Grid>
 
                     {selectedExpense.vendorName && (
-                      <Grid item xs={12}>
+                      <Grid size={{ xs: 12 }}>
                         <Paper sx={{ p: 2, bgcolor: '#fce4ec' }}>
                           <Typography variant="caption" color="text.secondary">
                             Vendor
@@ -315,7 +315,7 @@ const ExpenseApproval: React.FC = () => {
                     )}
 
                     {selectedExpense.receiptUrl && (
-                      <Grid item xs={12}>
+                      <Grid size={{ xs: 12 }}>
                         <Button
                           variant="outlined"
                           startIcon={<ReceiptIcon />}
@@ -351,7 +351,7 @@ const ExpenseApproval: React.FC = () => {
                     </Stack>
 
                     <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">
                           Budget Name
                         </Typography>
@@ -360,7 +360,7 @@ const ExpenseApproval: React.FC = () => {
                         </Typography>
                       </Grid>
 
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">
                           Remaining
                         </Typography>
@@ -369,7 +369,7 @@ const ExpenseApproval: React.FC = () => {
                         </Typography>
                       </Grid>
 
-                      <Grid item xs={12}>
+                      <Grid size={{ xs: 12 }}>
                         <Chip
                           label={budgetAvailable ? 'Budget Available' : 'Insufficient Budget'}
                           color={budgetAvailable ? 'success' : 'error'}

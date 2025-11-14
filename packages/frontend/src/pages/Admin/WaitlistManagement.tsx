@@ -510,7 +510,7 @@ export default function WaitlistManagement() {
         {statistics && (
           <>
             <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid size={{xs: 12, sm: 6, md: 2.4}}>
                 <Card
                   sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -533,7 +533,7 @@ export default function WaitlistManagement() {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid size={{xs: 12, sm: 6, md: 2.4}}>
                 <Card
                   sx={{
                     background: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
@@ -556,7 +556,7 @@ export default function WaitlistManagement() {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid size={{xs: 12, sm: 6, md: 2.4}}>
                 <Card
                   sx={{
                     background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -579,7 +579,7 @@ export default function WaitlistManagement() {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid size={{xs: 12, sm: 6, md: 2.4}}>
                 <Card
                   sx={{
                     background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
@@ -602,7 +602,7 @@ export default function WaitlistManagement() {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid size={{xs: 12, sm: 6, md: 2.4}}>
                 <Card
                   sx={{
                     background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
@@ -628,7 +628,7 @@ export default function WaitlistManagement() {
 
             {/* Charts */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <Card sx={{ boxShadow: 3 }}>
                   <CardContent>
                     <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -657,7 +657,7 @@ export default function WaitlistManagement() {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <Card sx={{ boxShadow: 3 }}>
                   <CardContent>
                     <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -705,7 +705,7 @@ export default function WaitlistManagement() {
             </Box>
 
             <Grid container spacing={2}>
-              <Grid item xs={12} md={3}>
+              <Grid size={{xs: 12, md: 3}}>
                 <TextField
                   fullWidth
                   size="small"
@@ -716,7 +716,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={3}>
+              <Grid size={{xs: 12, md: 3}}>
                 <Autocomplete
                   size="small"
                   options={clinicians}
@@ -729,7 +729,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={3}>
+              <Grid size={{xs: 12, md: 3}}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Appointment Type</InputLabel>
                   <Select
@@ -747,7 +747,7 @@ export default function WaitlistManagement() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={3}>
+              <Grid size={{xs: 12, md: 3}}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Status</InputLabel>
                   <Select
@@ -764,7 +764,7 @@ export default function WaitlistManagement() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <Box>
                   <Typography variant="body2" gutterBottom>
                     Priority Range: {priorityRange[0]} - {priorityRange[1]}
@@ -1066,7 +1066,7 @@ export default function WaitlistManagement() {
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ pt: 2 }}>
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <Autocomplete
                   options={clinicians}
                   getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
@@ -1080,7 +1080,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <DateTimePicker
                   label="Date & Time"
                   value={offerData.dateTime}
@@ -1091,7 +1091,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <FormControl fullWidth required>
                   <InputLabel>Appointment Type</InputLabel>
                   <Select
@@ -1110,7 +1110,7 @@ export default function WaitlistManagement() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <TextField
                   fullWidth
                   type="number"
@@ -1124,7 +1124,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   fullWidth
                   type="number"
@@ -1138,7 +1138,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <Divider sx={{ my: 1 }}>
                   <Typography variant="body2" color="text.secondary">
                     Notifications
@@ -1146,7 +1146,7 @@ export default function WaitlistManagement() {
                 </Divider>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -1160,7 +1160,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -1271,7 +1271,7 @@ export default function WaitlistManagement() {
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ pt: 2, mb: 3 }}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <Autocomplete
                   options={clinicians}
                   getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
@@ -1285,7 +1285,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <FormControl fullWidth required>
                   <InputLabel>Appointment Type</InputLabel>
                   <Select
@@ -1304,7 +1304,7 @@ export default function WaitlistManagement() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <DateTimePicker
                   label="Date"
                   value={matchSlot.date}
@@ -1315,7 +1315,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <TextField
                   fullWidth
                   type="time"
@@ -1329,7 +1329,7 @@ export default function WaitlistManagement() {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <Button
                   fullWidth
                   variant="contained"

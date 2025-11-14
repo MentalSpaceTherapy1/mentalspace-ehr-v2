@@ -325,7 +325,7 @@ export default function AppointmentTypes() {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label="Type Name"
@@ -334,7 +334,7 @@ export default function AppointmentTypes() {
                 required
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 select
@@ -349,7 +349,7 @@ export default function AppointmentTypes() {
                 <option value="COUPLES">Couples</option>
               </TextField>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Color Code"
@@ -358,7 +358,7 @@ export default function AppointmentTypes() {
                 onChange={(e) => setFormData({ ...formData, colorCode: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 multiline
@@ -368,7 +368,7 @@ export default function AppointmentTypes() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -380,7 +380,7 @@ export default function AppointmentTypes() {
                 required
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -391,7 +391,7 @@ export default function AppointmentTypes() {
                 }
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -402,7 +402,7 @@ export default function AppointmentTypes() {
                 }
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="CPT Code"
@@ -410,7 +410,7 @@ export default function AppointmentTypes() {
                 onChange={(e) => setFormData({ ...formData, cptCode: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -424,7 +424,7 @@ export default function AppointmentTypes() {
                 }
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -439,7 +439,7 @@ export default function AppointmentTypes() {
                 helperText="Leave empty for no limit"
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Stack spacing={1}>
                 <FormControlLabel
                   control={

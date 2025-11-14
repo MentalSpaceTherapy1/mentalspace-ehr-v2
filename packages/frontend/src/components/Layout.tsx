@@ -84,7 +84,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const getProductivityPath = () => {
-    if (user.role === 'ADMINISTRATOR' || user.role === 'ADMIN') {
+    if (user.role === 'ADMINISTRATOR' || user.role === 'SUPER_ADMIN') {
       return '/productivity/administrator';
     } else if (user.role === 'SUPERVISOR') {
       return '/productivity/supervisor';

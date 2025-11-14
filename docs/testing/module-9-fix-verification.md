@@ -73,3 +73,6 @@ at ReviewList (http://localhost:5175/src/pages/HR/ReviewList.tsx:185:122)
 2. **HR Performance**: Add null/undefined checks in `ReviewList.tsx` before calling `.toFixed()`
 3. **Both**: Verify API response structure matches frontend expectations
 
+
+
+

@@ -90,15 +90,15 @@ const SleepDiary: React.FC = () => {
   const clientId = portalClient.id;
 
   // Form state
-  const [date, setDate] = useState<any>(dayjs().subtract(1, 'day'));
-  const [bedtime, setBedtime] = useState<any>(null);
-  const [wakeTime, setWakeTime] = useState<any>(null);
+  const [date, setDate] = useState<dayjs.Dayjs>(dayjs().subtract(1, 'day'));
+  const [bedtime, setBedtime] = useState<dayjs.Dayjs | null>(null);
+  const [wakeTime, setWakeTime] = useState<dayjs.Dayjs | null>(null);
   const [hoursSlept, setHoursSlept] = useState<number>(0);
   const [quality, setQuality] = useState<number>(3);
   const [disturbances, setDisturbances] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
   const [bedtimeReminder, setBedtimeReminder] = useState<boolean>(false);
-  const [reminderTime, setReminderTime] = useState<Date | null>(null);
+  const [reminderTime, setReminderTime] = useState<dayjs.Dayjs | null>(null);
 
   // Data state
   const [logs, setLogs] = useState<SleepLog[]>([]);
@@ -116,7 +116,7 @@ const SleepDiary: React.FC = () => {
   const [selectedLog, setSelectedLog] = useState<SleepLog | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [editingLog, setEditingLog] = useState<SleepLog | null>(null);
-  const [currentMonth, setCurrentMonth] = useState<any>(dayjs());
+  const [currentMonth, setCurrentMonth] = useState<dayjs.Dayjs>(dayjs());
 
   // Auto-calculate hours slept
   useEffect(() => {
@@ -571,7 +571,7 @@ const SleepDiary: React.FC = () => {
 
         <Grid container spacing={3}>
           {/* Log Entry Form */}
-          <Grid item xs={12} lg={6}>
+          <Grid size={{ xs: 12, lg: 6 }}>
             <Card
               sx={{
                 borderRadius: 3,
@@ -596,7 +596,7 @@ const SleepDiary: React.FC = () => {
 
                 <Grid container spacing={2}>
                   {/* Date */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <DatePicker
                       label="Sleep Date"
                       value={date}
@@ -606,7 +606,7 @@ const SleepDiary: React.FC = () => {
                   </Grid>
 
                   {/* Bedtime */}
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TimePicker
                       label="Bedtime"
                       value={bedtime}
@@ -623,7 +623,7 @@ const SleepDiary: React.FC = () => {
                   </Grid>
 
                   {/* Wake Time */}
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TimePicker
                       label="Wake Time"
                       value={wakeTime}
@@ -640,7 +640,7 @@ const SleepDiary: React.FC = () => {
                   </Grid>
 
                   {/* Hours Slept */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       label="Hours Slept"
@@ -656,7 +656,7 @@ const SleepDiary: React.FC = () => {
                   </Grid>
 
                   {/* Quality */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Box
                       sx={{
                         p: 3,
@@ -709,12 +709,12 @@ const SleepDiary: React.FC = () => {
                   </Grid>
 
                   {/* Disturbances */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography gutterBottom>Sleep Disturbances</Typography>
                     <FormGroup>
                       <Grid container spacing={1}>
                         {DISTURBANCES.map((disturbance) => (
-                          <Grid item xs={12} sm={6} key={disturbance}>
+                          <Grid size={{ xs: 12, sm: 6 }} key={disturbance}>
                             <FormControlLabel
                               control={
                                 <Checkbox
@@ -738,7 +738,7 @@ const SleepDiary: React.FC = () => {
                   </Grid>
 
                   {/* Notes */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       multiline
@@ -751,7 +751,7 @@ const SleepDiary: React.FC = () => {
                   </Grid>
 
                   {/* Bedtime Reminder */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Divider sx={{ my: 1 }} />
                     <FormControlLabel
                       control={
@@ -773,7 +773,7 @@ const SleepDiary: React.FC = () => {
                   </Grid>
 
                   {/* Actions */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       {editingLog && (
                         <Button variant="outlined" onClick={resetForm}>
@@ -796,17 +796,17 @@ const SleepDiary: React.FC = () => {
           </Grid>
 
           {/* Sleep Metrics Dashboard */}
-          <Grid item xs={12} lg={6}>
+          <Grid size={{ xs: 12, lg: 6 }}>
             <Grid container spacing={2}>
               {dataLoading ? (
                 [1, 2, 3, 4].map((i) => (
-                  <Grid item xs={12} sm={6} key={i}>
+                  <Grid size={{ xs: 12, sm: 6 }} key={i}>
                     <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 3 }} />
                   </Grid>
                 ))
               ) : metrics ? (
                 <>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Card
                       sx={{
                         borderRadius: 3,
@@ -834,7 +834,7 @@ const SleepDiary: React.FC = () => {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Card
                       sx={{
                         borderRadius: 3,
@@ -862,7 +862,7 @@ const SleepDiary: React.FC = () => {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Card
                       sx={{
                         borderRadius: 3,
@@ -891,7 +891,7 @@ const SleepDiary: React.FC = () => {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Card
                       sx={{
                         borderRadius: 3,
@@ -919,7 +919,7 @@ const SleepDiary: React.FC = () => {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Card
                       sx={{
                         borderRadius: 3,
@@ -947,7 +947,7 @@ const SleepDiary: React.FC = () => {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Card
                       sx={{
                         borderRadius: 3,
@@ -976,7 +976,7 @@ const SleepDiary: React.FC = () => {
                   </Grid>
 
                   {(metrics.commonDisturbances ?? []).length > 0 && (
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Card
                         sx={{
                           borderRadius: 3,
@@ -1017,7 +1017,7 @@ const SleepDiary: React.FC = () => {
           </Grid>
 
           {/* Sleep Calendar */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card
               sx={{
                 borderRadius: 4,
@@ -1086,7 +1086,7 @@ const SleepDiary: React.FC = () => {
           </Grid>
 
           {/* Sleep Analytics */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card
               sx={{
                 borderRadius: 4,
@@ -1181,7 +1181,7 @@ const SleepDiary: React.FC = () => {
 
           {/* Sleep Tips */}
           {getSleepTips().length > 0 && (
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Card
                 sx={{
                   borderRadius: 4,
@@ -1212,7 +1212,7 @@ const SleepDiary: React.FC = () => {
                 <CardContent sx={{ p: 3 }}>
                   <Grid container spacing={2}>
                     {getSleepTips().map((tip, index) => (
-                      <Grid item xs={12} sm={6} md={3} key={index}>
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
                         <Paper
                           sx={{
                             p: 3,
@@ -1249,7 +1249,7 @@ const SleepDiary: React.FC = () => {
           )}
 
           {/* Export Button */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
               <Button
                 variant="contained"
@@ -1320,7 +1320,7 @@ const SleepDiary: React.FC = () => {
             {selectedLog && (
               <Box>
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Paper
                       sx={{
                         p: 2,
@@ -1342,7 +1342,7 @@ const SleepDiary: React.FC = () => {
                     </Paper>
                   </Grid>
 
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Paper
                       sx={{
                         p: 2,
@@ -1364,7 +1364,7 @@ const SleepDiary: React.FC = () => {
                     </Paper>
                   </Grid>
 
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Paper
                       sx={{
                         p: 2,
@@ -1386,7 +1386,7 @@ const SleepDiary: React.FC = () => {
                     </Paper>
                   </Grid>
 
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Paper
                       sx={{
                         p: 2,

@@ -244,7 +244,7 @@ export default function PolicyDistribution() {
 
       <Grid container spacing={3}>
         {/* Left: Recipient Selection */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%' }}>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
@@ -286,7 +286,6 @@ export default function PolicyDistribution() {
                   return (
                     <ListItem
                       key={item.id}
-                      button
                       onClick={() => handleAddRecipient(item)}
                       sx={{
                         mb: 1,
@@ -294,6 +293,7 @@ export default function PolicyDistribution() {
                         bgcolor: isSelected ? alpha(getRecipientColor(recipientType), 0.1) : 'transparent',
                         border: '1px solid',
                         borderColor: isSelected ? getRecipientColor(recipientType) : 'divider',
+                        cursor: 'pointer',
                         '&:hover': {
                           bgcolor: alpha(getRecipientColor(recipientType), 0.05)
                         }
@@ -313,7 +313,7 @@ export default function PolicyDistribution() {
                       </Box>
                       <ListItemText
                         primary={item.name}
-                        secondary={'role' in item ? item.role : undefined}
+                        secondary={'role' in item ? (item as any).role : undefined}
                       />
                     </ListItem>
                   );
@@ -324,7 +324,7 @@ export default function PolicyDistribution() {
         </Grid>
 
         {/* Right: Selected Recipients & Message */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Stack spacing={3}>
             {/* Selected Recipients */}
             <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
@@ -396,7 +396,7 @@ export default function PolicyDistribution() {
         </Grid>
 
         {/* Distribution History */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>

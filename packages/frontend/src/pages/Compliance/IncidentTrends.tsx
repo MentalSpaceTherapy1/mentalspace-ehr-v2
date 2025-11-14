@@ -196,7 +196,7 @@ export default function IncidentTrends() {
       {/* Insight Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {insightCards.map((card, idx) => (
-          <Grid item xs={12} sm={6} lg={3} key={idx}>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={idx}>
             <Card
               sx={{
                 borderRadius: 3,
@@ -240,7 +240,7 @@ export default function IncidentTrends() {
 
       <Grid container spacing={3}>
         {/* Trend Over Time */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
@@ -288,7 +288,7 @@ export default function IncidentTrends() {
         </Grid>
 
         {/* Breakdown by Type */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
@@ -301,7 +301,7 @@ export default function IncidentTrends() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent as number) * 100).toFixed(0)}%`}
                     outerRadius={100}
                     dataKey="value"
                   >
@@ -317,7 +317,7 @@ export default function IncidentTrends() {
         </Grid>
 
         {/* Heat Map by Location */}
-        <Grid item xs={12} lg={7}>
+        <Grid size={{ xs: 12, lg: 7 }}>
           <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
@@ -371,7 +371,7 @@ export default function IncidentTrends() {
         </Grid>
 
         {/* Resolution Time Metrics */}
-        <Grid item xs={12} lg={5}>
+        <Grid size={{ xs: 12, lg: 5 }}>
           <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
@@ -391,7 +391,7 @@ export default function IncidentTrends() {
         </Grid>
 
         {/* Trend Analysis Insights */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Card
             sx={{
               borderRadius: 3,
@@ -408,7 +408,7 @@ export default function IncidentTrends() {
               </Stack>
 
               <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Paper sx={{ p: 3, borderRadius: 2, bgcolor: 'white' }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#10B981' }}>
                       Positive Trends
@@ -427,7 +427,7 @@ export default function IncidentTrends() {
                   </Paper>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Paper sx={{ p: 3, borderRadius: 2, bgcolor: 'white' }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#F59E0B' }}>
                       Areas for Improvement

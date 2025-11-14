@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
   Area,
   AreaChart,
-  TooltipProps,
 } from 'recharts';
 import { Download } from 'lucide-react';
 import { exportChartAsImage } from '../../utils/chartExport';
@@ -28,6 +27,12 @@ interface SymptomTrendChartProps {
   showArea?: boolean;
 }
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: any; color: string; payload?: any }>;
+  label?: string;
+}
+
 export const SymptomTrendChart: React.FC<SymptomTrendChartProps> = ({
   data,
   title = 'Symptom Severity Over Time',
@@ -42,7 +47,7 @@ export const SymptomTrendChart: React.FC<SymptomTrendChartProps> = ({
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white border-2 border-rose-200 rounded-lg shadow-lg p-3">

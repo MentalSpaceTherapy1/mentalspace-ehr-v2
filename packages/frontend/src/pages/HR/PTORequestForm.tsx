@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -29,11 +30,12 @@ import {
   Remove as RemoveIcon,
 } from '@mui/icons-material';
 import { usePTO, PTOBalance, CreatePTORequest } from '../../hooks/usePTO';
+import { useAuth } from '../../hooks/useAuth';
 import { format, differenceInDays, addDays } from 'date-fns';
 
 interface PTORequestFormProps {
-  employeeId: string;
-  employeeName: string;
+  employeeId?: string;
+  employeeName?: string;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -47,11 +49,16 @@ const PTO_TYPES = [
 ];
 
 const PTORequestForm: React.FC<PTORequestFormProps> = ({
-  employeeId,
-  employeeName,
+  employeeId: propEmployeeId,
+  employeeName: propEmployeeName,
   onSuccess,
   onCancel,
 }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const employeeId = propEmployeeId || user?.id || '';
+  const employeeName = propEmployeeName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+  const handleCancel = onCancel || (() => navigate('/hr/pto'));
   const { createRequest, getBalance, checkConflicts, loading } = usePTO();
   const [balance, setBalance] = useState<PTOBalance | null>(null);
   const [formData, setFormData] = useState<Partial<CreatePTORequest>>({
@@ -196,7 +203,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
         {/* Balance Overview */}
         {balance && (
           <Grid container spacing={2} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card sx={{ border: '2px solid #3498DB30', backgroundColor: '#3498DB10' }}>
                 <CardContent>
                   <Typography variant="subtitle2" gutterBottom sx={{ color: '#3498DB', fontWeight: 600 }}>
@@ -226,7 +233,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card sx={{ border: '2px solid #E74C3C30', backgroundColor: '#E74C3C10' }}>
                 <CardContent>
                   <Typography variant="subtitle2" gutterBottom sx={{ color: '#E74C3C', fontWeight: 600 }}>
@@ -256,7 +263,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card sx={{ border: '2px solid #9B59B630', backgroundColor: '#9B59B610' }}>
                 <CardContent>
                   <Typography variant="subtitle2" gutterBottom sx={{ color: '#9B59B6', fontWeight: 600 }}>
@@ -290,7 +297,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
 
         {/* Request Form */}
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <FormControl fullWidth>
               <InputLabel>PTO Type</InputLabel>
               <Select
@@ -310,7 +317,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Start Date"
@@ -321,7 +328,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="End Date"
@@ -333,7 +340,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
           </Grid>
 
           {/* Days Calculator */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card
               sx={{
                 background: `linear-gradient(135deg, ${getPTOTypeConfig(formData.type!).color}15 0%, ${
@@ -344,7 +351,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
             >
               <CardContent>
                 <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="h3" sx={{ fontWeight: 700, color: getPTOTypeConfig(formData.type!).color }}>
                         {formData.totalDays}
@@ -354,7 +361,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
                       </Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="h3" sx={{ fontWeight: 700, color: getPTOTypeConfig(formData.type!).color }}>
                         {formData.totalHours}
@@ -364,7 +371,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
                       </Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="h3" sx={{ fontWeight: 700, color: getBalanceColor() }}>
                         {getAvailableBalance() - (formData.totalDays || 0)}
@@ -402,7 +409,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
 
           {/* Conflicts Warning */}
           {conflicts && conflicts.hasConflicts && (
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Alert severity="warning">
                 <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
                   Team Coverage Alert
@@ -415,7 +422,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
             </Grid>
           )}
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               multiline
@@ -427,7 +434,7 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               multiline

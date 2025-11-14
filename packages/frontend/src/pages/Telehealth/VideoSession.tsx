@@ -20,7 +20,7 @@ import WhiteboardTool from '../../components/Telehealth/WhiteboardTool';
 import BackgroundEffectsPanel from '../../components/Telehealth/BackgroundEffectsPanel';
 import { TranscriptionPanel } from '../../components/Telehealth/TranscriptionPanel';
 import RecordingConsentDialog from '../../components/Telehealth/RecordingConsentDialog';
-import { RecordingPlayback } from '../../components/Telehealth/RecordingPlayback';
+import RecordingPlayback from '../../components/Telehealth/RecordingPlayback';
 import { io, Socket } from 'socket.io-client';
 
 // Import Twilio Video SDK - ensure it's available globally
@@ -347,7 +347,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
 
       // Show warning if quality is poor
       if (level <= 2 && level > 0) {
-        toast.warning('Poor network connection. Consider switching to audio-only mode.', {
+        toast.error('Poor network connection. Consider switching to audio-only mode.', {
           duration: 5000,
         });
       }
@@ -449,7 +449,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
     setShowRecordingConsent(false);
 
     if (!consentData.consentGiven) {
-      toast.info('Recording cancelled');
+      toast('Recording cancelled');
       return;
     }
 
@@ -548,9 +548,9 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
         // Stop screen sharing
         const screenTrack = Array.from(room.localParticipant.videoTracks.values()).find(
           (publication: any) => publication.trackName.includes('screen')
-        );
+        ) as any;
 
-        if (screenTrack) {
+        if (screenTrack && screenTrack.track) {
           await room.localParticipant.unpublishTrack(screenTrack.track);
           screenTrack.track.stop();
           toast.success('Screen sharing stopped');
@@ -559,8 +559,8 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
         // Re-enable camera
         const cameraPublication = Array.from(room.localParticipant.videoTracks.values()).find(
           (publication: any) => !publication.trackName.includes('screen')
-        );
-        if (cameraPublication?.track) {
+        ) as any;
+        if (cameraPublication && cameraPublication.track) {
           cameraPublication.track.enable();
         }
 
@@ -611,7 +611,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
             }
           });
 
-          toast.info('Screen sharing ended');
+          toast('Screen sharing ended');
         };
 
         setIsScreenSharing(true);
@@ -1208,7 +1208,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
           {showTranscription && (
             <TranscriptionPanel
               sessionId={sessionData?.id || ''}
-              onClose={() => setShowTranscription(false)}
+              onTranscriptionToggle={(enabled) => setShowTranscription(enabled)}
             />
           )}
 
@@ -1273,19 +1273,21 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
         {/* Emergency modal */}
         {showEmergencyModal && sessionData && (
           <EmergencyModal
+            open={showEmergencyModal}
             sessionId={sessionData.id}
-            appointmentId={appointmentId || ''}
+            clientName={`${sessionData.appointment?.client?.firstName || ''} ${sessionData.appointment?.client?.lastName || ''}`.trim() || 'Client'}
             onClose={() => setShowEmergencyModal(false)}
-            onActivate={async (protocol) => {
-              console.log('Emergency protocol activated:', protocol);
+            onEmergencyResolved={async (data) => {
+              console.log('Emergency protocol resolved:', data);
               // Emit emergency event via socket
               if (socketRef.current) {
                 socketRef.current.emit('emergency:activate', {
                   sessionId: sessionData.id,
-                  protocol,
+                  ...data,
                   timestamp: new Date().toISOString(),
                 });
               }
+              setShowEmergencyModal(false);
             }}
           />
         )}

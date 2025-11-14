@@ -46,13 +46,13 @@ router.use(authMiddleware);
  * GET /api/v1/reminders/config
  * Get current reminder configuration
  */
-router.get('/config', requireRole(['ADMIN', 'PRACTICE_ADMIN']), getConfig);
+router.get('/config', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), getConfig);
 
 /**
  * PUT /api/v1/reminders/config
  * Update reminder configuration
  */
-router.put('/config', requireRole(['ADMIN', 'PRACTICE_ADMIN']), updateConfig);
+router.put('/config', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), updateConfig);
 
 // Testing endpoints (Admin only)
 /**
@@ -60,14 +60,14 @@ router.put('/config', requireRole(['ADMIN', 'PRACTICE_ADMIN']), updateConfig);
  * Send a test SMS to verify configuration
  * Body: { phoneNumber: string, fromNumber: string }
  */
-router.post('/test/sms', requireRole(['ADMIN', 'PRACTICE_ADMIN']), testSms);
+router.post('/test/sms', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), testSms);
 
 /**
  * POST /api/v1/reminders/test/email
  * Send a test email to verify configuration
  * Body: { email: string, fromEmail: string }
  */
-router.post('/test/email', requireRole(['ADMIN', 'PRACTICE_ADMIN']), testEmail);
+router.post('/test/email', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), testEmail);
 
 // Appointment reminder management
 /**
@@ -93,7 +93,7 @@ router.post('/:reminderId/resend', resendReminder);
  * POST /api/v1/reminders/process
  * Manually trigger reminder processing (normally runs via cron)
  */
-router.post('/process', requireRole(['ADMIN', 'PRACTICE_ADMIN']), processReminders);
+router.post('/process', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), processReminders);
 
 /**
  * POST /api/v1/reminders/retry-failed
@@ -101,7 +101,7 @@ router.post('/process', requireRole(['ADMIN', 'PRACTICE_ADMIN']), processReminde
  */
 router.post(
   '/retry-failed',
-  requireRole(['ADMIN', 'PRACTICE_ADMIN']),
+  requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']),
   retryFailedReminders
 );
 
@@ -110,13 +110,13 @@ router.post(
  * GET /api/v1/reminders/jobs/status
  * Get status of reminder cron jobs
  */
-router.get('/jobs/status', requireRole(['ADMIN', 'PRACTICE_ADMIN']), getJobStatus);
+router.get('/jobs/status', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), getJobStatus);
 
 /**
  * GET /api/v1/reminders/statistics
  * Get reminder statistics
  * Query params: startDate (optional), endDate (optional)
  */
-router.get('/statistics', requireRole(['ADMIN', 'PRACTICE_ADMIN']), getStatistics);
+router.get('/statistics', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), getStatistics);
 
 export default router;

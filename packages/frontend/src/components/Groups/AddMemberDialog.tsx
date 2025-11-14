@@ -153,7 +153,7 @@ export default function AddMemberDialog({
           )}
 
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <Autocomplete
                 options={clients}
                 getOptionLabel={(option) =>
@@ -195,13 +195,13 @@ export default function AddMemberDialog({
 
             {requiresScreening && (
               <>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Typography variant="subtitle2" color="primary" gutterBottom>
                     Screening Required
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     select
                     fullWidth
@@ -219,7 +219,7 @@ export default function AddMemberDialog({
                   </TextField>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     type="date"
                     fullWidth
@@ -231,7 +231,7 @@ export default function AddMemberDialog({
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     multiline
@@ -243,7 +243,7 @@ export default function AddMemberDialog({
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -257,7 +257,7 @@ export default function AddMemberDialog({
               </>
             )}
 
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <TextField
                 select
                 fullWidth

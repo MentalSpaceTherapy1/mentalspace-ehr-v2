@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
   ComposedChart,
   Line,
-  TooltipProps,
 } from 'recharts';
 import { Download } from 'lucide-react';
 import { exportChartAsImage } from '../../utils/chartExport';
@@ -29,6 +28,12 @@ interface SleepQualityChartProps {
   showQuality?: boolean;
 }
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: any; color: string; dataKey?: string; payload?: any }>;
+  label?: string;
+}
+
 export const SleepQualityChart: React.FC<SleepQualityChartProps> = ({
   data,
   title = 'Sleep Quality',
@@ -44,7 +49,7 @@ export const SleepQualityChart: React.FC<SleepQualityChartProps> = ({
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white border-2 border-indigo-200 rounded-lg shadow-lg p-3">

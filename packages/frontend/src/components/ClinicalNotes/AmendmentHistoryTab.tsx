@@ -92,7 +92,7 @@ export const AmendmentHistoryTab: React.FC<AmendmentHistoryTabProps> = ({ noteId
     setShowComparison(true);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'inherit' | 'grey' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
     switch (status) {
       case 'SIGNED':
         return 'success';
@@ -101,7 +101,7 @@ export const AmendmentHistoryTab: React.FC<AmendmentHistoryTabProps> = ({ noteId
       case 'REJECTED':
         return 'error';
       default:
-        return 'default';
+        return 'grey';
     }
   };
 
@@ -196,7 +196,7 @@ export const AmendmentHistoryTab: React.FC<AmendmentHistoryTabProps> = ({ noteId
                   </Box>
 
                   <Grid container spacing={2}>
-                    <Grid item xs={12}>
+                    <Grid size={{xs: 12}}>
                       <Typography variant="subtitle2" color="textSecondary">
                         Amended By:
                       </Typography>
@@ -206,21 +206,21 @@ export const AmendmentHistoryTab: React.FC<AmendmentHistoryTabProps> = ({ noteId
                       </Typography>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{xs: 12}}>
                       <Typography variant="subtitle2" color="textSecondary">
                         Reason:
                       </Typography>
                       <Typography variant="body2">{amendment.reason}</Typography>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{xs: 12}}>
                       <Typography variant="subtitle2" color="textSecondary">
                         Summary of Changes:
                       </Typography>
                       <Typography variant="body2">{amendment.changeSummary}</Typography>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{xs: 12}}>
                       <Typography variant="subtitle2" color="textSecondary">
                         Fields Modified:
                       </Typography>
@@ -233,10 +233,10 @@ export const AmendmentHistoryTab: React.FC<AmendmentHistoryTabProps> = ({ noteId
 
                     {amendment.signatureEvent && (
                       <>
-                        <Grid item xs={12}>
+                        <Grid size={{xs: 12}}>
                           <Divider />
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={{xs: 12}}>
                           <Typography variant="subtitle2" color="textSecondary">
                             Signed By:
                           </Typography>

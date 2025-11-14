@@ -4,6 +4,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import TimePicker from '../../components/TimePicker';
 
+interface AppointmentFormData {
+  clientId: string;
+  clinicianId: string;
+  appointmentDate: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  appointmentType: string;
+  serviceLocation: string;
+  cptCode: string;
+  timezone: string;
+  notes: string;
+  isRecurring: boolean;
+  recurrenceFrequency: string;
+  recurrenceDaysOfWeek: string[];
+  recurrenceEndDate: string;
+  recurrenceCount: number;
+  isGroupAppointment: boolean;
+  clientIds: string[];
+}
+
 export default function NewAppointment() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -42,7 +63,7 @@ export default function NewAppointment() {
   const preselectedDate = parseDate(preselectedDateParam);
   const preselectedStartTime = parseTime(preselectedDateParam);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AppointmentFormData>({
     clientId: preselectedClientId || '',
     clinicianId: '',
     appointmentDate: preselectedDate,
@@ -56,12 +77,12 @@ export default function NewAppointment() {
     notes: '',
     isRecurring: false,
     recurrenceFrequency: 'weekly', // 'twice_weekly', 'weekly', 'bi_weekly', 'monthly', 'custom'
-    recurrenceDaysOfWeek: [] as string[], // ['Monday', 'Wednesday']
+    recurrenceDaysOfWeek: [], // ['Monday', 'Wednesday']
     recurrenceEndDate: '',
     recurrenceCount: 0,
     // Group appointment support
     isGroupAppointment: false,
-    clientIds: [] as string[], // For group appointments
+    clientIds: [], // For group appointments
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -169,6 +190,8 @@ export default function NewAppointment() {
         recurrenceDaysOfWeek: [],
         recurrenceEndDate: '',
         recurrenceCount: 0,
+        isGroupAppointment: false,
+        clientIds: [],
       });
 
       // Set client search if client exists

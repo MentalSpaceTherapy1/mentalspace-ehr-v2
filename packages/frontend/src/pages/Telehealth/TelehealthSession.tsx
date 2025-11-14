@@ -142,11 +142,14 @@ function VideoSessionView({
   userRole,
 }: VideoSessionViewProps) {
   const meetingManager = useMeetingManager();
-  const { isVideoEnabled } = useLocalVideo();
+  const { isVideoEnabled, toggleVideo } = useLocalVideo();
   const { tiles } = useRemoteVideoTileState();
   const audioVideo = useAudioVideo();
   const { isLocalUserSharing, sharingAttendeeId } = useContentShareState();
   const [joined, setJoined] = useState(false);
+  const [localAudioTrack, setLocalAudioTrack] = useState<any>(null);
+  const [localVideoTrack, setLocalVideoTrack] = useState<any>(null);
+  const [room, setRoom] = useState<any>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
   // Join Chime meeting
@@ -308,6 +311,9 @@ function VideoSessionView({
 
       {/* Controls */}
       <VideoControls
+        room={room}
+        localAudioTrack={localAudioTrack}
+        localVideoTrack={localVideoTrack}
         onEndCall={onEndCall}
         onStartRecording={startRecording}
         onStopRecording={stopRecording}

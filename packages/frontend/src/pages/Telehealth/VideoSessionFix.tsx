@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import api from '../../lib/api';
 import VideoControls from '../../components/Telehealth/VideoControls';
 import WaitingRoom from '../../components/Telehealth/WaitingRoom';
-import { EmergencyModal } from '../../components/Telehealth/EmergencyModal';
+import EmergencyModal from '../../components/Telehealth/EmergencyModal';
 import { TranscriptionPanel } from '../../components/Telehealth/TranscriptionPanel';
 import RecordingConsentDialog from '../../components/Telehealth/RecordingConsentDialog';
-import { RecordingPlayback } from '../../components/Telehealth/RecordingPlayback';
-import { useAuth } from '../../contexts/AuthContext';
+import RecordingPlayback from '../../components/Telehealth/RecordingPlayback';
+import { useAuth } from '../../hooks/useAuth';
 import { io, Socket } from 'socket.io-client';
 
 // Import Twilio Video SDK - ensure it's available globally
@@ -69,7 +69,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   const remoteVideoRef = useRef<HTMLDivElement>(null);
 
   // Determine user role
-  const userRole = user?.roles?.includes('CLINICIAN') ? 'clinician' : 'client';
+  const userRole = user?.role === 'CLINICIAN' ? 'clinician' : 'client';
 
   // Validate appointment ID format
   const isValidAppointmentId = appointmentId &&
@@ -510,26 +510,19 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
 
           {/* Controls */}
           <VideoControls
-            isVideoEnabled={isVideoEnabled}
-            isAudioEnabled={isAudioEnabled}
-            isScreenSharing={isScreenSharing}
-            isRecording={isRecording}
-            onToggleVideo={toggleVideo}
-            onToggleAudio={toggleAudio}
-            onToggleScreenShare={() => {}}
+            room={room}
+            localAudioTrack={localTracks.find(t => t.kind === 'audio') || null}
+            localVideoTrack={localTracks.find(t => t.kind === 'video') || null}
             onEndCall={endSession}
-            onEmergencyClick={() => setShowEmergencyModal(true)}
-            onToggleTranscription={() => setShowTranscription(!showTranscription)}
-            onToggleRecording={() => {}}
-            hasRecordingConsent={false}
-            isHost={userRole === 'clinician'}
+            isRecording={isRecording}
+            userRole={userRole}
           />
 
           {/* Transcription panel */}
           {showTranscription && (
             <TranscriptionPanel
               sessionId={sessionData?.id || ''}
-              onClose={() => setShowTranscription(false)}
+              onTranscriptionToggle={(enabled) => setShowTranscription(enabled)}
             />
           )}
         </div>
@@ -537,19 +530,21 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
         {/* Emergency modal */}
         {showEmergencyModal && sessionData && (
           <EmergencyModal
+            open={showEmergencyModal}
             sessionId={sessionData.id}
-            appointmentId={appointmentId || ''}
+            clientName={`${sessionData.appointment?.client?.firstName || ''} ${sessionData.appointment?.client?.lastName || ''}`.trim() || 'Client'}
             onClose={() => setShowEmergencyModal(false)}
-            onActivate={async (protocol) => {
-              console.log('Emergency protocol activated:', protocol);
+            onEmergencyResolved={async (data) => {
+              console.log('Emergency protocol resolved:', data);
               // Emit emergency event via socket
               if (socketRef.current) {
                 socketRef.current.emit('emergency:activate', {
                   sessionId: sessionData.id,
-                  protocol,
+                  ...data,
                   timestamp: new Date().toISOString(),
                 });
               }
+              setShowEmergencyModal(false);
             }}
           />
         )}

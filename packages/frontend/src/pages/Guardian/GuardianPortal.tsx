@@ -387,7 +387,7 @@ const GuardianPortal: React.FC = () => {
           {/* Top Summary Cards Row */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
             {/* Profile Summary Card */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -441,7 +441,7 @@ const GuardianPortal: React.FC = () => {
             </Grid>
 
             {/* Permissions Card */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom fontWeight="bold">
@@ -505,7 +505,7 @@ const GuardianPortal: React.FC = () => {
             </Grid>
 
             {/* Next Appointment Card */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card elevation={3} sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom fontWeight="bold">
@@ -592,7 +592,7 @@ const GuardianPortal: React.FC = () => {
                 Quick Actions
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Button
                     variant="outlined"
                     fullWidth
@@ -604,7 +604,7 @@ const GuardianPortal: React.FC = () => {
                     Schedule Appointment
                   </Button>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Button
                     variant="outlined"
                     fullWidth
@@ -618,7 +618,7 @@ const GuardianPortal: React.FC = () => {
                     </Badge>
                   </Button>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Button
                     variant="outlined"
                     fullWidth
@@ -630,7 +630,7 @@ const GuardianPortal: React.FC = () => {
                     View Records
                   </Button>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Button
                     variant="outlined"
                     fullWidth
@@ -648,7 +648,7 @@ const GuardianPortal: React.FC = () => {
           {/* Main Content Grid */}
           <Grid container spacing={3}>
             {/* Upcoming Appointments */}
-            <Grid item xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -715,7 +715,7 @@ const GuardianPortal: React.FC = () => {
             </Grid>
 
             {/* Recent Activity & Messages */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               {/* Recent Activity Card */}
               <Card elevation={3} sx={{ mb: 3 }}>
                 <CardContent>
@@ -761,8 +761,9 @@ const GuardianPortal: React.FC = () => {
                     {messages.slice(0, 3).map((msg) => (
                       <React.Fragment key={msg.id}>
                         <ListItem
-                          button
+                          component="button"
                           onClick={() => navigate(`/guardian/minors/${selectedMinorId}/messages/${msg.id}`)}
+                          sx={{ cursor: 'pointer' }}
                         >
                           <ListItemText
                             primary={

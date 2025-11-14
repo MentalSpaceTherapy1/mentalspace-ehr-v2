@@ -153,7 +153,7 @@ export default function ComplianceDashboard() {
           const Icon = stat.icon;
           const TrendIcon = stat.trend === 'up' ? TrendingUp : TrendingDown;
           return (
-            <Grid item xs={12} sm={6} lg={3} key={stat.title}>
+            <Grid size={{xs: 12, sm: 6, lg: 3}} key={stat.title}>
               <Card
                 sx={{
                   borderRadius: 3,
@@ -225,7 +225,7 @@ export default function ComplianceDashboard() {
 
       <Grid container spacing={3}>
         {/* Policy Acknowledgment Rate */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{xs: 12, md: 6}}>
           <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
@@ -271,7 +271,7 @@ export default function ComplianceDashboard() {
         </Grid>
 
         {/* Open Incidents by Severity */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{xs: 12, md: 6}}>
           <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
@@ -295,7 +295,7 @@ export default function ComplianceDashboard() {
         </Grid>
 
         {/* Recent Incidents */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{xs: 12, md: 6}}>
           <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
@@ -348,7 +348,7 @@ export default function ComplianceDashboard() {
         </Grid>
 
         {/* Pending Acknowledgments */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{xs: 12, md: 6}}>
           <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>

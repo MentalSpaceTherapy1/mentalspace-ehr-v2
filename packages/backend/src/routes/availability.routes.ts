@@ -40,7 +40,7 @@ router.get(
 router.post(
   '/',
   authenticate,
-  authorize('ADMIN', 'THERAPIST'),
+  authorize('ADMINISTRATOR', 'THERAPIST'),
   availabilityController.createAvailability
 );
 
@@ -59,14 +59,14 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  authorize('ADMIN', 'THERAPIST'),
+  authorize('ADMINISTRATOR', 'THERAPIST'),
   availabilityController.updateAvailability
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('ADMIN', 'THERAPIST'),
+  authorize('ADMINISTRATOR', 'THERAPIST'),
   availabilityController.deleteAvailability
 );
 

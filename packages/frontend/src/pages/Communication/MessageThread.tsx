@@ -24,14 +24,18 @@ import {
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useMessaging } from '../../hooks/useMessaging';
 import { format } from 'date-fns';
 
 interface MessageThreadProps {
-  threadId: string;
+  threadId?: string;
 }
 
-const MessageThread: React.FC<MessageThreadProps> = ({ threadId }) => {
+const MessageThread: React.FC<MessageThreadProps> = ({ threadId: propThreadId }) => {
+  const { threadId: paramThreadId } = useParams<{ threadId: string }>();
+  const threadId = propThreadId || paramThreadId || '';
+  const navigate = useNavigate();
   const { messages, sendMessage, markAsRead, loading } = useMessaging();
   const [replyText, setReplyText] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);

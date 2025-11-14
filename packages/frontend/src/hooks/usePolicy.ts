@@ -12,6 +12,7 @@ interface Policy {
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   effectiveDate: string;
   reviewDate?: string;
+  reviewSchedule?: number;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

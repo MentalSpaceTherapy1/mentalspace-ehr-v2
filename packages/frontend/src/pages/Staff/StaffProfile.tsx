@@ -166,7 +166,7 @@ const StaffProfile: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 {staff.firstName} {staff.lastName}
               </h1>
-              <p className="text-xl text-gray-600 mb-4">{staff.title}</p>
+              <p className="text-xl text-gray-600 mb-4">{staff.jobTitle}</p>
               <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-blue-500" />
@@ -236,7 +236,7 @@ const StaffProfile: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Job Title</label>
-                  <p className="text-lg text-gray-900 mt-1">{staff.title}</p>
+                  <p className="text-lg text-gray-900 mt-1">{staff.jobTitle}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Employment Type</label>
@@ -295,7 +295,7 @@ const StaffProfile: React.FC = () => {
                         <p className="font-medium text-gray-900">
                           {staff.manager.firstName} {staff.manager.lastName}
                         </p>
-                        <p className="text-sm text-gray-600">{staff.manager.title}</p>
+                        <p className="text-sm text-gray-600">{staff.manager.jobTitle}</p>
                       </div>
                     </div>
                   </div>
@@ -327,7 +327,7 @@ const StaffProfile: React.FC = () => {
                             <p className="font-medium text-gray-900">
                               {report.firstName} {report.lastName}
                             </p>
-                            <p className="text-sm text-gray-600">{report.title}</p>
+                            <p className="text-sm text-gray-600">{report.jobTitle}</p>
                           </div>
                         </div>
                       ))}

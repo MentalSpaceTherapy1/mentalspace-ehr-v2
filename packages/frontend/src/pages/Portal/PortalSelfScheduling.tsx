@@ -120,7 +120,7 @@ interface MyAppointment {
   endTime: string;
   duration: number;
   status: string;
-  appointmentType: string;
+  appointmentType: string | AppointmentType;
   serviceLocation: string;
   notes?: string;
   clinician: {
@@ -810,7 +810,7 @@ END:VCALENDAR`;
       {isLoading ? (
         <Grid container spacing={3}>
           {[1, 2, 3, 4].map((i) => (
-            <Grid item xs={12} md={6} key={i}>
+            <Grid size={{ xs: 12, md: 6 }} key={i}>
               <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 3 }} />
             </Grid>
           ))}
@@ -818,7 +818,7 @@ END:VCALENDAR`;
       ) : (
         <Grid container spacing={3}>
           {getFilteredClinicians().map((clinician) => (
-            <Grid item xs={12} md={6} lg={4} key={clinician.id}>
+            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={clinician.id}>
               <Card
                 sx={{
                   cursor: 'pointer',
@@ -1001,7 +1001,7 @@ END:VCALENDAR`;
       {/* Appointment Type Cards */}
       <Grid container spacing={2}>
         {getFilteredAppointmentTypes().map((type) => (
-          <Grid item xs={12} md={6} key={type.id}>
+          <Grid size={{ xs: 12, md: 6 }} key={type.id}>
             <Card
               sx={{
                 cursor: 'pointer',
@@ -1098,7 +1098,7 @@ END:VCALENDAR`;
             const isPast = dayjs(date).isBefore(dayjs(), 'day');
 
             return (
-              <Grid item xs={12 / 7} key={date.toISOString()}>
+              <Grid size={{ xs: 12 / 7 }} key={date.toISOString()}>
                 <Card
                   sx={{
                     cursor: hasSlots && !isPast ? 'pointer' : 'not-allowed',
@@ -1171,7 +1171,7 @@ END:VCALENDAR`;
                         </Typography>
                         <Grid container spacing={1}>
                           {morning.map((slot, idx) => (
-                            <Grid item xs={6} sm={4} md={3} key={idx}>
+                            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={idx}>
                               <Button
                                 fullWidth
                                 variant={
@@ -1204,7 +1204,7 @@ END:VCALENDAR`;
                         </Typography>
                         <Grid container spacing={1}>
                           {afternoon.map((slot, idx) => (
-                            <Grid item xs={6} sm={4} md={3} key={idx}>
+                            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={idx}>
                               <Button
                                 fullWidth
                                 variant={
@@ -1237,7 +1237,7 @@ END:VCALENDAR`;
                         </Typography>
                         <Grid container spacing={1}>
                           {evening.map((slot, idx) => (
-                            <Grid item xs={6} sm={4} md={3} key={idx}>
+                            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={idx}>
                               <Button
                                 fullWidth
                                 variant={
@@ -1284,7 +1284,7 @@ END:VCALENDAR`;
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
@@ -1308,11 +1308,11 @@ END:VCALENDAR`;
               </Box>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Divider />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <CalendarToday color="action" />
                 <Box>
@@ -1331,7 +1331,7 @@ END:VCALENDAR`;
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <AccessTime color="action" />
                 <Box>
@@ -1348,7 +1348,7 @@ END:VCALENDAR`;
               </Box>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 {wizardState.modality === 'TELEHEALTH' ? (
                   <VideoCall color="action" />
@@ -1574,7 +1574,7 @@ END:VCALENDAR`;
               <CardContent sx={{ p: 3 }}>
                 <Grid container spacing={3} alignItems="center">
                   {/* Date & Time Column */}
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Box
                       sx={{
                         display: 'flex',
@@ -1611,14 +1611,16 @@ END:VCALENDAR`;
                           {appointment.startTime}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {appointment.appointmentType.defaultDuration || 50} minutes
+                          {typeof appointment.appointmentType === 'object'
+                            ? appointment.appointmentType.defaultDuration
+                            : appointment.duration || 50} minutes
                         </Typography>
                       </Box>
                     </Box>
                   </Grid>
 
                   {/* Clinician Column */}
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       <Avatar
                         sx={{
@@ -1648,13 +1650,15 @@ END:VCALENDAR`;
                   </Grid>
 
                   {/* Type & Modality Column */}
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Box>
                       <Typography variant="body2" color="text.secondary" fontSize={11} textTransform="uppercase" fontWeight={600} gutterBottom>
                         Session Type
                       </Typography>
                       <Typography variant="body1" fontWeight={500} gutterBottom>
-                        {appointment.appointmentType}
+                        {typeof appointment.appointmentType === 'object'
+                          ? appointment.appointmentType.typeName
+                          : appointment.appointmentType}
                       </Typography>
                       <Chip
                         size="small"
@@ -1677,7 +1681,7 @@ END:VCALENDAR`;
                   </Grid>
 
                   {/* Actions Column */}
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <Chip
                         label={appointment.status}
@@ -1799,7 +1803,7 @@ END:VCALENDAR`;
               >
                 <CardContent sx={{ p: 3 }}>
                   <Grid container spacing={3} alignItems="center">
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <Box>
                         <Chip
                           label={`Match Score: ${offer.matchScore}%`}
@@ -1833,12 +1837,12 @@ END:VCALENDAR`;
                         )}
                       </Box>
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid size={{ xs: 12, md: 3 }}>
                       <Typography variant="caption" color="error.main" fontWeight={600}>
                         Expires: {dayjs(offer.expiresAt).fromNow()}
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid size={{ xs: 12, md: 3 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <Button
                           variant="contained"
@@ -1910,7 +1914,7 @@ END:VCALENDAR`;
               >
                 <CardContent sx={{ p: 3 }}>
                   <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={8}>
+                    <Grid size={{ xs: 12, md: 8 }}>
                       <Box>
                         <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                           {entry.appointmentType?.typeName || 'Any Type'}
@@ -1947,7 +1951,7 @@ END:VCALENDAR`;
                         </Typography>
                       </Box>
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Button
                         variant="outlined"
                         color="error"

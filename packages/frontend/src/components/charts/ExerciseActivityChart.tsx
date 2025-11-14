@@ -9,7 +9,6 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
-  TooltipProps,
 } from 'recharts';
 import { Download } from 'lucide-react';
 import { exportChartAsImage } from '../../utils/chartExport';
@@ -33,6 +32,12 @@ interface ExerciseActivityChartProps {
   showSessions?: boolean;
 }
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: any; color: string; payload?: any }>;
+  label?: string;
+}
+
 export const ExerciseActivityChart: React.FC<ExerciseActivityChartProps> = ({
   data,
   title = 'Exercise Activity',
@@ -52,7 +57,7 @@ export const ExerciseActivityChart: React.FC<ExerciseActivityChartProps> = ({
 
   const COLORS = ['#10b981', '#059669', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'];
 
-  const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white border-2 border-green-200 rounded-lg shadow-lg p-3">

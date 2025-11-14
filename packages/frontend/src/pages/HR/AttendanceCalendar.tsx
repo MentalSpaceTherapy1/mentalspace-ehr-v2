@@ -25,6 +25,7 @@ import {
   BeachAccess as BeachAccessIcon,
 } from '@mui/icons-material';
 import { useAttendance, AttendanceRecord } from '../../hooks/useAttendance';
+import { useAuth } from '../../hooks/useAuth';
 import {
   startOfMonth,
   endOfMonth,
@@ -40,8 +41,8 @@ import {
 } from 'date-fns';
 
 interface AttendanceCalendarProps {
-  employeeId: string;
-  employeeName: string;
+  employeeId?: string;
+  employeeName?: string;
 }
 
 const STATUS_CONFIG = {
@@ -73,9 +74,12 @@ const STATUS_CONFIG = {
 };
 
 const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
-  employeeId,
-  employeeName,
+  employeeId: propEmployeeId,
+  employeeName: propEmployeeName,
 }) => {
+  const { user } = useAuth();
+  const employeeId = propEmployeeId || user?.id || '';
+  const employeeName = propEmployeeName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
   const { getAttendanceRecords, exportAttendance, loading } = useAttendance();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
@@ -200,7 +204,6 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                 variant="body2"
                 sx={{
                   fontWeight: isCurrentDay ? 700 : 400,
-                  color: isCurrentMonth ? '#2C3E50' : '#BDC3C7',
                   backgroundColor: isCurrentDay ? '#667EEA' : 'transparent',
                   color: isCurrentDay ? 'white' : isCurrentMonth ? '#2C3E50' : '#BDC3C7',
                   borderRadius: '50%',
@@ -246,7 +249,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
       rows.push(
         <Grid container key={day.toString()}>
           {days.map((dayCell, index) => (
-            <Grid item xs={12 / 7} key={index}>
+            <Grid size={{ xs: 12 / 7 }} key={index}>
               {dayCell}
             </Grid>
           ))}
@@ -297,7 +300,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
 
       {/* Summary Stats */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={2}>
+        <Grid size={{ xs: 12, md: 2 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #2ECC71 0%, #27AE60 100%)', color: 'white' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h3" sx={{ fontWeight: 700 }}>
@@ -307,7 +310,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={2}>
+        <Grid size={{ xs: 12, md: 2 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #E74C3C 0%, #C0392B 100%)', color: 'white' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h3" sx={{ fontWeight: 700 }}>
@@ -317,7 +320,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={2}>
+        <Grid size={{ xs: 12, md: 2 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #F39C12 0%, #E67E22 100%)', color: 'white' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h3" sx={{ fontWeight: 700 }}>
@@ -327,7 +330,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={2}>
+        <Grid size={{ xs: 12, md: 2 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #3498DB 0%, #2980B9 100%)', color: 'white' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h3" sx={{ fontWeight: 700 }}>
@@ -337,7 +340,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={2}>
+        <Grid size={{ xs: 12, md: 2 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)', color: 'white' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h3" sx={{ fontWeight: 700 }}>
@@ -347,7 +350,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={2}>
+        <Grid size={{ xs: 12, md: 2 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #E67E22 0%, #D35400 100%)', color: 'white' }}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h3" sx={{ fontWeight: 700 }}>
@@ -376,7 +379,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
         {/* Day Headers */}
         <Grid container sx={{ mb: 1 }}>
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <Grid item xs={12 / 7} key={day}>
+            <Grid size={{ xs: 12 / 7 }} key={day}>
               <Typography
                 variant="subtitle2"
                 align="center"
@@ -427,7 +430,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
           {selectedRecord && (
             <Box sx={{ pt: 2 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Chip
                     label={STATUS_CONFIG[selectedRecord.status as keyof typeof STATUS_CONFIG]?.label}
                     icon={STATUS_CONFIG[selectedRecord.status as keyof typeof STATUS_CONFIG]?.icon}
@@ -442,7 +445,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                     }}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="body2" color="textSecondary">
                     Hours Worked
                   </Typography>
@@ -450,7 +453,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                     {selectedRecord.hoursWorked.toFixed(2)} hrs
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="body2" color="textSecondary">
                     Overtime
                   </Typography>
@@ -459,7 +462,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
                   </Typography>
                 </Grid>
                 {selectedRecord.notes && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="body2" color="textSecondary" gutterBottom>
                       Notes
                     </Typography>

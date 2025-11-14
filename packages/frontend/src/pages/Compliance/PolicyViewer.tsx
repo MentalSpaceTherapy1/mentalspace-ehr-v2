@@ -236,13 +236,13 @@ export default function PolicyViewer() {
               {tableOfContents.map((item, index) => (
                 <ListItem
                   key={item.id}
-                  button
                   onClick={() => {
                     document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
                   }}
                   sx={{
                     borderRadius: 2,
                     mb: 1,
+                    cursor: 'pointer',
                     '&:hover': {
                       background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)',
                       color: 'white'

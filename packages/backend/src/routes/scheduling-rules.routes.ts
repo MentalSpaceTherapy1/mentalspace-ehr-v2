@@ -28,7 +28,7 @@ router.use(authenticate);
  */
 router.get(
   '/',
-  authorize('ADMIN', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN'),
+  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN'),
   getSchedulingRules
 );
 
@@ -40,7 +40,7 @@ router.get(
  */
 router.get(
   '/effective/:clinicianId',
-  authorize('ADMIN', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN'),
+  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN'),
   getEffectiveRules
 );
 
@@ -51,7 +51,7 @@ router.get(
  */
 router.get(
   '/:id',
-  authorize('ADMIN', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN'),
+  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN'),
   getSchedulingRuleById
 );
 
@@ -62,7 +62,7 @@ router.get(
  */
 router.post(
   '/',
-  authorize('ADMIN', 'SUPER_ADMIN', 'CLINICIAN'),
+  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'CLINICIAN'),
   createSchedulingRule
 );
 
@@ -73,7 +73,7 @@ router.post(
  */
 router.put(
   '/:id',
-  authorize('ADMIN', 'SUPER_ADMIN', 'CLINICIAN'),
+  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'CLINICIAN'),
   updateSchedulingRule
 );
 
@@ -84,7 +84,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('ADMIN', 'SUPER_ADMIN', 'CLINICIAN'),
+  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'CLINICIAN'),
   deleteSchedulingRule
 );
 

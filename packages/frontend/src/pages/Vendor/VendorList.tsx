@@ -102,7 +102,7 @@ const VendorList: React.FC = () => {
 
       {/* Quick Stats */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 3,
@@ -126,7 +126,7 @@ const VendorList: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 3,
@@ -150,7 +150,7 @@ const VendorList: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 3,
@@ -179,7 +179,7 @@ const VendorList: React.FC = () => {
       <Card sx={{ mb: 3, boxShadow: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={5}>
+            <Grid size={{ xs: 12, md: 5 }}>
               <TextField
                 fullWidth
                 placeholder="Search vendors..."
@@ -194,7 +194,7 @@ const VendorList: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth>
                 <InputLabel>Category</InputLabel>
                 <Select
@@ -211,7 +211,7 @@ const VendorList: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -225,7 +225,7 @@ const VendorList: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={1}>
+            <Grid size={{ xs: 12, md: 1 }}>
               <IconButton
                 color="primary"
                 onClick={() => {
@@ -247,7 +247,7 @@ const VendorList: React.FC = () => {
       ) : (
         <Grid container spacing={3}>
           {filteredVendors.map((vendor) => (
-            <Grid item xs={12} md={6} lg={4} key={vendor.id}>
+            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={vendor.id}>
               <Card
                 sx={{
                   height: '100%',
@@ -311,7 +311,7 @@ const VendorList: React.FC = () => {
 
                   {/* Quick Stats */}
                   <Grid container spacing={2} sx={{ mb: 2 }}>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Paper sx={{ p: 1.5, bgcolor: '#f3e5f5', textAlign: 'center' }}>
                         <Typography variant="h6" color="primary" fontWeight="bold">
                           ${vendor.totalSpent.toLocaleString()}
@@ -321,7 +321,7 @@ const VendorList: React.FC = () => {
                         </Typography>
                       </Paper>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Paper sx={{ p: 1.5, bgcolor: '#e3f2fd', textAlign: 'center' }}>
                         <Typography variant="h6" color="primary" fontWeight="bold">
                           {vendor.activeContracts}

@@ -135,7 +135,7 @@ const ExpenseForm: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Expense Details Form */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Card sx={{ boxShadow: 3 }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -144,7 +144,7 @@ const ExpenseForm: React.FC = () => {
               <Divider sx={{ mb: 3 }} />
 
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Description"
@@ -157,7 +157,7 @@ const ExpenseForm: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     label="Amount"
@@ -175,7 +175,7 @@ const ExpenseForm: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     label="Expense Date"
@@ -187,7 +187,7 @@ const ExpenseForm: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <FormControl fullWidth required>
                     <InputLabel>Category</InputLabel>
                     <Select
@@ -204,7 +204,7 @@ const ExpenseForm: React.FC = () => {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <FormControl fullWidth>
                     <InputLabel>Vendor (Optional)</InputLabel>
                     <Select
@@ -222,7 +222,7 @@ const ExpenseForm: React.FC = () => {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <FormControl fullWidth>
                     <InputLabel>Budget (Optional)</InputLabel>
                     <Select
@@ -245,7 +245,7 @@ const ExpenseForm: React.FC = () => {
         </Grid>
 
         {/* Sidebar */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Stack spacing={3}>
             {/* Receipt Upload */}
             <Card

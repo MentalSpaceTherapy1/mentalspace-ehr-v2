@@ -356,7 +356,7 @@ const DashboardWidgets: React.FC = () => {
           </Typography>
           <Grid container spacing={2}>
             {widgetTypes.map((widget) => (
-              <Grid item xs={12} sm={6} key={widget.type}>
+              <Grid size={{ xs: 12, sm: 6 }} key={widget.type}>
                 <Card
                   onClick={() => setSelectedWidgetType(widget.type)}
                   sx={{

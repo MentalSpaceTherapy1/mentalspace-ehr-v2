@@ -16,69 +16,69 @@ router.use(authenticate);
 // Statistics routes (must come before :id routes)
 router.get(
   '/statistics',
-  requireRole(['ADMIN', 'SUPERADMIN', 'SUPERVISOR']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
   onboardingController.getOnboardingStatistics
 );
 
 router.get(
   '/mentors/:mentorId/statistics',
-  requireRole(['ADMIN', 'SUPERADMIN', 'SUPERVISOR']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
   onboardingController.getMentorStatistics
 );
 
 router.get(
   '/user/:userId',
-  requireRole(['ADMIN', 'SUPERADMIN', 'SUPERVISOR', 'CLINICIAN']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN']),
   onboardingController.getOnboardingChecklistByUserId
 );
 
 // CRUD routes for onboarding checklists
 router.post(
   '/',
-  requireRole(['ADMIN', 'SUPERADMIN']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
   onboardingController.createOnboardingChecklist
 );
 
 router.get(
   '/',
-  requireRole(['ADMIN', 'SUPERADMIN', 'SUPERVISOR']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
   onboardingController.getOnboardingChecklists
 );
 
 router.get(
   '/:id',
-  requireRole(['ADMIN', 'SUPERADMIN', 'SUPERVISOR', 'CLINICIAN']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN']),
   onboardingController.getOnboardingChecklistById
 );
 
 router.put(
   '/:id',
-  requireRole(['ADMIN', 'SUPERADMIN', 'SUPERVISOR']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
   onboardingController.updateOnboardingChecklist
 );
 
 router.delete(
   '/:id',
-  requireRole(['ADMIN', 'SUPERADMIN']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
   onboardingController.deleteOnboardingChecklist
 );
 
 // Checklist item management
 router.put(
   '/:id/items/:itemId',
-  requireRole(['ADMIN', 'SUPERADMIN', 'SUPERVISOR', 'CLINICIAN']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN']),
   onboardingController.updateChecklistItem
 );
 
 router.post(
   '/:id/items',
-  requireRole(['ADMIN', 'SUPERADMIN', 'SUPERVISOR']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
   onboardingController.addChecklistItem
 );
 
 router.delete(
   '/:id/items/:itemId',
-  requireRole(['ADMIN', 'SUPERADMIN', 'SUPERVISOR']),
+  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
   onboardingController.removeChecklistItem
 );
 

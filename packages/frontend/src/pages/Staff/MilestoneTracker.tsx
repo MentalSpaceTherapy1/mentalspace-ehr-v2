@@ -187,7 +187,7 @@ const MilestoneTracker: React.FC = () => {
                 {onboarding.staff?.firstName} {onboarding.staff?.lastName}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                {onboarding.staff?.title} • Started:{' '}
+                {onboarding.staff?.jobTitle} • Started:{' '}
                 {new Date(onboarding.startDate).toLocaleDateString()}
               </p>
             </div>

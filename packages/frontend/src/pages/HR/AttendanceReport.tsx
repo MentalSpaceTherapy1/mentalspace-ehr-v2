@@ -22,6 +22,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useAttendance, AttendanceStats } from '../../hooks/useAttendance';
+import { useAuth } from '../../hooks/useAuth';
 import {
   PieChart,
   Pie,
@@ -40,8 +41,8 @@ import {
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 
 interface AttendanceReportProps {
-  employeeId: string;
-  employeeName: string;
+  employeeId?: string;
+  employeeName?: string;
 }
 
 const STATUS_COLORS = {
@@ -53,9 +54,12 @@ const STATUS_COLORS = {
 };
 
 const AttendanceReport: React.FC<AttendanceReportProps> = ({
-  employeeId,
-  employeeName,
+  employeeId: propEmployeeId,
+  employeeName: propEmployeeName,
 }) => {
+  const { user } = useAuth();
+  const employeeId = propEmployeeId || user?.id || '';
+  const employeeName = propEmployeeName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
   const { getAttendanceStats, getAttendanceRecords, exportAttendance, loading } = useAttendance();
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [dateRange, setDateRange] = useState({
@@ -212,7 +216,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
       {/* Date Range Selector */}
       <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               label="Start Date"
@@ -223,7 +227,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
               size="small"
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField
               fullWidth
               label="End Date"
@@ -234,7 +238,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
               size="small"
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Quick Select</InputLabel>
               <Select
@@ -271,7 +275,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
       {/* Stats Summary */}
       {stats && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Card sx={{ background: 'linear-gradient(135deg, #2ECC71 0%, #27AE60 100%)', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -287,7 +291,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Card sx={{ background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -303,7 +307,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Card sx={{ background: 'linear-gradient(135deg, #E67E22 0%, #D35400 100%)', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -319,7 +323,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Card sx={{ background: 'linear-gradient(135deg, #3498DB 0%, #2980B9 100%)', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -340,7 +344,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
       {/* Charts */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {/* Attendance Distribution Pie Chart */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom sx={{ color: '#2C3E50', fontWeight: 600, mb: 3 }}>
               Attendance Distribution
@@ -352,7 +356,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={(entry: any) => `${entry.name}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
@@ -369,7 +373,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
         </Grid>
 
         {/* Hours Worked Trend */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom sx={{ color: '#2C3E50', fontWeight: 600, mb: 3 }}>
               Hours Worked Trend
@@ -403,7 +407,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
         </Grid>
 
         {/* Absence Patterns */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom sx={{ color: '#2C3E50', fontWeight: 600, mb: 3 }}>
               Absence Patterns by Day of Week
@@ -430,7 +434,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
           </Typography>
           <Grid container spacing={2}>
             {stats.attendanceRate < 90 && (
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Card sx={{ border: '2px solid #E74C3C20', backgroundColor: '#E74C3C10' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'start', gap: 2 }}>
@@ -451,7 +455,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
             )}
 
             {stats.overtimeHours > 40 && (
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Card sx={{ border: '2px solid #E67E2220', backgroundColor: '#E67E2210' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'start', gap: 2 }}>
@@ -472,7 +476,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
             )}
 
             {stats.attendanceRate >= 95 && (
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Card sx={{ border: '2px solid #2ECC7120', backgroundColor: '#2ECC7110' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'start', gap: 2 }}>

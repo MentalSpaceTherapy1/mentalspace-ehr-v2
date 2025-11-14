@@ -70,16 +70,28 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
   const [cptSearchTerm, setCptSearchTerm] = useState('');
   const [showCptDropdown, setShowCptDropdown] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    insuranceId: string;
+    authorizationNumber: string;
+    authorizationType: string;
+    status: 'PENDING' | 'APPROVED' | 'DENIED' | 'EXPIRED' | 'EXHAUSTED';
+    sessionsAuthorized: string;
+    startDate: string;
+    endDate: string;
+    cptCodes: string[];
+    diagnosisCodes: string[];
+    clinicalJustification: string;
+    requestingProviderId: string;
+  }>({
     insuranceId: '',
     authorizationNumber: '',
     authorizationType: 'OUTPATIENT_MENTAL_HEALTH',
-    status: 'PENDING' as const,
+    status: 'PENDING',
     sessionsAuthorized: '',
     startDate: '',
     endDate: '',
-    cptCodes: [] as string[],
-    diagnosisCodes: [] as string[],
+    cptCodes: [],
+    diagnosisCodes: [],
     clinicalJustification: '',
     requestingProviderId: '',
   });

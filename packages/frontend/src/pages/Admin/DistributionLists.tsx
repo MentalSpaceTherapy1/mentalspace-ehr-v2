@@ -272,7 +272,7 @@ export const DistributionLists: React.FC = () => {
           <DialogContent>
             <Box sx={{ pt: 2 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     label="List Name"
@@ -280,7 +280,7 @@ export const DistributionLists: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     label="Description"
@@ -290,7 +290,7 @@ export const DistributionLists: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Typography variant="subtitle2" gutterBottom>
                     Email Addresses
                   </Typography>
@@ -333,7 +333,7 @@ export const DistributionLists: React.FC = () => {
           <DialogContent>
             <Box sx={{ pt: 2 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     label="List Name"
@@ -341,7 +341,7 @@ export const DistributionLists: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     label="Description"
@@ -351,7 +351,7 @@ export const DistributionLists: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Typography variant="subtitle2" gutterBottom>
                     Email Addresses
                   </Typography>

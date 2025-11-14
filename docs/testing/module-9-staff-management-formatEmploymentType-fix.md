@@ -43,3 +43,6 @@ const formatEmploymentType = (type: string | null | undefined) => {
 
 ✅ **FIXED** - Function now safely handles null/undefined employment types
 
+
+
+

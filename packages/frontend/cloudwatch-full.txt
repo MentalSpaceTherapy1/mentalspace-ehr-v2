@@ -1,0 +1,16 @@
+﻿2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31 2025-11-13 03:05:32.687 [[32minfo[39m] [mentalspace-backend]: API request
+2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31   {
+2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31     "version": "1.0.0",
+2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31     "method": "GET",
+2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31     "url": "/live",
+2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31     "statusCode": 200,
+2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31     "duration": "2ms",
+2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31     "ip": "::ffff:127.0.0.1",
+2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31     "userAgent": "curl/7.88.1"
+2025-11-13T03:05:32.687000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31   }
+2025-11-13T03:05:34.260000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31 [Delivery Tracker] Error in retry processor: PrismaClientKnownRequestError:
+2025-11-13T03:05:34.260000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31 Invalid `prisma.deliveryLog.findMany()` invocation in
+2025-11-13T03:05:34.260000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31 /app/packages/backend/src/services/delivery-tracker.service.ts:118:53
+2025-11-13T03:05:34.260000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31   115 }
+2025-11-13T03:05:34.260000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31   116
+2025-11-13T03:05:34.260000+00:00 backend/mentalspace-backend/5e6abdfc7bef4f039a19d5a932754d31   117 export async function processFailedDeliveries() {

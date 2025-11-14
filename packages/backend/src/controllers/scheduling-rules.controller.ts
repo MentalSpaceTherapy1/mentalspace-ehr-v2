@@ -62,7 +62,7 @@ export const getSchedulingRules = async (req: Request, res: Response) => {
 
     // If user is a clinician, restrict to their own rules unless they're admin
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
 
     if (!isAdmin && userRoles.includes('CLINICIAN')) {
       filters.clinicianId = req.user?.id;
@@ -112,7 +112,7 @@ export const getSchedulingRuleById = async (req: Request, res: Response) => {
 
     // Check authorization
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
 
     if (!isAdmin && rule.clinicianId && rule.clinicianId !== req.user?.id) {
       return res.status(403).json({
@@ -163,7 +163,7 @@ export const createSchedulingRule = async (req: Request, res: Response) => {
 
     // Check authorization
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
 
     // Only admins can create org-wide rules
     if (!data.clinicianId && !isAdmin) {
@@ -246,7 +246,7 @@ export const updateSchedulingRule = async (req: Request, res: Response) => {
 
     // Check authorization
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
 
     // Only admins can update org-wide rules
     if (!existingRule.clinicianId && !isAdmin) {
@@ -309,7 +309,7 @@ export const deleteSchedulingRule = async (req: Request, res: Response) => {
 
     // Check authorization
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
 
     // Only admins can delete org-wide rules
     if (!existingRule.clinicianId && !isAdmin) {

@@ -38,6 +38,7 @@ import {
   Collapse,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   Divider,
   Stack,
@@ -457,7 +458,7 @@ export default function MyWaitlist() {
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{xs: 12, sm: 6, md: 3}}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -473,7 +474,7 @@ export default function MyWaitlist() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{xs: 12, sm: 6, md: 3}}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -491,7 +492,7 @@ export default function MyWaitlist() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{xs: 12, sm: 6, md: 3}}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -507,7 +508,7 @@ export default function MyWaitlist() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{xs: 12, sm: 6, md: 3}}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -526,7 +527,7 @@ export default function MyWaitlist() {
 
       <Grid container spacing={3}>
         {/* Waitlist Entries Table */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{xs: 12, lg: 8}}>
           <Paper sx={{ p: 3 }}>
             <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
               <FormControl size="small" sx={{ minWidth: 200 }}>
@@ -818,7 +819,7 @@ export default function MyWaitlist() {
         </Grid>
 
         {/* Calendar Widget Sidebar */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{xs: 12, lg: 4}}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               My Calendar - Next 7 Days
@@ -826,8 +827,7 @@ export default function MyWaitlist() {
             <List>
               {calendarSlots?.map((slot, idx) => (
                 <React.Fragment key={idx}>
-                  <ListItem
-                    button
+                  <ListItemButton
                     onClick={() => setExpandedDay(expandedDay === slot.date ? null : slot.date)}
                   >
                     <ListItemText
@@ -849,7 +849,7 @@ export default function MyWaitlist() {
                       }
                     />
                     {expandedDay === slot.date ? <ExpandLess /> : <ExpandMore />}
-                  </ListItem>
+                  </ListItemButton>
                   <Collapse in={expandedDay === slot.date} timeout="auto" unmountOnExit>
                     <Box sx={{ pl: 4, pr: 2, pb: 2 }}>
                       <Typography variant="body2" color="text.secondary" gutterBottom>

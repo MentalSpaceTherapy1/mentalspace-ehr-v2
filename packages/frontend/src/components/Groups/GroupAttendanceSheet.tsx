@@ -27,6 +27,7 @@ import api from '../../lib/api';
 interface GroupMember {
   id: string;
   clientId: string;
+  status: string;
   attendanceCount: number;
   absenceCount: number;
   client: {

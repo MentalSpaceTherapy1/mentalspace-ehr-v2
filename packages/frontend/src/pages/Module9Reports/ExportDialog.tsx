@@ -28,16 +28,23 @@ import {
   FileDownload as DownloadIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useModule9Reports } from '../../hooks/useModule9Reports';
 
 interface ExportDialogProps {
-  open: boolean;
-  onClose: () => void;
-  reportId: string;
-  reportTitle: string;
+  open?: boolean;
+  onClose?: () => void;
+  reportId?: string;
+  reportTitle?: string;
 }
 
-const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, reportId, reportTitle }) => {
+const ExportDialog: React.FC<ExportDialogProps> = ({
+  open: propOpen = false,
+  onClose: propOnClose,
+  reportId: propReportId = '',
+  reportTitle: propReportTitle = 'Report'
+}) => {
+  const navigate = useNavigate();
   const { exportReport } = useModule9Reports();
   const [format, setFormat] = useState<'pdf' | 'excel' | 'csv'>('pdf');
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
@@ -97,14 +104,14 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, reportId, re
         options.emailTo = emailAddress;
       }
 
-      const blob = await exportReport(reportId, format, options);
+      const blob = await exportReport(propReportId, format, options);
 
       if (!sendEmail) {
         // Download the file
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${reportTitle}.${format === 'excel' ? 'xlsx' : format}`;
+        link.download = `${propReportTitle}.${format === 'excel' ? 'xlsx' : format}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -113,7 +120,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, reportId, re
 
       setSuccess(true);
       setTimeout(() => {
-        onClose();
+        handleClose();
         resetForm();
       }, 2000);
     } catch (err: any) {
@@ -136,14 +143,18 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, reportId, re
 
   const handleClose = () => {
     if (!loading) {
-      onClose();
+      if (propOnClose) {
+        propOnClose();
+      } else {
+        navigate(-1);
+      }
       resetForm();
     }
   };
 
   return (
     <Dialog
-      open={open}
+      open={propOpen}
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
@@ -164,7 +175,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ open, onClose, reportId, re
           </Button>
         </Box>
         <Typography variant="body2" color="text.secondary">
-          {reportTitle}
+          {propReportTitle}
         </Typography>
       </DialogTitle>
 

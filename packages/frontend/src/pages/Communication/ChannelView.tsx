@@ -32,14 +32,18 @@ import {
   EmojiEmotions as EmojiIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useMessaging } from '../../hooks/useMessaging';
 import { format } from 'date-fns';
 
 interface ChannelViewProps {
-  channelId: string;
+  channelId?: string;
 }
 
-const ChannelView: React.FC<ChannelViewProps> = ({ channelId }) => {
+const ChannelView: React.FC<ChannelViewProps> = ({ channelId: propChannelId }) => {
+  const { channelId: paramChannelId } = useParams<{ channelId: string }>();
+  const channelId = propChannelId || paramChannelId || '';
+  const navigate = useNavigate();
   const { messages, sendMessage, loading } = useMessaging();
   const [messageText, setMessageText] = useState('');
   const [showMemberList, setShowMemberList] = useState(false);

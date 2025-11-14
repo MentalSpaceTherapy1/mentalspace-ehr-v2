@@ -436,7 +436,7 @@ export default function ClinicalNoteReminderSettings() {
         <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
           <Tab label="Current Settings" icon={<Info />} iconPosition="start" />
           <Tab label="My Preferences" icon={<Person />} iconPosition="start" />
-          {user?.role === 'ADMIN' && (
+          {user?.role === 'ADMINISTRATOR' && (
             <Tab label="Practice Defaults" icon={<Business />} iconPosition="start" />
           )}
         </Tabs>
@@ -795,7 +795,7 @@ export default function ClinicalNoteReminderSettings() {
       </TabPanel>
 
       {/* Tab 3: Practice Defaults (Admin only) */}
-      {user?.role === 'ADMIN' && (
+      {user?.role === 'ADMINISTRATOR' && (
         <TabPanel value={tabValue} index={2}>
           <Card>
             <CardContent>

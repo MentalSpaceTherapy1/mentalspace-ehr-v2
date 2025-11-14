@@ -251,7 +251,7 @@ const PTOCalendar: React.FC<PTOCalendarProps> = ({ departmentId }) => {
       rows.push(
         <Grid container key={day.toString()}>
           {days.map((dayCell, index) => (
-            <Grid item xs={12 / 7} key={index}>
+            <Grid size={{ xs: 12 / 7 }} key={index}>
               {dayCell}
             </Grid>
           ))}
@@ -279,7 +279,7 @@ const PTOCalendar: React.FC<PTOCalendarProps> = ({ departmentId }) => {
       {/* Filters */}
       <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Department</InputLabel>
               <Select
@@ -315,7 +315,7 @@ const PTOCalendar: React.FC<PTOCalendarProps> = ({ departmentId }) => {
         {/* Day Headers */}
         <Grid container sx={{ mb: 1 }}>
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <Grid item xs={12 / 7} key={day}>
+            <Grid size={{ xs: 12 / 7 }} key={day}>
               <Typography
                 variant="subtitle2"
                 align="center"
@@ -366,7 +366,7 @@ const PTOCalendar: React.FC<PTOCalendarProps> = ({ departmentId }) => {
           ) : (
             <Grid container spacing={2}>
               {selectedDateData.requests.map((request, index) => (
-                <Grid item xs={12} md={6} key={index}>
+                <Grid size={{ xs: 12, md: 6 }} key={index}>
                   <Card
                     sx={{
                       border: `2px solid ${getTypeColor(request.type)}40`,

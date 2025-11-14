@@ -118,7 +118,7 @@ export const authorize = (...allowedRoles: string[]) => {
 
       // SUPER_ADMIN has absolute access to everything - bypass all role checks
       const isSuperAdmin = userRoles.some((role: string) =>
-        role === 'SUPER_ADMIN' || role === 'SUPERADMIN'
+        role === 'SUPER_ADMIN' || role === 'SUPER_ADMIN'
       );
 
       if (isSuperAdmin) {

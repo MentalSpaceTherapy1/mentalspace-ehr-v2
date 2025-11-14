@@ -14,6 +14,7 @@ import {
   InputAdornment,
   Typography,
   IconButton,
+  Button,
   Chip,
   Divider,
   Card,
@@ -110,7 +111,7 @@ const MessagingHub: React.FC = () => {
       <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
         <Grid container sx={{ height: '100%' }}>
           {/* Left Sidebar - Channels/Folders */}
-          <Grid item xs={12} md={3} sx={{ height: '100%', borderRight: '1px solid #e2e8f0' }}>
+          <Grid size={{xs: 12, md: 3}} sx={{ height: '100%', borderRight: '1px solid #e2e8f0' }}>
             <Paper elevation={0} sx={{ height: '100%', borderRadius: 0, overflow: 'auto' }}>
               <Box sx={{ p: 2 }}>
                 <Tabs
@@ -151,9 +152,10 @@ const MessagingHub: React.FC = () => {
                   />
                 </motion.div>
 
-                <IconButton
+                <Button
                   fullWidth
                   onClick={() => setShowComposer(true)}
+                  startIcon={<AddIcon />}
                   sx={{
                     mb: 2,
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -165,9 +167,8 @@ const MessagingHub: React.FC = () => {
                     },
                   }}
                 >
-                  <AddIcon sx={{ mr: 1 }} />
                   New Message
-                </IconButton>
+                </Button>
 
                 {tabValue === 0 ? (
                   <List sx={{ p: 0 }}>
@@ -254,7 +255,7 @@ const MessagingHub: React.FC = () => {
           </Grid>
 
           {/* Middle - Message Thread or Content */}
-          <Grid item xs={12} md={6} sx={{ height: '100%', overflow: 'auto' }}>
+          <Grid size={{xs: 12, md: 6}} sx={{ height: '100%', overflow: 'auto' }}>
             {showComposer ? (
               <MessageComposer onClose={() => setShowComposer(false)} />
             ) : selectedThread ? (
@@ -286,9 +287,7 @@ const MessagingHub: React.FC = () => {
 
           {/* Right Sidebar - Message Details/Actions */}
           <Grid
-            item
-            xs={12}
-            md={3}
+            size={{xs: 12, md: 3}}
             sx={{ height: '100%', borderLeft: '1px solid #e2e8f0', overflow: 'auto' }}
           >
             <Paper elevation={0} sx={{ p: 3, borderRadius: 0 }}>

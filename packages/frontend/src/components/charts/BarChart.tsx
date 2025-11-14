@@ -8,7 +8,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps,
   Cell,
 } from 'recharts';
 import { Download } from 'lucide-react';
@@ -31,7 +30,14 @@ interface BarChartProps {
   colorByValue?: boolean;
 }
 
-const CustomTooltip = ({ active, payload, label, formatTooltip }: TooltipProps<any, any> & { formatTooltip?: (value: any) => string }) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: any; color: string }>;
+  label?: string;
+  formatTooltip?: (value: any) => string;
+}
+
+const CustomTooltip = ({ active, payload, label, formatTooltip }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white border-2 border-gray-200 rounded-lg shadow-lg p-3">

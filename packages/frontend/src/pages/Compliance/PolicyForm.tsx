@@ -40,7 +40,7 @@ import {
   Description
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { usePolicy } from '../../hooks/usePolicy';
+import { usePolicy, Policy } from '../../hooks/usePolicy';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -69,7 +69,15 @@ export default function PolicyForm() {
   const [activeTab, setActiveTab] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    category: string;
+    content: string;
+    effectiveDate: string;
+    reviewSchedule: number;
+    status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+    versionNotes: string;
+  }>({
     title: '',
     category: '',
     content: '',
@@ -114,9 +122,11 @@ export default function PolicyForm() {
   };
 
   const handleSave = async (publish: boolean = false) => {
-    const policyData = {
-      ...formData,
-      status: publish ? 'ACTIVE' : formData.status
+    const { versionNotes, ...policyFields } = formData;
+    const status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED' = publish ? 'ACTIVE' : formData.status;
+    const policyData: Partial<Policy> = {
+      ...policyFields,
+      status
     };
 
     let success;
@@ -257,7 +267,7 @@ export default function PolicyForm() {
         <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
           <CardContent sx={{ p: 4 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Policy Title"
@@ -272,7 +282,7 @@ export default function PolicyForm() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth required>
                   <InputLabel>Category</InputLabel>
                   <Select
@@ -295,7 +305,7 @@ export default function PolicyForm() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth required>
                   <InputLabel>Status</InputLabel>
                   <Select
@@ -311,7 +321,7 @@ export default function PolicyForm() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                   Policy Content
                 </Typography>
@@ -339,7 +349,7 @@ export default function PolicyForm() {
               </Grid>
 
               {id && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Version Notes"
@@ -365,7 +375,7 @@ export default function PolicyForm() {
         <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
           <CardContent sx={{ p: 4 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   type="date"
@@ -382,7 +392,7 @@ export default function PolicyForm() {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <FormControl fullWidth>
                   <InputLabel>Review Schedule</InputLabel>
                   <Select
@@ -400,7 +410,7 @@ export default function PolicyForm() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Box
                   sx={{
                     p: 3,

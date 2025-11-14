@@ -26,7 +26,7 @@ import {
   Business as BusinessIcon,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createVendor, updateVendor, useVendor, uploadW9 } from '../../hooks/useVendor';
+import { createVendor, updateVendor, useVendor, uploadW9, Vendor } from '../../hooks/useVendor';
 
 const VENDOR_CATEGORIES = [
   'Medical Supplies',
@@ -53,7 +53,7 @@ const VendorForm: React.FC = () => {
   const { id } = useParams();
   const { vendor, loading: vendorLoading } = useVendor(id || '');
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<Vendor>>({
     name: '',
     category: '',
     contactName: '',
@@ -162,7 +162,7 @@ const VendorForm: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Main Information */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Card sx={{ boxShadow: 3 }}>
             <CardContent>
               <Typography
@@ -177,7 +177,7 @@ const VendorForm: React.FC = () => {
               <Divider sx={{ mb: 3 }} />
 
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Vendor Name"
@@ -192,7 +192,7 @@ const VendorForm: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <FormControl fullWidth required>
                     <InputLabel>Category</InputLabel>
                     <Select
@@ -209,7 +209,7 @@ const VendorForm: React.FC = () => {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <FormControl fullWidth>
                     <InputLabel>Status</InputLabel>
                     <Select
@@ -223,7 +223,7 @@ const VendorForm: React.FC = () => {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Address"
@@ -246,7 +246,7 @@ const VendorForm: React.FC = () => {
               <Divider sx={{ mb: 3 }} />
 
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Contact Name"
@@ -256,7 +256,7 @@ const VendorForm: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     label="Contact Email"
@@ -267,7 +267,7 @@ const VendorForm: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     label="Contact Phone"
@@ -281,7 +281,7 @@ const VendorForm: React.FC = () => {
         </Grid>
 
         {/* Sidebar - Financial & Tax Info */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Stack spacing={3}>
             {/* Tax Information */}
             <Card

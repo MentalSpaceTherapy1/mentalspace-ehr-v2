@@ -27,16 +27,20 @@ import {
 } from '@mui/icons-material';
 import { useAttendance, TimeEntry } from '../../hooks/useAttendance';
 import { format } from 'date-fns';
+import { useAuth } from '../../hooks/useAuth';
 
 interface TimeClockInterfaceProps {
-  employeeId: string;
-  employeeName: string;
+  employeeId?: string;
+  employeeName?: string;
 }
 
 const TimeClockInterface: React.FC<TimeClockInterfaceProps> = ({
-  employeeId,
-  employeeName,
+  employeeId: propEmployeeId,
+  employeeName: propEmployeeName,
 }) => {
+  const { user } = useAuth();
+  const employeeId = propEmployeeId || user?.id || '';
+  const employeeName = propEmployeeName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
   const { clockIn, clockOut, startBreak, endBreak, getCurrentStatus, getTimeEntries, loading } =
     useAttendance();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -165,7 +169,7 @@ const TimeClockInterface: React.FC<TimeClockInterfaceProps> = ({
 
       <Grid container spacing={3}>
         {/* Main Clock Display */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Paper
             elevation={4}
             sx={{
@@ -314,7 +318,7 @@ const TimeClockInterface: React.FC<TimeClockInterfaceProps> = ({
         </Grid>
 
         {/* Today's Summary */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Stack spacing={2}>
             <Card
               sx={{
@@ -375,7 +379,7 @@ const TimeClockInterface: React.FC<TimeClockInterfaceProps> = ({
         </Grid>
 
         {/* Recent Punch History */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom sx={{ color: '#2C3E50', fontWeight: 600, mb: 3 }}>
               Today's Activity

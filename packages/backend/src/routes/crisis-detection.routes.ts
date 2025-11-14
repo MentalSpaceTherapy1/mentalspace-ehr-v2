@@ -29,7 +29,7 @@ router.use(authenticate);
  */
 router.get(
   '/logs',
-  requireRole(['ADMIN']),
+  requireRole(['ADMINISTRATOR']),
   crisisController.getAllCrisisLogs
 );
 
@@ -39,7 +39,7 @@ router.get(
  */
 router.get(
   '/logs/:id',
-  requireRole(['ADMIN', 'CLINICIAN']),
+  requireRole(['ADMINISTRATOR', 'CLINICIAN']),
   crisisController.getCrisisLog
 );
 
@@ -53,7 +53,7 @@ router.get(
  */
 router.put(
   '/logs/:id/review',
-  requireRole(['ADMIN', 'CLINICIAN']),
+  requireRole(['ADMINISTRATOR', 'CLINICIAN']),
   crisisController.reviewCrisisLog
 );
 
@@ -65,7 +65,7 @@ router.put(
  */
 router.put(
   '/logs/:id/action',
-  requireRole(['ADMIN', 'CLINICIAN']),
+  requireRole(['ADMINISTRATOR', 'CLINICIAN']),
   crisisController.recordActionTaken
 );
 
@@ -78,7 +78,7 @@ router.put(
  */
 router.get(
   '/stats',
-  requireRole(['ADMIN']),
+  requireRole(['ADMINISTRATOR']),
   crisisController.getCrisisStatistics
 );
 

@@ -329,7 +329,7 @@ const RequestAccess: React.FC = () => {
               Provide information about the minor you wish to access
             </Typography>
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Minor's Client ID (Optional)"
@@ -339,7 +339,7 @@ const RequestAccess: React.FC = () => {
                   helperText="If you know the minor's client ID, entering it will speed up verification"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="First Name"
@@ -349,7 +349,7 @@ const RequestAccess: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Last Name"
@@ -359,7 +359,7 @@ const RequestAccess: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   type="date"
@@ -371,7 +371,7 @@ const RequestAccess: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <FormControl fullWidth required>
                   <InputLabel>Your Relationship to Minor</InputLabel>
                   <Select
@@ -574,7 +574,7 @@ const RequestAccess: React.FC = () => {
 
             {/* Summary Cards */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -595,7 +595,7 @@ const RequestAccess: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -626,7 +626,7 @@ const RequestAccess: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -647,7 +647,7 @@ const RequestAccess: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -665,7 +665,7 @@ const RequestAccess: React.FC = () => {
                 Contact Information
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Phone Number"
@@ -675,7 +675,7 @@ const RequestAccess: React.FC = () => {
                     placeholder="(555) 123-4567"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Email Address"

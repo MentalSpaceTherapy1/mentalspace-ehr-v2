@@ -25,11 +25,11 @@ import {
   Slider,
   LinearProgress,
   Fab,
-  Tooltip,
   Skeleton,
   Badge,
   Divider,
   Zoom,
+  Tooltip as MuiTooltip,
 } from '@mui/material';
 import {
   Timeline,
@@ -53,7 +53,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { ExerciseActivityChart } from '../../components/charts/ExerciseActivityChart';
 import { CalendarHeatmap } from '../../components/charts/CalendarHeatmap';
 import { MoodCorrelationChart } from '../../components/charts/MoodCorrelationChart';
@@ -81,6 +81,15 @@ interface ExerciseStats {
   longestStreak: number;
   weeklyGoal: number;
   progressToGoal: number;
+}
+
+// Custom Tooltip Props Interface for Recharts
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    name: string;
+  }>;
 }
 
 // Constants
@@ -161,8 +170,8 @@ const ExerciseLog: React.FC = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [editingLog, setEditingLog] = useState<ExerciseLog | null>(null);
   const [filterActivityType, setFilterActivityType] = useState<string>('All');
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
+  const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [weeklyGoal, setWeeklyGoal] = useState<number>(150);
   const [lastActivity, setLastActivity] = useState<ExerciseLog | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -264,11 +273,11 @@ const ExerciseLog: React.FC = () => {
     }
 
     if (startDate) {
-      filtered = filtered.filter(log => new Date(log.loggedAt) >= startDate);
+      filtered = filtered.filter(log => new Date(log.loggedAt) >= startDate.toDate());
     }
 
     if (endDate) {
-      filtered = filtered.filter(log => new Date(log.loggedAt) <= endDate);
+      filtered = filtered.filter(log => new Date(log.loggedAt) <= endDate.toDate());
     }
 
     setFilteredLogs(filtered);
@@ -533,7 +542,7 @@ const ExerciseLog: React.FC = () => {
 
         <Grid container spacing={3}>
           {/* Quick Entry Form */}
-          <Grid item xs={12} lg={4}>
+          <Grid size={{ xs: 12, lg: 4 }}>
             <Card
               sx={{
                 borderRadius: 3,
@@ -558,7 +567,7 @@ const ExerciseLog: React.FC = () => {
 
                 <Grid container spacing={2}>
                   {/* Activity Type */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <FormControl fullWidth>
                       <InputLabel>Activity Type</InputLabel>
                       <Select
@@ -579,7 +588,7 @@ const ExerciseLog: React.FC = () => {
                   </Grid>
 
                   {/* Duration */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography gutterBottom>
                       Duration: {duration} minutes
                     </Typography>
@@ -600,11 +609,11 @@ const ExerciseLog: React.FC = () => {
                   </Grid>
 
                   {/* Intensity */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography gutterBottom>Intensity</Typography>
                     <Grid container spacing={1}>
                       {INTENSITY_OPTIONS.map((option) => (
-                        <Grid item xs={12} key={option.value}>
+                        <Grid size={{ xs: 12 }} key={option.value}>
                           <Button
                             fullWidth
                             variant={intensity === option.value ? 'contained' : 'outlined'}
@@ -638,7 +647,7 @@ const ExerciseLog: React.FC = () => {
                   </Grid>
 
                   {/* Mood After */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography gutterBottom>Mood After Exercise</Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
                       {MOOD_OPTIONS.map((option) => (
@@ -660,7 +669,7 @@ const ExerciseLog: React.FC = () => {
                   </Grid>
 
                   {/* Notes */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       multiline
@@ -673,7 +682,7 @@ const ExerciseLog: React.FC = () => {
                   </Grid>
 
                   {/* Actions */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       {editingLog && (
                         <Button variant="outlined" onClick={resetForm} fullWidth>
@@ -697,7 +706,7 @@ const ExerciseLog: React.FC = () => {
           </Grid>
 
           {/* This Week Stats */}
-          <Grid item xs={12} lg={8}>
+          <Grid size={{ xs: 12, lg: 8 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -705,7 +714,7 @@ const ExerciseLog: React.FC = () => {
                 </Typography>
 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#e3f2fd' }}>
                       <Typography variant="h3" color="primary">
                         {stats?.totalMinutesThisWeek || 0}
@@ -716,7 +725,7 @@ const ExerciseLog: React.FC = () => {
                     </Paper>
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#f3e5f5' }}>
                       <Typography variant="h3" color="secondary">
                         {stats?.totalSessionsThisWeek || 0}
@@ -727,7 +736,7 @@ const ExerciseLog: React.FC = () => {
                     </Paper>
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#fff3e0' }}>
                       <Typography variant="h3" color="warning.main">
                         {stats?.currentStreak || 0}
@@ -738,7 +747,7 @@ const ExerciseLog: React.FC = () => {
                     </Paper>
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#e8f5e9' }}>
                       <Typography variant="h3" color="success.main">
                         {stats?.longestStreak || 0}
@@ -750,7 +759,7 @@ const ExerciseLog: React.FC = () => {
                   </Grid>
 
                   {/* Weekly Goal Progress */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Box sx={{ mt: 2 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="body2">
@@ -781,7 +790,7 @@ const ExerciseLog: React.FC = () => {
                   </Grid>
 
                   {/* Weekly Activity Chart */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Divider sx={{ my: 2 }} />
                     <ExerciseActivityChart
                       data={weeklyData}
@@ -796,7 +805,7 @@ const ExerciseLog: React.FC = () => {
           </Grid>
 
           {/* Activity Breakdown */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -813,7 +822,7 @@ const ExerciseLog: React.FC = () => {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        label={(entry: any) => `${entry.name}: ${(entry.percent * 100).toFixed(0)}%`}
                         outerRadius={100}
                         fill="#8884d8"
                         dataKey="value"
@@ -822,7 +831,16 @@ const ExerciseLog: React.FC = () => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => `${value} minutes`} />
+                      <Tooltip content={({ active, payload }: CustomTooltipProps) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div style={{ backgroundColor: 'white', padding: '10px', border: '1px solid #ccc' }}>
+                              <p>{`${payload[0].value} minutes`}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
@@ -832,7 +850,7 @@ const ExerciseLog: React.FC = () => {
           </Grid>
 
           {/* Streak Tracker */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -873,7 +891,7 @@ const ExerciseLog: React.FC = () => {
           </Grid>
 
           {/* Activity Heatmap */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card>
               <CardContent>
                 <CalendarHeatmap
@@ -886,7 +904,7 @@ const ExerciseLog: React.FC = () => {
           </Grid>
 
           {/* Exercise History */}
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -1017,7 +1035,7 @@ const ExerciseLog: React.FC = () => {
 
         {/* Quick Log FAB */}
         <Zoom in={lastActivity !== null && !editingLog}>
-          <Tooltip title="Repeat Last Activity" placement="left">
+          <MuiTooltip title="Repeat Last Activity" placement="left">
             <Fab
               color="primary"
               sx={{
@@ -1029,7 +1047,7 @@ const ExerciseLog: React.FC = () => {
             >
               <ReplayIcon />
             </Fab>
-          </Tooltip>
+          </MuiTooltip>
         </Zoom>
 
         {/* Delete Confirmation Dialog */}

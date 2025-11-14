@@ -116,7 +116,7 @@ const OnboardingChecklist: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 {onboarding.staff?.firstName} {onboarding.staff?.lastName}
               </h1>
-              <p className="text-gray-600">{onboarding.staff?.title}</p>
+              <p className="text-gray-600">{onboarding.staff?.jobTitle}</p>
               <p className="text-sm text-gray-500 mt-1">
                 Started: {new Date(onboarding.startDate).toLocaleDateString()}
               </p>

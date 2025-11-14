@@ -267,7 +267,7 @@ export default function SessionRatings() {
         {/* Enhanced Statistics Cards */}
         {stats && (
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={3}>
+            <Grid size={{xs: 12, md: 3}}>
               <Card
                 sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -296,7 +296,7 @@ export default function SessionRatings() {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{xs: 12, md: 3}}>
               <Card
                 sx={{
                   background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -325,7 +325,7 @@ export default function SessionRatings() {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{xs: 12, md: 3}}>
               <Card
                 sx={{
                   background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
@@ -354,7 +354,7 @@ export default function SessionRatings() {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{xs: 12, md: 3}}>
               <Card
                 sx={{
                   background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
@@ -423,7 +423,7 @@ export default function SessionRatings() {
             <Collapse in={showFilters}>
               <Grid container spacing={2}>
                 {/* Search in Comments */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <TextField
                     fullWidth
                     size="small"
@@ -438,7 +438,7 @@ export default function SessionRatings() {
                 </Grid>
 
                 {/* Clinician Filter */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <Autocomplete
                     size="small"
                     options={clinicians}
@@ -465,7 +465,7 @@ export default function SessionRatings() {
                 </Grid>
 
                 {/* Client Filter */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <Autocomplete
                     size="small"
                     options={clients}
@@ -492,7 +492,7 @@ export default function SessionRatings() {
                 </Grid>
 
                 {/* Min Rating */}
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{xs: 12, sm: 6, md: 3}}>
                   <Autocomplete
                     size="small"
                     options={[1, 2, 3, 4, 5]}
@@ -510,7 +510,7 @@ export default function SessionRatings() {
                 </Grid>
 
                 {/* Max Rating */}
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{xs: 12, sm: 6, md: 3}}>
                   <Autocomplete
                     size="small"
                     options={[1, 2, 3, 4, 5]}
@@ -528,7 +528,7 @@ export default function SessionRatings() {
                 </Grid>
 
                 {/* Start Date */}
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{xs: 12, sm: 6, md: 3}}>
                   <DatePicker
                     label="Start Date"
                     value={startDate}
@@ -546,7 +546,7 @@ export default function SessionRatings() {
                 </Grid>
 
                 {/* End Date */}
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{xs: 12, sm: 6, md: 3}}>
                   <DatePicker
                     label="End Date"
                     value={endDate}

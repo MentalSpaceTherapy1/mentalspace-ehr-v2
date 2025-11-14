@@ -201,7 +201,7 @@ const VendorProfile: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Contact Information */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ boxShadow: 3, height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -271,9 +271,9 @@ const VendorProfile: React.FC = () => {
         </Grid>
 
         {/* Quick Stats */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Paper
                 sx={{
                   p: 3,
@@ -292,7 +292,7 @@ const VendorProfile: React.FC = () => {
               </Paper>
             </Grid>
 
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Paper
                 sx={{
                   p: 3,
@@ -311,7 +311,7 @@ const VendorProfile: React.FC = () => {
               </Paper>
             </Grid>
 
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Paper
                 sx={{
                   p: 3,
@@ -412,7 +412,7 @@ const VendorProfile: React.FC = () => {
             </Typography>
             <Grid container spacing={3}>
               {performanceMetrics.map((metric) => (
-                <Grid item xs={12} sm={6} key={metric.label}>
+                <Grid size={{ xs: 12, sm: 6 }} key={metric.label}>
                   <Paper sx={{ p: 2 }}>
                     <Stack direction="row" justifyContent="space-between" mb={1}>
                       <Typography variant="body1" fontWeight="medium">

@@ -250,7 +250,7 @@ export default function CrisisDetections() {
         {/* Statistics Cards */}
         {stats && (
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{xs: 12, sm: 6, md: 2.4}}>
               <Card>
                 <CardContent>
                   <Box display="flex" alignItems="center" gap={1}>
@@ -263,7 +263,7 @@ export default function CrisisDetections() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{xs: 12, sm: 6, md: 2.4}}>
               <Card sx={{ bgcolor: '#ffebee' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" gap={1}>
@@ -276,7 +276,7 @@ export default function CrisisDetections() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{xs: 12, sm: 6, md: 2.4}}>
               <Card sx={{ bgcolor: '#fff3e0' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" gap={1}>
@@ -289,7 +289,7 @@ export default function CrisisDetections() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{xs: 12, sm: 6, md: 2.4}}>
               <Card sx={{ bgcolor: '#e3f2fd' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" gap={1}>
@@ -302,7 +302,7 @@ export default function CrisisDetections() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{xs: 12, sm: 6, md: 2.4}}>
               <Card sx={{ bgcolor: '#f1f8e9' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" gap={1}>
@@ -333,7 +333,7 @@ export default function CrisisDetections() {
 
             <Collapse in={showFilters}>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{xs: 12, sm: 6, md: 3}}>
                   <FormControl fullWidth>
                     <InputLabel>Severity</InputLabel>
                     <Select
@@ -348,7 +348,7 @@ export default function CrisisDetections() {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{xs: 12, sm: 6, md: 3}}>
                   <FormControl fullWidth>
                     <InputLabel>Review Status</InputLabel>
                     <Select
@@ -362,7 +362,7 @@ export default function CrisisDetections() {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{xs: 12, sm: 6, md: 3}}>
                   <DatePicker
                     label="Start Date"
                     value={startDate}
@@ -370,7 +370,7 @@ export default function CrisisDetections() {
                     slotProps={{ textField: { fullWidth: true } }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{xs: 12, sm: 6, md: 3}}>
                   <DatePicker
                     label="End Date"
                     value={endDate}
@@ -530,7 +530,7 @@ export default function CrisisDetections() {
             {selectedLog && (
               <Box sx={{ pt: 2 }}>
                 <Grid container spacing={2}>
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <Typography variant="subtitle2" color="text.secondary">
                       Severity
                     </Typography>
@@ -541,7 +541,7 @@ export default function CrisisDetections() {
                       sx={{ mt: 1 }}
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <Typography variant="subtitle2" color="text.secondary">
                       Detected Keywords
                     </Typography>
@@ -551,7 +551,7 @@ export default function CrisisDetections() {
                       ))}
                     </Box>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <Typography variant="subtitle2" color="text.secondary">
                       Message Snippet
                     </Typography>
@@ -559,7 +559,7 @@ export default function CrisisDetections() {
                       <Typography variant="body2">{selectedLog.messageSnippet}</Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <Typography variant="subtitle2" color="text.secondary">
                       Detected At
                     </Typography>
@@ -567,7 +567,7 @@ export default function CrisisDetections() {
                       {dayjs(selectedLog.detectedAt).format('MMMM D, YYYY [at] h:mm A')}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <TextField
                       fullWidth
                       multiline
@@ -578,7 +578,7 @@ export default function CrisisDetections() {
                       placeholder="Document your review and assessment of this detection..."
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <TextField
                       fullWidth
                       multiline
@@ -589,7 +589,7 @@ export default function CrisisDetections() {
                       placeholder="Describe any actions taken (e.g., contacted client, scheduled safety assessment...)"
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <FormControlLabel
                       control={
                         <Checkbox

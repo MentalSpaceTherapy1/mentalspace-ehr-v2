@@ -166,7 +166,7 @@ const BudgetAllocation: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Budget Details Form */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ boxShadow: 3, height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -269,7 +269,7 @@ const BudgetAllocation: React.FC = () => {
         </Grid>
 
         {/* Category Allocation */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Card sx={{ boxShadow: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -289,7 +289,7 @@ const BudgetAllocation: React.FC = () => {
 
               <Grid container spacing={3}>
                 {categories.map((cat, index) => (
-                  <Grid item xs={12} key={index}>
+                  <Grid size={{ xs: 12 }} key={index}>
                     <Paper
                       sx={{
                         p: 3,
@@ -299,7 +299,7 @@ const BudgetAllocation: React.FC = () => {
                       }}
                     >
                       <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12} sm={3}>
+                        <Grid size={{ xs: 12, sm: 3 }}>
                           <FormControl fullWidth size="small">
                             <InputLabel>Category</InputLabel>
                             <Select
@@ -320,7 +320,7 @@ const BudgetAllocation: React.FC = () => {
                           </FormControl>
                         </Grid>
 
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                           <Typography variant="caption" color="text.secondary" gutterBottom>
                             Allocation: {cat.percentage}%
                           </Typography>
@@ -345,7 +345,7 @@ const BudgetAllocation: React.FC = () => {
                           />
                         </Grid>
 
-                        <Grid item xs={8} sm={2}>
+                        <Grid size={{ xs: 8, sm: 2 }}>
                           <Paper
                             sx={{
                               p: 1.5,
@@ -362,7 +362,7 @@ const BudgetAllocation: React.FC = () => {
                           </Paper>
                         </Grid>
 
-                        <Grid item xs={4} sm={1}>
+                        <Grid size={{ xs: 4, sm: 1 }}>
                           <Button
                             color="error"
                             onClick={() => removeCategory(index)}
@@ -386,7 +386,7 @@ const BudgetAllocation: React.FC = () => {
 
                 <Grid container spacing={2}>
                   {categories.map((cat) => (
-                    <Grid item xs={12} sm={6} md={4} key={cat.category}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={cat.category}>
                       <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
                         <Typography variant="body2" fontWeight="medium" gutterBottom>
                           {cat.category}

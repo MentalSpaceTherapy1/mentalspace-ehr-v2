@@ -13,7 +13,7 @@ export interface OnboardingProcess {
     email: string;
     photoUrl?: string;
     department: string;
-    title: string;
+    jobTitle: string;
   };
   mentorId?: string;
   mentor?: {

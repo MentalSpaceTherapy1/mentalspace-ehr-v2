@@ -259,7 +259,7 @@ const OnboardingDashboard: React.FC = () => {
                     <h3 className="text-lg font-bold text-gray-900 group-hover:text-green-600 transition-colors">
                       {onboarding.staff?.firstName} {onboarding.staff?.lastName}
                     </h3>
-                    <p className="text-sm text-gray-600">{onboarding.staff?.title}</p>
+                    <p className="text-sm text-gray-600">{onboarding.staff?.jobTitle}</p>
                     <p className="text-xs text-gray-500 mt-1">
                       {onboarding.staff?.department}
                     </p>

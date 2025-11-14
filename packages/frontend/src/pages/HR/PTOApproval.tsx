@@ -192,7 +192,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
 
       {/* Summary Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #F39C12 0%, #E67E22 100%)', color: 'white' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -208,7 +208,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #2ECC71 0%, #27AE60 100%)', color: 'white' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -224,7 +224,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #E74C3C 0%, #C0392B 100%)', color: 'white' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -240,7 +240,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <Card sx={{ background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)', color: 'white' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -284,7 +284,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
       ) : (
         <Grid container spacing={3}>
           {requests.map((request) => (
-            <Grid item xs={12} key={request.id}>
+            <Grid size={{ xs: 12 }} key={request.id}>
               <Card
                 sx={{
                   border: `2px solid ${getTypeColor(request.type)}40`,
@@ -297,7 +297,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
               >
                 <CardContent>
                   <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={3}>
+                    <Grid size={{ xs: 12, md: 3 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar
                           sx={{
@@ -330,7 +330,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                       </Box>
                     </Grid>
 
-                    <Grid item xs={12} md={3}>
+                    <Grid size={{ xs: 12, md: 3 }}>
                       <Typography variant="body2" color="textSecondary" gutterBottom>
                         Dates
                       </Typography>
@@ -342,7 +342,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                       </Typography>
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid size={{ xs: 12, md: 2 }}>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h4" sx={{ fontWeight: 700, color: getTypeColor(request.type) }}>
                           {request.totalDays}
@@ -353,7 +353,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                       </Box>
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid size={{ xs: 12, md: 2 }}>
                       <Chip
                         label={request.status}
                         sx={{
@@ -365,7 +365,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                       />
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid size={{ xs: 12, md: 2 }}>
                       <Stack spacing={1}>
                         <Button
                           variant="outlined"
@@ -469,7 +469,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
           {selectedRequest && (
             <Box sx={{ pt: 2 }}>
               <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                     Start Date
                   </Typography>
@@ -477,7 +477,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                     {format(new Date(selectedRequest.startDate), 'MMMM dd, yyyy')}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                     End Date
                   </Typography>
@@ -486,7 +486,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Card sx={{ border: '2px solid #667EEA40', backgroundColor: '#667EEA10' }}>
                     <CardContent>
                       <Typography variant="h4" sx={{ fontWeight: 700, color: '#667EEA' }}>
@@ -498,7 +498,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                     </CardContent>
                   </Card>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Card sx={{ border: '2px solid #2ECC7140', backgroundColor: '#2ECC7110' }}>
                     <CardContent>
                       <Typography variant="h4" sx={{ fontWeight: 700, color: '#2ECC71' }}>
@@ -512,7 +512,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                 </Grid>
 
                 {selectedRequest.reason && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
                       Reason
                     </Typography>
@@ -523,7 +523,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                 )}
 
                 {selectedRequest.coveragePlan && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
                       Coverage Plan
                     </Typography>
@@ -533,14 +533,14 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                   </Grid>
                 )}
 
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <Divider sx={{ my: 2 }} />
                   <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                     Balance Verification
                   </Typography>
                   {employeeBalance && (
                     <Grid container spacing={2}>
-                      <Grid item xs={4}>
+                      <Grid size={{ xs: 4 }}>
                         <Card sx={{ border: '2px solid #3498DB40', backgroundColor: '#3498DB10' }}>
                           <CardContent>
                             <Typography variant="caption" color="textSecondary">
@@ -552,7 +552,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                           </CardContent>
                         </Card>
                       </Grid>
-                      <Grid item xs={4}>
+                      <Grid size={{ xs: 4 }}>
                         <Card sx={{ border: '2px solid #E74C3C40', backgroundColor: '#E74C3C10' }}>
                           <CardContent>
                             <Typography variant="caption" color="textSecondary">
@@ -564,7 +564,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                           </CardContent>
                         </Card>
                       </Grid>
-                      <Grid item xs={4}>
+                      <Grid size={{ xs: 4 }}>
                         <Card sx={{ border: '2px solid #9B59B640', backgroundColor: '#9B59B610' }}>
                           <CardContent>
                             <Typography variant="caption" color="textSecondary">
@@ -581,7 +581,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                 </Grid>
 
                 {conflicts && conflicts.hasConflicts && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Alert severity="warning" icon={<WarningIcon />}>
                       <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
                         Coverage Impact Warning
@@ -595,7 +595,7 @@ const PTOApproval: React.FC<PTOApprovalProps> = ({ managerId }) => {
                 )}
 
                 {selectedRequest.approverName && (
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                       Approval History

@@ -34,14 +34,26 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useDocuments } from '../../hooks/useDocuments';
 
 interface DocumentUploaderProps {
-  onClose: () => void;
+  onClose?: () => void;
   folderId?: string | null;
 }
 
-const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose, folderId }) => {
+const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose: propOnClose, folderId: propFolderId }) => {
+  const navigate = useNavigate();
+  const { folderId: paramFolderId } = useParams<{ folderId?: string }>();
+  const folderId = propFolderId || paramFolderId || undefined;
+
+  const handleClose = () => {
+    if (propOnClose) {
+      propOnClose();
+    } else {
+      navigate(-1);
+    }
+  };
   const { uploadDocument, loading } = useDocuments();
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
@@ -99,7 +111,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose, folderId }
     }
 
     setTimeout(() => {
-      onClose();
+      handleClose();
     }, 1500);
   };
 
@@ -119,7 +131,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose, folderId }
   const tagOptions = ['Important', 'Confidential', 'Archive', 'Review', 'Template'];
 
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle
         sx={{
           background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -135,7 +147,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose, folderId }
             Upload Documents
           </Typography>
         </Box>
-        <IconButton onClick={onClose} sx={{ color: 'white' }}>
+        <IconButton onClick={handleClose} sx={{ color: 'white' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -274,7 +286,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose, folderId }
               </Typography>
 
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     label="Title"
@@ -284,7 +296,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose, folderId }
                   />
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs: 12, sm: 6}}>
                   <FormControl fullWidth>
                     <InputLabel>Category</InputLabel>
                     <Select
@@ -301,7 +313,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose, folderId }
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs: 12, sm: 6}}>
                   <Autocomplete
                     multiple
                     options={tagOptions}
@@ -324,7 +336,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose, folderId }
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                     Access Level
                   </Typography>
@@ -393,7 +405,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onClose, folderId }
       </DialogContent>
 
       <DialogActions sx={{ p: 3, borderTop: '1px solid #e2e8f0' }}>
-        <Button onClick={onClose} disabled={loading}>
+        <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
         <Button

@@ -183,14 +183,14 @@ export default function GroupDetailsPage() {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Description
               </Typography>
               <Typography>{group.description || 'No description provided'}</Typography>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Status
               </Typography>
@@ -201,7 +201,7 @@ export default function GroupDetailsPage() {
               />
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Enrollment
               </Typography>
@@ -210,14 +210,14 @@ export default function GroupDetailsPage() {
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Group Type
               </Typography>
               <Typography>{group.groupType}</Typography>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Schedule
               </Typography>
@@ -233,7 +233,7 @@ export default function GroupDetailsPage() {
               )}
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Billing
               </Typography>
@@ -243,7 +243,7 @@ export default function GroupDetailsPage() {
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Facilitators
               </Typography>
@@ -259,7 +259,7 @@ export default function GroupDetailsPage() {
               )}
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Dates
               </Typography>
@@ -269,14 +269,14 @@ export default function GroupDetailsPage() {
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Open Enrollment
               </Typography>
               <Typography>{group.isOpenEnrollment ? 'Yes' : 'No'}</Typography>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Requires Screening
               </Typography>

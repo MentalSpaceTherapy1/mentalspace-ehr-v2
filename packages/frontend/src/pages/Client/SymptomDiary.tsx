@@ -153,8 +153,8 @@ const SymptomDiary: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [logToDelete, setLogToDelete] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
+  const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [editingLog, setEditingLog] = useState<SymptomLog | null>(null);
   const [tabValue, setTabValue] = useState(0);
 
@@ -487,7 +487,7 @@ const SymptomDiary: React.FC = () => {
             <Collapse in={formExpanded}>
               <Grid container spacing={3}>
                 {/* Symptoms */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <Autocomplete
                     multiple
                     options={COMMON_SYMPTOMS}
@@ -516,7 +516,7 @@ const SymptomDiary: React.FC = () => {
                 </Grid>
 
                 {/* Duration */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <FormControl fullWidth>
                     <InputLabel>Duration</InputLabel>
                     <Select
@@ -537,7 +537,7 @@ const SymptomDiary: React.FC = () => {
                 </Grid>
 
                 {/* Severity */}
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Box
                     sx={{
                       p: 3,
@@ -611,7 +611,7 @@ const SymptomDiary: React.FC = () => {
                 </Grid>
 
                 {/* Triggers */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <Autocomplete
                     multiple
                     options={TRIGGERS}
@@ -639,7 +639,7 @@ const SymptomDiary: React.FC = () => {
                 </Grid>
 
                 {/* Mood */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <Typography gutterBottom fontWeight={600} color="text.secondary">
                     Overall Mood
                   </Typography>
@@ -692,7 +692,7 @@ const SymptomDiary: React.FC = () => {
                 </Grid>
 
                 {/* Medications */}
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       Medications Taken
@@ -740,7 +740,7 @@ const SymptomDiary: React.FC = () => {
                 </Grid>
 
                 {/* Notes */}
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     multiline
@@ -753,7 +753,7 @@ const SymptomDiary: React.FC = () => {
                 </Grid>
 
                 {/* Actions */}
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                     {editingLog && (
                       <Button variant="outlined" onClick={resetForm}>
@@ -1145,7 +1145,7 @@ const SymptomDiary: React.FC = () => {
                           stroke: '#666',
                           strokeWidth: 2,
                         }}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name}: ${((percent as number) * 100).toFixed(0)}%`}
                         outerRadius={120}
                         fill="#8884d8"
                         dataKey="value"

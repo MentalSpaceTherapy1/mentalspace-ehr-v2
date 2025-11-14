@@ -61,7 +61,7 @@ export default function TimeOffRequestsPage() {
   const [denialReason, setDenialReason] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'denied'>('all');
 
-  const isAdmin = user?.roles?.includes('ADMIN') || user?.roles?.includes('ADMINISTRATOR');
+  const isAdmin = user?.roles?.includes('ADMINISTRATOR') || user?.roles?.includes('SUPER_ADMIN');
 
   useEffect(() => {
     if (user?.id) {

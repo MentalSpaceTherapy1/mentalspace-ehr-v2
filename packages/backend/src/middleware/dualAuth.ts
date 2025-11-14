@@ -220,7 +220,7 @@ export const canAccessClientData = (req: Request, targetClientId: string): boole
   if (req.user?.roles) {
     const userRoles = Array.isArray(req.user.roles) ? req.user.roles : [req.user.roles];
     const isSuperAdmin = userRoles.some((role: string) =>
-      role === 'SUPER_ADMIN' || role === 'SUPERADMIN'
+      role === 'SUPER_ADMIN' || role === 'SUPER_ADMIN'
     );
     if (isSuperAdmin) {
       return true;

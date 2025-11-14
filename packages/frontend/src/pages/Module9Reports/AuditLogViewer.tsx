@@ -47,7 +47,8 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useAuditLogs, AuditLogEntry } from '../../hooks/useModule9Reports';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
+import { format } from 'date-fns';
 
 const actionColors: Record<string, string> = {
   CREATE: '#10B981',
@@ -83,8 +84,8 @@ const AuditLogViewer: React.FC = () => {
   const [selectedAction, setSelectedAction] = useState<string>('');
   const [selectedModule, setSelectedModule] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
-  const [startDate, setStartDate] = useState<Date | null>(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-  const [endDate, setEndDate] = useState<Date | null>(new Date());
+  const [startDate, setStartDate] = useState<Dayjs | null>(dayjs().subtract(7, 'day'));
+  const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel'>('csv');
@@ -146,8 +147,8 @@ const AuditLogViewer: React.FC = () => {
     setSelectedModule('');
     setSelectedUser('');
     setSearchQuery('');
-    setStartDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-    setEndDate(new Date());
+    setStartDate(dayjs().subtract(7, 'day'));
+    setEndDate(dayjs());
     setPage(0);
   };
 
@@ -208,7 +209,7 @@ const AuditLogViewer: React.FC = () => {
 
         {/* Statistics Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -223,7 +224,7 @@ const AuditLogViewer: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -238,7 +239,7 @@ const AuditLogViewer: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
@@ -253,7 +254,7 @@ const AuditLogViewer: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
@@ -288,7 +289,7 @@ const AuditLogViewer: React.FC = () => {
           </Box>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Action</InputLabel>
                 <Select
@@ -314,7 +315,7 @@ const AuditLogViewer: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Module</InputLabel>
                 <Select
@@ -332,7 +333,7 @@ const AuditLogViewer: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <DatePicker
                 label="Start Date"
                 value={startDate}
@@ -341,7 +342,7 @@ const AuditLogViewer: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <DatePicker
                 label="End Date"
                 value={endDate}
@@ -496,7 +497,7 @@ const AuditLogViewer: React.FC = () => {
             {selectedLog && (
               <Box>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Typography variant="caption" color="text.secondary">
                       Timestamp
                     </Typography>
@@ -504,7 +505,7 @@ const AuditLogViewer: React.FC = () => {
                       {format(new Date(selectedLog.timestamp), 'PPpp')}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Typography variant="caption" color="text.secondary">
                       User
                     </Typography>
@@ -512,7 +513,7 @@ const AuditLogViewer: React.FC = () => {
                       {selectedLog.userName} ({selectedLog.userId})
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Typography variant="caption" color="text.secondary">
                       Action
                     </Typography>
@@ -527,7 +528,7 @@ const AuditLogViewer: React.FC = () => {
                       />
                     </Box>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Typography variant="caption" color="text.secondary">
                       Module
                     </Typography>
@@ -535,7 +536,7 @@ const AuditLogViewer: React.FC = () => {
                       {moduleIcons[selectedLog.module]} {selectedLog.module}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Typography variant="caption" color="text.secondary">
                       IP Address
                     </Typography>
@@ -543,7 +544,7 @@ const AuditLogViewer: React.FC = () => {
                       {selectedLog.ipAddress || 'N/A'}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Typography variant="caption" color="text.secondary">
                       User Agent
                     </Typography>
@@ -551,7 +552,7 @@ const AuditLogViewer: React.FC = () => {
                       {selectedLog.userAgent || 'N/A'}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography variant="caption" color="text.secondary" gutterBottom>
                       Event Details
                     </Typography>

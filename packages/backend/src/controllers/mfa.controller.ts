@@ -248,7 +248,7 @@ export class MFAController {
     }
 
     // Check if user has admin or super_admin role
-    if (!userRoles.includes('ADMIN') && !userRoles.includes('SUPER_ADMIN')) {
+    if (!userRoles.includes('ADMINISTRATOR') && !userRoles.includes('SUPER_ADMIN')) {
       throw new UnauthorizedError('Admin access required');
     }
 
@@ -275,7 +275,7 @@ export class MFAController {
     }
 
     // Check if user has admin or super_admin role
-    if (!adminRoles.includes('ADMIN') && !adminRoles.includes('SUPER_ADMIN')) {
+    if (!adminRoles.includes('ADMINISTRATOR') && !adminRoles.includes('SUPER_ADMIN')) {
       throw new UnauthorizedError('Admin access required');
     }
 

@@ -154,7 +154,7 @@ const POList: React.FC = () => {
       {/* Stats Cards */}
       {stats && (
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <Paper
               sx={{
                 p: 2,
@@ -172,7 +172,7 @@ const POList: React.FC = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <Paper
               sx={{
                 p: 2,
@@ -190,7 +190,7 @@ const POList: React.FC = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <Paper
               sx={{
                 p: 2,
@@ -208,7 +208,7 @@ const POList: React.FC = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <Paper
               sx={{
                 p: 2,
@@ -226,7 +226,7 @@ const POList: React.FC = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <Paper
               sx={{
                 p: 2,
@@ -244,7 +244,7 @@ const POList: React.FC = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <Paper
               sx={{
                 p: 2,
@@ -268,7 +268,7 @@ const POList: React.FC = () => {
       <Card sx={{ mb: 3, boxShadow: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 placeholder="Search by PO number or vendor..."
@@ -284,7 +284,7 @@ const POList: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -303,7 +303,7 @@ const POList: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Button
                 variant="outlined"
                 fullWidth

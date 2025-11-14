@@ -174,7 +174,7 @@ export default function IncidentDetails() {
 
       <Grid container spacing={3}>
         {/* Left Column */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{xs: 12, md: 8}}>
           {/* Incident Summary */}
           <Card sx={{ borderRadius: 3, boxShadow: 3, mb: 3 }}>
             <CardContent sx={{ p: 4 }}>
@@ -183,7 +183,7 @@ export default function IncidentDetails() {
               </Typography>
 
               <Grid container spacing={3}>
-                <Grid item xs={6}>
+                <Grid size={{xs: 6}}>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                     <CalendarToday sx={{ color: 'text.secondary' }} />
                     <Box>
@@ -197,7 +197,7 @@ export default function IncidentDetails() {
                   </Stack>
                 </Grid>
 
-                <Grid item xs={6}>
+                <Grid size={{xs: 6}}>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                     <LocationOn sx={{ color: 'text.secondary' }} />
                     <Box>
@@ -211,7 +211,7 @@ export default function IncidentDetails() {
                   </Stack>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                     Description
                   </Typography>
@@ -221,7 +221,7 @@ export default function IncidentDetails() {
                 </Grid>
 
                 {incident.immediateActions && (
-                  <Grid item xs={12}>
+                  <Grid size={{xs: 12}}>
                     <Paper sx={{ p: 2, bgcolor: alpha('#10B981', 0.05), borderRadius: 2 }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                         Immediate Actions Taken
@@ -360,7 +360,7 @@ export default function IncidentDetails() {
         </Grid>
 
         {/* Right Column */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{xs: 12, md: 4}}>
           {/* Assign Investigator */}
           <Card sx={{ borderRadius: 3, boxShadow: 3, mb: 3 }}>
             <CardContent>

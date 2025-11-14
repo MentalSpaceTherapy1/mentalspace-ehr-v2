@@ -8,7 +8,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps,
 } from 'recharts';
 import { Download } from 'lucide-react';
 import { exportChartAsImage } from '../../utils/chartExport';
@@ -28,7 +27,14 @@ interface StackedBarChartProps {
   animate?: boolean;
 }
 
-const CustomTooltip = ({ active, payload, label, formatTooltip }: TooltipProps<any, any> & { formatTooltip?: (value: any) => string }) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: any; color: string }>;
+  label?: string;
+  formatTooltip?: (value: any) => string;
+}
+
+const CustomTooltip = ({ active, payload, label, formatTooltip }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const total = payload.reduce((sum, entry) => sum + (entry.value || 0), 0);
     return (

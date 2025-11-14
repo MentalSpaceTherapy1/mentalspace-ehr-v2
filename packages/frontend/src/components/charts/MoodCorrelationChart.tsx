@@ -9,7 +9,6 @@ import {
   Legend,
   ResponsiveContainer,
   ZAxis,
-  TooltipProps,
 } from 'recharts';
 import { Download } from 'lucide-react';
 import { exportChartAsImage } from '../../utils/chartExport';
@@ -30,6 +29,12 @@ interface MoodCorrelationChartProps {
   color?: string;
 }
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: any; color: string; payload?: any }>;
+  label?: string;
+}
+
 export const MoodCorrelationChart: React.FC<MoodCorrelationChartProps> = ({
   data,
   title = 'Mood Correlation',
@@ -46,7 +51,7 @@ export const MoodCorrelationChart: React.FC<MoodCorrelationChartProps> = ({
     }
   };
 
-  const CustomTooltip = ({ active, payload }: TooltipProps<any, any>) => {
+  const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white border-2 border-purple-200 rounded-lg shadow-lg p-3">

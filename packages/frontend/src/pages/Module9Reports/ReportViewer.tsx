@@ -62,7 +62,8 @@ import {
   Cell
 } from 'recharts';
 import { useModule9Reports, ReportData } from '../../hooks/useModule9Reports';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
+import { format } from 'date-fns';
 import ExportDialog from './ExportDialog';
 
 const ReportViewer: React.FC = () => {
@@ -71,8 +72,8 @@ const ReportViewer: React.FC = () => {
   const { generateReport, loading, error } = useModule9Reports();
 
   const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [startDate, setStartDate] = useState<Date | null>(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
-  const [endDate, setEndDate] = useState<Date | null>(new Date());
+  const [startDate, setStartDate] = useState<Dayjs | null>(dayjs().subtract(30, 'day'));
+  const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
   const [activeTab, setActiveTab] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -279,7 +280,7 @@ const ReportViewer: React.FC = () => {
 
         {/* Summary Statistics */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -294,7 +295,7 @@ const ReportViewer: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -310,7 +311,7 @@ const ReportViewer: React.FC = () => {
             </Card>
           </Grid>
           {Object.entries(reportData.summary.metrics).slice(0, 2).map(([key, value]: [string, any], index) => (
-            <Grid item xs={12} sm={6} md={3} key={key}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={key}>
               <Card
                 sx={{
                   background: index === 0
@@ -345,7 +346,7 @@ const ReportViewer: React.FC = () => {
         {activeTab === 0 && (
           <Grid container spacing={3}>
             {reportData.charts.map((chart) => (
-              <Grid item xs={12} md={6} key={chart.id}>
+              <Grid size={{ xs: 12, md: 6 }} key={chart.id}>
                 <Paper sx={{ p: 3 }}>
                   <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                     {chart.title}
@@ -405,7 +406,7 @@ const ReportViewer: React.FC = () => {
             </Typography>
             <Grid container spacing={3}>
               {Object.entries(reportData.summary.metrics).map(([key, value]: [string, any]) => (
-                <Grid item xs={12} sm={6} md={4} key={key}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={key}>
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="h4" color="primary" sx={{ mb: 1, fontWeight: 700 }}>

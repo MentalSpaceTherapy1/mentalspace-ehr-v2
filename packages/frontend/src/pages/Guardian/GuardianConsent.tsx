@@ -28,6 +28,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemIcon,
   Divider,
   Stack,
   Tooltip,
@@ -496,7 +497,7 @@ const GuardianConsent: React.FC = () => {
             </Typography>
 
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -512,7 +513,7 @@ const GuardianConsent: React.FC = () => {
                   }
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -529,7 +530,7 @@ const GuardianConsent: React.FC = () => {
                   }
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -545,7 +546,7 @@ const GuardianConsent: React.FC = () => {
                   }
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -561,7 +562,7 @@ const GuardianConsent: React.FC = () => {
                   }
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -577,7 +578,7 @@ const GuardianConsent: React.FC = () => {
                   }
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -595,7 +596,7 @@ const GuardianConsent: React.FC = () => {
                   }
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -641,7 +642,7 @@ const GuardianConsent: React.FC = () => {
         <DialogContent>
           {selectedGuardian && (
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Guardian Information
                 </Typography>
@@ -678,7 +679,7 @@ const GuardianConsent: React.FC = () => {
                 </List>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   What This Guardian Can Access
                 </Typography>
@@ -701,7 +702,7 @@ const GuardianConsent: React.FC = () => {
                 </List>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Recent Access Log (Last 10 Activities)

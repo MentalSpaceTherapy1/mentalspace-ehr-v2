@@ -499,7 +499,7 @@ const GuardianVerification: React.FC = () => {
 
       {/* Statistics Dashboard */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={3}>
+        <Grid size={{xs: 12, md: 3}}>
           <Card>
             <CardContent>
               <Typography variant="h4" fontWeight="bold" color="warning.main">
@@ -513,7 +513,7 @@ const GuardianVerification: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid size={{xs: 12, md: 3}}>
           <Card>
             <CardContent>
               <Typography variant="h4" fontWeight="bold" color="success.main">
@@ -525,7 +525,7 @@ const GuardianVerification: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid size={{xs: 12, md: 3}}>
           <Card>
             <CardContent>
               <Typography variant="h4" fontWeight="bold" color="error.main">
@@ -537,7 +537,7 @@ const GuardianVerification: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid size={{xs: 12, md: 3}}>
           <Card>
             <CardContent>
               <Typography variant="h4" fontWeight="bold" color="info.main">
@@ -555,7 +555,7 @@ const GuardianVerification: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid size={{xs: 12, md: 4}}>
               <TextField
                 fullWidth
                 size="small"
@@ -572,7 +572,7 @@ const GuardianVerification: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{xs: 12, md: 4}}>
               <FormControl fullWidth size="small">
                 <InputLabel>Relationship Type</InputLabel>
                 <Select
@@ -587,7 +587,7 @@ const GuardianVerification: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{xs: 12, md: 4}}>
               <FormControl fullWidth size="small">
                 <InputLabel>Access Level</InputLabel>
                 <Select
@@ -643,7 +643,7 @@ const GuardianVerification: React.FC = () => {
           {selectedRelationship && (
             <Grid container spacing={3}>
               {/* Left Panel: Request Details */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <Typography variant="h6" gutterBottom>
                   Guardian Information
                 </Typography>
@@ -743,7 +743,7 @@ const GuardianVerification: React.FC = () => {
               </Grid>
 
               {/* Right Panel: Documents */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <Typography variant="h6" gutterBottom>
                   Verification Documents
                 </Typography>

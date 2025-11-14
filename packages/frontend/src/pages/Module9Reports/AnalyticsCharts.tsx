@@ -143,7 +143,7 @@ const AnalyticsCharts: React.FC = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card
             sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -170,7 +170,7 @@ const AnalyticsCharts: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card
             sx={{
               background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -197,7 +197,7 @@ const AnalyticsCharts: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card
             sx={{
               background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
@@ -224,7 +224,7 @@ const AnalyticsCharts: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card
             sx={{
               background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
@@ -255,7 +255,7 @@ const AnalyticsCharts: React.FC = () => {
       {/* Main Charts */}
       <Grid container spacing={3}>
         {/* Credential Trends */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               Credential Status Trends
@@ -290,7 +290,7 @@ const AnalyticsCharts: React.FC = () => {
         </Grid>
 
         {/* Training Compliance */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               Training Compliance by Type
@@ -310,7 +310,7 @@ const AnalyticsCharts: React.FC = () => {
         </Grid>
 
         {/* Incident Patterns */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               Incident Patterns by Severity
@@ -332,7 +332,7 @@ const AnalyticsCharts: React.FC = () => {
         </Grid>
 
         {/* Vendor Performance */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               Vendor Performance Score
@@ -360,7 +360,7 @@ const AnalyticsCharts: React.FC = () => {
         </Grid>
 
         {/* Budget Utilization */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               Budget Utilization by Category
@@ -380,7 +380,7 @@ const AnalyticsCharts: React.FC = () => {
         </Grid>
 
         {/* Department Performance Radar */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               Department Performance
@@ -401,13 +401,13 @@ const AnalyticsCharts: React.FC = () => {
         </Grid>
 
         {/* Key Insights */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               Key Insights & Recommendations
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6} lg={3}>
+              <Grid size={{ xs: 12, md: 6, lg: 3 }}>
                 <Card
                   sx={{
                     background: `linear-gradient(135deg, ${alpha('#10B981', 0.1)} 0%, ${alpha('#10B981', 0.05)} 100%)`,
@@ -426,7 +426,7 @@ const AnalyticsCharts: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={6} lg={3}>
+              <Grid size={{ xs: 12, md: 6, lg: 3 }}>
                 <Card
                   sx={{
                     background: `linear-gradient(135deg, ${alpha('#3B82F6', 0.1)} 0%, ${alpha('#3B82F6', 0.05)} 100%)`,
@@ -445,7 +445,7 @@ const AnalyticsCharts: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={6} lg={3}>
+              <Grid size={{ xs: 12, md: 6, lg: 3 }}>
                 <Card
                   sx={{
                     background: `linear-gradient(135deg, ${alpha('#F59E0B', 0.1)} 0%, ${alpha('#F59E0B', 0.05)} 100%)`,
@@ -464,7 +464,7 @@ const AnalyticsCharts: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={6} lg={3}>
+              <Grid size={{ xs: 12, md: 6, lg: 3 }}>
                 <Card
                   sx={{
                     background: `linear-gradient(135deg, ${alpha('#8B5CF6', 0.1)} 0%, ${alpha('#8B5CF6', 0.05)} 100%)`,

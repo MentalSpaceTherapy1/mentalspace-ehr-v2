@@ -106,7 +106,7 @@ export default function PolicyLibrary() {
       <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={5}>
+            <Grid size={{ xs: 12, md: 5 }}>
               <TextField
                 fullWidth
                 placeholder="Search policies..."
@@ -126,7 +126,7 @@ export default function PolicyLibrary() {
                 }}
               />
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth>
                 <InputLabel>Category</InputLabel>
                 <Select
@@ -142,7 +142,7 @@ export default function PolicyLibrary() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -158,7 +158,7 @@ export default function PolicyLibrary() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={1}>
+            <Grid size={{ xs: 12, md: 1 }}>
               <Tooltip title="Advanced Filters">
                 <IconButton
                   sx={{
@@ -185,7 +185,7 @@ export default function PolicyLibrary() {
           const categoryColor = categoryColors[policy.category] || categoryColors.Other;
 
           return (
-            <Grid item xs={12} md={6} lg={4} key={policy.id}>
+            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={policy.id}>
               <Card
                 sx={{
                   borderRadius: 3,

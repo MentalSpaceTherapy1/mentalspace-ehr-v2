@@ -149,7 +149,7 @@ export const ScheduleReportDialog: React.FC<ScheduleReportDialogProps> = ({
           )}
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs: 12, sm: 6}}>
               <FormControl fullWidth>
                 <InputLabel>Frequency</InputLabel>
                 <Select value={frequency} onChange={(e) => setFrequency(e.target.value)} label="Frequency">
@@ -160,7 +160,7 @@ export const ScheduleReportDialog: React.FC<ScheduleReportDialogProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs: 12, sm: 6}}>
               <FormControl fullWidth>
                 <InputLabel>Format</InputLabel>
                 <Select value={format} onChange={(e) => setFormat(e.target.value)} label="Format">
@@ -171,7 +171,7 @@ export const ScheduleReportDialog: React.FC<ScheduleReportDialogProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <FormControl fullWidth>
                 <InputLabel>Timezone</InputLabel>
                 <Select value={timezone} onChange={(e) => setTimezone(e.target.value)} label="Timezone">
@@ -184,7 +184,7 @@ export const ScheduleReportDialog: React.FC<ScheduleReportDialogProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <Typography variant="subtitle2" gutterBottom>
                 Recipients (To)
               </Typography>
@@ -211,7 +211,7 @@ export const ScheduleReportDialog: React.FC<ScheduleReportDialogProps> = ({
               </Button>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <Typography variant="subtitle2" gutterBottom>
                 CC Recipients (Optional)
               </Typography>
@@ -236,7 +236,7 @@ export const ScheduleReportDialog: React.FC<ScheduleReportDialogProps> = ({
               </Button>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <FormControl fullWidth>
                 <InputLabel>Distribution Condition</InputLabel>
                 <Select
@@ -253,7 +253,7 @@ export const ScheduleReportDialog: React.FC<ScheduleReportDialogProps> = ({
             </Grid>
 
             {distributionType === 'THRESHOLD' && (
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   fullWidth
                   label="Threshold Value"

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -36,12 +37,14 @@ import { motion } from 'framer-motion';
 import { useMessaging } from '../../hooks/useMessaging';
 
 interface MessageComposerProps {
-  onClose: () => void;
+  onClose?: () => void;
   replyTo?: string;
   channelId?: string;
 }
 
-const MessageComposer: React.FC<MessageComposerProps> = ({ onClose, replyTo, channelId }) => {
+const MessageComposer: React.FC<MessageComposerProps> = ({ onClose: propOnClose, replyTo, channelId }) => {
+  const navigate = useNavigate();
+  const onClose = propOnClose || (() => navigate('/messages'));
   const { sendMessage, loading } = useMessaging();
   const [recipients, setRecipients] = useState<string[]>([]);
   const [subject, setSubject] = useState('');

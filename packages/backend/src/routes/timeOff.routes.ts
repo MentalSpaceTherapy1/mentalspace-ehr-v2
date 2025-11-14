@@ -33,14 +33,14 @@ router.get(
 router.post(
   '/:id/approve',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMINISTRATOR'),
   timeOffController.approveTimeOffRequest
 );
 
 router.post(
   '/:id/deny',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMINISTRATOR'),
   timeOffController.denyTimeOffRequest
 );
 
@@ -48,7 +48,7 @@ router.post(
 router.post(
   '/',
   authenticate,
-  authorize('ADMIN', 'THERAPIST'),
+  authorize('ADMINISTRATOR', 'THERAPIST'),
   timeOffController.createTimeOffRequest
 );
 
@@ -67,14 +67,14 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  authorize('ADMIN', 'THERAPIST'),
+  authorize('ADMINISTRATOR', 'THERAPIST'),
   timeOffController.updateTimeOffRequest
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('ADMIN', 'THERAPIST'),
+  authorize('ADMINISTRATOR', 'THERAPIST'),
   timeOffController.deleteTimeOffRequest
 );
 

@@ -124,7 +124,7 @@ const POApproval: React.FC = () => {
 
       {/* Stats */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 3,
@@ -142,7 +142,7 @@ const POApproval: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 3,
@@ -160,7 +160,7 @@ const POApproval: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper
             sx={{
               p: 3,
@@ -181,7 +181,7 @@ const POApproval: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Pending POs List */}
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Card sx={{ boxShadow: 3 }}>
             <CardContent>
               <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -239,7 +239,7 @@ const POApproval: React.FC = () => {
         </Grid>
 
         {/* PO Details */}
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           {selectedPO ? (
             <Stack spacing={3}>
               {/* PO Summary */}
@@ -251,7 +251,7 @@ const POApproval: React.FC = () => {
                   <Divider sx={{ mb: 3 }} />
 
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                           <POIcon color="primary" />
@@ -265,7 +265,7 @@ const POApproval: React.FC = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Paper sx={{ p: 2, bgcolor: '#f3e5f5' }}>
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                           <VendorIcon color="primary" />
@@ -279,7 +279,7 @@ const POApproval: React.FC = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Paper sx={{ p: 2, bgcolor: '#e3f2fd' }}>
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                           <CalendarIcon color="primary" />
@@ -293,7 +293,7 @@ const POApproval: React.FC = () => {
                       </Paper>
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Paper sx={{ p: 2, bgcolor: '#fff3e0' }}>
                         <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                           <MoneyIcon color="primary" />
@@ -308,7 +308,7 @@ const POApproval: React.FC = () => {
                     </Grid>
 
                     {selectedPO.shippingAddress && (
-                      <Grid item xs={12}>
+                      <Grid size={{ xs: 12 }}>
                         <Paper sx={{ p: 2, bgcolor: '#fce4ec' }}>
                           <Typography variant="caption" color="text.secondary">
                             Shipping Address
@@ -321,7 +321,7 @@ const POApproval: React.FC = () => {
                     )}
 
                     {selectedPO.notes && (
-                      <Grid item xs={12}>
+                      <Grid size={{ xs: 12 }}>
                         <Paper sx={{ p: 2, bgcolor: '#f1f8e9' }}>
                           <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                             <DescriptionIcon color="primary" />
@@ -433,7 +433,7 @@ const POApproval: React.FC = () => {
                     </Stack>
 
                     <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">
                           Budget Name
                         </Typography>
@@ -442,7 +442,7 @@ const POApproval: React.FC = () => {
                         </Typography>
                       </Grid>
 
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary">
                           Remaining Budget
                         </Typography>
@@ -451,7 +451,7 @@ const POApproval: React.FC = () => {
                         </Typography>
                       </Grid>
 
-                      <Grid item xs={12}>
+                      <Grid size={{ xs: 12 }}>
                         <Chip
                           label={budgetAvailable ? 'Budget Available' : 'Insufficient Budget'}
                           color={budgetAvailable ? 'success' : 'error'}

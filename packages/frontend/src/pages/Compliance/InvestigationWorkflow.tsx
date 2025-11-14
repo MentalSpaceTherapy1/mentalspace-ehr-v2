@@ -59,13 +59,13 @@ export default function InvestigationWorkflow() {
   );
   const [rootCause, setRootCause] = useState('');
   const [correctiveActions, setCorrectiveActions] = useState<Array<{
-    id: number;
+    id: string;
     action: string;
     responsible: string;
     dueDate: string;
   }>>([]);
   const [preventiveActions, setPreventiveActions] = useState<Array<{
-    id: number;
+    id: string;
     action: string;
     responsible: string;
     dueDate: string;
@@ -83,14 +83,14 @@ export default function InvestigationWorkflow() {
   const addCorrectiveAction = () => {
     setCorrectiveActions(prev => [
       ...prev,
-      { id: Date.now(), action: '', responsible: '', dueDate: '' }
+      { id: String(Date.now()), action: '', responsible: '', dueDate: '' }
     ]);
   };
 
   const addPreventiveAction = () => {
     setPreventiveActions(prev => [
       ...prev,
-      { id: Date.now(), action: '', responsible: '', dueDate: '' }
+      { id: String(Date.now()), action: '', responsible: '', dueDate: '' }
     ]);
   };
 

@@ -1,0 +1,6 @@
+﻿2025-11-13T03:18:00 [Report Scheduler] Error in scheduler: PrismaClientKnownRequestError:
+2025-11-13T03:18:00 Invalid `prisma.reportSchedule.findMany()` invocation in
+2025-11-13T03:18:00 /app/packages/backend/src/services/report-scheduler.service.ts:35:52
+2025-11-13T03:18:00   32 const now = new Date();
+2025-11-13T03:18:00   33
+2025-11-13T03:18:00   34 // Find all active schedules that are due

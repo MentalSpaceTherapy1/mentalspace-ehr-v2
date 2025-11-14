@@ -131,7 +131,7 @@ const DocumentLibrary: React.FC = () => {
       <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
         <Grid container sx={{ height: '100%' }}>
           {/* Left Sidebar - Folder Tree */}
-          <Grid item xs={12} md={3} sx={{ height: '100%', borderRight: '1px solid #e2e8f0' }}>
+          <Grid size={{xs: 12, md: 3}} sx={{ height: '100%', borderRight: '1px solid #e2e8f0' }}>
             <Paper elevation={0} sx={{ height: '100%', borderRadius: 0, overflow: 'auto', p: 2 }}>
               <Typography variant="h6" fontWeight={600} gutterBottom>
                 Folders
@@ -175,7 +175,7 @@ const DocumentLibrary: React.FC = () => {
           </Grid>
 
           {/* Main Content Area */}
-          <Grid item xs={12} md={9} sx={{ height: '100%', overflow: 'auto' }}>
+          <Grid size={{xs: 12, md: 9}} sx={{ height: '100%', overflow: 'auto' }}>
             <Box sx={{ p: 3 }}>
               {/* Toolbar */}
               <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -220,7 +220,7 @@ const DocumentLibrary: React.FC = () => {
                 {viewMode === 'grid' ? (
                   <Grid container spacing={2}>
                     {filteredDocuments.map((doc, index) => (
-                      <Grid item xs={12} sm={6} md={4} lg={3} key={doc.id}>
+                      <Grid size={{xs: 12, sm: 6, md: 4, lg: 3}} key={doc.id}>
                         <motion.div
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
