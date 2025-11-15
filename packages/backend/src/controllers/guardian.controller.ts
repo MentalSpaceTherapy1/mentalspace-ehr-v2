@@ -10,10 +10,20 @@ const guardianSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   relationship: z.string().min(1, 'Relationship is required'),
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  email: z.string().email().or(z.literal('')).optional(),
-  address: z.string().min(1).or(z.literal('')).optional(),
+  email: z.string().optional(),
+  address: z.string().optional(),
   isPrimary: z.boolean().default(false),
   notes: z.string().optional(),
+}).refine((data) => {
+  // If email is provided and not empty, validate it
+  if (data.email && data.email !== '') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(data.email);
+  }
+  return true;
+}, {
+  message: 'Invalid email format',
+  path: ['email'],
 });
 
 const updateGuardianSchema = guardianSchema.partial().omit({ clientId: true });
