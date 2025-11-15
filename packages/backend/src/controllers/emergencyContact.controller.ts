@@ -3,6 +3,19 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../services/database';
 
+// Helper to clean empty strings from object
+const cleanEmptyStrings = (obj: any): any => {
+  const cleaned: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === '' || value === null) {
+      // Don't include empty strings or null in the cleaned object
+      continue;
+    }
+    cleaned[key] = value;
+  }
+  return cleaned;
+};
+
 // Emergency Contact schema for create
 const emergencyContactSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
@@ -10,24 +23,12 @@ const emergencyContactSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   relationship: z.string().min(1, 'Relationship is required'),
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  alternatePhone: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.string().optional()
-  ),
-  email: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.string().email('Invalid email format').optional()
-  ),
-  address: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.string().optional()
-  ),
+  alternatePhone: z.string().optional(),
+  email: z.string().email('Invalid email format').optional(),
+  address: z.string().optional(),
   isPrimary: z.boolean().default(false),
   canPickup: z.boolean().default(false),
-  notes: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.string().optional()
-  ),
+  notes: z.string().optional(),
 });
 
 // Update schema for update operations
@@ -104,7 +105,9 @@ export const getEmergencyContactById = async (req: Request, res: Response) => {
 // Create emergency contact
 export const createEmergencyContact = async (req: Request, res: Response) => {
   try {
-    const validatedData = emergencyContactSchema.parse(req.body);
+    // Clean empty strings before validation
+    const cleanedBody = cleanEmptyStrings(req.body);
+    const validatedData = emergencyContactSchema.parse(cleanedBody);
 
     // Transform the data to match database schema
     // Frontend sends: firstName, lastName, phoneNumber, canPickup, notes
@@ -168,7 +171,9 @@ export const createEmergencyContact = async (req: Request, res: Response) => {
 export const updateEmergencyContact = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const validatedData = updateEmergencyContactSchema.parse(req.body);
+    // Clean empty strings before validation
+    const cleanedBody = cleanEmptyStrings(req.body);
+    const validatedData = updateEmergencyContactSchema.parse(cleanedBody);
 
     const existingContact = await prisma.emergencyContact.findUnique({
       where: { id },

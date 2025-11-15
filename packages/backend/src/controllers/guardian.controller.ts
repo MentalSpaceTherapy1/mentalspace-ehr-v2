@@ -3,6 +3,19 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../services/database';
 
+// Helper to clean empty strings from object
+const cleanEmptyStrings = (obj: any): any => {
+  const cleaned: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === '' || value === null) {
+      // Don't include empty strings or null in the cleaned object
+      continue;
+    }
+    cleaned[key] = value;
+  }
+  return cleaned;
+};
+
 // Guardian schema for create
 const guardianSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
@@ -10,19 +23,10 @@ const guardianSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   relationship: z.string().min(1, 'Relationship is required'),
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  email: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.string().email('Invalid email format').optional()
-  ),
-  address: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.string().optional()
-  ),
+  email: z.string().email('Invalid email format').optional(),
+  address: z.string().optional(),
   isPrimary: z.boolean().default(false),
-  notes: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.string().optional()
-  ),
+  notes: z.string().optional(),
 });
 
 // Update schema for update operations
@@ -99,7 +103,9 @@ export const getGuardianById = async (req: Request, res: Response) => {
 // Create guardian
 export const createGuardian = async (req: Request, res: Response) => {
   try {
-    const validatedData = guardianSchema.parse(req.body);
+    // Clean empty strings before validation
+    const cleanedBody = cleanEmptyStrings(req.body);
+    const validatedData = guardianSchema.parse(cleanedBody);
 
     // If this guardian is marked as primary, unset any other primary guardians for this client
     if (validatedData.isPrimary) {
@@ -154,7 +160,9 @@ export const createGuardian = async (req: Request, res: Response) => {
 export const updateGuardian = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const validatedData = updateGuardianSchema.parse(req.body);
+    // Clean empty strings before validation
+    const cleanedBody = cleanEmptyStrings(req.body);
+    const validatedData = updateGuardianSchema.parse(cleanedBody);
 
     const existingGuardian = await prisma.legalGuardian.findUnique({
       where: { id },
