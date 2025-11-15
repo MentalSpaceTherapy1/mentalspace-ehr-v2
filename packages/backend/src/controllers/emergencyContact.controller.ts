@@ -3,8 +3,8 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../services/database';
 
-// Emergency Contact validation schema
-const emergencyContactSchema = z.object({
+// Base Emergency Contact schema without refinement
+const baseEmergencyContactSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
@@ -16,19 +16,28 @@ const emergencyContactSchema = z.object({
   isPrimary: z.boolean().default(false),
   canPickup: z.boolean().default(false),
   notes: z.string().optional(),
-}).refine((data) => {
-  // If email is provided and not empty, validate it
+});
+
+// Email validation refinement
+const emailValidation = (data: any) => {
   if (data.email && data.email !== '') {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(data.email);
   }
   return true;
-}, {
+};
+
+// Emergency Contact schema with refinement for create
+const emergencyContactSchema = baseEmergencyContactSchema.refine(emailValidation, {
   message: 'Invalid email format',
   path: ['email'],
 });
 
-const updateEmergencyContactSchema = emergencyContactSchema.partial().omit({ clientId: true });
+// Update schema with refinement for update
+const updateEmergencyContactSchema = baseEmergencyContactSchema.partial().omit({ clientId: true }).refine(emailValidation, {
+  message: 'Invalid email format',
+  path: ['email'],
+});
 
 // Get all emergency contacts for a client
 export const getEmergencyContacts = async (req: Request, res: Response) => {

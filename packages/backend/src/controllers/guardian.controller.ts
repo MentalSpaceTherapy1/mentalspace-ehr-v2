@@ -3,8 +3,8 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../services/database';
 
-// Guardian validation schema
-const guardianSchema = z.object({
+// Base Guardian schema without refinement
+const baseGuardianSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
@@ -14,19 +14,28 @@ const guardianSchema = z.object({
   address: z.string().optional(),
   isPrimary: z.boolean().default(false),
   notes: z.string().optional(),
-}).refine((data) => {
-  // If email is provided and not empty, validate it
+});
+
+// Email validation refinement
+const emailValidation = (data: any) => {
   if (data.email && data.email !== '') {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(data.email);
   }
   return true;
-}, {
+};
+
+// Guardian schema with refinement for create
+const guardianSchema = baseGuardianSchema.refine(emailValidation, {
   message: 'Invalid email format',
   path: ['email'],
 });
 
-const updateGuardianSchema = guardianSchema.partial().omit({ clientId: true });
+// Update schema with refinement for update
+const updateGuardianSchema = baseGuardianSchema.partial().omit({ clientId: true }).refine(emailValidation, {
+  message: 'Invalid email format',
+  path: ['email'],
+});
 
 // Get all guardians for a client
 export const getClientGuardians = async (req: Request, res: Response) => {
