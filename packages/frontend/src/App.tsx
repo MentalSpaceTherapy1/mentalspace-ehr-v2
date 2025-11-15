@@ -424,6 +424,14 @@ function App() {
           }
         />
         <Route
+          path="/appointments/:id/reschedule"
+          element={
+            <PrivateRoute>
+              <NewAppointment />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/appointments/waitlist"
           element={
             <PrivateRoute>

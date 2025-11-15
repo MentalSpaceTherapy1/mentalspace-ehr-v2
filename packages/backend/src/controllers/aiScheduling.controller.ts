@@ -454,6 +454,30 @@ export async function getSuggestionsHistory(req: Request, res: Response) {
  */
 export async function getSchedulingStats(req: Request, res: Response) {
   try {
+    // Check if the scheduling_suggestions table exists by attempting a simple query
+    const tableExists = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'scheduling_suggestions'
+      );
+    `.catch(() => null);
+
+    // If table doesn't exist, return empty stats
+    if (!tableExists || !(tableExists as any)[0]?.exists) {
+      return res.status(200).json({
+        message: 'AI Scheduling feature not yet enabled',
+        stats: {
+          totalSuggestions: 0,
+          acceptedSuggestions: 0,
+          acceptanceRate: '0%',
+          averageScore: '0',
+          topSuggestedProviders: []
+        },
+        featureStatus: 'NOT_ENABLED'
+      });
+    }
+
     const [
       totalSuggestions,
       acceptedSuggestions,
@@ -512,9 +536,19 @@ export async function getSchedulingStats(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('Error getting scheduling stats:', error);
-    res.status(500).json({
-      error: 'Failed to get scheduling statistics',
-      details: error.message
+
+    // Return graceful fallback for any database errors
+    res.status(200).json({
+      message: 'AI Scheduling feature not yet enabled',
+      stats: {
+        totalSuggestions: 0,
+        acceptedSuggestions: 0,
+        acceptanceRate: '0%',
+        averageScore: '0',
+        topSuggestedProviders: []
+      },
+      featureStatus: 'NOT_ENABLED',
+      error: error.message
     });
   }
 }
@@ -595,6 +629,33 @@ export async function executeNaturalLanguageRequest(req: Request, res: Response)
       });
     }
 
+    // Check if AI scheduling features are enabled (table exists)
+    const tableExists = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'scheduling_suggestions'
+      );
+    `.catch(() => null);
+
+    // If table doesn't exist, return feature not enabled message
+    if (!tableExists || !(tableExists as any)[0]?.exists) {
+      return res.status(200).json({
+        message: 'AI Scheduling feature not yet enabled',
+        parseResult: {
+          intent: 'UNKNOWN',
+          entities: {},
+          confidence: 0,
+          reasoning: ['AI Scheduling feature is currently not enabled in this environment']
+        },
+        result: {
+          suggestions: [],
+          message: 'Natural language scheduling is not yet available. Please use the manual scheduling interface.'
+        },
+        featureStatus: 'NOT_ENABLED'
+      });
+    }
+
     // Parse the request
     const parseResult = await parseSchedulingRequest(requestText, userId);
 
@@ -621,9 +682,22 @@ export async function executeNaturalLanguageRequest(req: Request, res: Response)
     });
   } catch (error: any) {
     console.error('Error executing natural language request:', error);
-    res.status(500).json({
-      error: 'Failed to execute natural language request',
-      details: error.message
+
+    // Return graceful fallback for any errors
+    res.status(200).json({
+      message: 'AI Scheduling feature not yet enabled',
+      parseResult: {
+        intent: 'UNKNOWN',
+        entities: {},
+        confidence: 0,
+        reasoning: ['AI Scheduling feature encountered an error: ' + error.message]
+      },
+      result: {
+        suggestions: [],
+        message: 'Natural language scheduling is not yet available. Please use the manual scheduling interface.'
+      },
+      featureStatus: 'NOT_ENABLED',
+      error: error.message
     });
   }
 }

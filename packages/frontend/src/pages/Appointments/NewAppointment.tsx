@@ -459,9 +459,10 @@ export default function NewAppointment() {
                       value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
                       className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
+                      data-testid="client-search-input"
                     />
                     {clientSearch.length > 2 && clients && clients.length > 0 && (
-                      <div className="max-h-48 overflow-y-auto bg-white border-2 border-purple-200 rounded-xl">
+                      <div className="max-h-48 overflow-y-auto bg-white border-2 border-purple-200 rounded-xl" data-testid="client-search-results">
                         {clients.map((client: any) => (
                           <button
                             key={client.id}
@@ -474,6 +475,8 @@ export default function NewAppointment() {
                             className={`w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors ${
                               formData.clientId === client.id ? 'bg-purple-100' : ''
                             }`}
+                            data-testid={`client-option-${client.id}`}
+                            data-client-name={`${client.firstName} ${client.lastName}`}
                           >
                             <div className="font-semibold">{client.firstName} {client.lastName}</div>
                             <div className="text-sm text-gray-600">{client.email}</div>

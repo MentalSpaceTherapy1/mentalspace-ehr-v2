@@ -264,18 +264,6 @@ export const getAppointmentById = async (req: Request, res: Response) => {
             licenseNumber: true,
           },
         },
-        appointmentClients: {
-          include: {
-            client: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        },
       },
     });
 

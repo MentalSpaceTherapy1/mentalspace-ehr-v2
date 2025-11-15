@@ -116,54 +116,62 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
         error: portalError.message,
       });
 
-      // Try staff authentication (session-based)
+      // Try staff authentication (session-based token validation)
       try {
-        // Check if there's a session with userId
-        if (req.session && (req.session as any).userId) {
-          const userId = (req.session as any).userId;
+        // Import session service dynamically to avoid circular dependency
+        const sessionService = (await import('../services/session.service')).default;
 
-          const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              role: true,
-              isActive: true,
-              isLocked: true,
-            },
-          });
+        // Validate session token
+        const sessionData = await sessionService.validateSession(token);
 
-          if (!user) {
-            throw new Error('User not found');
-          }
-
-          if (!user.isActive) {
-            throw new Error('User account is inactive');
-          }
-
-          if (user.isLocked) {
-            throw new Error('User account is locked');
-          }
-
-          // Staff authentication successful
-          req.user = {
-            userId: user.id,
-            email: user.email,
-            role: user.role,
-            firstName: user.firstName,
-            lastName: user.lastName,
-          };
-
-          logger.debug('Dual auth: Staff authentication successful', {
-            userId: user.id,
-          });
-
-          return next();
+        if (!sessionData) {
+          throw new Error('Invalid session token');
         }
 
-        throw new Error('No valid session');
+        // Fetch user data
+        const user = await prisma.user.findUnique({
+          where: { id: sessionData.userId },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            roles: true,
+            isActive: true,
+            mfaEnabled: true,
+          },
+        });
+
+        if (!user) {
+          throw new Error('User not found');
+        }
+
+        if (!user.isActive) {
+          throw new Error('User account is inactive');
+        }
+
+        // Staff authentication successful
+        req.user = {
+          userId: user.id,
+          email: user.email,
+          roles: user.roles,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        } as any;
+
+        req.session = {
+          sessionId: sessionData.sessionId,
+          token: token,
+        } as any;
+
+        // Update session activity
+        await sessionService.updateActivity(sessionData.sessionId);
+
+        logger.debug('Dual auth: Staff authentication successful', {
+          userId: user.id,
+        });
+
+        return next();
       } catch (staffError: any) {
         logger.debug('Staff authentication also failed', {
           error: staffError.message,
