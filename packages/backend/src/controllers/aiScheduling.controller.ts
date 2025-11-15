@@ -457,7 +457,7 @@ export async function getSchedulingStats(req: Request, res: Response) {
     // Check if the scheduling_suggestions table exists by attempting a simple query
     const tableExists = await prisma.$queryRaw`
       SELECT EXISTS (
-        SELECT FROM information_schema.tables
+        SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public'
         AND table_name = 'scheduling_suggestions'
       );
@@ -632,7 +632,7 @@ export async function executeNaturalLanguageRequest(req: Request, res: Response)
     // Check if AI scheduling features are enabled (table exists)
     const tableExists = await prisma.$queryRaw`
       SELECT EXISTS (
-        SELECT FROM information_schema.tables
+        SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public'
         AND table_name = 'scheduling_suggestions'
       );
