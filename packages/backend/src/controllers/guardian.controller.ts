@@ -3,41 +3,30 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../services/database';
 
-// Base Guardian schema without refinement
-const baseGuardianSchema = z.object({
+// Guardian schema for create
+const guardianSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   relationship: z.string().min(1, 'Relationship is required'),
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  email: z.string().optional(),
-  address: z.string().optional(),
+  email: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.string().email('Invalid email format').optional()
+  ),
+  address: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.string().optional()
+  ),
   isPrimary: z.boolean().default(false),
-  notes: z.string().optional(),
+  notes: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.string().optional()
+  ),
 });
 
-// Email validation refinement
-const emailValidation = (data: any) => {
-  // If email is undefined, null, or empty string, skip validation (allow it)
-  if (!data.email || data.email.trim() === '') {
-    return true;
-  }
-  // If email has content, validate the format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(data.email);
-};
-
-// Guardian schema with refinement for create
-const guardianSchema = baseGuardianSchema.refine(emailValidation, {
-  message: 'Invalid email format',
-  path: ['email'],
-});
-
-// Update schema with refinement for update
-const updateGuardianSchema = baseGuardianSchema.partial().omit({ clientId: true }).refine(emailValidation, {
-  message: 'Invalid email format',
-  path: ['email'],
-});
+// Update schema for update operations
+const updateGuardianSchema = guardianSchema.partial().omit({ clientId: true });
 
 // Get all guardians for a client
 export const getClientGuardians = async (req: Request, res: Response) => {
