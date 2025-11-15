@@ -184,16 +184,23 @@ export async function getTimeOffRequestById(req: Request, res: Response): Promis
 export async function getAllTimeOffRequests(req: Request, res: Response): Promise<void> {
   try {
     // Check if the time_off_requests table exists
-    const tableExists = await prisma.$queryRaw`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public'
-        AND table_name = 'time_off_requests'
-      );
-    `.catch(() => null);
+    let tableExists = false;
+    try {
+      const result: any = await prisma.$queryRaw`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'time_off_requests'
+        ) as exists
+      `;
+      tableExists = result[0]?.exists || false;
+    } catch (error) {
+      logger.error('Error checking table existence:', error);
+      tableExists = false;
+    }
 
     // If table doesn't exist, return empty array
-    if (!tableExists || !(tableExists as any)[0]?.exists) {
+    if (!tableExists) {
       return res.json({
         success: true,
         count: 0,
@@ -209,7 +216,21 @@ export async function getAllTimeOffRequests(req: Request, res: Response): Promis
       endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
     };
 
-    const timeOffRequests = await timeOffService.getAllTimeOffRequests(filters);
+    // Wrap service call in try-catch in case table/model doesn't exist
+    let timeOffRequests;
+    try {
+      timeOffRequests = await timeOffService.getAllTimeOffRequests(filters);
+    } catch (error: any) {
+      // If service call fails, return empty array
+      logger.error('Error querying time-off requests:', error);
+      return res.json({
+        success: true,
+        count: 0,
+        data: [],
+        featureStatus: 'NOT_ENABLED',
+        error: error.message
+      });
+    }
 
     res.json({
       success: true,

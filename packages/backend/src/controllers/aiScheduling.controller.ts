@@ -455,16 +455,23 @@ export async function getSuggestionsHistory(req: Request, res: Response) {
 export async function getSchedulingStats(req: Request, res: Response) {
   try {
     // Check if the scheduling_suggestions table exists by attempting a simple query
-    const tableExists = await prisma.$queryRaw`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public'
-        AND table_name = 'scheduling_suggestions'
-      );
-    `.catch(() => null);
+    let tableExists = false;
+    try {
+      const result: any = await prisma.$queryRaw`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'scheduling_suggestions'
+        ) as exists
+      `;
+      tableExists = result[0]?.exists || false;
+    } catch (error) {
+      console.error('Error checking table existence:', error);
+      tableExists = false;
+    }
 
     // If table doesn't exist, return empty stats
-    if (!tableExists || !(tableExists as any)[0]?.exists) {
+    if (!tableExists) {
       return res.status(200).json({
         message: 'AI Scheduling feature not yet enabled',
         stats: {
@@ -478,33 +485,61 @@ export async function getSchedulingStats(req: Request, res: Response) {
       });
     }
 
-    const [
-      totalSuggestions,
-      acceptedSuggestions,
-      averageScore,
-      topProviders
-    ] = await Promise.all([
-      // Total suggestions generated
-      prisma.schedulingSuggestion.count(),
+    // Wrap Prisma model calls in try-catch in case table/model doesn't exist
+    let totalSuggestions = 0;
+    let acceptedSuggestions = 0;
+    let averageScore = { _avg: { overallScore: null } };
+    let topProviders: any[] = [];
 
-      // Accepted suggestions
-      prisma.schedulingSuggestion.count({
-        where: { wasAccepted: true }
-      }),
+    try {
+      const [
+        total,
+        accepted,
+        avgScore,
+        top
+      ] = await Promise.all([
+        // Total suggestions generated
+        prisma.schedulingSuggestion.count(),
 
-      // Average overall score
-      prisma.schedulingSuggestion.aggregate({
-        _avg: { overallScore: true }
-      }),
+        // Accepted suggestions
+        prisma.schedulingSuggestion.count({
+          where: { wasAccepted: true }
+        }),
 
-      // Top suggested providers
-      prisma.schedulingSuggestion.groupBy({
-        by: ['suggestedProviderId'],
-        _count: { id: true },
-        orderBy: { _count: { id: 'desc' } },
-        take: 5
-      })
-    ]);
+        // Average overall score
+        prisma.schedulingSuggestion.aggregate({
+          _avg: { overallScore: true }
+        }),
+
+        // Top suggested providers
+        prisma.schedulingSuggestion.groupBy({
+          by: ['suggestedProviderId'],
+          _count: { id: true },
+          orderBy: { _count: { id: 'desc' } },
+          take: 5
+        })
+      ]);
+
+      totalSuggestions = total;
+      acceptedSuggestions = accepted;
+      averageScore = avgScore;
+      topProviders = top;
+    } catch (error: any) {
+      // If Prisma model calls fail, return empty stats
+      console.error('Error querying scheduling suggestions:', error);
+      return res.status(200).json({
+        message: 'AI Scheduling feature not yet enabled',
+        stats: {
+          totalSuggestions: 0,
+          acceptedSuggestions: 0,
+          acceptanceRate: '0%',
+          averageScore: '0',
+          topSuggestedProviders: []
+        },
+        featureStatus: 'NOT_ENABLED',
+        error: error.message
+      });
+    }
 
     // Get provider details for top providers
     const providerDetails = await Promise.all(
@@ -630,18 +665,25 @@ export async function executeNaturalLanguageRequest(req: Request, res: Response)
     }
 
     // Check if AI scheduling features are enabled (table exists)
-    const tableExists = await prisma.$queryRaw`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public'
-        AND table_name = 'scheduling_suggestions'
-      );
-    `.catch(() => null);
+    let tableExists = false;
+    try {
+      const result: any = await prisma.$queryRaw`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'scheduling_suggestions'
+        ) as exists
+      `;
+      tableExists = result[0]?.exists || false;
+    } catch (error) {
+      console.error('Error checking table existence:', error);
+      tableExists = false;
+    }
 
     // If table doesn't exist, return feature not enabled message
-    if (!tableExists || !(tableExists as any)[0]?.exists) {
+    if (!tableExists) {
       return res.status(200).json({
-        message: 'AI Scheduling feature not yet enabled',
+        message: 'AI Scheduling feature not yet enabled. Please use the manual scheduling interface.',
         parseResult: {
           intent: 'UNKNOWN',
           entities: {},
