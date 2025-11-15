@@ -18,11 +18,13 @@ const baseGuardianSchema = z.object({
 
 // Email validation refinement
 const emailValidation = (data: any) => {
-  if (data.email && data.email !== '') {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(data.email);
+  // If email is undefined, null, or empty string, skip validation (allow it)
+  if (!data.email || data.email.trim() === '') {
+    return true;
   }
-  return true;
+  // If email has content, validate the format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(data.email);
 };
 
 // Guardian schema with refinement for create
