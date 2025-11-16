@@ -283,6 +283,7 @@ export default function UserForm() {
                 </label>
                 <div className="space-y-2 bg-purple-50 p-4 rounded-xl border-2 border-purple-200">
                   {[
+                    { value: 'SUPER_ADMIN', label: '⚡ Super Admin', color: 'from-yellow-500 to-red-500' },
                     { value: 'ADMINISTRATOR', label: '🔴 Administrator', color: 'from-rose-500 to-pink-500' },
                     { value: 'SUPERVISOR', label: '🟣 Supervisor', color: 'from-purple-500 to-indigo-500' },
                     { value: 'CLINICIAN', label: '🔵 Clinician', color: 'from-blue-500 to-cyan-500' },

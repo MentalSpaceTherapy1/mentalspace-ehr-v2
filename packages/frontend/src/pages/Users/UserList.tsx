@@ -61,6 +61,11 @@ export default function UserList() {
   const pagination: Pagination = data?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
 
   const roleStyles = {
+    SUPER_ADMIN: {
+      badge: 'bg-gradient-to-r from-yellow-500 to-red-500 text-white shadow-lg shadow-yellow-200',
+      avatar: 'bg-gradient-to-br from-yellow-400 to-red-600',
+      label: 'Super Admin',
+    },
     ADMINISTRATOR: {
       badge: 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-200',
       avatar: 'bg-gradient-to-br from-rose-400 to-pink-600',
