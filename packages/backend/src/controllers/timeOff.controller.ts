@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import * as timeOffService from '../services/timeOff.service';
 import logger from '../utils/logger';
+import prisma from '../services/database';
 
 /**
  * Module 3 Phase 2.3: Time-Off Request Controller
@@ -201,12 +202,13 @@ export async function getAllTimeOffRequests(req: Request, res: Response): Promis
 
     // If table doesn't exist, return empty array
     if (!tableExists) {
-      return res.json({
+      res.json({
         success: true,
         count: 0,
         data: [],
         featureStatus: 'NOT_ENABLED'
       });
+      return;
     }
 
     const filters = {
