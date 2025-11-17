@@ -225,13 +225,14 @@ export async function getAllTimeOffRequests(req: Request, res: Response): Promis
     } catch (error: any) {
       // If service call fails, return empty array
       logger.error('Error querying time-off requests:', error);
-      return res.json({
+      res.json({
         success: true,
         count: 0,
         data: [],
         featureStatus: 'NOT_ENABLED',
         error: error.message
       });
+      return;
     }
 
     res.json({
