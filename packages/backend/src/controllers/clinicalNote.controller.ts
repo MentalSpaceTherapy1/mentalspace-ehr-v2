@@ -22,7 +22,7 @@ export const NOTE_TYPES = {
 // Clinical Note validation schema
 const clinicalNoteSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
-  appointmentId: z.string().uuid('Invalid appointment ID').optional(), // Made optional for drafts
+  appointmentId: z.string().uuid('Invalid appointment ID').nullable().optional(), // Made optional/nullable for drafts
   noteType: z.enum([
     'Intake Assessment',
     'Progress Note',
