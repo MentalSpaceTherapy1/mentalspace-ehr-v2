@@ -79,7 +79,8 @@ async function validateNoteWorkflow(
   clientId: string,
   clinicianId: string,
   noteType: string,
-  appointmentId?: string
+  appointmentId?: string,
+  status?: string
 ): Promise<{ valid: boolean; message?: string }> {
   try {
     // Use the comprehensive validation service
@@ -87,7 +88,8 @@ async function validateNoteWorkflow(
       noteType,
       clientId,
       clinicianId,
-      appointmentId
+      appointmentId,
+      status
     });
 
     return { valid: true };
@@ -265,7 +267,8 @@ export const createClinicalNote = async (req: Request, res: Response) => {
         validatedData.clientId,
         userId,
         validatedData.noteType,
-        validatedData.appointmentId
+        validatedData.appointmentId,
+        validatedData.status
       );
 
       if (!workflowCheck.valid) {

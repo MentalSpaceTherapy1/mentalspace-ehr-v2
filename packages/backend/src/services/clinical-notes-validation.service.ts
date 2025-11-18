@@ -50,6 +50,7 @@ export interface ValidateNoteCreationParams {
   clientId: string;
   clinicianId: string;
   appointmentId?: string;
+  status?: string;
 }
 
 export interface ValidateDiagnosisUpdateParams {
@@ -65,7 +66,12 @@ export interface ValidateDiagnosisUpdateParams {
 export async function validateAppointmentRequirement(
   params: ValidateNoteCreationParams
 ): Promise<void> {
-  const { noteType, clientId, clinicianId, appointmentId } = params;
+  const { noteType, clientId, clinicianId, appointmentId, status } = params;
+
+  // Skip appointment requirement for draft notes
+  if (status === 'DRAFT') {
+    return; // Draft notes can be saved without appointments
+  }
 
   // Check if this note type requires an appointment
   if (!APPOINTMENT_REQUIRED_NOTE_TYPES.includes(noteType)) {
