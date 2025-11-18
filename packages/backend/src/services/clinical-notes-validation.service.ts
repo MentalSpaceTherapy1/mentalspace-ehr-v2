@@ -13,20 +13,20 @@ import { BadRequestError } from '../utils/errors';
 
 // Note types that require appointments (Business Rule #1)
 const APPOINTMENT_REQUIRED_NOTE_TYPES = [
-  'INTAKE',
-  'PROGRESS',
+  'Intake Assessment',
+  'Progress Note',
   'SOAP',
-  'GROUP_THERAPY',
-  'CANCELLATION',
-  'CONSULTATION',
-  'CONTACT'
+  'Group Therapy Note',
+  'Cancellation Note',
+  'Consultation Note',
+  'Contact Note'
 ];
 
 // Note types that require completed Intake (Business Rule #2)
 const INTAKE_REQUIRED_NOTE_TYPES = [
-  'PROGRESS',
+  'Progress Note',
   'SOAP',
-  'TREATMENT_PLAN'
+  'Treatment Plan'
 ];
 
 // Valid appointment statuses for note creation
@@ -142,7 +142,7 @@ export async function validateSequentialDocumentation(
   const completedIntake = await prisma.clinicalNote.findFirst({
     where: {
       clientId: clientId,
-      noteType: 'INTAKE',
+      noteType: 'Intake Assessment',
       status: {
         in: COMPLETED_NOTE_STATUSES
       }
@@ -173,7 +173,7 @@ export async function validateDiagnosisModification(
   const { diagnosisId, noteType, noteId, clinicianId } = params;
 
   // Only INTAKE and TREATMENT_PLAN notes can modify diagnoses
-  const DIAGNOSIS_EDITABLE_NOTE_TYPES = ['INTAKE', 'TREATMENT_PLAN'];
+  const DIAGNOSIS_EDITABLE_NOTE_TYPES = ['Intake Assessment', 'Treatment Plan'];
 
   if (!DIAGNOSIS_EDITABLE_NOTE_TYPES.includes(noteType)) {
     throw new BadRequestError(

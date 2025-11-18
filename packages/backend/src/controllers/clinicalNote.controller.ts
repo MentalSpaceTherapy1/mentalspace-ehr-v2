@@ -306,7 +306,9 @@ export const createClinicalNote = async (req: Request, res: Response) => {
         clinicianId: userId,
         requiresCosign,
         lastModifiedBy: userId,
-        sessionDate: new Date(validatedData.sessionDate),
+        sessionDate: validatedData.sessionDate
+          ? new Date(validatedData.sessionDate)
+          : undefined,
         dueDate: validatedData.dueDate
           ? new Date(validatedData.dueDate)
           : null,
