@@ -22,7 +22,7 @@ export const NOTE_TYPES = {
 // Clinical Note validation schema
 const clinicalNoteSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
-  appointmentId: z.string().uuid('Appointment is required'),
+  appointmentId: z.string().uuid('Invalid appointment ID').optional(), // Made optional for drafts
   noteType: z.enum([
     'Intake Assessment',
     'Progress Note',
@@ -68,7 +68,8 @@ const clinicalNoteSchema = z.object({
   billable: z.boolean().default(true),
 
   // Compliance
-  dueDate: z.string().datetime('Due date is required'),
+  dueDate: z.string().datetime().optional(), // Made optional for drafts
+  status: z.enum(['DRAFT', 'PENDING_COSIGN', 'SIGNED', 'COSIGNED', 'RETURNED_FOR_REVISION', 'LOCKED']).optional(),
 });
 
 /**
@@ -247,19 +248,32 @@ export const createClinicalNote = async (req: Request, res: Response) => {
     const userId = (req as any).user.userId;
     const validatedData = clinicalNoteSchema.parse(req.body);
 
-    // Validate workflow rules (Business Rules #1 and #2)
-    const workflowCheck = await validateNoteWorkflow(
-      validatedData.clientId,
-      userId,
-      validatedData.noteType,
-      validatedData.appointmentId
-    );
+    // Conditional validation: Require appointmentId only for non-draft notes
+    const isDraft = validatedData.status === 'DRAFT';
 
-    if (!workflowCheck.valid) {
-      return res.status(400).json({
-        success: false,
-        message: workflowCheck.message,
-      });
+    if (!isDraft) {
+      // Non-draft notes require appointmentId
+      if (!validatedData.appointmentId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Appointment is required for non-draft notes',
+        });
+      }
+
+      // Validate workflow rules (Business Rules #1 and #2)
+      const workflowCheck = await validateNoteWorkflow(
+        validatedData.clientId,
+        userId,
+        validatedData.noteType,
+        validatedData.appointmentId
+      );
+
+      if (!workflowCheck.valid) {
+        return res.status(400).json({
+          success: false,
+          message: workflowCheck.message,
+        });
+      }
     }
 
     // Check if user is under supervision
@@ -290,7 +304,9 @@ export const createClinicalNote = async (req: Request, res: Response) => {
         requiresCosign,
         lastModifiedBy: userId,
         sessionDate: new Date(validatedData.sessionDate),
-        dueDate: new Date(validatedData.dueDate),
+        dueDate: validatedData.dueDate
+          ? new Date(validatedData.dueDate)
+          : null,
         nextSessionDate: validatedData.nextSessionDate
           ? new Date(validatedData.nextSessionDate)
           : null,
