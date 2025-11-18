@@ -33,7 +33,7 @@ const clinicalNoteSchema = z.object({
     'Termination Note',
     'Miscellaneous Note',
   ]),
-  sessionDate: z.string().datetime('Invalid session date'),
+  sessionDate: z.string().datetime('Invalid session date').optional(), // Made optional for drafts
   sessionStartTime: z.string().optional(),
   sessionEndTime: z.string().optional(),
   sessionDuration: z.number().int().positive().optional(),
