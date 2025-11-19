@@ -5,6 +5,7 @@ const DATABASE_URL = "postgresql://mentalspace_admin:MentalSpace2024!SecurePwd@m
 async function applyMigration() {
   const client = new Client({
     connectionString: DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
   });
 
   try {
@@ -14,21 +15,21 @@ async function applyMigration() {
     // Apply the migration SQL
     console.log('Applying migration: make_draft_fields_nullable');
 
-    await client.query('ALTER TABLE "ClinicalNote" ALTER COLUMN "appointmentId" DROP NOT NULL;');
+    await client.query('ALTER TABLE "clinical_notes" ALTER COLUMN "appointmentId" DROP NOT NULL;');
     console.log('✓ Made appointmentId nullable');
 
-    await client.query('ALTER TABLE "ClinicalNote" ALTER COLUMN "sessionDate" DROP NOT NULL;');
+    await client.query('ALTER TABLE "clinical_notes" ALTER COLUMN "sessionDate" DROP NOT NULL;');
     console.log('✓ Made sessionDate nullable');
 
-    await client.query('ALTER TABLE "ClinicalNote" ALTER COLUMN "dueDate" DROP NOT NULL;');
+    await client.query('ALTER TABLE "clinical_notes" ALTER COLUMN "dueDate" DROP NOT NULL;');
     console.log('✓ Made dueDate nullable');
 
     // Record the migration in _prisma_migrations table
     const migrationName = '20251119024521_make_draft_fields_nullable';
     const migrationSQL = `-- AlterTable: Make draft-related fields nullable for Progress Note drafts
-ALTER TABLE "ClinicalNote" ALTER COLUMN "appointmentId" DROP NOT NULL;
-ALTER TABLE "ClinicalNote" ALTER COLUMN "sessionDate" DROP NOT NULL;
-ALTER TABLE "ClinicalNote" ALTER COLUMN "dueDate" DROP NOT NULL;`;
+ALTER TABLE "clinical_notes" ALTER COLUMN "appointmentId" DROP NOT NULL;
+ALTER TABLE "clinical_notes" ALTER COLUMN "sessionDate" DROP NOT NULL;
+ALTER TABLE "clinical_notes" ALTER COLUMN "dueDate" DROP NOT NULL;`;
 
     await client.query(`
       INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count)

@@ -9,9 +9,9 @@
 BEGIN;
 
 -- Step 1: Apply schema changes
-ALTER TABLE "ClinicalNote" ALTER COLUMN "appointmentId" DROP NOT NULL;
-ALTER TABLE "ClinicalNote" ALTER COLUMN "sessionDate" DROP NOT NULL;
-ALTER TABLE "ClinicalNote" ALTER COLUMN "dueDate" DROP NOT NULL;
+ALTER TABLE "clinical_notes" ALTER COLUMN "appointmentId" DROP NOT NULL;
+ALTER TABLE "clinical_notes" ALTER COLUMN "sessionDate" DROP NOT NULL;
+ALTER TABLE "clinical_notes" ALTER COLUMN "dueDate" DROP NOT NULL;
 
 -- Step 2: Record migration in Prisma's tracking table
 INSERT INTO "_prisma_migrations" (
@@ -30,9 +30,9 @@ VALUES (
   NOW(),
   '20251119024521_make_draft_fields_nullable',
   '-- AlterTable: Make draft-related fields nullable for Progress Note drafts
-ALTER TABLE "ClinicalNote" ALTER COLUMN "appointmentId" DROP NOT NULL;
-ALTER TABLE "ClinicalNote" ALTER COLUMN "sessionDate" DROP NOT NULL;
-ALTER TABLE "ClinicalNote" ALTER COLUMN "dueDate" DROP NOT NULL;',
+ALTER TABLE "clinical_notes" ALTER COLUMN "appointmentId" DROP NOT NULL;
+ALTER TABLE "clinical_notes" ALTER COLUMN "sessionDate" DROP NOT NULL;
+ALTER TABLE "clinical_notes" ALTER COLUMN "dueDate" DROP NOT NULL;',
   NULL,
   NOW(),
   1
@@ -45,7 +45,7 @@ SELECT
   is_nullable,
   data_type
 FROM information_schema.columns
-WHERE table_name = 'ClinicalNote'
+WHERE table_name = 'clinical_notes'
   AND column_name IN ('appointmentId', 'sessionDate', 'dueDate')
 ORDER BY column_name;
 
