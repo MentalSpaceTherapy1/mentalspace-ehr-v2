@@ -1511,11 +1511,11 @@ model ClinicalNote {
   client        Client      @relation(fields: [clientId], references: [id])
   clinicianId   String
   clinician     User        @relation("NoteCreator", fields: [clinicianId], references: [id])
-  appointmentId String
-  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
 
   noteType         String // SOAP, Intake, Treatment Plan, etc.
-  sessionDate      DateTime
+  sessionDate      DateTime?
   sessionStartTime String?
   sessionEndTime   String?
   sessionDuration  Int? // minutes
@@ -1567,7 +1567,7 @@ model ClinicalNote {
   currentRevisionRequiredChanges String[] @default([]) // Current active required changes list
 
   // Compliance
-  dueDate         DateTime
+  dueDate         DateTime?
   completedOnTime Boolean  @default(false)
   daysToComplete  Int?
 
