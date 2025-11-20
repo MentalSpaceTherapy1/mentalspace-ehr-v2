@@ -26,9 +26,20 @@ export default function CreateAppointmentModal({
 }: CreateAppointmentModalProps) {
   const queryClient = useQueryClient();
 
+  // Get today's date and current time in correct formats
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD
+  };
+
+  const getCurrentTime = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`; // HH:mm
+  };
+
   // Form state
-  const [appointmentDate, setAppointmentDate] = useState('');
-  const [startTime, setStartTime] = useState('');
+  const [appointmentDate, setAppointmentDate] = useState(getTodayDate());
+  const [startTime, setStartTime] = useState(getCurrentTime());
   const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState(defaultConfig.duration);
   const [appointmentType, setAppointmentType] = useState(defaultConfig.appointmentType);
@@ -122,9 +133,11 @@ export default function CreateAppointmentModal({
                   type="date"
                   value={appointmentDate}
                   onChange={(e) => setAppointmentDate(e.target.value)}
+                  min={getTodayDate()}
                   className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">Format: YYYY-MM-DD (e.g., 2025-11-20)</p>
               </div>
 
               {/* Start Time */}
@@ -136,9 +149,11 @@ export default function CreateAppointmentModal({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
+                  step="900"
                   className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">Format: HH:MM (24-hour, e.g., 14:30)</p>
               </div>
 
               {/* Duration */}
