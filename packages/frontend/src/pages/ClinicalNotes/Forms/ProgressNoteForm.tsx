@@ -250,8 +250,11 @@ export default function ProgressNoteForm() {
   useEffect(() => {
     if (sessionDate && !dueDate) {
       const date = new Date(sessionDate);
-      date.setDate(date.getDate() + 7);
-      setDueDate(date.toISOString().split('T')[0]);
+      // Check if date is valid before using it
+      if (!isNaN(date.getTime())) {
+        date.setDate(date.getDate() + 7);
+        setDueDate(date.toISOString().split('T')[0]);
+      }
     }
   }, [sessionDate, dueDate]);
 
