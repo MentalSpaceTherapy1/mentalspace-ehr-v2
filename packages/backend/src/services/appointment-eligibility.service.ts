@@ -20,8 +20,8 @@ export interface EligibleAppointment {
 // Mapping of note types to eligible appointment types/service codes
 const NOTE_TYPE_MAPPINGS = {
   'Intake Assessment': {
-    appointmentTypes: ['Intake', 'Initial Evaluation'],
-    serviceCodes: ['90791'], // Diagnostic Evaluation
+    appointmentTypes: ['Intake', 'Initial Evaluation', 'INTAKE', 'Therapy', 'Individual Therapy'], // Allow various intake-related appointment types
+    serviceCodes: [], // Any service code - intake can use various codes
     allowMultipleNotes: false,
   },
   'Progress Note': {
@@ -35,22 +35,22 @@ const NOTE_TYPE_MAPPINGS = {
     allowMultipleNotes: false,
   },
   'Contact Note': {
-    appointmentTypes: ['Phone Contact', 'Collateral Contact'],
-    serviceCodes: ['99441', '99442', '99443'], // Telephone services
-    allowMultipleNotes: false,
+    appointmentTypes: [], // Any appointment type - contact notes can document any client interaction
+    serviceCodes: [], // Any service code
+    allowMultipleNotes: true, // Can document multiple contacts
   },
   'Consultation Note': {
-    appointmentTypes: ['Consultation'],
-    serviceCodes: ['99241', '99242', '99243', '99244', '99245'],
-    allowMultipleNotes: false,
+    appointmentTypes: [], // Any appointment type - consultations can occur in various appointment contexts
+    serviceCodes: [], // Any service code
+    allowMultipleNotes: true, // Can document multiple consultations
   },
   'Termination Note': {
-    appointmentTypes: ['Termination', 'Discharge'],
+    appointmentTypes: [], // Any appointment type - termination can be documented for any session
     serviceCodes: [],
     allowMultipleNotes: false,
   },
   'Cancellation Note': {
-    appointmentTypes: ['Cancelled'],
+    appointmentTypes: [], // Any appointment type - can document cancellation of any appointment
     serviceCodes: [],
     allowMultipleNotes: true, // Can document multiple cancellations
   },
