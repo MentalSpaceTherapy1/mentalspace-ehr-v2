@@ -78,7 +78,7 @@ export const AmendmentHistoryTab: React.FC<AmendmentHistoryTabProps> = ({ noteId
     setLoading(true);
     setError('');
     try {
-      const response = await axios.get(`/api/v1/clinical-notes/${noteId}/amendments`);
+      const response = await axios.get(`/clinical-notes/${noteId}/amendments`);
       setAmendments(response.data.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load amendment history');

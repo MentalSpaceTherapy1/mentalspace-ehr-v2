@@ -92,7 +92,7 @@ export const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     setLoading(true);
     setError('');
     try {
-      const response = await axios.get('/api/v1/versions/compare', {
+      const response = await axios.get('/versions/compare', {
         params: {
           version1: amendment.previousVersionId,
           version2: amendment.newVersionId,

@@ -113,7 +113,7 @@ export const AmendmentModal: React.FC<AmendmentModalProps> = ({
     setLoading(true);
 
     try {
-      const response = await axios.post(`/api/v1/clinical-notes/${noteId}/amend`, {
+      const response = await axios.post(`/clinical-notes/${noteId}/amend`, {
         reason: reason.trim(),
         fieldsChanged: selectedFields,
         changeSummary: changeSummary.trim(),
@@ -136,7 +136,7 @@ export const AmendmentModal: React.FC<AmendmentModalProps> = ({
     const method = authData.pin ? 'PIN' : 'PASSWORD';
     const credential = authData.pin || authData.password;
 
-    await axios.post(`/api/v1/amendments/${amendmentId}/sign`, {
+    await axios.post(`/amendments/${amendmentId}/sign`, {
       method,
       credential,
     });

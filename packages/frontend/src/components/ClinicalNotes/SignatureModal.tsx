@@ -59,7 +59,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
     setError('');
     try {
       const response = await axios.get(
-        `/api/v1/signatures/attestation/${noteType}`,
+        `/signatures/attestation/${noteType}`,
         {
           params: { signatureType },
         }
@@ -76,7 +76,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
 
   const fetchSignatureStatus = async () => {
     try {
-      const response = await axios.get('/api/v1/users/signature-status');
+      const response = await axios.get('/users/signature-status');
       setHasPin(response.data.data.hasPinConfigured);
       setHasPassword(response.data.data.hasPasswordConfigured);
 
