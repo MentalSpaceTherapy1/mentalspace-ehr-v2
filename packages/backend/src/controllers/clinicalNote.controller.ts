@@ -335,7 +335,11 @@ export const createClinicalNote = async (req: Request, res: Response) => {
       data: note,
     });
   } catch (error: any) {
-    logger.error('Create clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
+    logger.error('Create clinical note error:', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorMessage: error.message,
+      zodErrors: error instanceof z.ZodError ? error.errors : undefined
+    });
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({
