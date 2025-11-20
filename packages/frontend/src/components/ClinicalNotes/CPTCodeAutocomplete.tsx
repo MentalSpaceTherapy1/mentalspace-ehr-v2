@@ -6,27 +6,27 @@ const COMMON_CPT_CODES = [
   { code: '90791', description: 'Psychiatric diagnostic evaluation' },
   { code: '90792', description: 'Psychiatric diagnostic evaluation with medical services' },
 
-  // Psychotherapy - Individual (Office/Outpatient)
-  { code: '90832', description: 'Psychotherapy, 30 minutes with patient' },
-  { code: '90834', description: 'Psychotherapy, 45 minutes with patient' },
-  { code: '90837', description: 'Psychotherapy, 60 minutes with patient' },
+  // Psychotherapy - Individual (Office/Outpatient/Telehealth)
+  { code: '90832', description: 'Psychotherapy, 30 minutes with patient (office or telehealth)' },
+  { code: '90834', description: 'Psychotherapy, 45 minutes with patient (office or telehealth)' },
+  { code: '90837', description: 'Psychotherapy, 60 minutes with patient (office or telehealth)' },
 
   // Psychotherapy with E/M
   { code: '90833', description: 'Psychotherapy, 30 minutes with patient when performed with E/M (add-on)' },
   { code: '90836', description: 'Psychotherapy, 45 minutes with patient when performed with E/M (add-on)' },
   { code: '90838', description: 'Psychotherapy, 60 minutes with patient when performed with E/M (add-on)' },
 
-  // Crisis Psychotherapy
-  { code: '90839', description: 'Psychotherapy for crisis; first 60 minutes' },
+  // Crisis Psychotherapy (Office/Outpatient/Telehealth)
+  { code: '90839', description: 'Psychotherapy for crisis; first 60 minutes (office or telehealth)' },
   { code: '90840', description: 'Psychotherapy for crisis; each additional 30 minutes (add-on)' },
 
-  // Family/Couple Psychotherapy
-  { code: '90846', description: 'Family psychotherapy (without the patient present), 50 minutes' },
-  { code: '90847', description: 'Family psychotherapy (conjoint psychotherapy with patient present), 50 minutes' },
+  // Family/Couple Psychotherapy (Office/Outpatient/Telehealth)
+  { code: '90846', description: 'Family psychotherapy (without the patient present), 50 minutes (office or telehealth)' },
+  { code: '90847', description: 'Family psychotherapy (conjoint psychotherapy with patient present), 50 minutes (office or telehealth)' },
   { code: '90849', description: 'Multiple-family group psychotherapy' },
 
-  // Group Psychotherapy
-  { code: '90853', description: 'Group psychotherapy (other than multiple-family group)' },
+  // Group Psychotherapy (Office/Outpatient/Telehealth)
+  { code: '90853', description: 'Group psychotherapy (other than multiple-family group) (office or telehealth)' },
 
   // Interactive Complexity
   { code: '90785', description: 'Interactive complexity (add-on code for difficult communication)' },
@@ -68,15 +68,6 @@ const COMMON_CPT_CODES = [
   { code: '99355', description: 'Prolonged service in the office, each additional 30 minutes (add-on)' },
   { code: '99415', description: 'Prolonged clinical staff service during outpatient visit, first hour (add-on)' },
   { code: '99416', description: 'Prolonged clinical staff service during outpatient visit, each additional 30 minutes (add-on)' },
-
-  // Telehealth
-  { code: '90832', description: 'Psychotherapy, 30 minutes (telehealth)' },
-  { code: '90834', description: 'Psychotherapy, 45 minutes (telehealth)' },
-  { code: '90837', description: 'Psychotherapy, 60 minutes (telehealth)' },
-  { code: '90839', description: 'Psychotherapy for crisis, first 60 minutes (telehealth)' },
-  { code: '90846', description: 'Family psychotherapy without patient, 50 minutes (telehealth)' },
-  { code: '90847', description: 'Family psychotherapy with patient, 50 minutes (telehealth)' },
-  { code: '90853', description: 'Group psychotherapy (telehealth)' },
 ];
 
 interface CPTCodeAutocompleteProps {
