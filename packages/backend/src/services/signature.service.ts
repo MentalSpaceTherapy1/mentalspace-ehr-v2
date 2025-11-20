@@ -114,6 +114,7 @@ export async function verifySignatureAuth(request: SignatureAuthRequest): Promis
     const user = await prisma.user.findUnique({
       where: { id: request.userId },
       select: {
+        password: true,              // Login password (for fallback)
         signaturePin: true,
         signaturePassword: true,
       },
@@ -133,10 +134,18 @@ export async function verifySignatureAuth(request: SignatureAuthRequest): Promis
 
     // Verify password if provided
     if (request.password) {
-      if (!user.signaturePassword) {
-        throw new Error('Signature password not configured');
+      // First, try signature password if configured
+      if (user.signaturePassword) {
+        return await bcrypt.compare(request.password, user.signaturePassword);
       }
-      return await bcrypt.compare(request.password, user.signaturePassword);
+
+      // Fall back to login password if no signature password is set
+      // This allows clinicians to re-enter their login password to sign
+      if (user.password) {
+        return await bcrypt.compare(request.password, user.password);
+      }
+
+      throw new Error('No signature authentication method configured');
     }
 
     return false;
