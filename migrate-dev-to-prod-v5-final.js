@@ -1,0 +1,246 @@
+const { PrismaClient } = require('@mentalspace/database');
+
+const devPrisma = new PrismaClient({
+  datasources: {
+    db: { url: "postgresql://mentalspace_admin:9JS1df2PprIr%3D_MCJgyrjB%5EC.os%3D%5E7@mentalspace-db-dev.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432/mentalspace_ehr" }
+  }
+});
+
+const prodPrisma = new PrismaClient({
+  datasources: {
+    db: { url: "postgresql://mentalspace_admin:MentalSpace2024!SecurePwd@mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432/mentalspace_ehr" }
+  }
+});
+
+// Build map of UDT names to actual PostgreSQL type names
+async function buildTypeNameMap() {
+  const enumTypes = await prodPrisma.$queryRaw`
+    SELECT typname
+    FROM pg_type
+    WHERE typtype = 'e'
+  `;
+
+  const typeMap = {};
+  // Add enum types (preserve exact casing)
+  enumTypes.forEach(t => {
+    typeMap[`_${t.typname.toLowerCase()}`] = t.typname;
+  });
+
+  return typeMap;
+}
+
+async function getCommonColumns(tableName) {
+  const result = await prodPrisma.$queryRaw`
+    SELECT column_name, udt_name, data_type
+    FROM information_schema.columns
+    WHERE table_name = ${tableName}
+    AND table_schema = 'public'
+  `;
+
+  return result;
+}
+
+async function copyTableData(tableName, devRows, commonColumns, typeMap) {
+  console.log(`📦 Copying ${devRows.length} rows to ${tableName}...`);
+
+  for (const row of devRows) {
+    const filteredRow = {};
+    const columnTypes = {};
+
+    for (const colInfo of commonColumns) {
+      const colName = colInfo.column_name;
+      if (row[colName] !== undefined) {
+        filteredRow[colName] = row[colName];
+        columnTypes[colName] = colInfo.udt_name;
+      }
+    }
+
+    const columns = Object.keys(filteredRow);
+    const values = Object.values(filteredRow);
+
+    // Build placeholders with type casts for enum arrays
+    const placeholders = columns.map((col, i) => {
+      const type = columnTypes[col];
+
+      // Handle enum arrays (like UserRole[])
+      if (type.startsWith('_') && type !== '_text') {
+        // Look up the actual type name with correct casing
+        const actualTypeName = typeMap[type.toLowerCase()];
+        if (actualTypeName) {
+          return `$${i + 1}::"${actualTypeName}"[]`;
+        }
+      }
+
+      // Handle regular text arrays
+      if (type === '_text') {
+        return `$${i + 1}::text[]`;
+      }
+
+      return `$${i + 1}`;
+    }).join(', ');
+
+    const columnList = columns.map(c => `"${c}"`).join(', ');
+
+    try {
+      await prodPrisma.$executeRawUnsafe(
+        `INSERT INTO "${tableName}" (${columnList}) VALUES (${placeholders})`,
+        ...values
+      );
+    } catch (error) {
+      console.log(`  ⚠ Error inserting row into ${tableName}: ${error.message.substring(0, 100)}`);
+    }
+  }
+
+  console.log(`✅ Copied ${devRows.length} rows to ${tableName}\n`);
+}
+
+async function migrate() {
+  try {
+    console.log('🔍 Building type map...\n');
+    const typeMap = await buildTypeNameMap();
+    console.log(`Found ${Object.keys(typeMap).length} enum types\n`);
+
+    console.log('🔍 Checking current data...\n');
+
+    const [devClients, prodClients] = await Promise.all([
+      devPrisma.$queryRaw`SELECT COUNT(*) FROM clients`,
+      prodPrisma.$queryRaw`SELECT COUNT(*) FROM clients`
+    ]);
+
+    console.log(`Dev Database: ${devClients[0].count} clients`);
+    console.log(`Prod Database: ${prodClients[0].count} clients\n`);
+
+    console.log('⚠️  WARNING: This will DELETE ALL existing production data and replace it with dev data!');
+    console.log('Starting migration in 3 seconds...\n');
+
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    console.log('🗑️  Step 1: Clearing production database using TRUNCATE CASCADE...');
+
+    const coreTables = [
+      'users',
+      'clients',
+      'appointments',
+      'emergency_contacts',
+      'legal_guardians',
+      'insurance_information',
+      'diagnoses',
+      'clinical_notes'
+    ];
+
+    for (const tableName of [...coreTables].reverse()) {
+      try {
+        await prodPrisma.$executeRawUnsafe(`TRUNCATE TABLE "${tableName}" CASCADE`);
+        console.log(`  ✓ Cleared ${tableName}`);
+      } catch (error) {
+        console.log(`  ⚠ Skipping ${tableName} (${error.message.substring(0, 50)}...)`);
+      }
+    }
+
+    console.log('✅ Production database cleared\n');
+
+    // Copy users first (with two-pass for supervisorId)
+    console.log('📦 Step 2: Copying users...');
+    const userColumns = await getCommonColumns('users');
+    const users = await devPrisma.$queryRaw`SELECT * FROM users`;
+
+    // First pass: Insert users without supervisorId
+    for (const user of users) {
+      const filteredUser = {};
+      const columnTypes = {};
+
+      for (const colInfo of userColumns) {
+        const colName = colInfo.column_name;
+        if (colName !== 'supervisorId' && user[colName] !== undefined) {
+          filteredUser[colName] = user[colName];
+          columnTypes[colName] = colInfo.udt_name;
+        }
+      }
+
+      const columns = Object.keys(filteredUser);
+      const values = Object.values(filteredUser);
+
+      const placeholders = columns.map((col, i) => {
+        const type = columnTypes[col];
+
+        if (type.startsWith('_') && type !== '_text') {
+          const actualTypeName = typeMap[type.toLowerCase()];
+          if (actualTypeName) {
+            return `$${i + 1}::"${actualTypeName}"[]`;
+          }
+        }
+
+        if (type === '_text') {
+          return `$${i + 1}::text[]`;
+        }
+
+        return `$${i + 1}`;
+      }).join(', ');
+
+      const columnList = columns.map(c => `"${c}"`).join(', ');
+
+      try {
+        await prodPrisma.$executeRawUnsafe(
+          `INSERT INTO "users" (${columnList}) VALUES (${placeholders})`,
+          ...values
+        );
+      } catch (error) {
+        console.log(`  ⚠ Error inserting user: ${error.message.substring(0, 100)}`);
+      }
+    }
+
+    // Second pass: Update supervisorId
+    for (const user of users) {
+      if (user.supervisorId) {
+        try {
+          await prodPrisma.$executeRawUnsafe(
+            `UPDATE "users" SET "supervisorId" = $1 WHERE id = $2`,
+            user.supervisorId,
+            user.id
+          );
+        } catch (error) {
+          console.log(`  ⚠ Error updating supervisorId: ${error.message.substring(0, 100)}`);
+        }
+      }
+    }
+
+    console.log(`✅ Copied ${users.length} users\n`);
+
+    // Copy other tables
+    for (const tableName of ['clients', 'appointments', 'emergency_contacts', 'legal_guardians', 'insurance_information', 'diagnoses', 'clinical_notes']) {
+      try {
+        const columns = await getCommonColumns(tableName);
+        const rows = await devPrisma.$queryRawUnsafe(`SELECT * FROM "${tableName}"`);
+
+        if (rows.length > 0) {
+          await copyTableData(tableName, rows, columns, typeMap);
+        } else {
+          console.log(`⚠ No data in ${tableName}\n`);
+        }
+      } catch (error) {
+        console.log(`⚠ Error with ${tableName}: ${error.message}\n`);
+      }
+    }
+
+    console.log('✅ MIGRATION COMPLETE!\n');
+    console.log('📊 Final counts:');
+    const [finalClients, finalUsers, finalAppts] = await Promise.all([
+      prodPrisma.$queryRaw`SELECT COUNT(*) FROM clients`,
+      prodPrisma.$queryRaw`SELECT COUNT(*) FROM users`,
+      prodPrisma.$queryRaw`SELECT COUNT(*) FROM appointments`
+    ]);
+    console.log(`  Clients: ${finalClients[0].count}`);
+    console.log(`  Users: ${finalUsers[0].count}`);
+    console.log(`  Appointments: ${finalAppts[0].count}`);
+
+  } catch (error) {
+    console.error('❌ Migration failed:', error.message);
+    console.error(error);
+    process.exit(1);
+  } finally {
+    await devPrisma.$disconnect();
+    await prodPrisma.$disconnect();
+  }
+}
+
+migrate();

@@ -186,6 +186,7 @@ export default function UserList() {
                 className="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:ring-4 focus:ring-indigo-300 focus:border-indigo-400 transition-all duration-200 bg-white"
               >
                 <option value="">All Roles</option>
+                <option value="SUPER_ADMIN">Super Administrator</option>
                 <option value="ADMINISTRATOR">Administrator</option>
                 <option value="SUPERVISOR">Supervisor</option>
                 <option value="CLINICIAN">Clinician</option>

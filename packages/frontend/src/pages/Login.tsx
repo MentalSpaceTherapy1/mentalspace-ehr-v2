@@ -39,7 +39,14 @@ export default function Login() {
 
       // Store token in localStorage (session-based auth)
       localStorage.setItem('token', response.data.data.session.token);
-      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+
+      // Add backward compatibility: set both 'role' (singular) and 'roles' (array)
+      // Frontend components may use either user.role or user.roles
+      const userData = {
+        ...response.data.data.user,
+        role: response.data.data.user.roles?.[0] || response.data.data.user.role, // Use first role from array or existing role
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
 
       // Check for password expiration warning
       if (response.data.data.passwordExpiresIn !== undefined) {
@@ -76,7 +83,12 @@ export default function Login() {
 
     // Fetch and store user data
     api.get('/auth/me').then(response => {
-      localStorage.setItem('user', JSON.stringify(response.data.data));
+      // Add backward compatibility: set both 'role' (singular) and 'roles' (array)
+      const userData = {
+        ...response.data.data,
+        role: response.data.data.roles?.[0] || response.data.data.role,
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
       navigate('/dashboard');
     }).catch(() => {
       setError('Failed to fetch user data');

@@ -136,6 +136,7 @@ export default function SmartNoteCreator() {
   useEffect(() => {
     const noteTypeParam = searchParams.get('noteType');
     const appointmentIdParam = searchParams.get('appointmentId');
+    const allowDraftParam = searchParams.get('allowDraft');
 
     // If appointment is provided, preselect it and check if it's a group appointment
     if (appointmentIdParam) {
@@ -162,7 +163,8 @@ export default function SmartNoteCreator() {
 
       if (appointmentIdParam) {
         setStep('form');
-      } else if (APPOINTMENT_REQUIRED_NOTE_TYPES.includes(noteTypeParam)) {
+      } else if (APPOINTMENT_REQUIRED_NOTE_TYPES.includes(noteTypeParam) && allowDraftParam !== 'true') {
+        // Only require appointment if not in draft mode
         setStep('appointment');
         fetchAppointments();
       } else {
@@ -582,6 +584,43 @@ export default function SmartNoteCreator() {
                   </button>
                 ))}
 
+                  {/* Continue without Appointment (Save as Draft) Button */}
+                  {APPOINTMENT_REQUIRED_NOTE_TYPES.includes(selectedNoteType) && (
+                    <div className="mt-6 pt-6 border-t-2 border-gray-300">
+                      <button
+                        onClick={() => {
+                          // Navigate to form with allowDraft parameter to skip appointment requirement
+                          const noteTypeMap: Record<string, string> = {
+                            'intake-assessment': 'intake-assessment',
+                            'progress-note': 'progress-note',
+                            'cancellation-note': 'cancellation-note',
+                            'consultation-note': 'consultation-note',
+                            'contact-note': 'contact-note',
+                            'group-therapy': 'group-therapy',
+                          };
+                          const routePath = noteTypeMap[selectedNoteType];
+                          if (routePath && clientId) {
+                            navigate(`/clients/${clientId}/notes/new/${routePath}?allowDraft=true`);
+                          } else {
+                            // Fallback: set state and go to form
+                            setSelectedAppointmentId('');
+                            setStep('form');
+                          }
+                        }}
+                        className="w-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] flex items-center justify-center space-x-3"
+                      >
+                        <span className="text-2xl">📝</span>
+                        <div className="text-left">
+                          <div className="text-lg font-bold">Continue without Appointment (Save as Draft)</div>
+                          <div className="text-sm opacity-90">Create a draft note without selecting an appointment</div>
+                        </div>
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => {
                       if (clientId) {
@@ -590,7 +629,7 @@ export default function SmartNoteCreator() {
                         navigate('/appointments/new');
                       }
                     }}
-                    className="w-full bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 rounded-xl shadow-md p-6 text-left border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 transform hover:scale-[1.01]"
+                    className="w-full bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 rounded-xl shadow-md p-6 text-left border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 transform hover:scale-[1.01] mt-4"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">

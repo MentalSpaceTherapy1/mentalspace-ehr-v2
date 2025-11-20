@@ -1,0 +1,221 @@
+{
+    "events": [
+        {
+            "timestamp": 1763603731969,
+            "message": "Starting MentalSpace EHR Backend",
+            "ingestionTime": 1763603736905
+        },
+        {
+            "timestamp": 1763603731969,
+            "message": "==================================",
+            "ingestionTime": 1763603736905
+        },
+        {
+            "timestamp": 1763603731969,
+            "message": "Running database migrations...",
+            "ingestionTime": 1763603736905
+        },
+        {
+            "timestamp": 1763603742616,
+            "message": "Environment variables loaded from .env",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603742618,
+            "message": "Prisma schema loaded from prisma/schema.prisma",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603742816,
+            "message": "Datasource \"db\": PostgreSQL database \"mentalspace_ehr\", schema \"public\" at \"mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432\"",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603743915,
+            "message": "34 migrations found in prisma/migrations",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744213,
+            "message": "Error: P3005",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744213,
+            "message": "The database schema is not empty. Read more about how to baseline an existing production database: https://pris.ly/d/migrate-baseline",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744231,
+            "message": "npm notice",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744231,
+            "message": "npm notice New major version of npm available! 10.8.2 -> 11.6.3",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744231,
+            "message": "npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.3",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744231,
+            "message": "npm notice To update run: npm install -g npm@11.6.3",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744231,
+            "message": "npm notice",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744240,
+            "message": "Migration command exited with code 1",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744240,
+            "message": "Continuing with application startup...",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744240,
+            "message": "Migrations check complete",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603744240,
+            "message": "Starting application server...",
+            "ingestionTime": 1763603746844
+        },
+        {
+            "timestamp": 1763603749525,
+            "message": "[CONFIG] No .env file found, using environment variables from container/system",
+            "ingestionTime": 1763603751831
+        },
+        {
+            "timestamp": 1763603767916,
+            "message": "2025-11-20 01:56:07.916 [\u001b[32minfo\u001b[39m] [mentalspace-backend]: Registered 23 metric calculators",
+            "ingestionTime": 1763603771849
+        },
+        {
+            "timestamp": 1763603767916,
+            "message": "  {",
+            "ingestionTime": 1763603771849
+        },
+        {
+            "timestamp": 1763603767916,
+            "message": "    \"version\": \"1.0.0\"",
+            "ingestionTime": 1763603771849
+        },
+        {
+            "timestamp": 1763603767916,
+            "message": "  }",
+            "ingestionTime": 1763603771849
+        },
+        {
+            "timestamp": 1763603788512,
+            "message": "2025-11-20 01:56:28.512 [\u001b[33mwarn\u001b[39m] [mentalspace-backend]: RESEND_API_KEY not found in environment variables",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603788512,
+            "message": "  {",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603788512,
+            "message": "    \"version\": \"1.0.0\"",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603788512,
+            "message": "  }",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603789223,
+            "message": "2025-11-20 01:56:29.223 [\u001b[33mwarn\u001b[39m] [mentalspace-backend]: SMTP configuration incomplete. Email reminders will not be sent.",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603789223,
+            "message": "  {",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603789223,
+            "message": "    \"version\": \"1.0.0\",",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603789223,
+            "message": "    \"hasHost\": false,",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603789223,
+            "message": "    \"hasUser\": false,",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603789223,
+            "message": "    \"hasPassword\": false",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603789223,
+            "message": "  }",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603790927,
+            "message": "[PROGRESS-TRACKING] Router being created, applying authenticateDual middleware",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603791010,
+            "message": "[PROGRESS-TRACKING] authenticateDual middleware applied",
+            "ingestionTime": 1763603791846
+        },
+        {
+            "timestamp": 1763603805712,
+            "message": "[ROUTES] Progress tracking routes imported: true",
+            "ingestionTime": 1763603806850
+        },
+        {
+            "timestamp": 1763603805712,
+            "message": "[ROUTES] Registering progress tracking routes at /tracking",
+            "ingestionTime": 1763603806850
+        },
+        {
+            "timestamp": 1763603805712,
+            "message": "[ROUTES] Progress tracking routes registered successfully",
+            "ingestionTime": 1763603806850
+        },
+        {
+            "timestamp": 1763603807413,
+            "message": "2025-11-20 01:56:47.413 [\u001b[33mwarn\u001b[39m] [mentalspace-backend]: RESEND_API_KEY not found in environment variables",
+            "ingestionTime": 1763603811835
+        },
+        {
+            "timestamp": 1763603807413,
+            "message": "  {",
+            "ingestionTime": 1763603811835
+        },
+        {
+            "timestamp": 1763603807413,
+            "message": "    \"version\": \"1.0.0\"",
+            "ingestionTime": 1763603811835
+        },
+        {
+            "timestamp": 1763603807413,
+            "message": "  }",
+            "ingestionTime": 1763603811835
+        },
+        {
+            "timestamp": 1763603807619,
+            "message": 
+'charmap' codec can't encode character '\u2705' in position 75: character maps to <undefined>

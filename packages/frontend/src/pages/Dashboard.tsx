@@ -17,7 +17,8 @@ export default function Dashboard() {
   // Get user roles (handle both single role and array of roles)
   const userRoles = profile?.roles || (profile?.role ? [profile.role] : []);
   const hasRole = (role: string) => userRoles.includes(role);
-  const isAdmin = hasRole('ADMINISTRATOR');
+  const isSuperAdmin = hasRole('SUPER_ADMIN');
+  const isAdmin = hasRole('ADMINISTRATOR') || isSuperAdmin; // SUPER_ADMIN has all admin privileges
   const isSupervisor = hasRole('SUPERVISOR');
   const isClinician = hasRole('CLINICIAN');
   const isBilling = hasRole('BILLING_STAFF');
@@ -85,6 +86,7 @@ export default function Dashboard() {
 
   // Format roles for display
   const roleLabels: { [key: string]: string } = {
+    SUPER_ADMIN: 'Super Administrator',
     ADMINISTRATOR: 'Administrator',
     SUPERVISOR: 'Supervisor',
     CLINICIAN: 'Clinician',

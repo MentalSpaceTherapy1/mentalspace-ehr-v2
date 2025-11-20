@@ -1,0 +1,28 @@
+{
+  "family": "migration-simple",
+  "cpu": "256",
+  "memory": "512",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "executionRoleArn": "arn:aws:iam::706704660887:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::706704660887:role/ecsTaskExecutionRole",
+  "containerDefinitions": [{
+    "name": "migration",
+    "image": "706704660887.dkr.ecr.us-east-1.amazonaws.com/mentalspace-backend:c3a7950",
+    "essential": true,
+    "command": ["node", "-e", "const {Client} = require('pg'); new Client({connectionString: process.env.DATABASE_URL, ssl: {rejectUnauthorized: false}}).connect().then(c => c.query('ALTER TABLE clinical_notes ALTER COLUMN appointmentId DROP NOT NULL').then(() => console.log('OK appointmentId')).then(() => c.query('ALTER TABLE clinical_notes ALTER COLUMN sessionDate DROP NOT NULL')).then(() => console.log('OK sessionDate')).then(() => c.query('ALTER TABLE clinical_notes ALTER COLUMN dueDate DROP NOT NULL')).then(() => console.log('OK dueDate')).then(() => c.end()).then(() => console.log('DONE'))).catch(e => {console.error(e); process.exit(1)})"],
+    "environment": [{
+      "name": "DATABASE_URL",
+      "value": "postgresql://mentalspace_admin:MentalSpace2024!SecurePwd@mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432/mentalspace_ehr"
+    }],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/mentalspace-migration",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream-prefix": "simple",
+        "awslogs-create-group": "true"
+      }
+    }
+  }]
+}

@@ -467,7 +467,7 @@ function App() {
           path="/appointments/room-view"
           element={
             <PrivateRoute>
-              <RoomView />
+              <ClinicianSchedule />
             </PrivateRoute>
           }
         />

@@ -49,7 +49,7 @@ export default function TimeOffRequestDialog({
       setError(null);
 
       const response = await axios.get(
-        `${API_URL}/api/v1/time-off/affected-appointments`,
+        `${API_URL}/time-off/affected-appointments`,
         {
           params: {
             providerId,
@@ -93,7 +93,7 @@ export default function TimeOffRequestDialog({
       setError(null);
 
       const response = await axios.post(
-        `${API_URL}/api/v1/time-off`,
+        `${API_URL}/time-off`,
         {
           providerId,
           startDate: startDate.toISOString(),

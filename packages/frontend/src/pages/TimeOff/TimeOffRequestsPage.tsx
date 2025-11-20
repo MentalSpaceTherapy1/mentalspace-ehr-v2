@@ -83,8 +83,19 @@ export default function TimeOffRequestsPage() {
 
       const response = await api.get('/time-off', { params });
 
+      console.log('=== Time-Off Requests API Response ===');
+      console.log('Full response:', response);
+      console.log('Response data:', response.data);
+      console.log('Success:', response.data.success);
+      console.log('Requests data:', response.data.data);
+      console.log('Requests count:', response.data.data?.length || 0);
+      console.log('Params sent:', params);
+
       if (response.data.success) {
         setRequests(response.data.data || []);
+        console.log('✅ Requests set successfully:', response.data.data?.length || 0, 'items');
+      } else {
+        console.log('❌ Response was not successful');
       }
     } catch (err: any) {
       console.error('Error loading requests:', err);

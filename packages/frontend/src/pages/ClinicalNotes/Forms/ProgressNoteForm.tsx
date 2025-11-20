@@ -81,11 +81,12 @@ export default function ProgressNoteForm() {
   const queryClient = useQueryClient();
 
   const appointmentIdFromURL = searchParams.get('appointmentId') || '';
+  const allowDraft = searchParams.get('allowDraft') === 'true';
 
   // Appointment selection state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
   const [appointmentData, setAppointmentData] = useState<any>(null);
-  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode && !allowDraft);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const appointmentId = selectedAppointmentId;
@@ -498,7 +499,7 @@ export default function ProgressNoteForm() {
     const data = {
       clientId,
       noteType: 'Progress Note',
-      appointmentId,
+      appointmentId: appointmentId || null, // Allow null for drafts without appointment
       sessionDate: sessionDate ? new Date(sessionDate).toISOString() : undefined,
       sessionDuration,
       sessionType,
@@ -700,6 +701,18 @@ export default function ProgressNoteForm() {
                 setShowCreateModal(true);
               }}
             />
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAppointmentPicker(false);
+                  setSelectedAppointmentId('');
+                }}
+                className="w-full text-purple-600 hover:text-purple-700 font-medium py-2 px-4 rounded-lg border border-purple-300 hover:border-purple-400 transition-colors"
+              >
+                Continue without appointment (Save as Draft)
+              </button>
+            </div>
           </div>
         )}
 
@@ -718,8 +731,8 @@ export default function ProgressNoteForm() {
           />
         )}
 
-        {/* Form - only shown after appointment is selected */}
-        {!showAppointmentPicker && selectedAppointmentId && (
+        {/* Form - shown after appointment is selected OR when skipping appointment for draft */}
+        {!showAppointmentPicker && (
           <form onSubmit={() => handleSubmit({} as any)} className="space-y-6">
             {/* Schedule Header */}
             {appointmentData && (

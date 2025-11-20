@@ -116,7 +116,7 @@ export default function Layout({ children }: LayoutProps) {
         { path: '/appointments', label: 'Calendar' },
         { path: '/appointments/ai-assistant', label: '✨ AI Scheduling Assistant' },
         { path: '/appointments/provider-comparison', label: 'Provider Comparison' },
-        { path: '/appointments/room-view', label: 'Room View' },
+        { path: '/appointments/schedules', label: 'Clinician Schedules' },
         { path: '/appointments/waitlist', label: 'Waitlist' },
         { path: '/appointments/time-off', label: 'Time-Off Requests' },
       ]

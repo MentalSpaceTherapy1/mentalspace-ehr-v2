@@ -1,11 +1,18 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:us-east-1:706704660887:task-definition/MentalSpaceComputedevTaskDefinition3FD4B788:7",
+    "family": "mentalspace-backend-prod",
+    "cpu": "512",
+    "memory": "1024",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "executionRoleArn": "arn:aws:iam::706704660887:role/ecsTaskExecutionRole",
+    "taskRoleArn": "arn:aws:iam::706704660887:role/ecsTaskExecutionRole",
     "containerDefinitions": [
         {
             "name": "mentalspace-backend",
-            "image": "706704660887.dkr.ecr.us-east-1.amazonaws.com/mentalspace-ehr-backend-dev:latest",
+            "image": "706704660887.dkr.ecr.us-east-1.amazonaws.com/mentalspace-backend:3b82e36-nocache",
             "cpu": 0,
-            "links": [],
             "portMappings": [
                 {
                     "containerPort": 3001,
@@ -14,12 +21,14 @@
                 }
             ],
             "essential": true,
-            "entryPoint": [],
-            "command": [],
             "environment": [
                 {
-                    "name": "AWS_REGION",
-                    "value": "us-east-1"
+                    "name": "DATABASE_URL",
+                    "value": "postgresql://mentalspace_admin:MentalSpace2024!SecurePwd@mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432/mentalspace_ehr"
+                },
+                {
+                    "name": "RESEND_FROM_EMAIL",
+                    "value": "CHC Therapy <support@chctherapy.com>"
                 },
                 {
                     "name": "PORT",
@@ -27,52 +36,46 @@
                 },
                 {
                     "name": "JWT_SECRET",
-                    "value": "dev-jwt-secret-key-not-for-production-use-2024"
+                    "value": "KmPqTgVkXp2s5u8x/A?D(G+KaPdSgUkX"
                 },
                 {
-                    "name": "DYNAMODB_SESSIONS_TABLE",
-                    "value": "mentalspace-sessions-dev"
+                    "name": "GIT_SHA",
+                    "value": "53726d4"
+                },
+                {
+                    "name": "RESEND_API_KEY",
+                    "value": "re_VtEkf5MC_CgmzCKP7XZF8Ct1XkDa4H84U"
                 },
                 {
                     "name": "NODE_ENV",
-                    "value": "dev"
+                    "value": "production"
+                },
+                {
+                    "name": "BACKEND_URL",
+                    "value": "https://api.mentalspaceehr.com"
                 },
                 {
                     "name": "CORS_ORIGINS",
-                    "value": "http://mentalspace-frontend-dev.s3-website-us-east-1.amazonaws.com,http://mentalspace-ehr-frontend-dev.s3-website-us-east-1.amazonaws.com,http://localhost:5173"
+                    "value": "https://mentalspaceehr.com,https://www.mentalspaceehr.com"
                 },
                 {
-                    "name": "LOG_LEVEL",
-                    "value": "debug"
+                    "name": "BUILD_TIME",
+                    "value": "2025-11-15T20:30:00Z"
                 },
                 {
                     "name": "FRONTEND_URL",
-                    "value": "https://dev.app.mentalspaceehr.com"
+                    "value": "https://mentalspaceehr.com"
                 }
             ],
-            "environmentFiles": [],
             "mountPoints": [],
             "volumesFrom": [],
-            "secrets": [
-                {
-                    "name": "DATABASE_URL",
-                    "valueFrom": "arn:aws:secretsmanager:us-east-1:706704660887:secret:mentalspace/dev/database-url"
-                }
-            ],
-            "dnsServers": [],
-            "dnsSearchDomains": [],
-            "extraHosts": [],
-            "dockerSecurityOptions": [],
-            "dockerLabels": {},
-            "ulimits": [],
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
-                    "awslogs-group": "/ecs/mentalspace-ehr-dev",
+                    "awslogs-group": "/ecs/mentalspace-backend-prod",
                     "awslogs-region": "us-east-1",
-                    "awslogs-stream-prefix": "backend"
-                },
-                "secretOptions": []
+                    "awslogs-stream-prefix": "ecs"
+                }
             },
             "healthCheck": {
                 "command": [
@@ -84,66 +87,7 @@
                 "retries": 3,
                 "startPeriod": 60
             },
-            "systemControls": [],
-            "credentialSpecs": []
+            "systemControls": []
         }
-    ],
-    "family": "MentalSpaceComputedevTaskDefinition3FD4B788",
-    "taskRoleArn": "arn:aws:iam::706704660887:role/MentalSpace-Compute-dev-TaskRole30FC0FBB-o5olTqsWc4qY",
-    "executionRoleArn": "arn:aws:iam::706704660887:role/MentalSpace-Compute-dev-TaskExecutionRole250D2532-8Z7fOfAV85p7",
-    "networkMode": "awsvpc",
-    "revision": 7,
-    "volumes": [],
-    "status": "ACTIVE",
-    "requiresAttributes": [
-        {
-            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
-        },
-        {
-            "name": "ecs.capability.execution-role-awslogs"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.ecr-auth"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
-        },
-        {
-            "name": "ecs.capability.secrets.asm.environment-variables"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.17"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.task-iam-role"
-        },
-        {
-            "name": "ecs.capability.container-health-check"
-        },
-        {
-            "name": "ecs.capability.execution-role-ecr-pull"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
-        },
-        {
-            "name": "ecs.capability.task-eni"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
-        }
-    ],
-    "placementConstraints": [],
-    "compatibilities": [
-        "EC2",
-        "MANAGED_INSTANCES",
-        "FARGATE"
-    ],
-    "requiresCompatibilities": [
-        "FARGATE"
-    ],
-    "cpu": "512",
-    "memory": "1024",
-    "registeredAt": "2025-10-15T21:05:11.630000-04:00",
-    "registeredBy": "arn:aws:sts::706704660887:assumed-role/cdk-hnb659fds-cfn-exec-role-706704660887-us-east-1/AWSCloudFormation"
+    ]
 }

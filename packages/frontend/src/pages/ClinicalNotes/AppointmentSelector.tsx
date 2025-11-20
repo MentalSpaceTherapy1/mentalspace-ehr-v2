@@ -51,9 +51,15 @@ export default function AppointmentSelector() {
     navigate(`/clients/${clientId}/notes/new?appointmentId=${appointmentId}`);
   };
 
-  const handleCreateWithoutAppointment = () => {
+  const handleCreateNewAppointment = () => {
     // Navigate to new appointment page with client pre-populated
     navigate(`/appointments/new?clientId=${clientId}`);
+  };
+
+  const handleContinueWithoutAppointment = () => {
+    // Navigate to note type selector without an appointment (for draft notes)
+    // Pass allowDraft parameter to skip appointment requirement
+    navigate(`/clients/${clientId}/notes/new?allowDraft=true`);
   };
 
   const formatDate = (dateString: string) => {
@@ -200,7 +206,7 @@ export default function AppointmentSelector() {
 
         {/* Create New Appointment Option */}
         <button
-          onClick={handleCreateWithoutAppointment}
+          onClick={handleCreateNewAppointment}
           className="w-full bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 rounded-xl shadow-md p-6 text-left border-2 border-purple-300 hover:border-purple-400 transition-all duration-200 transform hover:scale-[1.01]"
         >
           <div className="flex items-center justify-between">
@@ -216,6 +222,29 @@ export default function AppointmentSelector() {
               </div>
             </div>
             <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </button>
+
+        {/* Continue without Appointment (Draft) Option */}
+        <button
+          onClick={handleContinueWithoutAppointment}
+          className="w-full mt-4 bg-gradient-to-r from-green-100 to-teal-100 hover:from-green-200 hover:to-teal-200 rounded-xl shadow-md p-6 text-left border-2 border-green-300 hover:border-green-400 transition-all duration-200 transform hover:scale-[1.01]"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-r from-green-500 to-teal-500 rounded-full p-3 text-white text-2xl">
+                📝
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">Continue without Appointment (Save as Draft)</h3>
+                <p className="text-sm text-gray-600">
+                  Create a draft note without selecting an appointment
+                </p>
+              </div>
+            </div>
+            <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>

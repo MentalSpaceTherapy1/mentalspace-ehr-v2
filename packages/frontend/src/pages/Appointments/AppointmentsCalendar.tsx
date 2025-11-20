@@ -295,12 +295,6 @@ export default function AppointmentsCalendar() {
                 👥 Provider Comparison
               </button>
               <button
-                onClick={() => navigate('/appointments/room-view')}
-                className="px-6 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold"
-              >
-                🚪 Room View
-              </button>
-              <button
                 onClick={() => navigate('/appointments/waitlist')}
                 className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold"
               >

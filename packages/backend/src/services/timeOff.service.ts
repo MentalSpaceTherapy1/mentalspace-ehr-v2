@@ -438,6 +438,9 @@ export async function getTimeOffRequestById(id: string): Promise<TimeOffRequest 
 export async function getAllTimeOffRequests(
   filters?: TimeOffFilters
 ): Promise<TimeOffRequest[]> {
+  console.log('=== getAllTimeOffRequests Service Called ===');
+  console.log('Filters received:', JSON.stringify(filters, null, 2));
+
   const where: any = {};
 
   if (filters?.providerId) {
@@ -465,7 +468,9 @@ export async function getAllTimeOffRequests(
     ];
   }
 
-  return await prisma.timeOffRequest.findMany({
+  console.log('Where clause constructed:', JSON.stringify(where, null, 2));
+
+  const results = await prisma.timeOffRequest.findMany({
     where,
     include: {
       provider: {
@@ -508,6 +513,11 @@ export async function getAllTimeOffRequests(
       { startDate: 'desc' },
     ],
   });
+
+  console.log('Query results count:', results.length);
+  console.log('Results sample:', results.length > 0 ? JSON.stringify(results[0], null, 2) : 'No results');
+
+  return results;
 }
 
 /**
