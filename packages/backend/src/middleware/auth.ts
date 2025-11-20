@@ -23,9 +23,6 @@ declare global {
  * Falls back to JWT for backward compatibility
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
-  console.log('[OLD AUTH] authenticate() called for:', req.method, req.url);
-  console.log('[OLD AUTH] Stack trace:', new Error().stack);
-
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
