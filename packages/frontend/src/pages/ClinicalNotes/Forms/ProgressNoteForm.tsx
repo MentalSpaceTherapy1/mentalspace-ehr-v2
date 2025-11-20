@@ -486,7 +486,7 @@ export default function ProgressNoteForm() {
   };
 
   const handleSaveDraft = (e: React.FormEvent) => {
-    
+
 
     const selectedInterventions = Object.entries(interventionsUsed)
       .filter(([_, checked]) => checked)
@@ -501,31 +501,31 @@ export default function ProgressNoteForm() {
       noteType: 'Progress Note',
       appointmentId: appointmentId || null, // Allow null for drafts without appointment
       sessionDate: sessionDate ? new Date(sessionDate).toISOString() : undefined,
-      sessionDuration,
-      sessionType,
-      location,
+      sessionDuration: sessionDuration ? parseInt(sessionDuration) : undefined, // Convert to number
+      sessionType: sessionType || undefined,
+      location: location || undefined,
       symptoms,
       goals: Array.isArray(goals) ? goals : [],
-      appearance,
-      mood,
-      affect,
-      thoughtProcess,
+      appearance: appearance || undefined,
+      mood: mood || undefined,
+      affect: affect || undefined,
+      thoughtProcess: thoughtProcess || undefined,
       suicidalIdeation,
       homicidalIdeation,
-      riskLevel,
+      riskLevel: riskLevel || undefined,
       interventionsUsed: selectedInterventions,
-      engagementLevel,
-      responseToInterventions,
-      homeworkCompliance,
-      clientResponseNotes,
-      subjective,
-      objective,
-      assessment,
-      plan,
+      engagementLevel: engagementLevel || undefined,
+      responseToInterventions: responseToInterventions || undefined,
+      homeworkCompliance: homeworkCompliance || undefined,
+      clientResponseNotes: clientResponseNotes || undefined,
+      subjective: subjective || undefined,
+      objective: objective || undefined,
+      assessment: assessment || undefined,
+      plan: plan || undefined,
       diagnosisCodes: Array.isArray(diagnosisCodes) ? diagnosisCodes : [],
       safetyPlanReviewed: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanReviewed : undefined,
       safetyPlanUpdated: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanUpdated : undefined,
-      cptCode,
+      cptCode: cptCode || undefined,
       sessionDurationMinutes: sessionDurationMinutes ? parseInt(sessionDurationMinutes) : undefined,
       billable,
       dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
