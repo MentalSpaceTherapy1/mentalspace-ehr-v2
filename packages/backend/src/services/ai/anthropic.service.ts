@@ -7,7 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
  */
 class AnthropicService {
   private client: Anthropic | null = null;
-  private model: string = 'claude-3-5-sonnet-latest';
+  private model: string = 'claude-3-opus-20240229';
 
   private initializeClient() {
     if (this.client) {

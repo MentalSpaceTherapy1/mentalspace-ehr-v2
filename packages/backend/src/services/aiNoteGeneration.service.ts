@@ -38,7 +38,7 @@ import {
 // ============================================================================
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const MODEL_NAME = 'claude-3-5-sonnet-latest';
+const MODEL_NAME = 'claude-3-opus-20240229';
 const TEMPERATURE = 0.3; // Low temperature for clinical consistency
 const MAX_TOKENS = 4096;
 const PROMPT_VERSION = '1.0';

@@ -35,7 +35,14 @@
       "Bash(python -c:*)",
       "Bash(tee:*)",
       "Bash(migration-entrypoint-logs.txt)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(test-ai-login.json)",
+      "Bash(test-ai-login-response.json)",
+      "Bash(test-ai-request.json)",
+      "Bash(test-anthropic.json)",
+      "Bash(test-opus.json)",
+      "Bash(test-sonnet.json)",
+      "Bash(test-haiku.json)"
     ],
     "deny": [],
     "ask": []
