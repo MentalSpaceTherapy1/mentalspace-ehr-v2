@@ -294,10 +294,11 @@ export const createClinicalNote = async (req: Request, res: Response) => {
     logger.info('🟢 CREATING CLINICAL NOTE - sessionDate received:', {
       sessionDateRaw: validatedData.sessionDate,
       sessionDateType: typeof validatedData.sessionDate,
-      sessionDateParsed: new Date(validatedData.sessionDate).toISOString(),
+      sessionDateParsed: validatedData.sessionDate ? new Date(validatedData.sessionDate).toISOString() : null,
       appointmentId: validatedData.appointmentId,
       clientId: validatedData.clientId,
-      noteType: validatedData.noteType
+      noteType: validatedData.noteType,
+      isDraft: validatedData.status === 'DRAFT'
     });
 
     const note = await prisma.clinicalNote.create({
