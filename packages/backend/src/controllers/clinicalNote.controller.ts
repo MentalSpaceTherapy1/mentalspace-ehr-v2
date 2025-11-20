@@ -975,10 +975,21 @@ export const getMyNotes = async (req: Request, res: Response) => {
             ],
           },
         },
+        // SOAP note fields (Progress Note)
         { subjective: { contains: search as string, mode: 'insensitive' } },
         { objective: { contains: search as string, mode: 'insensitive' } },
         { assessment: { contains: search as string, mode: 'insensitive' } },
         { plan: { contains: search as string, mode: 'insensitive' } },
+        // Additional text fields for other note types
+        { riskAssessmentDetails: { contains: search as string, mode: 'insensitive' } },
+        { interventionsTaken: { contains: search as string, mode: 'insensitive' } },
+        { progressTowardGoals: { contains: search as string, mode: 'insensitive' } },
+        { nextSessionPlan: { contains: search as string, mode: 'insensitive' } },
+        { supervisorComments: { contains: search as string, mode: 'insensitive' } },
+        { currentRevisionComments: { contains: search as string, mode: 'insensitive' } },
+        { unlockReason: { contains: search as string, mode: 'insensitive' } },
+        { aiPrompt: { contains: search as string, mode: 'insensitive' } },
+        { inputTranscript: { contains: search as string, mode: 'insensitive' } },
       ];
     }
 
