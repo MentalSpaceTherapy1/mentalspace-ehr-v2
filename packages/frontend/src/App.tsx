@@ -192,6 +192,11 @@ import DashboardWidgets from './pages/Module9Reports/DashboardWidgets';
 import AnalyticsCharts from './pages/Module9Reports/AnalyticsCharts';
 import AuditLogViewer from './pages/Module9Reports/AuditLogViewer';
 
+// AdvancedMD Integration
+import AdvancedMDSync from './pages/Admin/AdvancedMDSync';
+import AdvancedMDSettings from './pages/Admin/AdvancedMDSettings';
+import { AdvancedMDProvider } from './components/AdvancedMD';
+
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token');
@@ -218,8 +223,9 @@ function PortalRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Routes>
+    <AdvancedMDProvider>
+      <div className="min-h-screen bg-gray-50">
+        <Routes>
         {/* Public Landing Page */}
         <Route path="/" element={<LandingPage />} />
 
@@ -1018,6 +1024,22 @@ function App() {
           }
         />
         <Route
+          path="/admin/advancedmd-sync"
+          element={
+            <PrivateRoute>
+              <AdvancedMDSync />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/advancedmd-settings"
+          element={
+            <PrivateRoute>
+              <AdvancedMDSettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/client/symptoms"
           element={
             <PortalRoute>
@@ -1762,7 +1784,8 @@ function App() {
           }
         />
       </Routes>
-    </div>
+      </div>
+    </AdvancedMDProvider>
   );
 }
 

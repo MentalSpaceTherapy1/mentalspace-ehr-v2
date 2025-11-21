@@ -207,6 +207,8 @@ export default function Layout({ children }: LayoutProps) {
         { path: '/admin/guardian-verification', label: 'Guardian Verification' },
         { path: '/admin/scheduling-rules', label: 'Scheduling Rules' },
         { path: '/admin/waitlist-management', label: 'Waitlist Management' },
+        { path: '/admin/advancedmd-sync', label: '🔄 AdvancedMD Sync' },
+        { path: '/admin/advancedmd-settings', label: '⚙️ AdvancedMD Settings' },
       ]
     },
     {

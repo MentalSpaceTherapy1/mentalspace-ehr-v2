@@ -1,1 +1,1 @@
-{"success":false,"message":"Route POST /api/auth/login not found","errorCode":"ROUTE_NOT_FOUND","errorId":"ERR-1763301870463-wu6rh5ww5"}
+{"success":false,"message":"Invalid email or password","errorId":"ERR-1763648009012-mvf557561","errorCode":"UNAUTHORIZED"}

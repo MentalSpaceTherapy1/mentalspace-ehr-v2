@@ -1,0 +1,229 @@
+[36m╔════════════════════════════════════════════════════════════╗[0m
+[36m║  AdvancedMD Integration Phase 3 Test Suite                ║[0m
+[36m║  Appointment Synchronization                              ║[0m
+[36m╚════════════════════════════════════════════════════════════╝[0m
+
+============================================================
+[36mTEST 1: Appointment Lookup Service[0m
+============================================================
+[90m  Initializing appointment sync service...[0m
+[AMD Auth] Initializing...
+[AMD Auth] this: AdvancedMDAuthService {
+  config: null,
+  session: null,
+  httpClient: [Function: wrap] {
+    constructor: [Function: wrap],
+    request: [Function: wrap],
+    _request: [Function: wrap],
+    getUri: [Function: wrap],
+    delete: [Function: wrap],
+    get: [Function: wrap],
+    head: [Function: wrap],
+    options: [Function: wrap],
+    post: [Function: wrap],
+    postForm: [Function: wrap],
+    put: [Function: wrap],
+    putForm: [Function: wrap],
+    patch: [Function: wrap],
+    patchForm: [Function: wrap],
+    defaults: {
+      transitional: [Object],
+      adapter: [Array],
+      transformRequest: [Array],
+      transformResponse: [Array],
+      timeout: 30000,
+      xsrfCookieName: 'XSRF-TOKEN',
+      xsrfHeaderName: 'X-XSRF-TOKEN',
+      maxContentLength: -1,
+      maxBodyLength: -1,
+      env: [Object],
+      validateStatus: [Function: validateStatus],
+      headers: [Object]
+    },
+    interceptors: { request: [InterceptorManager], response: [InterceptorManager] },
+    create: [Function: create]
+  },
+  TOKEN_REFRESH_BUFFER_HOURS: 1,
+  ENCRYPTION_ALGORITHM: 'aes-256-gcm',
+  ENCRYPTION_KEY: <Buffer 98 d1 93 8e fb 4a 8c a5 40 0a 77 95 8e 1f 12 5a 2a 1f c5 78 69 d4 c7 73 fe ef 6a f5 eb 9d 96 d3>
+}
+[AMD Auth] this.constructor.name: AdvancedMDAuthService
+[AMD Auth] DATABASE_URL: postgresql://mentalspace_admin:9JS1df2PprIr=_MCJgyrjB^C.os=^...
+[AMD Auth] ADVANCEDMD_ENV: sandbox
+[AMD Auth] Config record found: true
+[AMD Auth] Config data: {
+  officeKey: '162882',
+  partnerUsername: 'CAHCAPI',
+  hasPartnerPassword: true,
+  hasAppPassword: true
+}
+[AMD Auth] Decrypting passwords...
+[AMD Auth] Passwords decrypted successfully
+[AMD Auth] About to create config object...
+[AMD Auth] partnerLoginURL: https://partnerlogin.advancedmd.com/practicemanager/xmlrpc/processrequest.aspx
+[AMD Auth] Config object created
+[AMD Auth] this.config: {
+  officeKey: '162882',
+  partnerUsername: 'CAHCAPI',
+  partnerPassword: '1o7Dn4p1',
+  appUsername: 'JOSEPH',
+  appPassword: 'Bing@@0912',
+  partnerLoginURL: 'https://partnerlogin.advancedmd.com/practicemanager/xmlrpc/processrequest.aspx',
+  environment: 'sandbox'
+}
+[AMD Auth] Using database config - Office Key: 162882
+[AMD Auth] Restored valid session from database
+[32m  ✅ Service initialized[0m
+[90m  Testing lookup (today to next week)...[0m
+[AMD API] Unexpected response structure: {
+  "PPMDResults": {
+    "@s": "advancedmd-api-processrequest-0-6958b94f-ww9rt",
+    "@lst": "11/20/2025 17:50:59",
+    "Results": null,
+    "Error": {
+      "Fault": {
+        "faultcode": "Server",
+        "faultstring": "Server Error",
+        "detail": {
+          "code": "-2147218419",
+          "description": "view visit information for a date",
+          "class": "PermissionUtil",
+          "method": "GetPermissionDeniedMessage",
+          "linenum": "101",
+          "source": "api",
+          "extrainfo": {
+            "permissiondetails": {
+              "@explanation": "This privilege has been denied to this user",
+              "@user": "JOSEPH",
+              "@licensekey": "162882",
+              "@rolename": "ADMIN"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+[Appointment Sync] Response: {
+  "success": false,
+  "error": {
+    "code": "API_ERROR",
+    "message": "Invalid response structure from AdvancedMD - missing ppmdmsg",
+    "endpoint": "GETDATEVISITS",
+    "timestamp": "2025-11-21T01:51:00.809Z",
+    "requestData": {
+      "ppmdmsg": {
+        "@action": "getdatevisits",
+        "@class": "api",
+        "@msgtime": "2025-11-21T01:51:00.339Z",
+        "@nocookie": "0",
+        "startdate": "11/20/2025",
+        "enddate": "11/27/2025"
+      }
+    },
+    "responseData": {
+      "PPMDResults": {
+        "@s": "advancedmd-api-processrequest-0-6958b94f-ww9rt",
+        "@lst": "11/20/2025 17:50:59",
+        "Results": null,
+        "Error": {
+          "Fault": {
+            "faultcode": "Server",
+            "faultstring": "Server Error",
+            "detail": {
+              "code": "-2147218419",
+              "description": "view visit information for a date",
+              "class": "PermissionUtil",
+              "method": "GetPermissionDeniedMessage",
+              "linenum": "101",
+              "source": "api",
+              "extrainfo": {
+                "permissiondetails": {
+                  "@explanation": "This privilege has been denied to this user",
+                  "@user": "JOSEPH",
+                  "@licensekey": "162882",
+                  "@rolename": "ADMIN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "isRateLimitError": false,
+    "isAuthError": false,
+    "isValidationError": true,
+    "retryable": false
+  }
+}
+[31m
+❌ Appointment Lookup Test: FAILED[0m
+[31m   Error: Invalid response structure from AdvancedMD - missing ppmdmsg[0m
+[90m   Stack: Error: Invalid response structure from AdvancedMD - missing ppmdmsg
+    at AdvancedMDAppointmentSyncService.getAppointments (C:\Users\Jarvis 2.0\mentalspace-ehr-v2\packages\backend\src\integrations\advancedmd\appointment-sync.service.ts:139:13)
+    at async testAppointmentLookup (C:\Users\Jarvis 2.0\mentalspace-ehr-v2\packages\backend\test-appointment-sync-integration.ts:71:26)
+    at async runAllTests (C:\Users\Jarvis 2.0\mentalspace-ehr-v2\packages\backend\test-appointment-sync-integration.ts:257:31)[0m
+
+============================================================
+[36mTEST 2: Data Mapping (Appointment <-> VisitData)[0m
+============================================================
+[90m  Testing appointment to visit data mapping...[0m
+[33m  ⚠️  No appointments with synced clients in database[0m
+[33m
+⚠️  Data Mapping Test: SKIPPED[0m
+
+============================================================
+[36mTEST 3: Status Mapping[0m
+============================================================
+[90m  Testing status mapping (local <-> AMD)...[0m
+[90m  Status mappings:[0m
+[90m     SCHEDULED ↔ Scheduled[0m
+[90m     CONFIRMED ↔ Confirmed[0m
+[90m     CHECKED_IN ↔ Checked In[0m
+[90m     COMPLETED ↔ Completed[0m
+[90m     CANCELLED ↔ Cancelled[0m
+[90m     NO_SHOW ↔ No Show[0m
+[32m  ✅ All status mappings defined[0m
+[32m
+✅ Status Mapping Test: PASSED[0m
+
+============================================================
+[36mTEST 4: Sync Logging[0m
+============================================================
+[90m  Checking AdvancedMD sync logs...[0m
+[32m  ✅ Found 0 recent appointment sync log(s)[0m
+[90m  ℹ️  No appointment sync logs yet (expected for fresh install)[0m
+[32m
+✅ Sync Logging Test: PASSED[0m
+
+============================================================
+[36mTEST 5: Database Fields Verification[0m
+============================================================
+[90m  Verifying AdvancedMD appointment fields exist...[0m
+[90m  AdvancedMD fields in appointments table:[0m
+[90m     ✓ advancedMDFacilityId (text)[0m
+[90m     ✓ advancedMDProviderId (text)[0m
+[90m     ✓ advancedMDVisitId (text)[0m
+[90m     ✓ amdSyncError (text)[0m
+[90m     ✓ amdSyncStatus (text)[0m
+[90m     ✓ lastSyncedToAMD (timestamp without time zone)[0m
+[32m  ✅ All 6 AdvancedMD fields verified[0m
+[32m
+✅ Database Fields Test: PASSED[0m
+
+============================================================
+[36mTEST SUMMARY[0m
+============================================================
+[31m  ❌ PASS - Appointment Lookup Service[0m
+[32m  ✅ PASS - Data Mapping[0m
+[32m  ✅ PASS - Status Mapping[0m
+[32m  ✅ PASS - Sync Logging[0m
+[32m  ✅ PASS - Database Fields[0m
+
+============================================================
+[36mTotal: 5 tests[0m
+[32mPassed: 4[0m
+[31mFailed: 1[0m
+============================================================
+
+[33m⚠️  Some tests failed. Please review the errors above.[0m

@@ -368,3 +368,6 @@ export interface TranscriptionOptions {
   limit?: number;
   offset?: number;
 }
+
+// AdvancedMD Integration Types
+export * from './advancedmd.types';

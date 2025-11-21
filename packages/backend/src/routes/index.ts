@@ -81,6 +81,7 @@ import purchaseOrderRoutes from './purchase-order.routes';
 import performanceReviewRoutes from './performance-review.routes';
 import timeAttendanceRoutes from './time-attendance.routes';
 import ptoRoutes from './pto.routes';
+import advancedMDRoutes from './advancedmd.routes';
 
 const router = Router();
 
@@ -120,6 +121,7 @@ router.use('/guardians', guardianRoutes);
 router.use('/clinical-notes', clinicalNoteRoutes);
 router.use('/appointments', appointmentRoutes);
 router.use('/billing', billingRoutes);
+router.use('/advancedmd', advancedMDRoutes); // AdvancedMD Integration (Phase 3)
 router.use('/productivity', productivityRoutes);
 router.use('/service-codes', serviceCodeRoutes);
 router.use('/waitlist', waitlistRoutes);

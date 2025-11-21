@@ -1,0 +1,741 @@
+ADVANCEDMD QUESTIONS CHECKLIST - EXTRACTED FROM JOSEPH'S TECH QUESTIONNAIRE
+
+================================================================================
+SECTION 1: API Access & Authentication
+================================================================================
+
+API Availability
+-----------------
+[✓] Do you provide a sandbox/test environment for API development?
+    → Yes
+
+  • Is the sandbox environment identical to production?
+    → Yes, just with no live data
+
+  • Can we test real eligibility checks in sandbox without incurring costs?
+    → Yes, but you would have to use live data
+
+  • How long does it take to provision sandbox access?
+    → 2 weeks max
+
+[✓] What are the API rate limits?
+  • Requests per second/minute/hour/day?
+    → I will send you a document about API rate limits
+
+  • Are rate limits per API endpoint or account-wide?
+    → (See API Limits document - tiered system)
+
+  • What happens if we exceed rate limits (throttling vs. hard block)?
+    → (See API Limits document)
+
+  • Can rate limits be increased for production use?
+    → (To be determined)
+
+Authentication & Security
+-------------------------
+[✓] What authentication method does the API use?
+  • OAuth 2.0? API Key? Basic Auth? Session-based?
+    → Two-step login (Partner + Redirect)
+
+  • How often do tokens/keys need to be rotated?
+    → Every 24 hours
+
+  • Do you support IP whitelisting for security?
+    → Yes
+
+[✓] What credentials will we receive?
+  • Office Key (Practice ID)?
+    → Yes
+
+  • API Username/Password?
+    → Yes
+
+  • Client ID / Client Secret?
+    → Yes
+
+  • Webhook signing secrets?
+    → No Webhooks
+
+[✓] Is there separate authentication for sandbox vs. production?
+  • Will we receive two sets of credentials?
+    → Yes, you will receive 2 sets of credentials
+
+[✓] Do you support webhook notifications for real-time updates?
+    → We do not support webhooks
+
+  • What events trigger webhooks (claim status changes, ERA arrival, etc.)?
+    → N/A - No webhooks
+
+  • How do we verify webhook authenticity (signature validation)?
+    → N/A - No webhooks
+
+  • Can we configure webhook URLs in your portal?
+    → N/A - No webhooks
+
+API Documentation
+-----------------
+[✓] Where can we access the API documentation?
+  • Is it web-based or PDF?
+    → I can send you a PDF or you can access them in the F1 help files
+
+  • Is sample code provided (cURL, Postman collections, SDKs)?
+    → Sample codes are provided via Postman
+
+  • Is there a developer forum or community?
+    → Not currently but we're working on a developer portal. You can also
+      reach out to interops directly via cases
+
+[✓] Do you have API client libraries/SDKs?
+  • JavaScript/TypeScript?
+    → No API client libraries, but we use a lot of SDKs. However, we do not
+      share them.
+
+  • What versions are supported?
+    → N/A
+
+  • Are they officially maintained?
+    → N/A
+
+[✓] Is there an OpenAPI/Swagger specification available?
+  • This helps with automated code generation
+    → Postman would be the turnaround for Swagger
+
+================================================================================
+SECTION 2: Real-Time Eligibility Checks
+================================================================================
+
+Eligibility API Basics
+----------------------
+[✓] Do you support real-time eligibility verification through the API?
+    → Yes
+
+  • What is the typical response time (milliseconds)?
+    → It takes less than 30 seconds
+
+  • What is the success rate (percentage of successful verifications)?
+    → 99.9%
+
+[✓] Is there a per-query cost for eligibility checks?
+    → No
+
+  • How much per check?
+    → N/A
+
+  • Are there monthly minimums or volume discounts?
+    → (Not specified)
+
+  • Do failed checks count toward our quota?
+    → (Not specified)
+
+[✓] Which payers do you have direct connections with?
+    → Everyone with which Waystar is connected
+
+  • Can you provide a list of supported insurance companies?
+    → (To be provided)
+
+  • How do you handle payers you don't have direct connections with?
+    → I have not seen one we don't have a connection with
+
+Eligibility Data Returned
+--------------------------
+[✓] What fields are returned in the eligibility response?
+  • Coverage status (active/inactive)?
+    → Yes
+
+  • Copay, coinsurance, deductible amounts?
+    → Yes
+
+  • Deductible met vs. remaining?
+    → Yes
+
+  • Out-of-pocket max and amounts met?
+    → Yes
+
+  • Prior authorization requirements?
+    → Depends on the insurance
+
+[✓] Can we specify which service types to check?
+    → Yes
+
+  • Individual therapy (CPT 90834, 90837)?
+    → Yes
+
+  • Group therapy?
+    → Yes
+
+  • Psychiatric evaluation?
+    → Yes
+
+  • Medication management?
+    → Yes
+
+[✓] Do you support eligibility checks for dependents?
+  • Can we check coverage for a subscriber's family members?
+    → Yes
+
+Error Handling
+--------------
+[✓] What happens if an eligibility check fails?
+  • Do we receive a specific error code?
+    → Yes
+
+  • Can we distinguish between "payer not found" vs. "patient not covered"
+    vs. "API error"?
+    → Yes
+
+[✓] Do you store eligibility check history?
+    → Yes
+
+  • Can we retrieve past eligibility checks via API?
+    → Yes
+
+  • How long is the history retained?
+    → Indefinitely
+
+================================================================================
+SECTION 3: Claim Submission
+================================================================================
+
+Claim Submission API
+--------------------
+[✓] Do you support electronic claim submission via API?
+    → Yes
+
+  • 837P (professional claims) format?
+    → Yes
+
+  • Can we submit claims individually or in batches?
+    → Yes, both
+
+  • What is the maximum batch size?
+    → Unknown, I'll get back to you
+
+[✓] What clearinghouse do you use for claim processing?
+    → Waystar
+
+  • Do you have direct EDI connections or go through a third-party
+    clearinghouse?
+    → Yes, a third party (Waystar or Change)
+
+  • What is the clearinghouse's track record for claim acceptance rates?
+    → We guarantee a 99.5% acceptance rate
+
+[✓] Can we receive claim status updates via API?
+    → Yes
+
+  • Real-time status updates or polling required?
+    → (Polling required - no webhooks)
+
+  • What statuses are supported (Submitted, Accepted, Rejected, Paid,
+    Denied, etc.)?
+    → (See API documentation)
+
+[✓] Do you support claim attachments (clinical documentation)?
+    → Yes. You talking Via API or in the UI?
+
+  • PDFs, images, scanned documents?
+    → (To be clarified)
+
+  • What file formats are accepted?
+    → (To be clarified)
+
+  • What is the maximum file size?
+    → (To be clarified)
+
+Claim Workflow
+--------------
+[✓] How long does it take for a submitted claim to appear in the AdvancedMD
+    system?
+    → You can submit claims anytime you want.
+
+  • Is it immediate or batched (e.g., nightly)?
+    → Immediate
+
+[✓] Can we update or cancel a claim after submission?
+    → Yes
+
+  • Via API or only through your portal?
+    → Not via API
+
+  • What is the time window for making changes?
+    → Depending on the insurance
+
+[✓] Do you support claim resubmission for denials?
+    → Yes
+
+  • Can we submit corrected claims via API?
+    → Yes. You will need to resend the charge. When you push a charge to an
+      existing visit that has a charge, it will void the previous one and
+      set the new one. This works if the claim is not already processed.
+
+  • Do you track the relationship between original and corrected claims?
+    → Not Via the API
+
+Claim Validation
+----------------
+[✓] Do you perform validation on claims before submitting to payers?
+    → In the UI, sure. Via API no.
+
+  • Checking for missing fields, invalid codes, etc.?
+    → Yes (UI only)
+
+  • Can we get validation errors before submission?
+    → Yes (UI only)
+
+[✓] What CPT/ICD-10 code validation do you provide?
+  • Do you check for valid codes?
+    → (UI only)
+
+  • Do you validate code combinations (e.g., certain CPT codes require
+    certain modifiers)?
+    → (UI only)
+
+IMPORTANT: API does not perform claim validation. We will need to implement
+our own validation layer before submitting charges via API.
+
+================================================================================
+SECTION 4: ERA (Electronic Remittance Advice) & Payment Posting
+================================================================================
+
+ERA Retrieval
+-------------
+[✓] Do you provide ERA (835) files via API?
+    → No
+
+  • JSON format or raw 835 EDI format?
+    → N/A
+
+  • Can we download ERAs individually or in bulk?
+    → N/A
+
+[✓] Can we get webhook notifications for new ERAs?
+    → No
+
+  • Immediate notification when ERA is received from payer?
+    → N/A
+
+  • Does webhook include ERA ID or full data?
+    → N/A
+
+[✓] How far back can we retrieve historical ERAs?
+    → Can't via the API
+
+  • 30 days? 90 days? 1 year?
+    → N/A
+
+  • Is there a cost for retrieving old ERAs?
+    → N/A
+
+LIMITATION: ERAs cannot be retrieved via API. Will need to use UI or ODBC.
+
+Payment Posting
+---------------
+[✓] Is automatic payment posting available via API?
+    → You can post payment through API. I have no idea what automatic
+      payment posting is.
+
+  • Can we post payments programmatically?
+    → Yes
+
+  • Can we post adjustments (write-offs, contractual adjustments)?
+    → (To be clarified)
+
+[✓] Can we reconcile payments to specific claims?
+    → No
+
+  • Does the API provide claim-to-payment mapping?
+    → No
+
+  • Can we handle split payments (partial payments on multiple claims)?
+    → Not via the API
+
+[✓] Do you support posting client payments via API?
+    → You can post a payment through API.
+
+  • Credit card, cash, check payments?
+    → Yes
+
+  • Can we record payment methods and transaction IDs?
+    → (To be clarified)
+
+ERA Data Fields
+---------------
+[✓] What fields are included in ERA data?
+  • Claim ID, Claim Control Number?
+    → See our API documentation.
+
+  • Service line details (CPT code, units, charges, payments, adjustments)?
+    → See our API documentation.
+
+  • Adjustment reason codes (CARC/RARC)?
+    → See our API documentation.
+
+  • Patient responsibility amount?
+    → See our API documentation.
+
+  • Check/EFT number and date?
+    → See our API documentation.
+
+LIMITATION: Payment reconciliation to specific claims not available via API.
+
+================================================================================
+SECTION 5: Patient & Provider Data Sync
+================================================================================
+
+Patient Synchronization
+-----------------------
+[✓] Can we create/update patient records via API?
+    → Yes
+
+  • What fields are required (demographics, insurance, contact info)?
+    → See our API documentation.
+
+  • Can we link patients to insurance policies programmatically?
+    → See our API documentation.
+
+[✓] Do you support searching for existing patients?
+    → Yes
+
+  • By name, date of birth, MRN, SSN?
+    → Yes
+
+  • What happens if we try to create a duplicate patient?
+    → It will warn you of a duplicate patient
+
+[✓] Can we retrieve a patient's appointment history?
+    → Yes
+
+  • Past appointments, no-shows, cancellations?
+    → Yes
+
+Provider Synchronization
+------------------------
+[✓] Can we sync provider/clinician information via API?
+    → Yes
+
+  • NPI numbers, taxonomy codes, license numbers?
+    → Yes
+
+  • Provider addresses and phone numbers?
+    → Yes
+
+[✓] Do you support mapping providers to specific payers?
+    → Yes
+
+  • Some payers require provider enrollment; can we track this via API?
+    → No
+
+================================================================================
+SECTION 6: Service Codes & Fee Schedules
+================================================================================
+
+CPT/ICD-10 Code Management
+---------------------------
+[✓] Can we retrieve your list of supported CPT/ICD-10 codes via API?
+    → Yes
+
+  • Updated annually?
+    → Yes
+
+  • Can we get code descriptions and billing rules?
+    → No
+
+[✓] Do you provide payer-specific fee schedules?
+    → Yes, you will create them in the system
+
+  • Contracted rates for specific insurance companies?
+    → Yes, you will create them in the system
+
+  • Can we retrieve these via API to auto-populate charge amounts?
+    → Yes
+
+Modifier Support
+----------------
+[✓] Do you support CPT modifiers in claim submission?
+    → Yes, in the UI
+
+  • Common modifiers like 59 (distinct procedural service), 25 (significant,
+    separately identifiable E/M)?
+    → Yes
+
+  • Can we include multiple modifiers per service line?
+    → (To be clarified)
+
+================================================================================
+SECTION 7: Reporting & Analytics
+================================================================================
+
+Reporting API
+-------------
+[✓] Do you provide APIs for reporting data?
+    → Reporting is usually done in the UI or Via ODBC
+
+  • Aging reports (accounts receivable)?
+    → Yes, In the UI
+
+  • Production reports (charges, payments, adjustments)?
+    → Yes, In the UI
+
+  • Denial reports (denial reasons, trends)?
+    → Yes, In the UI
+
+[✓] Can we export data for custom analytics?
+    → Yes
+
+  • CSV, JSON, or database export?
+    → Yes
+
+  • What is the maximum date range for exports?
+    → It can go back at least 24 months. Depends on the data you are
+      looking for.
+
+LIMITATION: Reporting primarily via UI or ODBC, not dedicated reporting APIs.
+
+================================================================================
+SECTION 8: Support & Onboarding
+================================================================================
+
+Implementation Support
+----------------------
+[✓] Who will be our technical contact for API integration?
+    → Interops
+
+  • Dedicated integration specialist?
+    → Not a dedicated one
+
+  • Support ticket system?
+    → Yes
+
+  • Response time SLA (e.g., within 24 hours)?
+    → Yes
+
+[✓] What is the typical API response time for support tickets?
+  • Business hours only or 24/7?
+    → Business hours only
+
+  • Priority levels for critical issues?
+    → (To be clarified)
+
+[✓] Do you provide developer-specific documentation?
+    → Yes, We provide an API documentation and postman items.
+
+  • API reference docs?
+    → Yes
+
+  • Integration guides?
+    → Yes
+
+  • Best practices for error handling?
+    → Yes
+
+Onboarding Timeline
+-------------------
+[✓] What is the typical onboarding timeline?
+    → Depends on how long it takes to build out the API
+
+  • From contract signing to API access?
+    → See above
+
+  • From API access to production go-live?
+    → See above
+
+[✓] Do you offer onboarding assistance?
+    → Yes
+
+  • Kickoff call?
+    → Yes
+
+  • Training sessions?
+    → Yes
+
+  • Code review before production?
+    → Yes
+
+[✓] Do you have a status page for API health?
+    → We have a status page but not specifically one for API
+
+  • Real-time status updates?
+    → Yes
+
+  • Scheduled maintenance notifications?
+    → Yes
+
+================================================================================
+SECTION 9: Pricing & Billing
+================================================================================
+
+API Costs
+---------
+[✓] Is API access a monthly fee or usage-based?
+    → This will need to be discussed with Sales
+
+  • If usage-based, what are the per-transaction costs?
+    → This will need to be discussed with Sales
+
+  • Are there minimum monthly fees?
+    → This will need to be discussed with Sales
+
+[✓] Are there additional costs for:
+    → This will need to be discussed with Sales
+
+  • Sandbox environment access?
+    → Yes (pricing TBD)
+
+  • Webhook notifications?
+    → N/A
+
+  • Historical data retrieval?
+    → (TBD)
+
+  • Premium support?
+    → (TBD)
+
+Transaction Volume
+------------------
+[✓] Do you have monthly transaction limits?
+    → See the API limit Document
+
+  • Number of API calls per month?
+    → (See rate limits document)
+
+  • Number of claims submitted per month?
+    → (To be clarified)
+
+  • Number of eligibility checks per month?
+    → (To be clarified)
+
+[✓] What happens if we exceed our limits?
+    → See the API limit Document
+
+  • Overage fees?
+    → (To be clarified)
+
+  • API throttling?
+    → (See rate limits document)
+
+  • Automatic tier upgrade?
+    → (To be clarified)
+
+================================================================================
+SECTION 10: Compliance & Security
+================================================================================
+
+Audit Logging
+-------------
+[✓] Do you provide audit logs for API activity?
+    → Yes
+
+  • Can we see who accessed what data and when?
+    → Yes
+
+  • How long are logs retained?
+    → (To be clarified)
+
+[✓] Can we retrieve audit logs via API?
+    → Yes
+
+  • For compliance reporting and security monitoring?
+    → Yes
+
+================================================================================
+SECTION 11: Integration-Specific Questions
+================================================================================
+
+Data Mapping
+------------
+[✓] Do you provide a mapping tool for:
+    → Yes, in the UI
+
+  • Our CPT codes to your procedure codes?
+    → Yes
+
+  • Our insurance companies to your payer IDs?
+    → Yes
+
+  • Our providers to your provider IDs?
+    → Yes
+
+[✓] Can we bulk-import mappings?
+  • CSV upload?
+    → (To be clarified)
+
+  • API endpoint for mapping management?
+    → (To be clarified)
+
+Testing & Validation
+--------------------
+[✓] Do you provide test data for sandbox?
+    → Yes
+
+  • Test patient records?
+    → Yes
+
+  • Test payers for eligibility checks?
+    → Yes
+
+  • Test claims that will be auto-accepted vs. rejected?
+    → Yes
+
+[✓] Can we run parallel processing during go-live?
+    → Yes
+
+  • Submit claims through both our system and AdvancedMD portal for
+    validation?
+    → Yes
+
+  • How long should we run parallel before full cutover?
+    → (To be determined)
+
+================================================================================
+KEY INSIGHTS & CRITICAL ITEMS
+================================================================================
+
+CONFIRMED CAPABILITIES:
+✓ Sandbox environment available (2 weeks max provisioning)
+✓ Two sets of credentials (sandbox + production)
+✓ Session tokens expire every 24 hours (auto-refresh needed)
+✓ IP whitelisting supported
+✓ Real-time eligibility checks (<30 seconds, 99.9% success rate)
+✓ No cost per eligibility check
+✓ Waystar clearinghouse (99.5% claim acceptance rate)
+✓ 837P professional claims format supported
+✓ Can submit claims individually or in batches
+✓ Duplicate patient detection
+✓ Provider/patient sync via API
+✓ CPT/ICD-10 code lists available via API
+✓ Payer-specific fee schedules (created in system)
+✓ Support via Interops team (business hours)
+✓ Onboarding assistance available
+
+CRITICAL LIMITATIONS DISCOVERED:
+❌ No webhooks supported (must use polling)
+❌ No ERA (835) retrieval via API
+❌ No claim validation via API (UI only)
+❌ Cannot update/cancel claims via API (UI only)
+❌ No payment-to-claim reconciliation via API
+❌ No claim relationship tracking (original vs. corrected) via API
+❌ Reporting primarily via UI/ODBC, not dedicated API endpoints
+❌ No dedicated integration specialist
+❌ No SDK/client libraries provided
+
+IMPORTANT NOTES:
+⚠ Claim resubmission: Pushing new charge to existing visit voids previous
+  charge (only works if not already processed)
+⚠ Must implement our own claim validation before API submission
+⚠ Eligibility history stored indefinitely
+⚠ Sandbox uses live data for eligibility checks
+⚠ Support is business hours only (not 24/7)
+⚠ API pricing to be discussed with Sales
+⚠ Maximum batch size for claims unknown (need follow-up)
+
+FOLLOW-UP ITEMS NEEDED:
+1. Maximum batch size for claim submission
+2. Claim attachment file formats and size limits
+3. Payment posting adjustment capabilities
+4. Payment method and transaction ID recording
+5. CPT modifier support details (multiple modifiers per line)
+6. Audit log retention period
+7. Bulk mapping import capabilities
+8. Parallel processing duration recommendation
+9. API pricing structure
+10. Transaction volume limits and overage fees

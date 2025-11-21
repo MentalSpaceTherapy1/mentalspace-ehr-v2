@@ -1,23 +1,45 @@
 /**
  * AdvancedMD API Configuration
  * Based on integration requirements and rate limits
+ *
+ * Central configuration module for all AdvancedMD services.
+ * Loads from multiple possible .env locations for flexibility.
  */
+
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+import * as fs from 'fs';
+
+// Load environment variables from multiple possible locations
+// Priority order: backend/.env, root/.env, database/.env
+const possibleEnvPaths = [
+  path.resolve(__dirname, '../../.env'), // packages/backend/.env
+  path.resolve(__dirname, '../../../../.env'), // root .env
+  path.resolve(__dirname, '../../../database/.env'), // packages/database/.env
+];
+
+for (const envPath of possibleEnvPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  }
+}
 
 export const advancedMDConfig = {
   // Environment-specific settings
+  // Supports both old naming (ADVANCEDMD_*) and new naming (AMD_*)
   sandbox: {
     baseUrl: process.env.ADVANCEDMD_SANDBOX_URL || '',
-    officeKey: process.env.ADVANCEDMD_SANDBOX_OFFICE_KEY || '',
-    username: process.env.ADVANCEDMD_SANDBOX_USERNAME || '',
-    password: process.env.ADVANCEDMD_SANDBOX_PASSWORD || '',
+    officeKey: process.env.ADVANCEDMD_SANDBOX_OFFICE_KEY || process.env.AMD_OFFICE_KEY || '',
+    username: process.env.ADVANCEDMD_SANDBOX_USERNAME || process.env.AMD_PARTNER_USERNAME || '',
+    password: process.env.ADVANCEDMD_SANDBOX_PASSWORD || process.env.AMD_PARTNER_PASSWORD || '',
     clientId: process.env.ADVANCEDMD_SANDBOX_CLIENT_ID || '',
     clientSecret: process.env.ADVANCEDMD_SANDBOX_CLIENT_SECRET || '',
   },
   production: {
     baseUrl: process.env.ADVANCEDMD_PROD_URL || '',
-    officeKey: process.env.ADVANCEDMD_PROD_OFFICE_KEY || '',
-    username: process.env.ADVANCEDMD_PROD_USERNAME || '',
-    password: process.env.ADVANCEDMD_PROD_PASSWORD || '',
+    officeKey: process.env.ADVANCEDMD_PROD_OFFICE_KEY || process.env.AMD_OFFICE_KEY || '',
+    username: process.env.ADVANCEDMD_PROD_USERNAME || process.env.AMD_PARTNER_USERNAME || '',
+    password: process.env.ADVANCEDMD_PROD_PASSWORD || process.env.AMD_PARTNER_PASSWORD || '',
     clientId: process.env.ADVANCEDMD_PROD_CLIENT_ID || '',
     clientSecret: process.env.ADVANCEDMD_PROD_CLIENT_SECRET || '',
   },

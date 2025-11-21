@@ -9,6 +9,7 @@ import ClinicalNotesList from '../../components/ClinicalNotes/ClinicalNotesList'
 import AppointmentsTab from '../../components/Appointments/AppointmentsTab';
 import PortalTab from '../../components/ClientPortal/PortalTab';
 import AssessmentTab from '../../components/ClientPortal/AssessmentTab';
+import { PatientSyncSection } from '../../components/AdvancedMD';
 
 export default function ClientDetail() {
   const navigate = useNavigate();
@@ -428,6 +429,9 @@ export default function ClientDetail() {
               </div>
             </div>
           </div>
+
+          {/* AdvancedMD Integration */}
+          <PatientSyncSection clientId={id!} />
 
           {/* System Information */}
           <div className="bg-white rounded-2xl shadow-xl p-6">

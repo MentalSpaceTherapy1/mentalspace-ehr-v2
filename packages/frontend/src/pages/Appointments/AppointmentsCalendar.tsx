@@ -7,6 +7,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import { useNavigate } from 'react-router-dom';
+import { AppointmentSyncSection } from '../../components/AdvancedMD';
 
 interface Appointment {
   id: string;
@@ -539,6 +540,15 @@ export default function AppointmentsCalendar() {
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Location</label>
                     <p>{selectedAppointment.serviceLocation}</p>
                   </div>
+                </div>
+
+                {/* AdvancedMD Integration */}
+                <div className="mb-6">
+                  <AppointmentSyncSection
+                    appointmentId={selectedAppointment.id}
+                    providerId={selectedAppointment.clinicianId}
+                    className=""
+                  />
                 </div>
 
                 {/* Quick Actions */}

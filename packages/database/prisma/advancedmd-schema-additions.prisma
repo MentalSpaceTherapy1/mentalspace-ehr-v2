@@ -288,7 +288,346 @@ model AdvancedMDSyncLog {
   @@map("advancedmd_sync_logs")
 }
 
+// ============================================================================
+// ADDITIONAL MODELS (Based on Comprehensive Analysis)
+// ============================================================================
+
+// AdvancedMD Configuration & Credentials
+model AdvancedMDConfig {
+  id              String   @id @default(uuid())
+
+  // Office Information
+  officeKey       String   @unique  // '990207'
+  officeName      String?
+
+  // Partner Login Credentials (Programmatic API)
+  partnerUsername String   // 'CAHCAPI'
+  partnerPassword String   // Encrypted
+
+  // Application Login Credentials (UI/Fallback)
+  appUsername     String   // 'ADMIN'
+  appPassword     String   // Encrypted: 'Bing@@0912'
+
+  // Dynamic URLs (Updated after each login)
+  partnerLoginURL String   @default("https://partnerlogin.advancedmd.com/practicemanager/xmlrpc/processrequest.aspx")
+  redirectURLXMLRPC String?
+  redirectURLRESTPM String?
+  redirectURLRESTEHR String?
+  redirectURLScheduler String?
+
+  // Session Management
+  currentToken    String?  // AMD_TOKEN
+  tokenExpiresAt  DateTime?
+  tokenRefreshedAt DateTime?
+
+  // Environment
+  environment     String   @default("sandbox") // 'sandbox', 'production'
+
+  // Sync Settings
+  syncEnabled     Boolean  @default(false)
+  autoSyncPatients Boolean @default(false)
+  autoSyncVisits  Boolean  @default(false)
+  autoSyncClaims  Boolean  @default(false)
+
+  // Polling Intervals (in minutes)
+  pollingIntervalClaims   Int @default(30)
+  pollingIntervalVisits   Int @default(15)
+  pollingIntervalPatients Int @default(60)
+
+  // Feature Flags
+  enableEligibilityCheck Boolean @default(true)
+  enableClaimSubmission  Boolean @default(true)
+  enablePaymentSync      Boolean @default(false) // ODBC not configured yet
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastSyncAt      DateTime?
+
+  @@map("advancedmd_config")
+}
+
+// Rate Limiter State Tracking
+model AdvancedMDRateLimitState {
+  id           String   @id @default(uuid())
+
+  // Tier Classification
+  tier         String   // 'tier1', 'tier2', 'tier3'
+  endpoint     String   // API endpoint name (e.g., 'GETUPDATEDPATIENTS', 'SAVECHARGES')
+
+  // Rate Limit Tracking
+  callsThisMinute     Int      @default(0)
+  callsThisHour       Int      @default(0)
+
+  // Time Windows
+  currentMinuteStart  DateTime @default(now())
+  currentHourStart    DateTime @default(now())
+
+  // Peak/Off-Peak Detection
+  isPeakHours         Boolean  @default(false)
+  peakHoursStart      String   @default("06:00") // Mountain Time
+  peakHoursEnd        String   @default("18:00") // Mountain Time
+
+  // Rate Limits (calls per minute)
+  limitPeak           Int      // Based on tier
+  limitOffPeak        Int      // Based on tier
+
+  // Backoff State
+  isBackingOff        Boolean  @default(false)
+  backoffUntil        DateTime?
+  backoffRetryCount   Int      @default(0)
+
+  // Last Call Tracking
+  lastCallAt          DateTime?
+  lastCallSuccess     Boolean  @default(true)
+  lastCallError       String?
+
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([tier, endpoint])
+  @@index([isPeakHours, currentMinuteStart])
+  @@map("advancedmd_rate_limit_state")
+}
+
+// Manual Payment-to-Claim Reconciliation
+model PaymentClaimMapping {
+  id                  String   @id @default(uuid())
+
+  // Payment Information
+  paymentId           String   // From ERARecord or manual payment entry
+  paymentAmount       Decimal  @db.Decimal(10, 2)
+  paymentDate         DateTime
+  paymentSource       String   // 'ERA', 'EOB', 'Check', 'EFT'
+  checkNumber         String?
+
+  // Claim Information
+  claimId             String
+  claim               Claim    @relation("PaymentClaimMapping", fields: [claimId], references: [id])
+  claimNumber         String
+
+  // Matching Details
+  matchScore          Int?     // 0-100 confidence score
+  matchMethod         String   // 'auto_suggested', 'manual'
+  matchReason         String?  // 'amount_match', 'date_range', 'patient_match'
+
+  // Split Payment Support
+  splitPaymentGroup   String?  // Group ID for payments split across multiple claims
+  allocatedAmount     Decimal  @db.Decimal(10, 2) // Amount allocated to this claim
+
+  // Reconciliation
+  isReconciled        Boolean  @default(false)
+  reconciledAt        DateTime?
+  reconciledBy        String?  // User ID
+
+  // Notes
+  reconciliationNotes String?
+
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([claimId, isReconciled])
+  @@index([paymentId, isReconciled])
+  @@index([splitPaymentGroup])
+  @@map("payment_claim_mappings")
+}
+
+// In-House Claim Validation Rules
+model ClaimValidationRule {
+  id                  String   @id @default(uuid())
+
+  // Rule Identification
+  ruleName            String   @unique
+  ruleType            String   // 'cpt_icd_combo', 'modifier_required', 'unit_limit', 'date_range', 'payer_specific'
+  description         String
+
+  // Scope
+  isActive            Boolean  @default(true)
+  severity            String   @default("error") // 'error', 'warning', 'info'
+
+  // CPT Code Rules
+  cptCode             String?
+  cptCodePattern      String?  // Regex pattern for multiple codes
+  allowedModifiers    String[]
+  requiredModifiers   String[]
+  maxUnits            Int?
+  minUnits            Int?
+
+  // ICD Code Rules
+  requiredICDPrefix   String?  // 'F' for mental health
+  allowedICDPatterns  String[] // Regex patterns
+  minDiagnosisCodes   Int?
+  maxDiagnosisCodes   Int?
+
+  // CPT-ICD Combination Rules
+  requiresICDMatch    Boolean  @default(false)
+  icdMatchPattern     String?
+
+  // Payer Rules
+  payerId             String?
+  payerName           String?
+  payerCategory       String?  // 'Medicare', 'Medicaid', 'Commercial'
+
+  // Service Rules
+  placeOfService      String[] // Valid POS codes
+  requiresPriorAuth   Boolean  @default(false)
+
+  // Date Rules
+  timelyFilingDays    Int?     // Days from service date
+  maxFutureDays       Int?     // Cannot be more than N days in future
+
+  // Financial Rules
+  maxChargeAmount     Decimal? @db.Decimal(10, 2)
+  minChargeAmount     Decimal? @db.Decimal(10, 2)
+
+  // Custom Validation Logic
+  customValidationJS  String?  @db.Text // JavaScript function for complex validation
+
+  // Effective Dates
+  effectiveDate       DateTime @default(now())
+  terminationDate     DateTime?
+
+  // Override Capability
+  allowOverride       Boolean  @default(true)
+  overrideRequiresRole String[] // Roles that can override: ['ADMINISTRATOR', 'BILLING_STAFF']
+
+  // Usage Tracking
+  timesTriggered      Int      @default(0)
+  lastTriggeredAt     DateTime?
+
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  createdBy           String
+  lastModifiedBy      String?
+
+  @@index([ruleType, isActive])
+  @@index([cptCode, isActive])
+  @@index([payerId, isActive])
+  @@index([effectiveDate, terminationDate])
+  @@map("claim_validation_rules")
+}
+
+// CPT Codes (Synced from AdvancedMD)
+model CPTCode {
+  id                  String   @id @default(uuid())
+
+  // Code Information
+  code                String   @unique // '90837', '99214', etc.
+  description         String
+  category            String?  // 'Evaluation & Management', 'Psychotherapy', etc.
+
+  // AdvancedMD Integration
+  advancedMDProcId    String?  // Internal AMD ID
+
+  // Billing Details
+  defaultFee          Decimal? @db.Decimal(10, 2)
+  rvu                 Decimal? @db.Decimal(6, 2) // Relative Value Units
+
+  // Validity
+  isActive            Boolean  @default(true)
+  effectiveDate       DateTime?
+  terminationDate     DateTime?
+
+  // Unit Rules
+  billableUnits       Boolean  @default(true)
+  maxUnits            Int?
+  minUnits            Int      @default(1)
+
+  // Modifiers
+  allowedModifiers    String[] // ['25', '59', 'GT', etc.]
+  typicalModifiers    String[]
+
+  // Requirements
+  requiresDiagnosis   Boolean  @default(true)
+  requiresPlace       Boolean  @default(false)
+  requiresAuth        Boolean  @default(false)
+
+  // Telehealth
+  telehealthEligible  Boolean  @default(false)
+  telehealthModifier  String?  // 'GT', '95', etc.
+
+  // Medicare/Medicaid
+  medicareApproved    Boolean  @default(false)
+  medicaidApproved    Boolean  @default(false)
+
+  // Metadata
+  notes               String?
+
+  // Fee Schedules (Payer-Specific)
+  feeSchedules        Json?    // {payerId: amount}
+
+  // Sync Tracking
+  lastSyncedFromAMD   DateTime?
+
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([code, isActive])
+  @@index([category, isActive])
+  @@index([advancedMDProcId])
+  @@map("cpt_codes")
+}
+
+// ICD-10 Codes (Synced from AdvancedMD)
+model ICDCode {
+  id                  String   @id @default(uuid())
+
+  // Code Information
+  code                String   @unique // 'F41.1', 'F43.10', etc.
+  description         String
+  category            String?  // 'Mental, Behavioral and Neurodevelopmental disorders'
+
+  // Code Classification
+  codeType            String   @default("diagnosis") // 'diagnosis', 'symptom'
+  isBillable          Boolean  @default(true)
+
+  // Validity
+  isActive            Boolean  @default(true)
+  effectiveDate       DateTime?
+  terminationDate     DateTime?
+
+  // Clinical Details
+  severity            String?  // 'Mild', 'Moderate', 'Severe'
+  acuity              String?  // 'Acute', 'Chronic'
+
+  // Medicare/Medicaid
+  medicareApproved    Boolean  @default(false)
+  medicaidApproved    Boolean  @default(false)
+
+  // Common Usage
+  isCommonlyUsed      Boolean  @default(false)
+  usageCount          Int      @default(0)
+  lastUsedAt          DateTime?
+
+  // Related Codes
+  relatedCodes        String[] // Array of related ICD codes
+  excludesCodes       String[] // Mutually exclusive codes
+
+  // Metadata
+  notes               String?
+  clinicalGuidelines  String?  @db.Text
+
+  // Sync Tracking
+  lastSyncedFromAMD   DateTime?
+
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([code, isActive])
+  @@index([category, isActive])
+  @@index([isBillable, isActive])
+  @@map("icd_codes")
+}
+
 // ADDITIONS TO EXISTING MODEL RELATIONS:
 // Add these to the Client model relations section (after line 223):
 eligibilityChecks       EligibilityCheck[] @relation("ClientEligibilityCheck")
 claims                  Claim[]            @relation("ClientClaim")
+
+// Add these to the Claim model relations section:
+paymentMappings         PaymentClaimMapping[] @relation("PaymentClaimMapping")
