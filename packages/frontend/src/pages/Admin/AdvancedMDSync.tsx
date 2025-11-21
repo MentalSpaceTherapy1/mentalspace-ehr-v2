@@ -218,7 +218,12 @@ export default function AdvancedMDSync() {
       <Box display="flex" gap={3} flexWrap="wrap">
         {/* Patients Card */}
         <Box flex="1" minWidth="400px">
-          <Card>
+          <Card
+            sx={{
+              borderRadius: 3,
+              boxShadow: '0 4px 24px 0 rgba(0, 0, 0, 0.1)',
+            }}
+          >
             <CardContent>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                 <Typography variant="h6">Patient Sync</Typography>
@@ -269,7 +274,12 @@ export default function AdvancedMDSync() {
 
         {/* Appointments Card */}
         <Box flex="1" minWidth="400px">
-          <Card>
+          <Card
+            sx={{
+              borderRadius: 3,
+              boxShadow: '0 4px 24px 0 rgba(0, 0, 0, 0.1)',
+            }}
+          >
             <CardContent>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                 <Typography variant="h6">Appointment Sync</Typography>
@@ -326,7 +336,13 @@ export default function AdvancedMDSync() {
    */
   const renderActionButtons = () => {
     return (
-      <Card sx={{ mt: 3 }}>
+      <Card
+        sx={{
+          mt: 3,
+          borderRadius: 3,
+          boxShadow: '0 4px 24px 0 rgba(0, 0, 0, 0.1)',
+        }}
+      >
         <CardContent>
           <Typography variant="h6" mb={2}>
             Sync Actions
@@ -402,7 +418,13 @@ export default function AdvancedMDSync() {
     }));
 
     return (
-      <Card sx={{ mt: 3 }}>
+      <Card
+        sx={{
+          mt: 3,
+          borderRadius: 3,
+          boxShadow: '0 4px 24px 0 rgba(0, 0, 0, 0.1)',
+        }}
+      >
         <CardContent>
           <Typography variant="h6" mb={2}>
             Sync Activity (Last {stats.period.days} Days)
@@ -445,7 +467,13 @@ export default function AdvancedMDSync() {
    */
   const renderLogsTable = () => {
     return (
-      <Card sx={{ mt: 3 }}>
+      <Card
+        sx={{
+          mt: 3,
+          borderRadius: 3,
+          boxShadow: '0 4px 24px 0 rgba(0, 0, 0, 0.1)',
+        }}
+      >
         <CardContent>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">Recent Sync Activity</Typography>
@@ -522,16 +550,59 @@ export default function AdvancedMDSync() {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="xl">
         <Box py={4}>
-          {/* Header */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-            <Typography variant="h4">AdvancedMD Sync Dashboard</Typography>
-            {config && (
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Office Key: {config.officeKey} • Environment: {config.environment}
-                </Typography>
+          {/* Modern Gradient Header */}
+          <Box
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: 4,
+              p: 4,
+              mb: 4,
+              color: 'white',
+              boxShadow: '0 8px 32px 0 rgba(102, 126, 234, 0.37)',
+            }}
+          >
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Box display="flex" alignItems="center">
+                <Box
+                  sx={{
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: 2,
+                    p: 1.5,
+                    mr: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Sync sx={{ fontSize: 32 }} />
+                </Box>
+                <Box>
+                  <Typography variant="h4" fontWeight="600">
+                    AdvancedMD Sync Dashboard
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+                    Monitor and manage synchronization between MentalSpace EHR and AdvancedMD
+                  </Typography>
+                </Box>
               </Box>
-            )}
+              {config && (
+                <Box
+                  sx={{
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    borderRadius: 2,
+                    px: 2,
+                    py: 1,
+                  }}
+                >
+                  <Typography variant="caption" display="block">
+                    Office Key: {config.officeKey}
+                  </Typography>
+                  <Typography variant="caption" display="block">
+                    Environment: {config.environment.toUpperCase()}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           </Box>
 
           {/* Loading State */}

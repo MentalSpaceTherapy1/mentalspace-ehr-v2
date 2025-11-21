@@ -114,14 +114,50 @@ export default function AdvancedMDSettings() {
   return (
     <Container maxWidth="lg">
       <Box py={4}>
-        {/* Header */}
-        <Box display="flex" alignItems="center" mb={3}>
-          <Settings sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
-          <Typography variant="h4">AdvancedMD Integration Settings</Typography>
+        {/* Modern Gradient Header */}
+        <Box
+          sx={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 4,
+            p: 4,
+            mb: 4,
+            color: 'white',
+            boxShadow: '0 8px 32px 0 rgba(102, 126, 234, 0.37)',
+          }}
+        >
+          <Box display="flex" alignItems="center" mb={2}>
+            <Box
+              sx={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: 2,
+                p: 1.5,
+                mr: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Settings sx={{ fontSize: 32 }} />
+            </Box>
+            <Box>
+              <Typography variant="h4" fontWeight="600">
+                AdvancedMD Integration Settings
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+                Configure your AdvancedMD connection and synchronization settings
+              </Typography>
+            </Box>
+          </Box>
         </Box>
 
         {/* Connection Settings Card */}
-        <Card sx={{ mb: 3 }}>
+        <Card
+          sx={{
+            mb: 3,
+            borderRadius: 3,
+            boxShadow: '0 4px 24px 0 rgba(0, 0, 0, 0.1)',
+          }}
+        >
           <CardContent>
             <Typography variant="h6" gutterBottom>
               Connection Settings
@@ -246,7 +282,13 @@ export default function AdvancedMDSettings() {
         </Card>
 
         {/* Sync Settings Card */}
-        <Card sx={{ mb: 3 }}>
+        <Card
+          sx={{
+            mb: 3,
+            borderRadius: 3,
+            boxShadow: '0 4px 24px 0 rgba(0, 0, 0, 0.1)',
+          }}
+        >
           <CardContent>
             <Typography variant="h6" gutterBottom>
               Sync Settings
@@ -342,7 +384,12 @@ export default function AdvancedMDSettings() {
         </Card>
 
         {/* Help & Documentation Card */}
-        <Card>
+        <Card
+          sx={{
+            borderRadius: 3,
+            boxShadow: '0 4px 24px 0 rgba(0, 0, 0, 0.1)',
+          }}
+        >
           <CardContent>
             <Typography variant="h6" gutterBottom>
               Help & Documentation
