@@ -130,7 +130,7 @@ export class AdvancedMDPatientSyncService {
       // Parse response
       return this.parseLookupResponse(response.data);
     } catch (error: any) {
-      await this.rateLimiter.recordFailure('LOOKUPPATIENT', error.message);
+      await this.rateLimiter.recordFailure('LOOKUPPATIENT', error.message, false);
       console.error('[AMD Patient Sync] Lookup failed:', error.message);
       throw error;
     }
@@ -165,7 +165,7 @@ export class AdvancedMDPatientSyncService {
       await this.rateLimiter.recordSuccess('LOOKUPPATIENT');
       return this.parseLookupResponse(response.data);
     } catch (error: any) {
-      await this.rateLimiter.recordFailure('LOOKUPPATIENT', error.message);
+      await this.rateLimiter.recordFailure('LOOKUPPATIENT', error.message, false);
       throw error;
     }
   }
@@ -260,7 +260,7 @@ export class AdvancedMDPatientSyncService {
         syncLogId: syncLog.id,
       };
     } catch (error: any) {
-      await this.rateLimiter.recordFailure('ADDPATIENT', error.message);
+      await this.rateLimiter.recordFailure('ADDPATIENT', error.message, false);
       await this.completeSyncLog(syncLog.id, 'error', null, null, error.message);
 
       // Update client sync status
@@ -371,7 +371,7 @@ export class AdvancedMDPatientSyncService {
         syncLogId: syncLog.id,
       };
     } catch (error: any) {
-      await this.rateLimiter.recordFailure('GETDEMOGRAPHIC', error.message);
+      await this.rateLimiter.recordFailure('GETDEMOGRAPHIC', error.message, false);
       await this.completeSyncLog(syncLog.id, 'error', null, null, error.message);
 
       await prisma.client.update({
@@ -464,7 +464,7 @@ export class AdvancedMDPatientSyncService {
       // Parse and return updated patients
       return this.parseUpdatedPatientsResponse(response.data);
     } catch (error: any) {
-      await this.rateLimiter.recordFailure('GETUPDATEDPATIENTS', error.message);
+      await this.rateLimiter.recordFailure('GETUPDATEDPATIENTS', error.message, false);
       throw error;
     }
   }
@@ -542,17 +542,19 @@ export class AdvancedMDPatientSyncService {
         dateOfBirth: demographic.dateOfBirth ? new Date(demographic.dateOfBirth) : undefined,
         gender: this.unmapGender(demographic.gender),
         email: demographic.email || null,
-        homePhone: demographic.homePhone || null,
-        cellPhone: demographic.cellPhone || null,
-        workPhone: demographic.workPhone || null,
-        address: demographic.address1 || null,
-        city: demographic.city || null,
-        state: demographic.state || null,
-        zipCode: demographic.zip || null,
+        primaryPhone: demographic.cellPhone || demographic.homePhone || '',
+        primaryPhoneType: demographic.cellPhone ? 'Mobile' : 'Home',
+        secondaryPhone: demographic.workPhone || demographic.homePhone || null,
+        secondaryPhoneType: demographic.workPhone ? 'Work' : 'Home',
+        addressStreet1: demographic.address1 || '',
+        addressStreet2: demographic.address2 || null,
+        addressCity: demographic.city || '',
+        addressState: demographic.state || '',
+        addressZipCode: demographic.zip || '',
         maritalStatus: demographic.maritalStatus || null,
-        race: demographic.race || null,
+        race: demographic.race ? [demographic.race] : [],
         ethnicity: demographic.ethnicity || null,
-        preferredLanguage: demographic.language || null,
+        primaryLanguage: demographic.language || 'English',
         lastSyncedToAMD: new Date(),
         amdSyncStatus: 'synced',
       },
@@ -573,10 +575,10 @@ export class AdvancedMDPatientSyncService {
   /**
    * Map gender from AdvancedMD to Client format
    */
-  private unmapGender(gender: 'M' | 'F' | 'U'): string {
-    if (gender === 'M') return 'Male';
-    if (gender === 'F') return 'Female';
-    return 'Unknown';
+  private unmapGender(gender: 'M' | 'F' | 'U'): 'MALE' | 'FEMALE' | 'OTHER' {
+    if (gender === 'M') return 'MALE';
+    if (gender === 'F') return 'FEMALE';
+    return 'OTHER';
   }
 
   /**

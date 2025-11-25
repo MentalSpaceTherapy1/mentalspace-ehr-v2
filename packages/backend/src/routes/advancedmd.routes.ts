@@ -35,8 +35,14 @@ const requireAdminOrBilling = (req: Request, res: Response, next: NextFunction) 
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const allowedRoles = ['ADMIN', 'BILLING'];
-  if (!allowedRoles.includes(user.role)) {
+  // Handle both old single role format and new roles array format
+  const userRoles = user.roles || (user.role ? [user.role] : []);
+
+  // Use actual UserRole enum values: ADMINISTRATOR, BILLING_STAFF, SUPER_ADMIN
+  const allowedRoles = ['ADMINISTRATOR', 'BILLING_STAFF', 'SUPER_ADMIN'];
+  const hasAllowedRole = userRoles.some((role: string) => allowedRoles.includes(role));
+
+  if (!hasAllowedRole) {
     return res.status(403).json({ error: 'Insufficient permissions. Admin or Billing role required.' });
   }
 

@@ -24,7 +24,7 @@ import {
   AddVisitRequest,
   GetDateVisitsRequest,
   GetUpdatedVisitsRequest,
-  UpdateVisitRequest,
+  UpdateVisitWithNewChargesRequest,
 } from '../../../../shared/src/types/advancedmd.types';
 
 // Initialize Prisma client
@@ -119,13 +119,13 @@ export class AdvancedMDAppointmentSyncService {
         '@action': 'getdatevisits',
         '@class': 'api',
         '@msgtime': new Date().toISOString(),
-        startdate: startDate,
-        enddate: endDate,
+        '@startdate': startDate,
+        '@enddate': endDate,
       },
     };
 
     if (providerId) {
-      request.ppmdmsg.providerid = providerId;
+      request.ppmdmsg['@providerid'] = providerId;
     }
 
     const response = await this.apiClient.makeRequest('GETDATEVISITS', request.ppmdmsg);
@@ -203,7 +203,7 @@ export class AdvancedMDAppointmentSyncService {
         '@action': 'getupdatedvisits',
         '@class': 'api',
         '@msgtime': new Date().toISOString(),
-        since: sinceDate,
+        '@datechanged': sinceDate,
       },
     };
 
@@ -241,10 +241,11 @@ export class AdvancedMDAppointmentSyncService {
     const syncLog = await prisma.advancedMDSyncLog.create({
       data: {
         syncType: 'appointment',
+        entityId: appointmentId,
+        entityType: 'Appointment',
         syncDirection: 'to_amd',
         syncStatus: 'in_progress',
         syncStarted: new Date(),
-        entityId: appointmentId,
       },
     });
 
@@ -318,7 +319,7 @@ export class AdvancedMDAppointmentSyncService {
         data: {
           syncStatus: 'success',
           syncCompleted: new Date(),
-          advancedMDEntityId: visitId,
+          advancedMDId: visitId,
         },
       });
 
@@ -374,10 +375,11 @@ export class AdvancedMDAppointmentSyncService {
     const syncLog = await prisma.advancedMDSyncLog.create({
       data: {
         syncType: 'appointment',
+        entityId: appointmentId,
+        entityType: 'Appointment',
         syncDirection: 'to_amd',
         syncStatus: 'in_progress',
         syncStarted: new Date(),
-        entityId: appointmentId,
       },
     });
 
@@ -413,12 +415,13 @@ export class AdvancedMDAppointmentSyncService {
       visitData.visitId = appointment.advancedMDVisitId;
 
       // Update visit in AdvancedMD
-      const request: UpdateVisitRequest = {
+      const request: UpdateVisitWithNewChargesRequest = {
         ppmdmsg: {
           '@action': 'updvisitwithnewcharges',
           '@class': 'api',
           '@msgtime': new Date().toISOString(),
-          visit: visitData,
+          '@visitid': appointment.advancedMDVisitId!,
+          chargelist: { charge: [] }, // TODO: Add charge data if needed
         },
       };
 
@@ -447,7 +450,7 @@ export class AdvancedMDAppointmentSyncService {
         data: {
           syncStatus: 'success',
           syncCompleted: new Date(),
-          advancedMDEntityId: appointment.advancedMDVisitId,
+          advancedMDId: appointment.advancedMDVisitId,
         },
       });
 
@@ -521,10 +524,12 @@ export class AdvancedMDAppointmentSyncService {
     const syncLog = await prisma.advancedMDSyncLog.create({
       data: {
         syncType: 'appointment',
+        entityId: visitId, // Use AMD visit ID as entity ID for from_amd syncs
+        entityType: 'Appointment',
         syncDirection: 'from_amd',
         syncStatus: 'in_progress',
         syncStarted: new Date(),
-        advancedMDEntityId: visitId,
+        advancedMDId: visitId,
       },
     });
 
@@ -653,7 +658,7 @@ export class AdvancedMDAppointmentSyncService {
   async checkOutAppointment(appointmentId: string): Promise<AppointmentSyncResult> {
     await prisma.appointment.update({
       where: { id: appointmentId },
-      data: { status: AppointmentStatus.CHECKED_OUT },
+      data: { status: AppointmentStatus.COMPLETED },
     });
 
     return this.updateAppointment(appointmentId);
@@ -702,7 +707,7 @@ export class AdvancedMDAppointmentSyncService {
       appointmentDate: this.formatDateForAMD(appointment.appointmentDate),
       appointmentTime: appointment.startTime,
       providerId: providerId,
-      status: this.mapAppointmentStatusToAMD(appointment.status),
+      status: this.mapAppointmentStatusToAMD(appointment.status) as 'Cancelled' | 'Completed' | 'Scheduled' | 'Confirmed' | 'Checked In',
     };
 
     if (facilityId) {
@@ -714,8 +719,8 @@ export class AdvancedMDAppointmentSyncService {
     }
 
     // Note: Don't include clinical notes or diagnosis unless explicitly requested (HIPAA)
-    if (options?.includeNotes && appointment.notes) {
-      visitData.chiefComplaint = appointment.notes.substring(0, 255); // Limit length
+    if (options?.includeNotes && appointment.appointmentNotes) {
+      visitData.chiefComplaint = appointment.appointmentNotes.substring(0, 255); // Limit length
     }
 
     return visitData;
@@ -764,11 +769,11 @@ export class AdvancedMDAppointmentSyncService {
    */
   private mapAppointmentStatusToAMD(status: AppointmentStatus): string {
     const statusMap: Record<AppointmentStatus, string> = {
+      [AppointmentStatus.REQUESTED]: 'Scheduled',
       [AppointmentStatus.SCHEDULED]: 'Scheduled',
       [AppointmentStatus.CONFIRMED]: 'Confirmed',
       [AppointmentStatus.CHECKED_IN]: 'Checked In',
-      [AppointmentStatus.IN_PROGRESS]: 'In Progress',
-      [AppointmentStatus.CHECKED_OUT]: 'Completed',
+      [AppointmentStatus.IN_SESSION]: 'In Progress',
       [AppointmentStatus.COMPLETED]: 'Completed',
       [AppointmentStatus.CANCELLED]: 'Cancelled',
       [AppointmentStatus.NO_SHOW]: 'No Show',
@@ -788,7 +793,7 @@ export class AdvancedMDAppointmentSyncService {
       Scheduled: AppointmentStatus.SCHEDULED,
       Confirmed: AppointmentStatus.CONFIRMED,
       'Checked In': AppointmentStatus.CHECKED_IN,
-      'In Progress': AppointmentStatus.IN_PROGRESS,
+      'In Progress': AppointmentStatus.IN_SESSION,
       Completed: AppointmentStatus.COMPLETED,
       Cancelled: AppointmentStatus.CANCELLED,
       'No Show': AppointmentStatus.NO_SHOW,

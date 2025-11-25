@@ -4,6 +4,7 @@
  * Phase 1: Authentication, Rate Limiting, Base API Client
  * Phase 2: Patient Synchronization
  * Phase 3: Appointment/Visit Synchronization
+ * Phase 4: Billing & Charges Synchronization
  *
  * @module integrations/advancedmd
  */
@@ -30,6 +31,10 @@ export {
   AppointmentSyncResult,
   AppointmentMappingOptions,
 } from './appointment-sync.service';
+
+// Phase 4: Billing & Charges
+export { AdvancedMDLookupService } from './lookup.service';
+export { AdvancedMDChargeSyncService } from './charge-sync.service';
 
 // Re-export types from shared package (using relative path for monorepo)
 export * from '../../../../shared/src/types/advancedmd.types';

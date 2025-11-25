@@ -325,12 +325,11 @@ export class AdvancedMDAuthService {
     const request: RedirectLoginRequest = {
       ppmdmsg: {
         '@action': 'login',
-        '@class': 'login', // Changed from 'api' to 'login'
+        '@class': 'api',
         '@msgtime': this.formatDateTime(new Date()),
-        '@username': this.config!.appUsername, // Changed from 'username' to '@username'
-        '@psw': this.config!.appPassword, // Changed from 'password' to '@psw'
-        '@officecode': parseInt(this.config!.officeKey),
         '@appname': 'API',
+        username: this.config!.appUsername,
+        password: this.config!.appPassword,
       },
     };
 
