@@ -1,5 +1,7 @@
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient } from 'redis';
 import config from '../config';
 import logger from '../utils/logger';
 import { authenticateSocket } from './middleware/auth';
@@ -9,11 +11,44 @@ import { setupNotificationHandlers } from './handlers/notifications';
 import { setupTranscriptionHandlers } from './handlers/transcription';
 
 let io: SocketIOServer | null = null;
+let pubClient: ReturnType<typeof createClient> | null = null;
+let subClient: ReturnType<typeof createClient> | null = null;
+
+/**
+ * Initialize Redis adapter for horizontal scaling
+ * Required for multi-instance deployment (50,000+ users)
+ */
+async function initializeRedisAdapter(socketIO: SocketIOServer): Promise<void> {
+  const redisUrl = process.env.REDIS_URL;
+
+  if (!redisUrl) {
+    if (process.env.NODE_ENV === 'production') {
+      logger.warn('REDIS_URL not set - Socket.IO will not scale across instances');
+    }
+    return;
+  }
+
+  try {
+    pubClient = createClient({ url: redisUrl });
+    subClient = pubClient.duplicate();
+
+    await Promise.all([
+      pubClient.connect(),
+      subClient.connect(),
+    ]);
+
+    socketIO.adapter(createAdapter(pubClient, subClient));
+    logger.info('Socket.IO Redis adapter initialized for horizontal scaling');
+  } catch (error) {
+    logger.error('Failed to initialize Redis adapter', { error });
+    // Continue without Redis - will work in single instance mode
+  }
+}
 
 /**
  * Initialize Socket.IO server
  */
-export function initializeSocketIO(server: HTTPServer): SocketIOServer {
+export async function initializeSocketIO(server: HTTPServer): Promise<SocketIOServer> {
   io = new SocketIOServer(server, {
     cors: {
       origin: config.corsOrigins,
@@ -22,7 +57,15 @@ export function initializeSocketIO(server: HTTPServer): SocketIOServer {
     // Add ping timeout and interval for connection stability
     pingTimeout: 60000,
     pingInterval: 25000,
+    // Enable connection state recovery for better reconnection experience
+    connectionStateRecovery: {
+      maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+      skipMiddlewares: false,
+    },
   });
+
+  // Initialize Redis adapter for horizontal scaling
+  await initializeRedisAdapter(io);
 
   // Authentication middleware
   io.use(authenticateSocket);

@@ -4,6 +4,7 @@ import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import { enforceSessionTimeout } from './sessionTimeout';
 import sessionService from '../services/session.service';
 import prisma from '../services/database';
+import logger from '../utils/logger';
 
 // Extend Express Request type to include user and session
 declare global {
@@ -114,12 +115,47 @@ export const authorize = (...allowedRoles: string[]) => {
       // @ts-ignore - for backward compatibility with old tokens
       const userRoles = req.user.roles || (req.user.role ? [req.user.role] : []);
 
-      // SUPER_ADMIN has absolute access to everything - bypass all role checks
+      // SUPER_ADMIN has absolute access to everything - but MUST be audited
       const isSuperAdmin = userRoles.some((role: string) =>
-        role === 'SUPER_ADMIN' || role === 'SUPER_ADMIN'
+        role === 'SUPER_ADMIN'
       );
 
       if (isSuperAdmin) {
+        // CRITICAL: Audit ALL SUPER_ADMIN actions before bypassing authorization
+        logger.warn('SUPER_ADMIN authorization bypass', {
+          userId: req.user.userId || req.user.id,
+          email: req.user.email,
+          path: req.path,
+          method: req.method,
+          ip: req.ip,
+          userAgent: req.headers['user-agent'],
+          requestedRoles: allowedRoles,
+          timestamp: new Date().toISOString(),
+          action: 'SUPER_ADMIN_BYPASS',
+        });
+
+        // Also create audit log entry in database for compliance
+        prisma.auditLog.create({
+          data: {
+            userId: req.user.userId || req.user.id,
+            action: 'SUPER_ADMIN_AUTHORIZATION_BYPASS',
+            entityType: 'AUTHORIZATION',
+            entityId: req.path,
+            details: {
+              method: req.method,
+              path: req.path,
+              requiredRoles: allowedRoles,
+              ip: req.ip,
+              userAgent: req.headers['user-agent'],
+            },
+            ipAddress: req.ip || 'unknown',
+            userAgent: req.headers['user-agent'] || 'unknown',
+          },
+        }).catch((err) => {
+          // Don't block the request if audit logging fails, but log the error
+          logger.error('Failed to create SUPER_ADMIN audit log', { error: err });
+        });
+
         return next();
       }
 

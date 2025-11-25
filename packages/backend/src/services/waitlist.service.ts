@@ -98,6 +98,7 @@ export async function getWaitlistEntries(filters: {
 
 /**
  * Find matching available slots for a waitlist entry
+ * OPTIMIZED: Uses batch queries instead of N+1 pattern for enterprise scale
  */
 export async function findAvailableSlots(
   waitlistEntryId: string,
@@ -115,63 +116,116 @@ export async function findAvailableSlots(
   const clinicianIds = [
     entry.requestedClinicianId,
     ...entry.alternateClinicianIds,
-  ];
+  ].filter(Boolean); // Remove any null/undefined values
+
+  if (clinicianIds.length === 0) {
+    return [];
+  }
 
   const startDate = new Date();
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + daysAhead);
 
-  // Find available slots for each clinician
+  // ============================================================================
+  // OPTIMIZED: Batch all queries upfront instead of N+1 pattern
+  // This reduces 4N queries to 4 queries for significant performance improvement
+  // ============================================================================
+
+  // Batch query 1: Get ALL clinician schedules in one query
+  const schedules = await prisma.clinicianSchedule.findMany({
+    where: {
+      clinicianId: { in: clinicianIds },
+      effectiveStartDate: { lte: endDate },
+      OR: [
+        { effectiveEndDate: null },
+        { effectiveEndDate: { gte: startDate } },
+      ],
+    },
+  });
+
+  // Create a map for quick lookup
+  const scheduleMap = new Map<string, typeof schedules[0]>();
+  schedules.forEach(schedule => {
+    // Only store the first (most recent effective) schedule for each clinician
+    if (!scheduleMap.has(schedule.clinicianId)) {
+      scheduleMap.set(schedule.clinicianId, schedule);
+    }
+  });
+
+  // Batch query 2: Get ALL clinicians in one query
+  const clinicians = await prisma.user.findMany({
+    where: { id: { in: clinicianIds } },
+    select: { id: true, firstName: true, lastName: true },
+  });
+
+  // Create a map for quick lookup
+  const clinicianMap = new Map<string, { firstName: string; lastName: string }>();
+  clinicians.forEach(c => {
+    clinicianMap.set(c.id, { firstName: c.firstName, lastName: c.lastName });
+  });
+
+  // Batch query 3: Get ALL existing appointments in one query
+  const existingAppointments = await prisma.appointment.findMany({
+    where: {
+      clinicianId: { in: clinicianIds },
+      appointmentDate: {
+        gte: startDate,
+        lte: endDate,
+      },
+      status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
+    },
+    select: {
+      clinicianId: true,
+      appointmentDate: true,
+      startTime: true,
+      endTime: true,
+    },
+  });
+
+  // Group appointments by clinician for efficient lookup
+  const appointmentMap = new Map<string, typeof existingAppointments>();
+  clinicianIds.forEach(id => appointmentMap.set(id, []));
+  existingAppointments.forEach(apt => {
+    const list = appointmentMap.get(apt.clinicianId) || [];
+    list.push(apt);
+    appointmentMap.set(apt.clinicianId, list);
+  });
+
+  // Batch query 4: Get ALL schedule exceptions in one query
+  const allExceptions = await prisma.scheduleException.findMany({
+    where: {
+      clinicianId: { in: clinicianIds },
+      startDate: { lte: endDate },
+      endDate: { gte: startDate },
+      status: 'Approved',
+    },
+  });
+
+  // Group exceptions by clinician for efficient lookup
+  const exceptionMap = new Map<string, typeof allExceptions>();
+  clinicianIds.forEach(id => exceptionMap.set(id, []));
+  allExceptions.forEach(ex => {
+    const list = exceptionMap.get(ex.clinicianId) || [];
+    list.push(ex);
+    exceptionMap.set(ex.clinicianId, list);
+  });
+
+  // ============================================================================
+  // Process results using the pre-fetched data (no more database queries in loop)
+  // ============================================================================
+
   const availableSlots: AvailabilitySlot[] = [];
 
   for (const clinicianId of clinicianIds) {
-    // Get clinician schedule
-    const schedule = await prisma.clinicianSchedule.findFirst({
-      where: {
-        clinicianId,
-        effectiveStartDate: { lte: endDate },
-        OR: [
-          { effectiveEndDate: null },
-          { effectiveEndDate: { gte: startDate } },
-        ],
-      },
-    });
-
+    // Get data from maps (O(1) lookup instead of database query)
+    const schedule = scheduleMap.get(clinicianId);
     if (!schedule) continue;
 
-    const clinician = await prisma.user.findUnique({
-      where: { id: clinicianId },
-      select: { firstName: true, lastName: true },
-    });
-
+    const clinician = clinicianMap.get(clinicianId);
     if (!clinician) continue;
 
-    // Get existing appointments for this clinician
-    const existingAppointments = await prisma.appointment.findMany({
-      where: {
-        clinicianId,
-        appointmentDate: {
-          gte: startDate,
-          lte: endDate,
-        },
-        status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
-      },
-      select: {
-        appointmentDate: true,
-        startTime: true,
-        endTime: true,
-      },
-    });
-
-    // Get schedule exceptions (time off, holidays, etc.)
-    const exceptions = await prisma.scheduleException.findMany({
-      where: {
-        clinicianId,
-        startDate: { lte: endDate },
-        endDate: { gte: startDate },
-        status: 'Approved',
-      },
-    });
+    const clinicianAppointments = appointmentMap.get(clinicianId) || [];
+    const exceptions = exceptionMap.get(clinicianId) || [];
 
     // Parse weekly schedule
     const weeklySchedule = schedule.weeklyScheduleJson as any;
@@ -217,8 +271,8 @@ export async function findAvailableSlots(
       const startTime = daySchedule.startTime || '09:00';
       const endTime = daySchedule.endTime || '17:00';
 
-      // Check for conflicts with existing appointments
-      const hasConflict = existingAppointments.some((apt) => {
+      // Check for conflicts with existing appointments (using pre-fetched data)
+      const hasConflict = clinicianAppointments.some((apt) => {
         const aptDate = new Date(apt.appointmentDate);
         return (
           aptDate.toDateString() === currentDate.toDateString() &&

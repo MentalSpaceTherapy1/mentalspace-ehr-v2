@@ -102,8 +102,8 @@ const config: Config = {
   // Database
   databaseUrl: getDatabaseUrl(),
 
-  // JWT
-  jwtSecret: process.env.JWT_SECRET || 'INSECURE_DEFAULT_SECRET_REPLACE_ME',
+  // JWT - SECURITY: No default secret allowed
+  jwtSecret: process.env.JWT_SECRET || '',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
 
@@ -164,13 +164,56 @@ const missingEnvVars = requiredEnvVars.filter((envVar) => {
   return !config[key as keyof Config];
 });
 
-// CRITICAL SECURITY CHECK: Enforce JWT_SECRET in production
-if (config.nodeEnv === 'production' && config.jwtSecret === 'INSECURE_DEFAULT_SECRET_REPLACE_ME') {
-  console.error('❌ FATAL: JWT_SECRET is not set or is using the insecure default value.');
-  console.error('   This is a CRITICAL security vulnerability in production.');
-  console.error('   Set JWT_SECRET environment variable to a strong random value.');
-  console.error('   Generate one with: openssl rand -base64 64');
-  process.exit(1);
+// CRITICAL SECURITY CHECKS
+// 1. JWT_SECRET must be set and strong
+if (!config.jwtSecret) {
+  if (config.nodeEnv === 'production') {
+    console.error('❌ FATAL: JWT_SECRET environment variable is not set.');
+    console.error('   This is a CRITICAL security vulnerability.');
+    console.error('   Set JWT_SECRET to a strong random value (min 64 chars).');
+    console.error('   Generate one with: openssl rand -base64 64');
+    process.exit(1);
+  } else {
+    // Development fallback - still warn
+    console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure development default.');
+    console.warn('   This is NOT secure for production use.');
+    config.jwtSecret = 'dev-only-jwt-secret-not-for-production-use-minimum-64-characters';
+  }
+}
+
+// 2. Validate JWT_SECRET strength
+const MIN_JWT_SECRET_LENGTH = 64;
+if (config.jwtSecret.length < MIN_JWT_SECRET_LENGTH) {
+  if (config.nodeEnv === 'production') {
+    console.error(`❌ FATAL: JWT_SECRET is too short (${config.jwtSecret.length} chars).`);
+    console.error(`   Minimum required length: ${MIN_JWT_SECRET_LENGTH} characters.`);
+    console.error('   Generate a strong secret with: openssl rand -base64 64');
+    process.exit(1);
+  } else {
+    console.warn(`⚠️  WARNING: JWT_SECRET is short (${config.jwtSecret.length} chars).`);
+    console.warn(`   Recommended minimum: ${MIN_JWT_SECRET_LENGTH} characters.`);
+  }
+}
+
+// 3. Detect known insecure patterns
+const INSECURE_PATTERNS = [
+  'INSECURE_DEFAULT',
+  'CHANGE_THIS',
+  'secret',
+  'password',
+  '123456',
+  'default',
+];
+
+if (config.nodeEnv === 'production') {
+  const lowerSecret = config.jwtSecret.toLowerCase();
+  for (const pattern of INSECURE_PATTERNS) {
+    if (lowerSecret.includes(pattern.toLowerCase())) {
+      console.error(`❌ FATAL: JWT_SECRET contains insecure pattern: "${pattern}"`);
+      console.error('   Use a randomly generated secret in production.');
+      process.exit(1);
+    }
+  }
 }
 
 if (missingEnvVars.length > 0) {

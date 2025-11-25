@@ -105,20 +105,40 @@ export class ComputeStack extends cdk.Stack {
         CORS_ORIGINS: environment === 'prod'
           ? 'https://app.mentalspaceehr.com'
           : `http://mentalspace-ehr-frontend-${environment}.s3-website-us-east-1.amazonaws.com,http://localhost:5173`,
-        // TODO: Move JWT_SECRET to Secrets Manager in production
-        JWT_SECRET: environment === 'prod'
-          ? 'CHANGE_THIS_IN_PRODUCTION_USE_SECRETS_MANAGER'
-          : 'dev-jwt-secret-key-not-for-production-use-2024',
         AWS_REGION: 'us-east-1',
         DYNAMODB_SESSIONS_TABLE: `mentalspace-sessions-${environment}`,
       },
       secrets: {
-        // Inject DATABASE_URL from dedicated secret
+        // SECURITY: All secrets injected from AWS Secrets Manager - no hardcoded values
         DATABASE_URL: ecs.Secret.fromSecretsManager(
           secretsmanager.Secret.fromSecretNameV2(
             this,
             'DatabaseUrlSecret',
-            'mentalspace/dev/database-url'
+            `mentalspace/${environment}/database-url`
+          )
+        ),
+        // JWT_SECRET from Secrets Manager - CRITICAL for security
+        JWT_SECRET: ecs.Secret.fromSecretsManager(
+          secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'JwtSecret',
+            `mentalspace/${environment}/jwt-secret`
+          )
+        ),
+        // PHI Encryption Key from Secrets Manager - HIPAA requirement
+        PHI_ENCRYPTION_KEY: ecs.Secret.fromSecretsManager(
+          secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'PhiEncryptionKey',
+            `mentalspace/${environment}/phi-encryption-key`
+          )
+        ),
+        // CSRF Secret from Secrets Manager
+        CSRF_SECRET: ecs.Secret.fromSecretsManager(
+          secretsmanager.Secret.fromSecretNameV2(
+            this,
+            'CsrfSecret',
+            `mentalspace/${environment}/csrf-secret`
           )
         ),
       },
@@ -159,22 +179,34 @@ export class ComputeStack extends cdk.Stack {
     // Attach to Target Group
     this.service.attachToApplicationTargetGroup(targetGroup);
 
-    // Auto Scaling (Production only)
+    // Auto Scaling - ENTERPRISE SCALE for 50,000+ users
+    // Production: min 5, max 100 tasks for high availability
+    // Dev/Staging: min 1, max 10 tasks for cost efficiency
+    const scaling = this.service.autoScaleTaskCount({
+      minCapacity: environment === 'prod' ? 5 : 1,
+      maxCapacity: environment === 'prod' ? 100 : 10,
+    });
+
+    // CPU-based scaling - triggers at 60% to allow headroom
+    scaling.scaleOnCpuUtilization('CpuScaling', {
+      targetUtilizationPercent: 60,
+      scaleInCooldown: cdk.Duration.seconds(300), // 5 min cooldown to prevent thrashing
+      scaleOutCooldown: cdk.Duration.seconds(60), // Fast scale-out for responsiveness
+    });
+
+    // Memory-based scaling
+    scaling.scaleOnMemoryUtilization('MemoryScaling', {
+      targetUtilizationPercent: 70,
+      scaleInCooldown: cdk.Duration.seconds(300),
+      scaleOutCooldown: cdk.Duration.seconds(60),
+    });
+
+    // Request count based scaling for production (handles burst traffic)
     if (environment === 'prod') {
-      const scaling = this.service.autoScaleTaskCount({
-        minCapacity: 2,
-        maxCapacity: 10,
-      });
-
-      scaling.scaleOnCpuUtilization('CpuScaling', {
-        targetUtilizationPercent: 70,
-        scaleInCooldown: cdk.Duration.seconds(60),
-        scaleOutCooldown: cdk.Duration.seconds(60),
-      });
-
-      scaling.scaleOnMemoryUtilization('MemoryScaling', {
-        targetUtilizationPercent: 80,
-        scaleInCooldown: cdk.Duration.seconds(60),
+      scaling.scaleOnRequestCount('RequestCountScaling', {
+        targetGroup: targetGroup,
+        requestsPerTarget: 1000, // Scale up when approaching 1000 requests/target
+        scaleInCooldown: cdk.Duration.seconds(300),
         scaleOutCooldown: cdk.Duration.seconds(60),
       });
     }

@@ -8,14 +8,22 @@ type GlobalWithPrisma = typeof globalThis & {
 
 const globalForPrisma = global as GlobalWithPrisma;
 
+// Only log queries in development - significant performance impact in production
+const prismaLogConfig = process.env.NODE_ENV === 'development'
+  ? [
+      { level: 'error' as const, emit: 'event' as const },
+      { level: 'warn' as const, emit: 'event' as const },
+      { level: 'query' as const, emit: 'event' as const },
+    ]
+  : [
+      { level: 'error' as const, emit: 'event' as const },
+      { level: 'warn' as const, emit: 'event' as const },
+    ];
+
 const prisma =
   globalForPrisma.__prisma ??
   new PrismaClient({
-    log: [
-      { level: 'error', emit: 'event' },
-      { level: 'warn', emit: 'event' },
-      { level: 'query', emit: 'event' },
-    ],
+    log: prismaLogConfig,
   });
 
 if (!globalForPrisma.__prismaListenersAttached) {
@@ -53,9 +61,9 @@ if (!globalForPrisma.__prismaListenersAttached) {
   globalForPrisma.__prismaListenersAttached = true;
 }
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.__prisma = prisma;
-}
+// Cache Prisma client in ALL environments to prevent connection exhaustion
+// This is critical for production scalability
+globalForPrisma.__prisma = prisma;
 
 export { prisma };
 export default prisma;

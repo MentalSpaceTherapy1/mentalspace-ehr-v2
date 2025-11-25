@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -7,6 +7,7 @@ import config from './config';
 import logger from './utils/logger';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { csrfCookieParser, csrfProtection, generateCsrfToken, csrfErrorHandler } from './middleware/csrf';
 import routes from './routes';
 
 // Create Express app
@@ -30,6 +31,45 @@ app.use(
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// CSRF Protection - Cookie parser must come before CSRF middleware
+app.use(csrfCookieParser);
+
+// CSRF token endpoint - frontend calls this to get a token
+app.get('/api/v1/csrf-token', (req: Request, res: Response) => {
+  const token = generateCsrfToken(req, res);
+  res.json({ csrfToken: token });
+});
+
+// Apply CSRF protection to all state-changing requests
+// Skip for specific API routes that use different auth (e.g., webhook endpoints)
+app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  // Skip CSRF for webhook endpoints that use signature verification
+  if (req.path.includes('/webhooks/')) {
+    return next();
+  }
+  // Skip CSRF for health check
+  if (req.path === '/v1/health') {
+    return next();
+  }
+  return csrfProtection(req, res, next);
+});
+
+// CSRF error handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err === csrfErrorHandler) {
+    logger.warn('CSRF token validation failed', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+    });
+    return res.status(403).json({
+      success: false,
+      error: 'Invalid or missing CSRF token',
+    });
+  }
+  next(err);
+});
 
 // Compression middleware
 app.use(compression());

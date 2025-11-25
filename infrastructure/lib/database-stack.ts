@@ -54,7 +54,8 @@ export class DatabaseStack extends cdk.Stack {
       storageEncryptionKey: kmsKey,
       multiAz: environment === 'prod',
       autoMinorVersionUpgrade: true,
-      backupRetention: environment === 'prod' ? cdk.Duration.days(30) : cdk.Duration.days(7),
+      // HIPAA requires longer backup retention - 90 days minimum for production
+      backupRetention: environment === 'prod' ? cdk.Duration.days(90) : cdk.Duration.days(7),
       deleteAutomatedBackups: environment !== 'prod',
       removalPolicy: environment === 'prod' ? cdk.RemovalPolicy.SNAPSHOT : cdk.RemovalPolicy.DESTROY,
       deletionProtection: environment === 'prod',
