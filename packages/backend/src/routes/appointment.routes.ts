@@ -21,6 +21,10 @@ import {
   bulkCancelAppointments,
   bulkDeleteAppointments,
   bulkAssignRoom,
+  // Phase 5: AdvancedMD Eligibility Integration
+  checkAppointmentEligibility,
+  checkDailyEligibility,
+  checkInWithEligibility,
 } from '../controllers/appointment.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireClientAccess } from '../middleware/clientAccess';
@@ -49,6 +53,13 @@ router.get(
   '/room-view',
   authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
   getRoomView
+);
+
+// Batch check eligibility for all appointments on a date (must be before /:id to avoid route collision)
+router.get(
+  '/eligibility/daily',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'BILLING_STAFF'),
+  checkDailyEligibility
 );
 
 // Get all appointments for a specific client (must be before /:id to avoid route collision)
@@ -89,6 +100,9 @@ router.put('/:id', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), update
 // Check-in appointment
 router.post('/:id/check-in', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), checkInAppointment);
 
+// Check-in with eligibility verification (AdvancedMD integration)
+router.post('/:id/check-in-with-eligibility', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), checkInWithEligibility);
+
 // Check-out appointment
 router.post('/:id/check-out', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), checkOutAppointment);
 
@@ -112,6 +126,17 @@ router.delete('/bulk/delete', authorize('ADMINISTRATOR', 'SUPERVISOR'), bulkDele
 
 // Mark as no-show
 router.post('/:id/no-show', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), markNoShow);
+
+// ============================================
+// Phase 5: Insurance Eligibility Verification (AdvancedMD)
+// ============================================
+
+// Check eligibility for a specific appointment
+router.get(
+  '/:id/eligibility',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'BILLING_STAFF'),
+  checkAppointmentEligibility
+);
 
 // Delete appointment
 router.delete('/:id', authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'), deleteAppointment);

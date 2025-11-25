@@ -9,6 +9,7 @@ import { applyAppointmentScope, assertCanAccessClient } from '../services/access
 import { calculateNoteDueDate } from '../services/compliance.service';
 import * as telehealthService from '../services/telehealth.service';
 import * as waitlistIntegrationService from '../services/waitlist-integration.service';
+import { AdvancedMDEligibilityService } from '../services/advancedmd/eligibility.service';
 // Fixed phoneNumber -> primaryPhone field name
 
 const ensureAppointmentAccess = async (
@@ -2142,6 +2143,225 @@ export const getProviderComparison = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch provider comparison',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+// ============================================================================
+// PHASE 5: INSURANCE ELIGIBILITY VERIFICATION (AdvancedMD Integration)
+// ============================================================================
+
+/**
+ * Check insurance eligibility for a specific appointment
+ * Verifies coverage status with payer before the appointment
+ */
+export const checkAppointmentEligibility = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { skipCache = false } = req.query;
+
+    // Verify appointment exists and user has access
+    if (!(await ensureAppointmentAccess(req, id, { allowBillingView: true }))) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            dateOfBirth: true,
+          },
+        },
+      },
+    });
+
+    if (!appointment || !appointment.clientId) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment or client not found',
+      });
+    }
+
+    // Check eligibility via AdvancedMD
+    const eligibilityService = AdvancedMDEligibilityService.getInstance();
+    const eligibilityResult = await eligibilityService.checkEligibilityForAppointment(id);
+
+    // Determine eligibility status
+    const isEligible = eligibilityResult.success && eligibilityResult.eligibilityData?.isEligible;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        appointmentId: id,
+        clientId: appointment.clientId,
+        clientName: `${appointment.client.firstName} ${appointment.client.lastName}`,
+        appointmentDate: appointment.appointmentDate,
+        eligibility: eligibilityResult,
+      },
+    });
+  } catch (error) {
+    logControllerError('checkAppointmentEligibility', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check eligibility',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Batch check eligibility for all appointments on a given date
+ * Used for front desk to verify coverage before appointments
+ */
+export const checkDailyEligibility = async (req: Request, res: Response) => {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: 'date query parameter is required',
+      });
+    }
+
+    const targetDate = new Date(date as string);
+    if (isNaN(targetDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format',
+      });
+    }
+
+    // Check eligibility for all appointments on the date via AdvancedMD
+    const eligibilityService = AdvancedMDEligibilityService.getInstance();
+    const eligibilityResults = await eligibilityService.checkEligibilityForDateAppointments(targetDate);
+
+    // Return results - the results contain clientId which can be used to identify appointments
+    res.status(200).json({
+      success: true,
+      message: `Eligibility checked for ${eligibilityResults.totalChecked} appointments (${eligibilityResults.successCount} successful, ${eligibilityResults.failureCount} failed)`,
+      data: eligibilityResults,
+    });
+  } catch (error) {
+    logControllerError('checkDailyEligibility', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check daily eligibility',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Enhanced check-in with automatic eligibility verification
+ * Verifies insurance coverage as part of the check-in process
+ */
+export const checkInWithEligibility = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { checkedInTime, verifyEligibility = true } = req.body;
+    const userId = (req as any).user?.userId;
+
+    // Verify appointment exists and user has access
+    if (!(await ensureAppointmentAccess(req, id))) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+      });
+    }
+
+    // Validate check-in time
+    if (!checkedInTime || !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(checkedInTime)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid check-in time format (HH:MM)',
+      });
+    }
+
+    // Optionally verify eligibility during check-in
+    let eligibilityResult = null;
+    if (verifyEligibility) {
+      try {
+        const eligibilityService = AdvancedMDEligibilityService.getInstance();
+        eligibilityResult = await eligibilityService.checkEligibilityForAppointment(id);
+      } catch (eligibilityError) {
+        // Log but don't fail check-in if eligibility check fails
+        logger.warn('Eligibility check failed during check-in', {
+          appointmentId: id,
+          error: eligibilityError instanceof Error ? eligibilityError.message : 'Unknown error',
+        });
+        eligibilityResult = { success: false, error: 'Eligibility check unavailable' };
+      }
+    }
+
+    // Determine eligibility status
+    const isEligible = eligibilityResult?.success && eligibilityResult?.eligibilityData?.isEligible;
+
+    // Prepare update data - core check-in fields only
+    const updateData: any = {
+      status: 'CHECKED_IN',
+      checkedInTime,
+      checkedInBy: userId,
+      statusUpdatedDate: new Date(),
+      statusUpdatedBy: userId,
+    };
+
+    // Update appointment
+    const appointment = await prisma.appointment.update({
+      where: { id },
+      data: updateData,
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    auditLogger.info('Client checked in with eligibility', {
+      userId,
+      appointmentId: id,
+      eligibilityVerified: eligibilityResult?.success || false,
+      eligibilityStatus: isEligible ? 'VERIFIED' : 'NOT_VERIFIED',
+      action: 'APPOINTMENT_CHECKED_IN_WITH_ELIGIBILITY',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: isEligible
+        ? 'Client checked in - eligibility verified'
+        : eligibilityResult?.success === false
+          ? 'Client checked in - eligibility check unavailable'
+          : 'Client checked in - eligibility not verified',
+      data: {
+        appointment,
+        eligibility: eligibilityResult,
+      },
+    });
+  } catch (error) {
+    logControllerError('checkInWithEligibility', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check in with eligibility',
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }

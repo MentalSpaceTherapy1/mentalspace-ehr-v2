@@ -83,6 +83,9 @@ import timeAttendanceRoutes from './time-attendance.routes';
 import ptoRoutes from './pto.routes';
 import advancedMDRoutes from './advancedmd.routes';
 import advancedMDBillingRoutes from './advancedmd-billing.routes';
+import advancedMDEligibilityRoutes from './advancedmd-eligibility.routes';
+import advancedMDClaimsRoutes from './advancedmd-claims.routes';
+import advancedMDERARoutes from './advancedmd-era.routes';
 
 const router = Router();
 
@@ -124,6 +127,9 @@ router.use('/appointments', appointmentRoutes);
 router.use('/billing', billingRoutes);
 router.use('/advancedmd', advancedMDRoutes); // AdvancedMD Integration (Phase 3)
 router.use('/advancedmd/billing', advancedMDBillingRoutes); // AdvancedMD Billing Integration (Phase 4)
+router.use('/advancedmd/eligibility', advancedMDEligibilityRoutes); // AdvancedMD Eligibility (Phase 5)
+router.use('/advancedmd/claims', advancedMDClaimsRoutes); // AdvancedMD Claims (Phase 5)
+router.use('/advancedmd/era', advancedMDERARoutes); // AdvancedMD ERA Workaround (Phase 5)
 router.use('/productivity', productivityRoutes);
 router.use('/service-codes', serviceCodeRoutes);
 router.use('/waitlist', waitlistRoutes);

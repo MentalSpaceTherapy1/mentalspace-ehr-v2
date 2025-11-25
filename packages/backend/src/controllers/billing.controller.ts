@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { auditLogger } from '../utils/logger';
 import prisma from '../services/database';
 import { Prisma } from '@mentalspace/database';
+import { AdvancedMDChargeSyncService } from '../integrations/advancedmd/charge-sync.service';
 
 // ============================================================================
 // CHARGES
@@ -25,6 +26,9 @@ const createChargeSchema = z.object({
   chargeAmount: z.number().min(0),
   primaryInsuranceId: z.string().uuid().optional(),
   secondaryInsuranceId: z.string().uuid().optional(),
+  // AdvancedMD sync options
+  syncToAdvancedMD: z.boolean().optional().default(false),
+  autoSubmitClaim: z.boolean().optional().default(false),
 });
 
 // Get all charges
@@ -170,10 +174,43 @@ export const createCharge = async (req: Request, res: Response) => {
       action: 'CHARGE_CREATED',
     });
 
+    // Optional: Sync to AdvancedMD
+    let amdSyncResult = null;
+    if (validatedData.syncToAdvancedMD) {
+      try {
+        const chargeSyncService = AdvancedMDChargeSyncService.getInstance();
+        amdSyncResult = await chargeSyncService.submitCharge(charge.id);
+
+        if (amdSyncResult.success) {
+          auditLogger.info('Charge synced to AdvancedMD', {
+            userId,
+            chargeId: charge.id,
+            amdChargeId: amdSyncResult.amdChargeId,
+            action: 'CHARGE_AMD_SYNC',
+          });
+        } else {
+          logger.warn('AdvancedMD sync failed for charge', {
+            chargeId: charge.id,
+            error: amdSyncResult.error,
+          });
+        }
+      } catch (syncError) {
+        logger.error('AdvancedMD sync error:', {
+          chargeId: charge.id,
+          error: syncError instanceof Error ? syncError.message : 'Unknown error',
+        });
+        // Don't fail the request - charge was created locally
+        amdSyncResult = { success: false, error: 'Sync failed - charge saved locally' };
+      }
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Charge created successfully',
+      message: validatedData.syncToAdvancedMD
+        ? (amdSyncResult?.success ? 'Charge created and synced to AdvancedMD' : 'Charge created (AMD sync failed)')
+        : 'Charge created successfully',
       data: charge,
+      amdSync: amdSyncResult,
     });
   } catch (error) {
     logger.error('Create charge error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });

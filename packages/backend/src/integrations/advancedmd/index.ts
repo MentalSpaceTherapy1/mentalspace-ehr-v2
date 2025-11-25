@@ -33,8 +33,35 @@ export {
 } from './appointment-sync.service';
 
 // Phase 4: Billing & Charges
-export { AdvancedMDLookupService } from './lookup.service';
+export { AdvancedMDLookupService, advancedMDLookup } from './lookup.service';
 export { AdvancedMDChargeSyncService } from './charge-sync.service';
+
+// Phase 5: Eligibility, Claims, ERA Services (from services/advancedmd)
+export {
+  AdvancedMDEligibilityService,
+  advancedMDEligibility,
+  EligibilityCheckResult,
+  EligibilityData,
+  BatchEligibilityResult,
+} from '../../services/advancedmd/eligibility.service';
+
+export {
+  AdvancedMDClaimsService,
+  advancedMDClaims,
+  ClaimSubmissionResult,
+  ClaimStatusResult,
+  BatchClaimStatusResult,
+  CreateClaimOptions,
+} from '../../services/advancedmd/claims.service';
+
+export {
+  AdvancedMDERAService,
+  advancedMDERA,
+  PaymentImportRecord,
+  PaymentImportResult,
+  PaymentPostingResult,
+  ReconciliationResult,
+} from '../../services/advancedmd/era.service';
 
 // Re-export types from shared package (using relative path for monorepo)
 export * from '../../../../shared/src/types/advancedmd.types';
