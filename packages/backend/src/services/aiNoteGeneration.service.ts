@@ -47,6 +47,29 @@ const PROMPT_VERSION = '1.0';
 const MIN_TRANSCRIPT_LENGTH = 200;
 
 // ============================================================================
+// TODO: AI Generated Note Models Not Implemented
+// ============================================================================
+// The AIGeneratedNote and AIGenerationAuditLog models are not yet implemented
+// in the Prisma schema. All AI note generation functionality is disabled until
+// these models are added to packages/database/prisma/schema.prisma
+
+const AI_NOTE_MODELS_NOT_IMPLEMENTED = true;
+
+function throwNotImplementedError(): never {
+  throw new AIGenerationError(
+    'AI note generation is not yet implemented - required database models are missing',
+    AIErrorCode.API_ERROR,
+    {
+      message: 'AIGeneratedNote and AIGenerationAuditLog models need to be added to Prisma schema',
+      feature: 'ai-note-generation',
+    }
+  );
+}
+
+// Type helper to suppress missing model errors (models don't exist in schema yet)
+const prismaAI = prisma as any;
+
+// ============================================================================
 // INITIALIZE ANTHROPIC CLIENT
 // ============================================================================
 
@@ -269,6 +292,11 @@ export async function generateSOAPNote(
   request: GenerateNoteRequest,
   userId: string
 ): Promise<GenerateNoteResponse> {
+  // TODO: Feature not implemented - models missing from schema
+  if (AI_NOTE_MODELS_NOT_IMPLEMENTED) {
+    throwNotImplementedError();
+  }
+
   const startTime = Date.now();
 
   try {
@@ -297,7 +325,7 @@ export async function generateSOAPNote(
     }
 
     // Create AI note record in GENERATING status
-    const aiNote = await prisma.aIGeneratedNote.create({
+    const aiNote = await prismaAI.aIGeneratedNote.create({
       data: {
         sessionId: request.sessionId,
         appointmentId: session.appointmentId,
@@ -361,7 +389,7 @@ export async function generateSOAPNote(
     );
 
     // Update AI note with generated content
-    const updatedNote = await prisma.aIGeneratedNote.update({
+    const updatedNote = await prismaAI.aIGeneratedNote.update({
       where: { id: aiNote.id },
       data: {
         status: AIGeneratedNoteStatus.GENERATED,
@@ -378,14 +406,15 @@ export async function generateSOAPNote(
     });
 
     // Update session with AI note reference
-    await prisma.telehealthSession.update({
-      where: { id: request.sessionId },
-      data: {
-        aiNoteGenerated: true,
-        aiNoteGeneratedAt: new Date(),
-        aiNoteId: aiNote.id,
-      },
-    });
+    // TODO: TelehealthSession model doesn't have aiNoteGenerated, aiNoteGeneratedAt, aiNoteId fields yet
+    // await prisma.telehealthSession.update({
+    //   where: { id: request.sessionId },
+    //   data: {
+    //     aiNoteGenerated: true,
+    //     aiNoteGeneratedAt: new Date(),
+    //     aiNoteId: aiNote.id,
+    //   },
+    // });
 
     // Log generation completed
     await logAuditEvent(
@@ -441,7 +470,7 @@ export async function generateSOAPNote(
 
     // Update note status to FAILED if it was created
     if (error.aiNoteId) {
-      await prisma.aIGeneratedNote.update({
+      await prismaAI.aIGeneratedNote.update({
         where: { id: error.aiNoteId },
         data: {
           status: AIGeneratedNoteStatus.FAILED,
@@ -471,6 +500,11 @@ export async function generateRiskAssessment(
   sessionId: string,
   userId: string
 ): Promise<RiskAssessment> {
+  // TODO: Feature not implemented - models missing from schema
+  if (AI_NOTE_MODELS_NOT_IMPLEMENTED) {
+    throwNotImplementedError();
+  }
+
   try {
     validateTranscript(transcriptText);
 
@@ -523,8 +557,13 @@ export async function regenerateNote(
   request: RegenerateNoteRequest,
   userId: string
 ): Promise<GenerateNoteResponse> {
+  // TODO: Feature not implemented - models missing from schema
+  if (AI_NOTE_MODELS_NOT_IMPLEMENTED) {
+    throwNotImplementedError();
+  }
+
   try {
-    const existingNote = await prisma.aIGeneratedNote.findUnique({
+    const existingNote = await prismaAI.aIGeneratedNote.findUnique({
       where: { id: request.aiNoteId },
       include: {
         session: {
@@ -562,7 +601,7 @@ export async function regenerateNote(
     });
 
     // Update status to REGENERATING
-    await prisma.aIGeneratedNote.update({
+    await prismaAI.aIGeneratedNote.update({
       where: { id: request.aiNoteId },
       data: {
         status: AIGeneratedNoteStatus.REGENERATING,
@@ -632,7 +671,7 @@ Please regenerate the note incorporating this feedback while maintaining clinica
     );
 
     // Update note with regenerated content
-    const updatedNote = await prisma.aIGeneratedNote.update({
+    const updatedNote = await prismaAI.aIGeneratedNote.update({
       where: { id: request.aiNoteId },
       data: {
         status: AIGeneratedNoteStatus.GENERATED,
@@ -767,7 +806,7 @@ async function logAuditEvent(
   userId?: string
 ): Promise<void> {
   try {
-    await prisma.aIGenerationAuditLog.create({
+    await prismaAI.aIGenerationAuditLog.create({
       data: {
         aiNoteId,
         eventType,
@@ -794,7 +833,12 @@ async function logAuditEvent(
  * Get AI generated note by ID
  */
 export async function getAINote(aiNoteId: string) {
-  return prisma.aIGeneratedNote.findUnique({
+  // TODO: Feature not implemented - models missing from schema
+  if (AI_NOTE_MODELS_NOT_IMPLEMENTED) {
+    throwNotImplementedError();
+  }
+
+  return prismaAI.aIGeneratedNote.findUnique({
     where: { id: aiNoteId },
     include: {
       session: {
@@ -823,7 +867,12 @@ export async function getAINote(aiNoteId: string) {
  * Get AI note by session ID
  */
 export async function getAINoteBySession(sessionId: string) {
-  return prisma.aIGeneratedNote.findUnique({
+  // TODO: Feature not implemented - models missing from schema
+  if (AI_NOTE_MODELS_NOT_IMPLEMENTED) {
+    throwNotImplementedError();
+  }
+
+  return prismaAI.aIGeneratedNote.findUnique({
     where: { sessionId },
     include: {
       session: {
@@ -844,7 +893,12 @@ export async function getAINoteBySession(sessionId: string) {
  * Get audit logs for an AI note
  */
 export async function getAINoteAuditLogs(aiNoteId: string) {
-  return prisma.aIGenerationAuditLog.findMany({
+  // TODO: Feature not implemented - models missing from schema
+  if (AI_NOTE_MODELS_NOT_IMPLEMENTED) {
+    throwNotImplementedError();
+  }
+
+  return prismaAI.aIGenerationAuditLog.findMany({
     where: { aiNoteId },
     include: {
       user: {

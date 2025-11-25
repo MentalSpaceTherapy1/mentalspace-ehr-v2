@@ -358,7 +358,7 @@ export const transferToDemographics = async (req: Request, res: Response) => {
     const { selectedFields, mappedData } = req.body;
 
     // Verify user has access to this client
-    await assertCanAccessClient(req.user!.userId, clientId, req.user!.organizationId);
+    await assertCanAccessClient(req.user, { clientId });
 
     // Get the form submission
     const assignment = await prisma.formAssignment.findFirst({
@@ -464,7 +464,7 @@ export const transferToIntake = async (req: Request, res: Response) => {
     const { selectedFields, mappedData, intakeAssessmentId } = req.body;
 
     // Verify user has access to this client
-    await assertCanAccessClient(req.user!.userId, clientId, req.user!.organizationId);
+    await assertCanAccessClient(req.user, { clientId });
 
     // Get the form submission
     const assignment = await prisma.formAssignment.findFirst({
@@ -493,90 +493,19 @@ export const transferToIntake = async (req: Request, res: Response) => {
       });
     }
 
-    let intake;
+    // TODO: Re-enable when clientAssessmentForm model is added to schema
+    // Feature temporarily disabled - clientAssessmentForm model not yet in schema
+    logger.warn('Transfer to intake requested but clientAssessmentForm model not available', {
+      clientId,
+      assignmentId,
+      transferredBy: req.user!.userId,
+    });
 
-    // If intakeAssessmentId provided, update existing intake
-    if (intakeAssessmentId) {
-      const existingIntake = await prisma.clientAssessmentForm.findFirst({
-        where: {
-          id: intakeAssessmentId,
-          clientId,
-        },
-      });
-
-      if (!existingIntake) {
-        return res.status(404).json({
-          success: false,
-          message: 'Intake assessment not found',
-        });
-      }
-
-      // Get current intake data for audit trail
-      const changedFields: Record<string, { old: any; new: any }> = {};
-      Object.keys(mappedData).forEach(field => {
-        const oldValue = (existingIntake as any)[field];
-        const newValue = mappedData[field];
-        if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-          changedFields[field] = { old: oldValue, new: newValue };
-        }
-      });
-
-      // Update existing intake
-      intake = await prisma.clientAssessmentForm.update({
-        where: { id: intakeAssessmentId },
-        data: {
-          ...mappedData,
-          updatedAt: new Date(),
-        },
-      });
-
-      logger.info(`Intake assessment ${intakeAssessmentId} updated from form submission ${assignment.submission.id}`, {
-        selectedFields,
-        changedFields: Object.keys(changedFields),
-        transferredBy: req.user!.userId,
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: 'Client history transferred successfully to existing intake assessment',
-        data: {
-          intake,
-          changedFields,
-          transferredFields: selectedFields,
-          isNewIntake: false,
-        },
-      });
-    } else {
-      // Create new intake assessment
-      intake = await prisma.clientAssessmentForm.create({
-        data: {
-          clientId,
-          assessmentType: 'Initial',
-          status: 'Draft',
-          ...mappedData,
-          assessmentDate: new Date(),
-          assessedBy: req.user!.userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-
-      logger.info(`New intake assessment created from form submission ${assignment.submission.id}`, {
-        intakeId: intake.id,
-        selectedFields,
-        transferredBy: req.user!.userId,
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: 'Client history transferred successfully to new intake assessment',
-        data: {
-          intake,
-          transferredFields: selectedFields,
-          isNewIntake: true,
-        },
-      });
-    }
+    return res.status(501).json({
+      success: false,
+      message: 'Transfer to intake assessment feature is currently unavailable. Please contact support.',
+      error: 'CLIENT_ASSESSMENT_FORM_MODEL_NOT_IMPLEMENTED',
+    });
   } catch (error) {
     logger.error('Error transferring to intake:', error);
     return res.status(500).json({

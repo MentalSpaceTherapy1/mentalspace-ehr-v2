@@ -130,140 +130,11 @@ export const bookAppointment = async (req: Request, res: Response) => {
 
     const { clinicianId, appointmentDate, appointmentType, duration, notes, serviceLocation } = validation.data;
 
-    // Get client ID from authenticated user
-    const clientId = req.user?.clientId;
-    if (!clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Client authentication required',
-      });
-    }
-
-    const slotTime = new Date(appointmentDate);
-
-    logger.info('Booking appointment', {
-      clientId,
-      clinicianId,
-      appointmentDate,
-      appointmentType,
-    });
-
-    // Check if slot can be booked
-    const canBook = await availableSlotsService.canBookSlot(
-      clinicianId,
-      slotTime,
-      clientId,
-      duration
-    );
-
-    if (!canBook.canBook) {
-      return res.status(400).json({
-        success: false,
-        message: canBook.reason || 'Slot cannot be booked',
-      });
-    }
-
-    // Get scheduling rules to determine auto-confirmation
-    const rules = await getEffectiveRules(clinicianId);
-
-    // Calculate start and end times
-    const startTime = format(slotTime, 'HH:mm');
-    const endTime = format(addMinutes(slotTime, duration), 'HH:mm');
-
-    // Create appointment using transaction to prevent double-booking
-    const appointment = await prisma.$transaction(async (tx) => {
-      // Double-check for conflicts within transaction
-      const conflict = await tx.appointment.findFirst({
-        where: {
-          clinicianId,
-          appointmentDate: {
-            gte: addMinutes(slotTime, -rules.bufferTime),
-            lt: addMinutes(slotTime, duration + rules.bufferTime),
-          },
-          status: {
-            in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN'],
-          },
-        },
-      });
-
-      if (conflict) {
-        throw new Error('Slot is no longer available');
-      }
-
-      // Get client details
-      const client = await tx.client.findUnique({
-        where: { id: clientId },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-        },
-      });
-
-      if (!client) {
-        throw new Error('Client not found');
-      }
-
-      // Create the appointment
-      const newAppointment = await tx.appointment.create({
-        data: {
-          clientId,
-          clinicianId,
-          appointmentDate: slotTime,
-          startTime,
-          endTime,
-          duration,
-          appointmentType,
-          serviceLocation,
-          timezone: 'America/New_York', // Should be from org settings
-          status: rules.autoConfirm ? 'CONFIRMED' : 'SCHEDULED',
-          statusUpdatedDate: new Date(),
-          statusUpdatedBy: clientId,
-          appointmentNotes: notes,
-          createdBy: clientId, // Required field: who created this appointment (audit trail)
-          lastModifiedBy: clientId, // Required field: who last modified this appointment
-        },
-        include: {
-          clinician: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              title: true,
-              email: true,
-            },
-          },
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
-        },
-      });
-
-      return newAppointment;
-    });
-
-    logger.info('Appointment booked successfully', {
-      appointmentId: appointment.id,
-      clientId,
-      clinicianId,
-      status: appointment.status,
-    });
-
-    // TODO: Send confirmation email/notification
-    // await sendAppointmentConfirmation(appointment);
-
-    res.status(201).json({
-      success: true,
-      message: rules.autoConfirm
-        ? 'Appointment confirmed successfully'
-        : 'Appointment request submitted and pending clinician approval',
-      data: appointment,
+    // TODO: Client portal/self-scheduling not yet implemented - clients don't have user accounts
+    // The Client model doesn't have a userId field, so req.user.clientId doesn't exist
+    return res.status(501).json({
+      success: false,
+      message: 'Client self-scheduling not yet implemented. Please contact your provider to schedule appointments.',
     });
   } catch (error: any) {
     logger.error('Book appointment error', {
@@ -297,139 +168,10 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
 
     const { newAppointmentDate, reason } = validation.data;
 
-    // Get client ID from authenticated user
-    const clientId = req.user?.clientId;
-    if (!clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Client authentication required',
-      });
-    }
-
-    logger.info('Rescheduling appointment', {
-      appointmentId,
-      clientId,
-      newAppointmentDate,
-    });
-
-    // Get existing appointment
-    const existingAppointment = await prisma.appointment.findUnique({
-      where: { id: appointmentId },
-    });
-
-    if (!existingAppointment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Appointment not found',
-      });
-    }
-
-    // Verify client owns this appointment
-    if (existingAppointment.clientId !== clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to reschedule this appointment',
-      });
-    }
-
-    // Check if appointment can be cancelled (same rules apply for rescheduling)
-    const canCancel = await availableSlotsService.canCancelAppointment(
-      appointmentId,
-      existingAppointment.clinicianId
-    );
-
-    if (!canCancel.canCancel) {
-      return res.status(400).json({
-        success: false,
-        message: canCancel.reason,
-      });
-    }
-
-    const newSlotTime = new Date(newAppointmentDate);
-
-    // Check if new slot can be booked
-    const canBook = await availableSlotsService.canBookSlot(
-      existingAppointment.clinicianId,
-      newSlotTime,
-      clientId,
-      existingAppointment.duration
-    );
-
-    if (!canBook.canBook) {
-      return res.status(400).json({
-        success: false,
-        message: canBook.reason || 'New slot cannot be booked',
-      });
-    }
-
-    // Get scheduling rules
-    const rules = await getEffectiveRules(existingAppointment.clinicianId);
-
-    // Calculate new start and end times
-    const startTime = format(newSlotTime, 'HH:mm');
-    const endTime = format(addMinutes(newSlotTime, existingAppointment.duration), 'HH:mm');
-
-    // Update appointment
-    const updatedAppointment = await prisma.$transaction(async (tx) => {
-      // Double-check for conflicts at new time
-      const conflict = await tx.appointment.findFirst({
-        where: {
-          clinicianId: existingAppointment.clinicianId,
-          id: { not: appointmentId },
-          appointmentDate: {
-            gte: addMinutes(newSlotTime, -rules.bufferTime),
-            lt: addMinutes(newSlotTime, existingAppointment.duration + rules.bufferTime),
-          },
-          status: {
-            in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN'],
-          },
-        },
-      });
-
-      if (conflict) {
-        throw new Error('New slot is no longer available');
-      }
-
-      return await tx.appointment.update({
-        where: { id: appointmentId },
-        data: {
-          appointmentDate: newSlotTime,
-          startTime,
-          endTime,
-          status: rules.autoConfirm ? 'CONFIRMED' : 'SCHEDULED',
-          statusUpdatedDate: new Date(),
-          statusUpdatedBy: clientId,
-          appointmentNotes: reason
-            ? `${existingAppointment.appointmentNotes || ''}\n\nRescheduled: ${reason}`.trim()
-            : existingAppointment.appointmentNotes,
-        },
-        include: {
-          clinician: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              title: true,
-              email: true,
-            },
-          },
-        },
-      });
-    });
-
-    logger.info('Appointment rescheduled successfully', {
-      appointmentId,
-      oldDate: existingAppointment.appointmentDate,
-      newDate: newSlotTime,
-    });
-
-    // TODO: Send reschedule notification
-    // await sendRescheduleNotification(updatedAppointment);
-
-    res.status(200).json({
-      success: true,
-      message: 'Appointment rescheduled successfully',
-      data: updatedAppointment,
+    // TODO: Client portal/self-scheduling not yet implemented - clients don't have user accounts
+    return res.status(501).json({
+      success: false,
+      message: 'Client self-scheduling not yet implemented. Please contact your provider to reschedule appointments.',
     });
   } catch (error: any) {
     logger.error('Reschedule appointment error', {
@@ -463,92 +205,10 @@ export const cancelAppointment = async (req: Request, res: Response) => {
 
     const { reason, notes } = validation.data;
 
-    // Get client ID from authenticated user
-    const clientId = req.user?.clientId;
-    if (!clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Client authentication required',
-      });
-    }
-
-    logger.info('Cancelling appointment', {
-      appointmentId,
-      clientId,
-      reason,
-    });
-
-    // Get existing appointment
-    const existingAppointment = await prisma.appointment.findUnique({
-      where: { id: appointmentId },
-    });
-
-    if (!existingAppointment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Appointment not found',
-      });
-    }
-
-    // Verify client owns this appointment
-    if (existingAppointment.clientId !== clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to cancel this appointment',
-      });
-    }
-
-    // Check if appointment can be cancelled
-    const canCancel = await availableSlotsService.canCancelAppointment(
-      appointmentId,
-      existingAppointment.clinicianId
-    );
-
-    if (!canCancel.canCancel) {
-      return res.status(400).json({
-        success: false,
-        message: canCancel.reason,
-      });
-    }
-
-    // Cancel the appointment
-    const cancelledAppointment = await prisma.appointment.update({
-      where: { id: appointmentId },
-      data: {
-        status: 'CANCELLED',
-        statusUpdatedDate: new Date(),
-        statusUpdatedBy: clientId,
-        cancellationDate: new Date(),
-        cancellationReason: reason,
-        cancellationNotes: notes,
-        cancelledBy: clientId,
-        cancellationFeeApplied: false, // Determine based on cancellation policy
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    logger.info('Appointment cancelled successfully', {
-      appointmentId,
-      clientId,
-    });
-
-    // TODO: Send cancellation notification
-    // await sendCancellationNotification(cancelledAppointment);
-
-    res.status(200).json({
-      success: true,
-      message: 'Appointment cancelled successfully',
-      data: cancelledAppointment,
+    // TODO: Client portal/self-scheduling not yet implemented - clients don't have user accounts
+    return res.status(501).json({
+      success: false,
+      message: 'Client self-scheduling not yet implemented. Please contact your provider to cancel appointments.',
     });
   } catch (error: any) {
     logger.error('Cancel appointment error', {
@@ -569,50 +229,14 @@ export const cancelAppointment = async (req: Request, res: Response) => {
  */
 export const getMyAppointments = async (req: Request, res: Response) => {
   try {
-    const clientId = req.user?.clientId;
-    if (!clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Client authentication required',
-      });
-    }
-
-    logger.info('Getting client appointments', { clientId });
-
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        clientId,
-        appointmentDate: {
-          gte: new Date(),
-        },
-        status: {
-          in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN'],
-        },
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        appointmentDate: 'asc',
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      data: appointments,
+    // TODO: Client portal/self-scheduling not yet implemented - clients don't have user accounts
+    return res.status(501).json({
+      success: false,
+      message: 'Client self-scheduling not yet implemented. Please contact your provider for appointment information.',
     });
   } catch (error: any) {
     logger.error('Get my appointments error', {
       error: error.message,
-      clientId: req.user?.clientId,
     });
     res.status(500).json({
       success: false,

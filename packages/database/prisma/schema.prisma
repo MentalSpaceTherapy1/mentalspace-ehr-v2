@@ -5847,6 +5847,29 @@ model AdvancedMDRateLimitState {
   @@map("advancedmd_rate_limit_state")
 }
 
+// AdvancedMD Code Cache for CPT, ICD-10, Modifiers, Providers, Facilities
+model AdvancedMDCodeCache {
+  id          String   @id @default(uuid())
+
+  // Cache Key
+  type        String   // 'CPT', 'ICD10', 'MODIFIER', 'PROVIDER', 'FACILITY'
+  code        String   // The code being looked up (e.g., '90834', 'F41.1', 'GT')
+
+  // AdvancedMD Response
+  amdId       String   // AdvancedMD internal ID for this code
+  description String?  // Code description from AdvancedMD
+
+  // Cache Management
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastUsedAt  DateTime @default(now())
+
+  @@unique([type, code])
+  @@index([type])
+  @@index([lastUsedAt])
+  @@map("advancedmd_code_cache")
+}
+
 // Manual Payment-to-Claim Reconciliation
 model PaymentClaimMapping {
   id                  String   @id @default(uuid())

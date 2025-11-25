@@ -67,6 +67,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
       // Attach user and session to request
       req.user = {
+        id: user.id,
         userId: user.id,
         email: user.email,
         roles: user.roles,
@@ -168,6 +169,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 
           if (user && user.isActive) {
             req.user = {
+              id: user.id,
               userId: user.id,
               email: user.email,
               roles: user.roles,

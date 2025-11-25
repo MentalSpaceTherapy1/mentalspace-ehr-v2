@@ -12,7 +12,7 @@ export class ApiTestHelper {
    * Generate authentication token for test user
    */
   generateAuthToken(userId: string, email: string, role: string = 'CLINICIAN'): string {
-    return generateAccessToken({ userId, email, role });
+    return generateAccessToken({ id: userId, userId, email, roles: [role] });
   }
 
   /**

@@ -14,8 +14,7 @@ import {
   getJobStatus,
   getStatistics,
 } from '../controllers/reminder.controller.new';
-import { authMiddleware } from '../middleware/auth';
-import { requireRole } from '../middleware/requireRole';
+import { authMiddleware, authorize } from '../middleware/auth';
 
 const router = Router();
 
@@ -46,13 +45,13 @@ router.use(authMiddleware);
  * GET /api/v1/reminders/config
  * Get current reminder configuration
  */
-router.get('/config', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), getConfig);
+router.get('/config', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), getConfig);
 
 /**
  * PUT /api/v1/reminders/config
  * Update reminder configuration
  */
-router.put('/config', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), updateConfig);
+router.put('/config', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), updateConfig);
 
 // Testing endpoints (Admin only)
 /**
@@ -60,14 +59,14 @@ router.put('/config', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), updateCo
  * Send a test SMS to verify configuration
  * Body: { phoneNumber: string, fromNumber: string }
  */
-router.post('/test/sms', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), testSms);
+router.post('/test/sms', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), testSms);
 
 /**
  * POST /api/v1/reminders/test/email
  * Send a test email to verify configuration
  * Body: { email: string, fromEmail: string }
  */
-router.post('/test/email', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), testEmail);
+router.post('/test/email', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), testEmail);
 
 // Appointment reminder management
 /**
@@ -93,7 +92,7 @@ router.post('/:reminderId/resend', resendReminder);
  * POST /api/v1/reminders/process
  * Manually trigger reminder processing (normally runs via cron)
  */
-router.post('/process', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), processReminders);
+router.post('/process', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), processReminders);
 
 /**
  * POST /api/v1/reminders/retry-failed
@@ -101,7 +100,7 @@ router.post('/process', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), proces
  */
 router.post(
   '/retry-failed',
-  requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']),
+  authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'),
   retryFailedReminders
 );
 
@@ -110,13 +109,13 @@ router.post(
  * GET /api/v1/reminders/jobs/status
  * Get status of reminder cron jobs
  */
-router.get('/jobs/status', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), getJobStatus);
+router.get('/jobs/status', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), getJobStatus);
 
 /**
  * GET /api/v1/reminders/statistics
  * Get reminder statistics
  * Query params: startDate (optional), endDate (optional)
  */
-router.get('/statistics', requireRole(['ADMINISTRATOR', 'PRACTICE_ADMIN']), getStatistics);
+router.get('/statistics', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), getStatistics);
 
 export default router;

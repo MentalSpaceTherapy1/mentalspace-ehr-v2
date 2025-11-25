@@ -32,21 +32,21 @@ router.get(
 router.post(
   '/',
   authenticate,
-  authorize(['ADMINISTRATOR', 'SUPERVISOR']),
+  authorize('ADMINISTRATOR', 'SUPERVISOR'),
   emergencyProtocolController.createEmergencyProtocol
 );
 
 router.put(
   '/:id',
   authenticate,
-  authorize(['ADMINISTRATOR', 'SUPERVISOR']),
+  authorize('ADMINISTRATOR', 'SUPERVISOR'),
   emergencyProtocolController.updateEmergencyProtocol
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize(['ADMINISTRATOR']),
+  authorize('ADMINISTRATOR'),
   emergencyProtocolController.deleteEmergencyProtocol
 );
 

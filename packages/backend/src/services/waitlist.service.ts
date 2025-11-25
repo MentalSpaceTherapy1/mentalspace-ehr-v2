@@ -1,6 +1,6 @@
 import { auditLogger } from '../utils/logger';
 import prisma from './database';
-import { AppointmentStatus } from '@mentalspace/database';
+import { AppointmentStatus, WaitlistStatus } from '@mentalspace/database';
 
 interface WaitlistEntryData {
   clientId: string;
@@ -36,10 +36,10 @@ export async function addToWaitlist(data: WaitlistEntryData) {
         requestedAppointmentType: data.requestedAppointmentType,
         preferredDays: data.preferredDays,
         preferredTimes: data.preferredTimes,
-        priority: data.priority || 'Normal',
+        priority: data.priority || 1,
         notes: data.notes,
         addedBy: data.addedBy,
-        status: 'Active',
+        status: WaitlistStatus.ACTIVE,
       },
     });
 
@@ -264,7 +264,7 @@ export async function offerAppointment(
       notified: true,
       notifiedDate: new Date(),
       notificationMethod: slotData.notificationMethod,
-      status: 'Offered',
+      status: WaitlistStatus.MATCHED,
     },
   });
 
@@ -333,7 +333,7 @@ export async function bookFromWaitlist(
     const updatedEntry = await tx.waitlistEntry.update({
       where: { id: waitlistEntryId },
       data: {
-        status: 'Scheduled',
+        status: WaitlistStatus.MATCHED,
         scheduledAppointmentId: appointment.id,
         scheduledDate: new Date(),
       },
@@ -364,7 +364,7 @@ export async function removeFromWaitlist(
   const entry = await prisma.waitlistEntry.update({
     where: { id: waitlistEntryId },
     data: {
-      status: 'Removed',
+      status: WaitlistStatus.CANCELLED,
       notes: reason,
     },
   });
@@ -420,14 +420,14 @@ export async function joinWaitlist(data: {
     if (data.clinicianId) {
       const clinician = await prisma.user.findUnique({
         where: { id: data.clinicianId },
-        select: { role: true, isActive: true },
+        select: { roles: true, isActive: true },
       });
 
       if (!clinician || !clinician.isActive) {
         throw new Error('Clinician not found or inactive');
       }
 
-      if (clinician.role !== 'CLINICIAN' && clinician.role !== 'ADMIN') {
+      if (!clinician.roles.includes('CLINICIAN') && !clinician.roles.includes('ADMINISTRATOR')) {
         throw new Error('Selected user is not a clinician');
       }
     }

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import * as reminderConfigService from '../services/reminderConfig.service';
 import emailReminderService from '../services/emailReminder.service';
 import logger from '../utils/logger';
+import prisma from '../services/database';
 
 /**
  * Get all reminder configurations
@@ -269,12 +270,25 @@ export const getEmailStatus = async (req: Request, res: Response) => {
  */
 export const sendTestEmail = async (req: Request, res: Response) => {
   try {
-    const user = req.user!;
+    const jwtUser = req.user!;
 
     if (!emailReminderService.isConfigured()) {
       return res.status(400).json({
         success: false,
         message: 'Email service is not configured. Please set SMTP environment variables.',
+      });
+    }
+
+    // Fetch actual user from database to get firstName/lastName
+    const user = await prisma.user.findUnique({
+      where: { id: jwtUser.userId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
       });
     }
 

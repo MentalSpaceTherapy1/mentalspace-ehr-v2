@@ -361,17 +361,19 @@ export const allowClientOrGuardian = async (
       });
     }
 
-    // Check if user is the client themselves
-    const isDirectClient = await prisma.client.findFirst({
-      where: {
-        id: clientId,
-        userId,
-      },
-    });
-
-    if (isDirectClient) {
-      return next();
-    }
+    // TODO: Check if user is the client themselves
+    // Note: Client model doesn't have userId field - clients don't have user accounts
+    // This check may need to be implemented differently if clients can have portal access
+    // const isDirectClient = await prisma.client.findFirst({
+    //   where: {
+    //     id: clientId,
+    //     userId,
+    //   },
+    // });
+    //
+    // if (isDirectClient) {
+    //   return next();
+    // }
 
     // Check if user is a verified guardian
     const hasGuardianAccess = await guardianRelationshipService.checkAccess(

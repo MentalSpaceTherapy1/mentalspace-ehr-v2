@@ -68,9 +68,7 @@ export const policyReviewReminders = cron.schedule('0 9 * * *', async () => {
   } catch (error) {
     console.error('❌ Error in policy review reminders job:', error);
   }
-}, {
-  scheduled: false // Start manually
-});
+}); // TODO: Cron task - call .start() manually to begin
 
 /**
  * Check for incidents requiring follow-up
@@ -136,9 +134,7 @@ export const incidentFollowUpCheck = cron.schedule('0 10 * * *', async () => {
   } catch (error) {
     console.error('❌ Error in incident follow-up check job:', error);
   }
-}, {
-  scheduled: false // Start manually
-});
+}); // TODO: Cron task - call .start() manually to begin
 
 /**
  * Monitor high-severity open incidents
@@ -195,9 +191,7 @@ export const highSeverityIncidentMonitor = cron.schedule('0 */4 * * *', async ()
   } catch (error) {
     console.error('❌ Error in high-severity incident monitor:', error);
   }
-}, {
-  scheduled: false // Start manually
-});
+}); // TODO: Cron task - call .start() manually to begin
 
 /**
  * Generate weekly compliance report
@@ -259,9 +253,7 @@ export const weeklyComplianceReport = cron.schedule('0 8 * * 1', async () => {
   } catch (error) {
     console.error('❌ Error generating weekly compliance report:', error);
   }
-}, {
-  scheduled: false // Start manually
-});
+}); // TODO: Cron task - call .start() manually to begin
 
 /**
  * Start all compliance monitoring jobs

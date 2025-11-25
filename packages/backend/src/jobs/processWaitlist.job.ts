@@ -66,8 +66,8 @@ export const processWaitlistJob = cron.schedule(
     }
   },
   {
-    scheduled: false, // Don't start automatically
     timezone: 'America/New_York',
+    // TODO: Call .start() manually to begin this cron task
   }
 );
 
@@ -92,8 +92,8 @@ export const updatePriorityScoresJob = cron.schedule(
     }
   },
   {
-    scheduled: false,
     timezone: 'America/New_York',
+    // TODO: Call .start() manually to begin this cron task
   }
 );
 

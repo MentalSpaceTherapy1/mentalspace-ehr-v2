@@ -354,7 +354,7 @@ export const getRevenueAnalysis = async (req: Request, res: Response) => {
 
       const stats = providerRevenue.get(appt.clinicianId);
       const hours = (appt.duration || 0) / 60;
-      const revenue = appt.fee || 0;
+      const revenue = Number(appt.chargeAmount) || 0;
 
       stats.totalHours += hours;
       stats.totalRevenue += revenue;
@@ -484,7 +484,7 @@ export const getCancellationPatterns = async (req: Request, res: Response) => {
     }));
 
     // Cancellation timing (how far in advance)
-    const cancelledWithDate = cancelled.filter((a) => a.cancelledDate);
+    const cancelledWithDate = cancelled.filter((a) => a.cancellationDate);
     const timingBuckets = {
       'Same day': 0,
       '1-3 days': 0,
@@ -494,10 +494,10 @@ export const getCancellationPatterns = async (req: Request, res: Response) => {
     };
 
     for (const appt of cancelledWithDate) {
-      if (!appt.cancelledDate) continue;
+      if (!appt.cancellationDate) continue;
 
       const apptDate = new Date(appt.appointmentDate);
-      const cancelDate = new Date(appt.cancelledDate);
+      const cancelDate = new Date(appt.cancellationDate);
       const daysDiff = Math.ceil((apptDate.getTime() - cancelDate.getTime()) / (1000 * 60 * 60 * 24));
 
       if (daysDiff <= 0) timingBuckets['Same day']++;

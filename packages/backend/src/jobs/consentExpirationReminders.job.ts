@@ -166,6 +166,11 @@ async function checkReminderSent(
   consentId: string,
   daysBeforeExpiration: number
 ): Promise<boolean> {
+  // TODO: consentReminderLog model not implemented in Prisma schema
+  // Unable to track sent reminders - will send reminders every time job runs
+  return false; // Always return false so reminders are sent
+
+  /* Commented out until consentReminderLog model is added
   // Check if we have a reminder log for this consent and day window
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -181,6 +186,7 @@ async function checkReminderSent(
   });
 
   return !!log;
+  */
 }
 
 /**
@@ -190,6 +196,11 @@ async function logReminderSent(
   consentId: string,
   daysBeforeExpiration: number
 ) {
+  // TODO: consentReminderLog model not implemented in Prisma schema
+  // Unable to log sent reminders
+  return;
+
+  /* Commented out until consentReminderLog model is added
   await prisma.consentReminderLog.create({
     data: {
       consentId,
@@ -197,6 +208,7 @@ async function logReminderSent(
       sentAt: new Date(),
     },
   });
+  */
 }
 
 /**

@@ -207,7 +207,7 @@ export const getAmendments = async (req: Request, res: Response) => {
       select: {
         id: true,
         clinicianId: true,
-        cosignerId: true,
+        cosignedBy: true,
       },
     });
 
@@ -226,7 +226,7 @@ export const getAmendments = async (req: Request, res: Response) => {
 
     const hasAccess =
       note.clinicianId === userId ||
-      note.cosignerId === userId ||
+      note.cosignedBy === userId ||
       user?.roles.includes('ADMINISTRATOR') ||
       user?.roles.includes('SUPERVISOR');
 
@@ -268,7 +268,7 @@ export const getVersionHistory = async (req: Request, res: Response) => {
       select: {
         id: true,
         clinicianId: true,
-        cosignerId: true,
+        cosignedBy: true,
       },
     });
 
@@ -287,7 +287,7 @@ export const getVersionHistory = async (req: Request, res: Response) => {
 
     const hasAccess =
       note.clinicianId === userId ||
-      note.cosignerId === userId ||
+      note.cosignedBy === userId ||
       user?.roles.includes('ADMINISTRATOR') ||
       user?.roles.includes('SUPERVISOR');
 

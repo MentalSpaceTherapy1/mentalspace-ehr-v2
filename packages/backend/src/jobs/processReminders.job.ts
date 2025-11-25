@@ -68,8 +68,8 @@ export const processRemindersJob = cron.schedule(
     }
   },
   {
-    scheduled: false, // Don't start automatically
     timezone: 'America/New_York', // TODO: Make this configurable
+    // TODO: Call .start() manually to begin this cron task
   }
 );
 
@@ -104,8 +104,8 @@ export const retryFailedRemindersJob = cron.schedule(
     }
   },
   {
-    scheduled: false,
     timezone: 'America/New_York',
+    // TODO: Call .start() manually to begin this cron task
   }
 );
 

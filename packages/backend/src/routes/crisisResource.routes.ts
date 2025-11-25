@@ -44,28 +44,28 @@ router.get(
 router.post(
   '/',
   authenticate,
-  authorize(['ADMINISTRATOR', 'SUPERVISOR']),
+  authorize('ADMINISTRATOR', 'SUPERVISOR'),
   crisisResourceController.createCrisisResource
 );
 
 router.put(
   '/:id',
   authenticate,
-  authorize(['ADMINISTRATOR', 'SUPERVISOR']),
+  authorize('ADMINISTRATOR', 'SUPERVISOR'),
   crisisResourceController.updateCrisisResource
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize(['ADMINISTRATOR']),
+  authorize('ADMINISTRATOR'),
   crisisResourceController.deleteCrisisResource
 );
 
 router.post(
   '/reorder',
   authenticate,
-  authorize(['ADMINISTRATOR', 'SUPERVISOR']),
+  authorize('ADMINISTRATOR', 'SUPERVISOR'),
   crisisResourceController.reorderCrisisResources
 );
 

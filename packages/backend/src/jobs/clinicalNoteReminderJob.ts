@@ -3,6 +3,7 @@ import prisma from '../services/database';
 import emailReminderService from '../services/emailReminder.service';
 import * as reminderConfigService from '../services/reminderConfig.service';
 import logger from '../utils/logger';
+import { NoteStatus } from '@prisma/client';
 
 /**
  * Clinical Note Reminder Job
@@ -12,6 +13,10 @@ import logger from '../utils/logger';
  * - Hourly: Check for due soon and overdue notes
  * - Daily Digest: Send summary at configured time
  * - Sunday Warnings: Friday evening reminders about Sunday lockout
+ *
+ * NOTE: This job currently does NOT track sent reminders because the
+ * ClinicalNoteReminder model is not implemented in the schema. It will
+ * send reminder emails but may send duplicates.
  */
 
 interface NoteWithRelations {
@@ -19,7 +24,7 @@ interface NoteWithRelations {
   noteType: string;
   sessionDate: Date;
   dueDate: Date;
-  status: string;
+  status: NoteStatus;
   clientId: string;
   clinicianId: string;
   client: {
@@ -53,7 +58,7 @@ async function checkDueSoonReminders() {
     const upcomingNotes = await prisma.clinicalNote.findMany({
       where: {
         status: {
-          in: ['DRAFT', 'IN_PROGRESS', 'PENDING_COSIGN'],
+          in: ['DRAFT', 'PENDING_COSIGN', 'RETURNED_FOR_REVISION'],
         },
         dueDate: {
           gte: now,
@@ -106,52 +111,17 @@ async function checkDueSoonReminders() {
           continue;
         }
 
-        // Check if we've already sent this reminder
-        const existingReminder = await prisma.clinicalNoteReminder.findFirst({
-          where: {
-            noteId: note.id,
-            hoursBeforeDue: {
-              gte: hoursUntilDue - 1,
-              lte: hoursUntilDue + 1,
-            },
-            status: 'SENT',
-          },
-        });
-
-        if (existingReminder) {
-          continue;
-        }
-
-        // Create reminder record
-        const reminder = await prisma.clinicalNoteReminder.create({
-          data: {
-            noteId: note.id,
-            recipientUserId: note.clinicianId,
-            recipientEmail: note.clinician.email,
-            reminderType: 'EMAIL',
-            scheduledFor: now,
-            hoursBeforeDue: hoursUntilDue,
-            status: 'PENDING',
-          },
-        });
+        // TODO: Reminder tracking disabled - ClinicalNoteReminder model not implemented
+        // This may result in duplicate reminders being sent
+        // const existingReminder = await prisma.clinicalNoteReminder.findFirst({...});
 
         // Send the email
         const sent = await emailReminderService.sendDueSoonReminder({
           recipientEmail: note.clinician.email,
           recipientName: `${note.clinician.firstName} ${note.clinician.lastName}`,
-          note,
+          note: note as any, // Type assertion - NoteWithRelations simplified interface
           reminderType: 'DUE_SOON',
           hoursRemaining: hoursUntilDue,
-        });
-
-        // Update reminder status
-        await prisma.clinicalNoteReminder.update({
-          where: { id: reminder.id },
-          data: {
-            status: sent ? 'SENT' : 'FAILED',
-            sentAt: sent ? new Date() : null,
-            errorMessage: sent ? null : 'Failed to send email',
-          },
         });
 
         logger.info('Due soon reminder sent', {
@@ -191,7 +161,7 @@ async function checkOverdueReminders() {
     const overdueNotes = await prisma.clinicalNote.findMany({
       where: {
         status: {
-          in: ['DRAFT', 'IN_PROGRESS', 'PENDING_COSIGN'],
+          in: ['DRAFT', 'PENDING_COSIGN', 'RETURNED_FOR_REVISION'],
         },
         dueDate: {
           lt: now,
@@ -234,71 +204,17 @@ async function checkOverdueReminders() {
           (now.getTime() - note.dueDate.getTime()) / (1000 * 60 * 60)
         );
 
-        // Check how many overdue reminders we've sent
-        const overdueRemindersCount = await prisma.clinicalNoteReminder.count({
-          where: {
-            noteId: note.id,
-            hoursBeforeDue: 0,
-            status: 'SENT',
-          },
-        });
-
-        // Stop if we've reached the max
-        if (overdueRemindersCount >= config.maxOverdueReminders) {
-          continue;
-        }
-
-        // Check if enough time has passed since last reminder
-        const lastReminder = await prisma.clinicalNoteReminder.findFirst({
-          where: {
-            noteId: note.id,
-            status: 'SENT',
-          },
-          orderBy: {
-            sentAt: 'desc',
-          },
-        });
-
-        if (lastReminder && lastReminder.sentAt) {
-          const hoursSinceLastReminder = Math.floor(
-            (now.getTime() - lastReminder.sentAt.getTime()) / (1000 * 60 * 60)
-          );
-
-          if (hoursSinceLastReminder < config.overdueReminderFrequency) {
-            continue;
-          }
-        }
-
-        // Create reminder record
-        const reminder = await prisma.clinicalNoteReminder.create({
-          data: {
-            noteId: note.id,
-            recipientUserId: note.clinicianId,
-            recipientEmail: note.clinician.email,
-            reminderType: 'EMAIL',
-            scheduledFor: now,
-            hoursBeforeDue: 0, // 0 means overdue
-            status: 'PENDING',
-          },
-        });
+        // TODO: Reminder tracking disabled - ClinicalNoteReminder model not implemented
+        // Cannot track reminder count or frequency without the model
+        // This may result in duplicate reminders
 
         // Send overdue reminder
         const sent = await emailReminderService.sendOverdueReminder({
           recipientEmail: note.clinician.email,
           recipientName: `${note.clinician.firstName} ${note.clinician.lastName}`,
-          note,
+          note: note as any, // Type assertion - NoteWithRelations simplified interface
           reminderType: 'OVERDUE',
           hoursOverdue,
-        });
-
-        // Update reminder status
-        await prisma.clinicalNoteReminder.update({
-          where: { id: reminder.id },
-          data: {
-            status: sent ? 'SENT' : 'FAILED',
-            sentAt: sent ? new Date() : null,
-            errorMessage: sent ? null : 'Failed to send email',
-          },
         });
 
         logger.info('Overdue reminder sent', {
@@ -355,43 +271,18 @@ async function sendEscalationReminder(
     });
 
     for (const recipient of recipients) {
-      // Check if we've already sent escalation for this note to this recipient
-      const existingEscalation = await prisma.clinicalNoteReminder.findFirst({
-        where: {
-          noteId: note.id,
-          recipientUserId: recipient.id,
-          hoursBeforeDue: -999, // Use -999 to indicate escalation
-          status: 'SENT',
-        },
-      });
-
-      if (existingEscalation) {
-        continue;
-      }
+      // TODO: Escalation tracking disabled - ClinicalNoteReminder model not implemented
+      // This may result in duplicate escalation emails
 
       const sent = await emailReminderService.sendEscalationReminder({
         recipientEmail: recipient.email,
         recipientName: `${recipient.firstName} ${recipient.lastName}`,
-        note,
+        note: note as any, // Type assertion - NoteWithRelations simplified interface
         reminderType: 'ESCALATION',
         hoursOverdue,
       });
 
       if (sent) {
-        // Record the escalation
-        await prisma.clinicalNoteReminder.create({
-          data: {
-            noteId: note.id,
-            recipientUserId: recipient.id,
-            recipientEmail: recipient.email,
-            reminderType: 'EMAIL',
-            scheduledFor: new Date(),
-            hoursBeforeDue: -999, // Escalation marker
-            status: 'SENT',
-            sentAt: new Date(),
-          },
-        });
-
         logger.info('Escalation reminder sent', {
           noteId: note.id,
           recipientId: recipient.id,
@@ -431,7 +322,7 @@ async function checkSundayWarnings() {
     const pendingNotes = await prisma.clinicalNote.findMany({
       where: {
         status: {
-          in: ['DRAFT', 'IN_PROGRESS', 'PENDING_COSIGN'],
+          in: ['DRAFT', 'PENDING_COSIGN', 'RETURNED_FOR_REVISION'],
         },
       },
       include: {
@@ -465,43 +356,17 @@ async function checkSundayWarnings() {
           continue;
         }
 
-        // Check if we've already sent Sunday warning for this note
-        const existingWarning = await prisma.clinicalNoteReminder.findFirst({
-          where: {
-            noteId: note.id,
-            hoursBeforeDue: -777, // Use -777 to indicate Sunday warning
-            status: 'SENT',
-            sentAt: {
-              gte: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7), // Within last week
-            },
-          },
-        });
-
-        if (existingWarning) {
-          continue;
-        }
+        // TODO: Sunday warning tracking disabled - ClinicalNoteReminder model not implemented
+        // This may result in duplicate Sunday warning emails
 
         const sent = await emailReminderService.sendSundayWarningReminder({
           recipientEmail: note.clinician.email,
           recipientName: `${note.clinician.firstName} ${note.clinician.lastName}`,
-          note,
+          note: note as any, // Type assertion - NoteWithRelations simplified interface
           reminderType: 'SUNDAY_WARNING',
         });
 
         if (sent) {
-          await prisma.clinicalNoteReminder.create({
-            data: {
-              noteId: note.id,
-              recipientUserId: note.clinicianId,
-              recipientEmail: note.clinician.email,
-              reminderType: 'EMAIL',
-              scheduledFor: now,
-              hoursBeforeDue: -777, // Sunday warning marker
-              status: 'SENT',
-              sentAt: new Date(),
-            },
-          });
-
           logger.info('Sunday warning sent', {
             noteId: note.id,
             clinicianId: note.clinicianId,
@@ -545,7 +410,7 @@ async function sendDailyDigests() {
         clinicalNotesCreated: {
           where: {
             status: {
-              in: ['DRAFT', 'IN_PROGRESS', 'PENDING_COSIGN'],
+              in: ['DRAFT', 'PENDING_COSIGN', 'RETURNED_FOR_REVISION'],
             },
           },
           include: {

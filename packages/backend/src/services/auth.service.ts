@@ -53,6 +53,7 @@ export class AuthService {
 
     // Generate tokens
     const tokens = generateTokenPair({
+      id: user.id,
       userId: user.id,
       email: user.email,
       roles: user.roles,
@@ -187,6 +188,7 @@ export class AuthService {
 
       // Generate temporary token for MFA verification
       const tempToken = generateTokenPair({
+        id: user.id,
         userId: user.id,
         email: user.email,
         roles: user.roles,
@@ -526,6 +528,7 @@ export class AuthService {
 
       // Generate new token pair
       const tokens = generateTokenPair({
+        id: user.id,
         userId: user.id,
         email: user.email,
         roles: user.roles,

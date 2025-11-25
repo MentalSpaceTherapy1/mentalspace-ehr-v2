@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import {
   requireGuardianAccess,
   requireGuardianPermission,
@@ -8,6 +8,7 @@ import {
   allowClientOrGuardian,
 } from '../middleware/guardian-access.middleware';
 import * as guardianController from '../controllers/guardian.controller.new';
+// @ts-ignore - multer types may not be installed
 import multer from 'multer';
 
 const router = express.Router();
@@ -46,7 +47,7 @@ const upload = multer({
  */
 router.post(
   '/relationship',
-  authenticateToken,
+  authenticate,
   validateMinorStatus,
   guardianController.requestGuardianAccess
 );
@@ -57,7 +58,7 @@ router.post(
  */
 router.get(
   '/my-minors',
-  authenticateToken,
+  authenticate,
   guardianController.getMyMinors
 );
 
@@ -67,7 +68,7 @@ router.get(
  */
 router.get(
   '/minors/:minorId/profile',
-  authenticateToken,
+  authenticate,
   requireGuardianAccess,
   requireGuardianPermission('view'),
   guardianController.getMinorProfile
@@ -79,7 +80,7 @@ router.get(
  */
 router.get(
   '/minors/:minorId/appointments',
-  authenticateToken,
+  authenticate,
   requireGuardianAccess,
   requireGuardianPermission('view'),
   guardianController.getMinorAppointments
@@ -91,7 +92,7 @@ router.get(
  */
 router.post(
   '/minors/:minorId/appointments',
-  authenticateToken,
+  authenticate,
   requireGuardianAccess,
   requireGuardianPermission('schedule'),
   guardianController.scheduleMinorAppointment
@@ -103,7 +104,7 @@ router.post(
  */
 router.get(
   '/minors/:minorId/messages',
-  authenticateToken,
+  authenticate,
   requireGuardianAccess,
   requireGuardianPermission('communicate'),
   guardianController.getMinorMessages
@@ -115,7 +116,7 @@ router.get(
  */
 router.post(
   '/minors/:minorId/messages',
-  authenticateToken,
+  authenticate,
   requireGuardianAccess,
   requireGuardianPermission('communicate'),
   guardianController.sendMinorMessage
@@ -127,7 +128,7 @@ router.post(
  */
 router.post(
   '/relationship/:relationshipId/documents',
-  authenticateToken,
+  authenticate,
   upload.single('document'),
   guardianController.uploadVerificationDocument
 );
@@ -142,7 +143,7 @@ router.post(
  */
 router.get(
   '/admin/pending',
-  authenticateToken,
+  authenticate,
   // TODO: Add admin role check middleware
   guardianController.getPendingVerifications
 );
@@ -153,7 +154,7 @@ router.get(
  */
 router.get(
   '/admin/relationships',
-  authenticateToken,
+  authenticate,
   // TODO: Add admin role check middleware
   guardianController.getAllRelationships
 );
@@ -164,7 +165,7 @@ router.get(
  */
 router.get(
   '/admin/:id',
-  authenticateToken,
+  authenticate,
   // TODO: Add admin role check middleware
   guardianController.getRelationshipById
 );
@@ -175,7 +176,7 @@ router.get(
  */
 router.put(
   '/admin/:id/verify',
-  authenticateToken,
+  authenticate,
   // TODO: Add admin role check middleware
   guardianController.verifyRelationship
 );
@@ -186,7 +187,7 @@ router.put(
  */
 router.put(
   '/admin/:id/reject',
-  authenticateToken,
+  authenticate,
   // TODO: Add admin role check middleware
   guardianController.rejectRelationship
 );
@@ -197,7 +198,7 @@ router.put(
  */
 router.put(
   '/admin/:id/revoke',
-  authenticateToken,
+  authenticate,
   // TODO: Add admin role check middleware
   guardianController.revokeRelationship
 );
@@ -208,7 +209,7 @@ router.put(
  */
 router.put(
   '/admin/:id',
-  authenticateToken,
+  authenticate,
   // TODO: Add admin role check middleware
   guardianController.updateGuardianRelationship
 );
@@ -219,7 +220,7 @@ router.put(
  */
 router.post(
   '/admin/document-url',
-  authenticateToken,
+  authenticate,
   // TODO: Add admin role check middleware
   guardianController.getDocumentUrl
 );
@@ -230,7 +231,7 @@ router.post(
  */
 router.get(
   '/admin/audit-log',
-  authenticateToken,
+  authenticate,
   // TODO: Add admin role check middleware
   guardianController.getGuardianAuditLog
 );
@@ -245,7 +246,7 @@ router.get(
  */
 router.get(
   '/client/:clientId',
-  authenticateToken,
+  authenticate,
   guardianController.getClientGuardians
 );
 
@@ -255,7 +256,7 @@ router.get(
  */
 router.get(
   '/:id',
-  authenticateToken,
+  authenticate,
   guardianController.getGuardianById
 );
 
@@ -265,7 +266,7 @@ router.get(
  */
 router.post(
   '/',
-  authenticateToken,
+  authenticate,
   guardianController.createGuardian
 );
 
@@ -275,7 +276,7 @@ router.post(
  */
 router.put(
   '/:id',
-  authenticateToken,
+  authenticate,
   guardianController.updateGuardian
 );
 
@@ -285,7 +286,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authenticateToken,
+  authenticate,
   guardianController.deleteGuardian
 );
 

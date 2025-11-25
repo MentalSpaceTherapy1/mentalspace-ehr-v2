@@ -3,12 +3,12 @@ import symptomTrackingService from './symptom-tracking.service';
 import sleepTrackingService from './sleep-tracking.service';
 import exerciseTrackingService from './exercise-tracking.service';
 
-interface DateRange {
+export interface DateRange {
   startDate: Date;
   endDate: Date;
 }
 
-interface CorrelationData {
+export interface CorrelationData {
   metric1: string;
   metric2: string;
   correlation: number;
@@ -16,7 +16,7 @@ interface CorrelationData {
   description: string;
 }
 
-interface Pattern {
+export interface Pattern {
   type: string;
   description: string;
   confidence: number;

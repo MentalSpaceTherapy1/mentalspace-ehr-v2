@@ -2,7 +2,7 @@ import logger from '../utils/logger';
 import { auditLogger } from '../utils/logger';
 import prisma from './database';
 
-interface NoShowFeatures {
+export interface NoShowFeatures {
   noShowRate: number;
   cancellationRate: number;
   isNewClient: boolean;
@@ -14,7 +14,7 @@ interface NoShowFeatures {
   riskFactors: string[];
 }
 
-interface RiskPrediction {
+export interface RiskPrediction {
   riskScore: number;
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   riskFactors: string[];

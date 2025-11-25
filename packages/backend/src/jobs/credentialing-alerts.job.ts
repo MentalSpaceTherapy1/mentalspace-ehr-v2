@@ -35,8 +35,8 @@ export const dailyExpirationAlertJob = cron.schedule(
     }
   },
   {
-    scheduled: false, // Start manually
     timezone: 'America/New_York', // Adjust to your timezone
+    // TODO: Call .start() manually to begin this cron task
   }
 );
 
@@ -89,8 +89,8 @@ export const monthlyScreeningJob = cron.schedule(
     }
   },
   {
-    scheduled: false, // Start manually
     timezone: 'America/New_York', // Adjust to your timezone
+    // TODO: Call .start() manually to begin this cron task
   }
 );
 
@@ -127,8 +127,8 @@ export const weeklyComplianceReportJob = cron.schedule(
     }
   },
   {
-    scheduled: false, // Start manually
     timezone: 'America/New_York', // Adjust to your timezone
+    // TODO: Call .start() manually to begin this cron task
   }
 );
 

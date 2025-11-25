@@ -14,9 +14,15 @@ interface Charge {
   cptCode?: string;
   diagnosis?: string;
   chargeStatus: string;
+  advancedMDChargeId?: string;
+  advancedMDVisitId?: string;
+  syncStatus?: string;
+  syncError?: string;
+  lastSyncAttempt?: string;
   client: {
     firstName: string;
     lastName: string;
+    advancedMDPatientId?: string;
   };
 }
 
@@ -53,6 +59,23 @@ export default function ChargesPage() {
     },
   });
 
+  // Sync to AdvancedMD mutation
+  const syncToAMDMutation = useMutation({
+    mutationFn: async (chargeId: string) => {
+      const response = await api.post(`/advancedmd/billing/charges/${chargeId}/submit`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['charges'] });
+      alert(`Charge successfully submitted to AdvancedMD!\nAMD Charge ID: ${data.amdChargeId}`);
+    },
+    onError: (error: any) => {
+      const errorMsg = error.response?.data?.error || 'Failed to sync charge';
+      const validationErrors = error.response?.data?.validationErrors?.join(', ') || '';
+      alert(`Failed to sync charge to AdvancedMD:\n${errorMsg}${validationErrors ? '\n\nValidation Errors:\n' + validationErrors : ''}`);
+    },
+  });
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       'Pending': 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -63,6 +86,31 @@ export default function ChargesPage() {
       'Void': 'bg-gray-100 text-gray-800 border-gray-300',
     };
     return colors[status] || 'bg-gray-100 text-gray-800 border-gray-300';
+  };
+
+  const getSyncStatusBadge = (charge: Charge) => {
+    if (charge.advancedMDChargeId) {
+      return (
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 border border-green-300">
+          ✓ Synced
+        </span>
+      );
+    }
+    if (charge.syncError) {
+      return (
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 border border-red-300" title={charge.syncError}>
+          ✗ Error
+        </span>
+      );
+    }
+    if (charge.syncStatus === 'pending') {
+      return (
+        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">
+          Not Synced
+        </span>
+      );
+    }
+    return null;
   };
 
   if (isLoading) {
@@ -158,6 +206,9 @@ export default function ChargesPage() {
                     Status
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    AMD Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -192,6 +243,9 @@ export default function ChargesPage() {
                           {charge.chargeStatus}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getSyncStatusBadge(charge)}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center gap-2">
                           <button
@@ -200,6 +254,20 @@ export default function ChargesPage() {
                           >
                             View
                           </button>
+                          {!charge.advancedMDChargeId && charge.chargeStatus === 'Pending' && (
+                            <button
+                              onClick={() => {
+                                if (confirm('Submit this charge to AdvancedMD?')) {
+                                  syncToAMDMutation.mutate(charge.id);
+                                }
+                              }}
+                              disabled={syncToAMDMutation.isPending || !charge.client.advancedMDPatientId}
+                              className="text-blue-600 hover:text-blue-900 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={!charge.client.advancedMDPatientId ? 'Patient must be synced to AMD first' : 'Sync to AdvancedMD'}
+                            >
+                              {syncToAMDMutation.isPending ? 'Syncing...' : 'Sync AMD'}
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               if (confirm('Are you sure you want to void this charge?')) {
@@ -458,8 +526,8 @@ function ChargeDetailModal({ charge, onClose }: { charge: Charge; onClose: () =>
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 rounded-t-2xl">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 p-6 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-white">Charge Details</h2>
             <button onClick={onClose} className="text-white hover:text-gray-200">
@@ -470,45 +538,90 @@ function ChargeDetailModal({ charge, onClose }: { charge: Charge; onClose: () =>
           </div>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm font-semibold text-gray-600">Client</div>
-              <div className="text-lg font-bold text-gray-800">
-                {charge.client.firstName} {charge.client.lastName}
+        <div className="p-6 space-y-6">
+          {/* Billing Information */}
+          <div>
+            <h3 className="text-lg font-bold text-gray-800 mb-3">Billing Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-semibold text-gray-600">Client</div>
+                <div className="text-lg font-bold text-gray-800">
+                  {charge.client.firstName} {charge.client.lastName}
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-600">Service Date</div>
-              <div className="text-lg font-bold text-gray-800">
-                {new Date(charge.serviceDate).toLocaleDateString()}
+              <div>
+                <div className="text-sm font-semibold text-gray-600">Service Date</div>
+                <div className="text-lg font-bold text-gray-800">
+                  {new Date(charge.serviceDate).toLocaleDateString()}
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-600">CPT Code</div>
-              <div className="text-lg font-bold text-gray-800">{charge.cptCode || '-'}</div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-600">Diagnosis</div>
-              <div className="text-lg font-bold text-gray-800">{charge.diagnosis || '-'}</div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-600">Charge Amount</div>
-              <div className="text-lg font-bold text-gray-800">${charge.chargeAmount.toFixed(2)}</div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-600">Payment Amount</div>
-              <div className="text-lg font-bold text-green-600">${(charge.paymentAmount || 0).toFixed(2)}</div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-600">Adjustment Amount</div>
-              <div className="text-lg font-bold text-amber-600">${(charge.adjustmentAmount || 0).toFixed(2)}</div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-600">Balance</div>
-              <div className="text-lg font-bold text-red-600">${balance.toFixed(2)}</div>
+              <div>
+                <div className="text-sm font-semibold text-gray-600">CPT Code</div>
+                <div className="text-lg font-bold text-gray-800">{charge.cptCode || '-'}</div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-600">Diagnosis</div>
+                <div className="text-lg font-bold text-gray-800">{charge.diagnosis || '-'}</div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-600">Charge Amount</div>
+                <div className="text-lg font-bold text-gray-800">${charge.chargeAmount.toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-600">Payment Amount</div>
+                <div className="text-lg font-bold text-green-600">${(charge.paymentAmount || 0).toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-600">Adjustment Amount</div>
+                <div className="text-lg font-bold text-amber-600">${(charge.adjustmentAmount || 0).toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-600">Balance</div>
+                <div className="text-lg font-bold text-red-600">${balance.toFixed(2)}</div>
+              </div>
             </div>
           </div>
+
+          {/* AdvancedMD Sync Information */}
+          {(charge.advancedMDChargeId || charge.syncError || charge.lastSyncAttempt) && (
+            <div className="border-t-2 border-gray-200 pt-4">
+              <h3 className="text-lg font-bold text-gray-800 mb-3">AdvancedMD Sync Status</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {charge.advancedMDChargeId && (
+                  <div>
+                    <div className="text-sm font-semibold text-gray-600">AMD Charge ID</div>
+                    <div className="text-lg font-bold text-green-600">{charge.advancedMDChargeId}</div>
+                  </div>
+                )}
+                {charge.advancedMDVisitId && (
+                  <div>
+                    <div className="text-sm font-semibold text-gray-600">AMD Visit ID</div>
+                    <div className="text-lg font-bold text-blue-600">{charge.advancedMDVisitId}</div>
+                  </div>
+                )}
+                {charge.syncStatus && (
+                  <div>
+                    <div className="text-sm font-semibold text-gray-600">Sync Status</div>
+                    <div className="text-lg font-bold text-gray-800 capitalize">{charge.syncStatus}</div>
+                  </div>
+                )}
+                {charge.lastSyncAttempt && (
+                  <div>
+                    <div className="text-sm font-semibold text-gray-600">Last Sync Attempt</div>
+                    <div className="text-sm text-gray-800">{new Date(charge.lastSyncAttempt).toLocaleString()}</div>
+                  </div>
+                )}
+                {charge.syncError && (
+                  <div className="col-span-2">
+                    <div className="text-sm font-semibold text-red-600">Sync Error</div>
+                    <div className="text-sm text-red-800 bg-red-50 p-3 rounded-lg border border-red-200 mt-1">
+                      {charge.syncError}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="pt-4">
             <button

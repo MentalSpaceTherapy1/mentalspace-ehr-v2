@@ -3,6 +3,7 @@ import config from '../config';
 import { UnauthorizedError } from './errors';
 
 export interface JwtPayload {
+  id: string; // User ID (alias for userId for backward compatibility)
   userId: string;
   email: string;
   roles: string[]; // Support multiple roles

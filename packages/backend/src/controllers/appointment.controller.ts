@@ -402,15 +402,16 @@ export const createAppointment = async (req: Request, res: Response) => {
         },
       });
 
+      // TODO: Re-enable when AppointmentClient model is added to schema for group appointments
       // If group appointment, create AppointmentClient records
-      if (validatedData.isGroupAppointment && validatedData.clientIds) {
-        await tx.appointmentClient.createMany({
-          data: validatedData.clientIds.map((clientId, index) => ({
-            appointmentId: newAppointment.id,
-            clientId,
-            isPrimary: index === 0, // First client is primary for billing
-          })),
-        });
+      // if (validatedData.isGroupAppointment && validatedData.clientIds) {
+      //   await tx.appointmentClient.createMany({
+      //     data: validatedData.clientIds.map((clientId, index) => ({
+      //       appointmentId: newAppointment.id,
+      //       clientId,
+      //       isPrimary: index === 0, // First client is primary for billing
+      //     })),
+      //   });
 
         // Fetch appointment with all clients for response
         return await tx.appointment.findUnique({
@@ -432,23 +433,22 @@ export const createAppointment = async (req: Request, res: Response) => {
                 title: true,
               },
             },
-            appointmentClients: {
-              include: {
-                client: {
-                  select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    email: true,
-                  },
-                },
-              },
-            },
+            // appointmentClients: {
+            //   include: {
+            //     client: {
+            //       select: {
+            //         id: true,
+            //         firstName: true,
+            //         lastName: true,
+            //         email: true,
+            //       },
+            //     },
+            //   },
           },
         });
-      }
+      // }
 
-      return newAppointment;
+      // return newAppointment;
     });
 
     // Audit log
@@ -1700,7 +1700,7 @@ export const bulkCancelAppointments = async (req: Request, res: Response) => {
         status: 'CANCELLED',
         cancellationReason: cancellationReason || 'Bulk cancellation',
         cancellationNotes,
-        cancelledDate: new Date(),
+        cancellationDate: new Date(),
         statusUpdatedDate: new Date(),
         statusUpdatedBy: userId,
       },

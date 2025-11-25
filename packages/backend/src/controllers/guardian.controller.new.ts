@@ -60,8 +60,8 @@ export const requestGuardianAccess = async (req: Request, res: Response) => {
     const validatedData = createRelationshipSchema.parse(req.body);
 
     const relationship = await guardianRelationshipService.createGuardianRelationship({
-      guardianId: userId,
       ...validatedData,
+      guardianId: userId,
     });
 
     res.status(201).json({
@@ -139,11 +139,10 @@ export const getMinorProfile = async (req: Request, res: Response) => {
         medicalRecordNumber: true,
         dateOfBirth: true,
         email: true,
-        phoneNumber: true,
-        address: true,
-        city: true,
-        state: true,
-        zipCode: true,
+        primaryPhone: true,
+        addressCity: true,
+        addressState: true,
+        addressZipCode: true,
         // Based on accessLevel, we might filter what's returned
       },
     });
@@ -168,7 +167,7 @@ export const getMinorProfile = async (req: Request, res: Response) => {
         medicalRecordNumber: client.medicalRecordNumber,
         dateOfBirth: client.dateOfBirth,
         email: client.email,
-        phoneNumber: client.phoneNumber,
+        phoneNumber: client.primaryPhone,
       } as any;
     }
 
@@ -217,18 +216,18 @@ export const getMinorAppointments = async (req: Request, res: Response) => {
             id: true,
             firstName: true,
             lastName: true,
-            specialization: true,
+            specialties: true,
           },
         },
-        appointmentType: {
+        appointmentTypeObj: {
           select: {
             id: true,
-            name: true,
-            duration: true,
+            typeName: true,
+            defaultDuration: true,
           },
         },
       },
-      orderBy: { startTime: 'desc' },
+      orderBy: { appointmentDate: 'desc' },
     });
 
     res.status(200).json({
@@ -262,9 +261,9 @@ export const scheduleMinorAppointment = async (req: Request, res: Response) => {
         clientId: minorId,
         clinicianId,
         appointmentTypeId,
-        startTime: new Date(startTime),
+        appointmentDate: new Date(startTime),
         status: 'SCHEDULED',
-        notes: notes || `Scheduled by guardian: ${(req as any).user?.userId}`,
+        // notes: notes || `Scheduled by guardian: ${(req as any).user?.userId}`, // TODO: notes field doesn't exist in Appointment model
         createdBy: (req as any).user?.userId,
       },
       include: {
@@ -275,11 +274,11 @@ export const scheduleMinorAppointment = async (req: Request, res: Response) => {
             lastName: true,
           },
         },
-        appointmentType: {
+        appointmentTypeObj: {
           select: {
             id: true,
-            name: true,
-            duration: true,
+            typeName: true,
+            defaultDuration: true,
           },
         },
       },
@@ -370,8 +369,9 @@ export const uploadVerificationDocument = async (req: Request, res: Response) =>
   try {
     const { relationshipId } = req.params;
     const userId = (req as any).user?.userId;
+    const file = (req as any).file;
 
-    if (!req.file) {
+    if (!file) {
       return res.status(400).json({
         success: false,
         message: 'No file uploaded',
@@ -381,10 +381,10 @@ export const uploadVerificationDocument = async (req: Request, res: Response) =>
     const documentMetadata = await documentUploadService.uploadDocument({
       relationshipId,
       file: {
-        buffer: req.file.buffer,
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
+        buffer: file.buffer,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
       },
       uploadedBy: userId,
       documentType: req.body.documentType || 'OTHER',

@@ -86,8 +86,7 @@ import {
   getAttendanceReport,
   getFinancialReport,
   getVendorReport,
-  getPracticeManagementDashboard,
-  getAuditTrailReport
+  getPracticeManagementDashboard
 } from '../controllers/reports.controller';
 
 const router = Router();

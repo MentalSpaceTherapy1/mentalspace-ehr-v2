@@ -52,4 +52,4 @@ export const generateCsrfToken = generateToken;
 /**
  * Error handler for CSRF token errors
  */
-export const csrfErrorHandler = invalidCsrfTokenError;
+export const csrfErrorHandler: typeof invalidCsrfTokenError = invalidCsrfTokenError;

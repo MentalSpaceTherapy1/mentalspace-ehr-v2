@@ -168,7 +168,7 @@ export const getNoteSignatures = async (req: Request, res: Response) => {
       select: {
         id: true,
         clinicianId: true,
-        cosignerId: true,
+        cosignedBy: true, // Field name is cosignedBy, not cosignerId
         appointment: {
           select: { clientId: true },
         },
@@ -190,7 +190,7 @@ export const getNoteSignatures = async (req: Request, res: Response) => {
 
     const hasAccess =
       note.clinicianId === userId ||
-      note.cosignerId === userId ||
+      note.cosignedBy === userId ||
       user?.roles.includes('ADMINISTRATOR') ||
       user?.roles.includes('SUPERVISOR');
 

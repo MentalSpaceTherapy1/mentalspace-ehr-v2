@@ -46,31 +46,31 @@ async function getReportData(reportId: string, reportType: string, req: Request)
 
   switch (reportType) {
     case 'revenue-by-clinician':
-      result = await reportsController.getRevenueByClinicianReport(mockReq as Request, mockRes as Response);
+      result = await reportsController.getRevenueByClinicianReport(mockReq as unknown as Request, mockRes as Response);
       break;
     case 'revenue-by-cpt':
-      result = await reportsController.getRevenueByCPTReport(mockReq as Request, mockRes as Response);
+      result = await reportsController.getRevenueByCPTReport(mockReq as unknown as Request, mockRes as Response);
       break;
     case 'revenue-by-payer':
-      result = await reportsController.getRevenueByPayerReport(mockReq as Request, mockRes as Response);
+      result = await reportsController.getRevenueByPayerReport(mockReq as unknown as Request, mockRes as Response);
       break;
     case 'payment-collection':
-      result = await reportsController.getPaymentCollectionReport(mockReq as Request, mockRes as Response);
+      result = await reportsController.getPaymentCollectionReport(mockReq as unknown as Request, mockRes as Response);
       break;
     case 'kvr-analysis':
-      result = await reportsController.getKVRAnalysisReport(mockReq as Request, mockRes as Response);
+      result = await reportsController.getKVRAnalysisReport(mockReq as unknown as Request, mockRes as Response);
       break;
     case 'sessions-per-day':
-      result = await reportsController.getSessionsPerDayReport(mockReq as Request, mockRes as Response);
+      result = await reportsController.getSessionsPerDayReport(mockReq as unknown as Request, mockRes as Response);
       break;
     case 'unsigned-notes':
-      result = await reportsController.getUnsignedNotesReport(mockReq as Request, mockRes as Response);
+      result = await reportsController.getUnsignedNotesReport(mockReq as unknown as Request, mockRes as Response);
       break;
     case 'missing-treatment-plans':
-      result = await reportsController.getMissingTreatmentPlansReport(mockReq as Request, mockRes as Response);
+      result = await reportsController.getMissingTreatmentPlansReport(mockReq as unknown as Request, mockRes as Response);
       break;
     case 'client-demographics':
-      result = await reportsController.getClientDemographicsReport(mockReq as Request, mockRes as Response);
+      result = await reportsController.getClientDemographicsReport(mockReq as unknown as Request, mockRes as Response);
       break;
     default:
       throw new Error(`Unknown report type: ${reportType}`);
@@ -276,8 +276,8 @@ export async function bulkExportReports(req: Request, res: Response) {
     await archive.finalize();
 
     // Wait for output stream to finish
-    await new Promise((resolve, reject) => {
-      output.on('close', resolve);
+    await new Promise<void>((resolve, reject) => {
+      output.on('close', () => resolve());
       output.on('error', reject);
     });
 
@@ -323,14 +323,18 @@ export async function exportDashboard(req: Request, res: Response) {
 
     // Get dashboard data (quick stats)
     const reportsController = await import('./reports.controller');
+    let statsData: any;
     const mockRes: any = {
-      json: (data: any) => data
+      json: (data: any) => {
+        statsData = data;
+        return data;
+      }
     };
 
-    const quickStats = await reportsController.getReportQuickStats(req, mockRes as Response);
+    await reportsController.getReportQuickStats(req, mockRes as Response);
 
     // Generate PDF
-    const result = await exportDashboardToPDF(dashboardId, quickStats.data);
+    const result = await exportDashboardToPDF(dashboardId, statsData.data);
 
     res.json({
       success: true,

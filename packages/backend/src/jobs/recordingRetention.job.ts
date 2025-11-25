@@ -25,6 +25,11 @@ const GRACE_PERIOD_DAYS = 90; // Keep for 90 days after scheduled deletion
  * Send warnings to practice administrators
  */
 async function processUpcomingDeletions() {
+  // TODO: sessionRecording model not implemented in Prisma schema
+  logger.warn('processUpcomingDeletions skipped - sessionRecording model not available');
+  return 0;
+
+  /* Commented out until sessionRecording model is added
   try {
     const warningDate = new Date();
     warningDate.setDate(warningDate.getDate() + DAYS_BEFORE_WARNING);
@@ -90,12 +95,18 @@ async function processUpcomingDeletions() {
     });
     throw error;
   }
+  */
 }
 
 /**
  * Archive recordings past retention date
  */
 async function archiveExpiredRecordings() {
+  // TODO: sessionRecording model not implemented in Prisma schema
+  logger.warn('archiveExpiredRecordings skipped - sessionRecording model not available');
+  return 0;
+
+  /* Commented out until sessionRecording model is added
   try {
     const now = new Date();
 
@@ -155,12 +166,18 @@ async function archiveExpiredRecordings() {
     });
     throw error;
   }
+  */
 }
 
 /**
  * Permanently delete recordings past grace period
  */
 async function deleteRecordingsAfterGracePeriod() {
+  // TODO: sessionRecording model not implemented in Prisma schema
+  logger.warn('deleteRecordingsAfterGracePeriod skipped - sessionRecording model not available');
+  return 0;
+
+  /* Commented out until sessionRecording model is added
   try {
     const gracePeriodEnd = new Date();
     gracePeriodEnd.setDate(gracePeriodEnd.getDate() - GRACE_PERIOD_DAYS);
@@ -209,12 +226,18 @@ async function deleteRecordingsAfterGracePeriod() {
     });
     throw error;
   }
+  */
 }
 
 /**
  * Clean up failed or stuck recordings
  */
 async function cleanupFailedRecordings() {
+  // TODO: sessionRecording model not implemented in Prisma schema
+  logger.warn('cleanupFailedRecordings skipped - sessionRecording model not available');
+  return 0;
+
+  /* Commented out until sessionRecording model is added
   try {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -265,117 +288,52 @@ async function cleanupFailedRecordings() {
     });
     throw error;
   }
+  */
 }
 
 /**
  * Main retention job execution
+ *
+ * TODO: Re-enable when sessionRecording model is added to schema
  */
 export async function runRetentionJob() {
-  try {
-    logger.info('Starting recording retention job');
+  logger.warn('Recording retention job skipped - sessionRecording model not available');
 
-    const startTime = Date.now();
-
-    // Run all retention tasks
-    const [warningCount, archiveCount, deleteCount, cleanupCount] = await Promise.all([
-      processUpcomingDeletions(),
-      archiveExpiredRecordings(),
-      deleteRecordingsAfterGracePeriod(),
-      cleanupFailedRecordings(),
-    ]);
-
-    const duration = Date.now() - startTime;
-
-    logger.info('Recording retention job completed', {
-      duration,
-      warnings: warningCount,
-      archived: archiveCount,
-      deleted: deleteCount,
-      cleaned: cleanupCount,
-    });
-
-    return {
-      success: true,
-      duration,
-      warnings: warningCount,
-      archived: archiveCount,
-      deleted: deleteCount,
-      cleaned: cleanupCount,
-    };
-  } catch (error: any) {
-    logger.error('Recording retention job failed', {
-      error: error.message,
-      stack: error.stack,
-    });
-    throw error;
-  }
+  return {
+    success: false,
+    message: 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED',
+    duration: 0,
+    warnings: 0,
+    archived: 0,
+    deleted: 0,
+    cleaned: 0,
+  };
 }
 
 /**
  * Schedule the retention job
  * Runs daily at 2 AM
+ *
+ * TODO: Re-enable when sessionRecording model is added to schema
  */
 export function scheduleRetentionJob() {
-  // Cron format: minute hour day month dayOfWeek
-  // Run at 2:00 AM every day
-  const schedule = '0 2 * * *';
-
-  cron.schedule(schedule, async () => {
-    logger.info('Recording retention job triggered by cron');
-    try {
-      await runRetentionJob();
-    } catch (error: any) {
-      logger.error('Scheduled retention job failed', {
-        error: error.message,
-      });
-    }
-  });
-
-  logger.info('Recording retention job scheduled', {
-    schedule,
-    description: 'Daily at 2:00 AM',
-  });
+  logger.warn('Recording retention job scheduler disabled - sessionRecording model not available');
 }
 
 /**
  * Get retention statistics
+ *
+ * TODO: Re-enable when sessionRecording model is added to schema
  */
 export async function getRetentionStats() {
-  try {
-    const now = new Date();
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+  logger.warn('Recording retention stats unavailable - sessionRecording model not available');
 
-    const [totalRecordings, available, archived, deleted, upcomingDeletions, failedRecordings] =
-      await Promise.all([
-        prisma.sessionRecording.count(),
-        prisma.sessionRecording.count({ where: { status: 'AVAILABLE' } }),
-        prisma.sessionRecording.count({ where: { status: 'ARCHIVED' } }),
-        prisma.sessionRecording.count({ where: { status: 'DELETED' } }),
-        prisma.sessionRecording.count({
-          where: {
-            status: { in: ['AVAILABLE', 'ARCHIVED'] },
-            scheduledDeletionAt: {
-              lte: thirtyDaysFromNow,
-              gte: now,
-            },
-          },
-        }),
-        prisma.sessionRecording.count({ where: { status: 'FAILED' } }),
-      ]);
-
-    return {
-      total: totalRecordings,
-      available,
-      archived,
-      deleted,
-      upcomingDeletions,
-      failed: failedRecordings,
-    };
-  } catch (error: any) {
-    logger.error('Failed to get retention stats', {
-      error: error.message,
-    });
-    throw error;
-  }
+  return {
+    total: 0,
+    available: 0,
+    archived: 0,
+    deleted: 0,
+    upcomingDeletions: 0,
+    failed: 0,
+  };
 }

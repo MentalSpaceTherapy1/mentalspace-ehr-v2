@@ -77,9 +77,7 @@ export const performanceReviewReminders = cron.schedule('0 9 * * *', async () =>
   } catch (error) {
     console.error('[HR-JOB] Error in performance review reminders:', error);
   }
-}, {
-  scheduled: false, // Don't start automatically, will be started manually
-});
+}); // TODO: Cron task - call .start() manually to begin
 
 /**
  * Process PTO accruals for all employees
@@ -107,9 +105,7 @@ export const processPTOAccruals = cron.schedule('0 0 1 * *', async () => {
   } catch (error) {
     console.error('[HR-JOB] Error processing PTO accruals:', error);
   }
-}, {
-  scheduled: false,
-});
+}); // TODO: Cron task - call .start() manually to begin
 
 /**
  * Check for attendance compliance issues
@@ -202,9 +198,7 @@ export const attendanceComplianceCheck = cron.schedule('0 8 * * 1', async () => 
   } catch (error) {
     console.error('[HR-JOB] Error in attendance compliance check:', error);
   }
-}, {
-  scheduled: false,
-});
+}); // TODO: Cron task - call .start() manually to begin
 
 /**
  * Check for expiring PTO balances and send alerts
@@ -260,9 +254,7 @@ export const expiringPTOAlert = cron.schedule('0 10 15 * *', async () => {
   } catch (error) {
     console.error('[HR-JOB] Error checking expiring PTO:', error);
   }
-}, {
-  scheduled: false,
-});
+}); // TODO: Cron task - call .start() manually to begin
 
 /**
  * Start all HR automation jobs
