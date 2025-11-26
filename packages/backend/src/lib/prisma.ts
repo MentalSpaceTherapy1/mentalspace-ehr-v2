@@ -1,5 +1,6 @@
 import { PrismaClient } from '@mentalspace/database';
 import logger from '../utils/logger';
+import { createPHIEncryptionMiddleware } from '../middleware/phiEncryption';
 
 type GlobalWithPrisma = typeof globalThis & {
   __prisma?: PrismaClient;
@@ -25,6 +26,13 @@ const prisma =
   new PrismaClient({
     log: prismaLogConfig,
   });
+
+// Register PHI Encryption Middleware
+// HIPAA Compliance: Automatically encrypts PHI before write, decrypts after read
+if (!globalForPrisma.__prisma) {
+  prisma.$use(createPHIEncryptionMiddleware());
+  logger.info('PHI encryption middleware registered for HIPAA compliance');
+}
 
 if (!globalForPrisma.__prismaListenersAttached) {
   if (process.env.NODE_ENV === 'development') {
