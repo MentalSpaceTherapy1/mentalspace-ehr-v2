@@ -3,11 +3,15 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import swaggerUi from 'swagger-ui-express';
 import config from './config';
 import logger from './utils/logger';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { csrfCookieParser, csrfProtection, generateCsrfToken, csrfErrorHandler } from './middleware/csrf';
+import { sanitizationMiddleware } from './middleware/sanitization';
+import { monitoringMiddleware } from './services/monitoring';
+import { swaggerSpec } from './config/swagger';
 import routes from './routes';
 
 // Create Express app
@@ -31,6 +35,10 @@ app.use(
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Input Sanitization (XSS, SQL injection, command injection prevention)
+// HIPAA Security: Prevents injection attacks that could compromise PHI
+app.use(sanitizationMiddleware);
 
 // CSRF Protection - Cookie parser must come before CSRF middleware
 app.use(csrfCookieParser);
@@ -77,6 +85,10 @@ app.use(compression());
 // Request logging
 app.use(requestLogger);
 
+// Monitoring middleware (CloudWatch metrics, request tracking)
+// HIPAA Audit: Tracks all API requests, latency, and errors
+app.use(monitoringMiddleware());
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: config.rateLimitWindowMs,
@@ -87,6 +99,30 @@ const limiter = rateLimit({
 });
 
 app.use('/api', limiter);
+
+// Swagger API Documentation
+// Note: In production, this should be protected or disabled
+const swaggerOptions = {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'MentalSpace EHR API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+  },
+};
+
+// Serve Swagger JSON spec
+app.get('/api/v1/docs/swagger.json', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// Swagger UI - protected in production
+if (config.nodeEnv !== 'production' || process.env.ENABLE_SWAGGER_UI === 'true') {
+  app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOptions));
+  logger.info('📚 Swagger documentation available at /api/v1/docs');
+}
 
 // API routes
 app.use('/api/v1', routes);

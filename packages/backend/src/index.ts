@@ -13,6 +13,13 @@ import { startReminderJobs } from './jobs/clinicalNoteReminderJob';
 import { startConsentExpirationReminderJob } from './jobs/consentExpirationReminders.job';
 import { startReportScheduler } from './services/report-scheduler.service';
 import { startDeliveryRetryProcessor } from './services/delivery-tracker.service';
+import {
+  initializeCloudWatch,
+  startMetricsCollection,
+  stopMetricsCollection,
+  flushMetrics
+} from './services/monitoring';
+import { initializeSecrets, secretsManager } from './services/secrets';
 
 const PORT = config.port;
 
@@ -25,6 +32,42 @@ const server = app.listen(PORT, () => {
 
 // Initialize Socket.IO
 initializeSocketIO(server);
+
+// Initialize AWS Secrets Manager (HIPAA Security - Credential Management)
+// This should be one of the first things initialized for secure credential access
+(async () => {
+  try {
+    if (config.nodeEnv === 'production' || process.env.ENABLE_SECRETS_MANAGER === 'true') {
+      await initializeSecrets({
+        region: process.env.AWS_REGION || 'us-east-1',
+        environment: config.nodeEnv,
+        prefix: 'mentalspace-ehr',
+        cacheTtlMs: 5 * 60 * 1000, // 5 minute cache
+        fallbackToEnv: true,
+      });
+      logger.info('🔐 AWS Secrets Manager initialized');
+    } else {
+      logger.info('🔑 Using environment variables for secrets (non-production mode)');
+    }
+  } catch (error) {
+    logger.error('Failed to initialize Secrets Manager', { error });
+    // Continue with env vars as fallback
+  }
+})();
+
+// Initialize CloudWatch monitoring (HIPAA Audit Compliance)
+if (config.nodeEnv === 'production' || process.env.ENABLE_CLOUDWATCH === 'true') {
+  initializeCloudWatch({
+    region: process.env.AWS_REGION || 'us-east-1',
+    namespace: 'MentalSpaceEHR',
+    environment: config.nodeEnv,
+    enableAlarms: config.nodeEnv === 'production',
+  });
+  startMetricsCollection();
+  logger.info('☁️ CloudWatch monitoring initialized');
+} else {
+  logger.info('📊 CloudWatch monitoring disabled in non-production environment');
+}
 
 // Test database connection
 prisma.$connect()
@@ -82,6 +125,11 @@ prisma.$connect()
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
   logger.info(`${signal} received. Starting graceful shutdown...`);
+
+  // Stop CloudWatch metrics collection and flush remaining metrics
+  stopMetricsCollection();
+  await flushMetrics();
+  logger.info('☁️ CloudWatch metrics flushed');
 
   // Stop cron jobs
   notificationScheduler.stopReminderJob();
