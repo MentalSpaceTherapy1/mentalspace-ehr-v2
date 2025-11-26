@@ -69,6 +69,18 @@ interface Config {
 
   // Backend URL (for webhooks)
   backendUrl: string;
+
+  // Cookie Configuration (for httpOnly auth tokens)
+  cookieSecret: string;
+  cookieOptions: {
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: 'strict' | 'lax' | 'none';
+    domain?: string;
+    path: string;
+  };
+  accessTokenCookieMaxAge: number;
+  refreshTokenCookieMaxAge: number;
 }
 
 // Construct DATABASE_URL from individual components if not provided directly
@@ -149,6 +161,21 @@ const config: Config = {
 
   // Backend URL
   backendUrl: process.env.BACKEND_URL || 'http://localhost:3001',
+
+  // Cookie Configuration for httpOnly auth tokens
+  // CRITICAL for HIPAA: Tokens in httpOnly cookies prevent XSS token theft
+  cookieSecret: process.env.COOKIE_SECRET || 'dev-cookie-secret-change-me',
+  cookieOptions: {
+    httpOnly: true, // CRITICAL: Prevents JavaScript access (XSS protection)
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    sameSite: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') || 'strict',
+    domain: process.env.COOKIE_DOMAIN, // Optional: set for cross-subdomain
+    path: '/',
+  },
+  // 1 hour for access token (matches JWT_EXPIRES_IN default)
+  accessTokenCookieMaxAge: parseInt(process.env.ACCESS_TOKEN_COOKIE_MAX_AGE || '3600000', 10),
+  // 7 days for refresh token (matches JWT_REFRESH_EXPIRES_IN default)
+  refreshTokenCookieMaxAge: parseInt(process.env.REFRESH_TOKEN_COOKIE_MAX_AGE || '604800000', 10),
 };
 
 // Validate required environment variables

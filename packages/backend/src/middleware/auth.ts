@@ -6,6 +6,32 @@ import sessionService from '../services/session.service';
 import prisma from '../services/database';
 import logger from '../utils/logger';
 
+// Cookie name for access token (must match auth.controller.ts)
+const ACCESS_TOKEN_COOKIE = 'access_token';
+
+/**
+ * Extract token from request
+ * Priority: httpOnly cookie > Authorization header
+ * HIPAA Security: Prefers httpOnly cookies to prevent XSS token theft
+ */
+const extractToken = (req: Request): string | null => {
+  // 1. First check httpOnly cookie (most secure - recommended)
+  if (req.cookies?.[ACCESS_TOKEN_COOKIE]) {
+    return req.cookies[ACCESS_TOKEN_COOKIE];
+  }
+
+  // 2. Fallback to Authorization header (for backward compatibility / API clients)
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    const parts = authHeader.split(' ');
+    if (parts.length === 2 && parts[0] === 'Bearer') {
+      return parts[1];
+    }
+  }
+
+  return null;
+};
+
 // Extend Express Request type to include user and session
 declare global {
   namespace Express {
@@ -22,23 +48,17 @@ declare global {
 /**
  * Middleware to authenticate requests using session-based authentication
  * Falls back to JWT for backward compatibility
+ *
+ * HIPAA Security: Accepts tokens from httpOnly cookies (preferred) or Authorization header
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Get token from Authorization header
-    const authHeader = req.headers.authorization;
+    // Extract token from cookie or Authorization header
+    const token = extractToken(req);
 
-    if (!authHeader) {
-      throw new UnauthorizedError('No authorization header provided');
+    if (!token) {
+      throw new UnauthorizedError('No authentication token provided');
     }
-
-    // Extract token (format: "Bearer <token>")
-    const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      throw new UnauthorizedError('Invalid authorization header format. Use: Bearer <token>');
-    }
-
-    const token = parts[1];
 
     // Try session-based authentication first
     const sessionData = await sessionService.validateSession(token);
@@ -177,56 +197,53 @@ export const authorize = (...allowedRoles: string[]) => {
 
 /**
  * Optional authentication - attaches user if token is valid, but doesn't fail if missing
+ * HIPAA Security: Accepts tokens from httpOnly cookies (preferred) or Authorization header
  */
 export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
+    // Extract token from cookie or Authorization header
+    const token = extractToken(req);
 
-    if (authHeader) {
-      const parts = authHeader.split(' ');
-      if (parts.length === 2 && parts[0] === 'Bearer') {
-        const token = parts[1];
+    if (token) {
+      // Try session-based authentication first
+      const sessionData = await sessionService.validateSession(token);
 
-        // Try session-based authentication first
-        const sessionData = await sessionService.validateSession(token);
+      if (sessionData) {
+        const user = await prisma.user.findUnique({
+          where: { id: sessionData.userId },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            roles: true,
+            isActive: true,
+          },
+        });
 
-        if (sessionData) {
-          const user = await prisma.user.findUnique({
-            where: { id: sessionData.userId },
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-              roles: true,
-              isActive: true,
-            },
-          });
+        if (user && user.isActive) {
+          req.user = {
+            id: user.id,
+            userId: user.id,
+            email: user.email,
+            roles: user.roles,
+          } as any;
 
-          if (user && user.isActive) {
-            req.user = {
-              id: user.id,
-              userId: user.id,
-              email: user.email,
-              roles: user.roles,
-            } as any;
+          req.session = {
+            sessionId: sessionData.sessionId,
+            token: token,
+          };
 
-            req.session = {
-              sessionId: sessionData.sessionId,
-              token: token,
-            };
-
-            await sessionService.updateActivity(sessionData.sessionId);
-          }
-        } else {
-          // Fallback to JWT
-          try {
-            const payload = verifyToken(token);
-            req.user = payload;
-            enforceSessionTimeout(req, res);
-          } catch {
-            // Ignore JWT errors for optional auth
-          }
+          await sessionService.updateActivity(sessionData.sessionId);
+        }
+      } else {
+        // Fallback to JWT
+        try {
+          const payload = verifyToken(token);
+          req.user = payload;
+          enforceSessionTimeout(req, res);
+        } catch {
+          // Ignore JWT errors for optional auth
         }
       }
     }

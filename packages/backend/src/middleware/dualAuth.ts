@@ -24,8 +24,7 @@ interface PortalTokenPayload {
  * - Staff (clinicians/admins) accessing client data
  */
 export const authenticateDual = async (req: Request, res: Response, next: NextFunction) => {
-  console.log('[DUAL AUTH] Middleware executing for:', req.method, req.url);
-  logger.info('[DUAL AUTH] Middleware executing', { method: req.method, url: req.url });
+  logger.debug('[DUAL AUTH] Middleware executing', { method: req.method, url: req.url });
 
   try {
     const authHeader = req.headers.authorization;
@@ -218,21 +217,43 @@ export const getClientId = (req: Request): string | null => {
 /**
  * Check if the authenticated user has permission to access a client's data
  *
+ * SECURITY FIX: Implements proper RBAC to prevent IDOR vulnerabilities
+ *
  * Rules:
- * - SUPER_ADMIN can access all data
+ * - SUPER_ADMIN, ADMINISTRATOR, CLINICAL_DIRECTOR can access all client data
+ * - BILLING_STAFF, OFFICE_MANAGER, SCHEDULER can access all client data (operational need)
  * - Portal users can only access their own data
- * - Staff users can access any client's data (subject to role authorization)
+ * - CLINICIAN/SUPERVISOR can only access clients assigned to them (checked async)
  */
 export const canAccessClientData = (req: Request, targetClientId: string): boolean => {
-  // SUPER_ADMIN has absolute access to everything
-  if (req.user?.roles) {
-    const userRoles = Array.isArray(req.user.roles) ? req.user.roles : [req.user.roles];
-    const isSuperAdmin = userRoles.some((role: string) =>
-      role === 'SUPER_ADMIN' || role === 'SUPER_ADMIN'
-    );
-    if (isSuperAdmin) {
-      return true;
-    }
+  // Get user roles (handle both array and single role formats)
+  const userRoles: string[] = req.user?.roles
+    ? (Array.isArray(req.user.roles) ? req.user.roles : [req.user.roles])
+    : [];
+
+  // Roles with global client access (administrative/operational roles)
+  const GLOBAL_ACCESS_ROLES = [
+    'SUPER_ADMIN',
+    'ADMINISTRATOR',
+    'CLINICAL_DIRECTOR',
+    'BILLING_STAFF',
+    'OFFICE_MANAGER',
+    'SCHEDULER',
+    'RECEPTIONIST',
+  ];
+
+  // Check if user has a role with global access
+  const hasGlobalAccess = userRoles.some((role: string) =>
+    GLOBAL_ACCESS_ROLES.includes(role)
+  );
+
+  if (hasGlobalAccess) {
+    logger.debug('User has global client access', {
+      userId: req.user?.userId,
+      roles: userRoles,
+      targetClientId,
+    });
+    return true;
   }
 
   // Portal account - can only access own data
@@ -241,10 +262,84 @@ export const canAccessClientData = (req: Request, targetClientId: string): boole
     return portalAccount.clientId === targetClientId;
   }
 
-  // Staff user - can access any client data (role checks handled separately)
-  if (req.user?.userId) {
+  // For CLINICIAN/SUPERVISOR roles without global access:
+  // Return true here to allow the request to proceed, but controllers MUST
+  // verify clinician-client assignment using verifyClinicianClientAccess()
+  // This is a security gate, not the final authorization check
+  if (req.user?.userId && (userRoles.includes('CLINICIAN') || userRoles.includes('SUPERVISOR') || userRoles.includes('INTERN'))) {
+    // Mark request to indicate clinician-level access check is needed
+    (req as any).requiresClinicianClientCheck = true;
+    (req as any).targetClientId = targetClientId;
     return true;
   }
 
+  logger.warn('Client data access denied', {
+    userId: req.user?.userId,
+    roles: userRoles,
+    targetClientId,
+  });
   return false;
+};
+
+/**
+ * Async function to verify clinician has access to specific client
+ * Must be called in controllers after canAccessClientData returns true
+ * when requiresClinicianClientCheck is set
+ */
+export const verifyClinicianClientAccess = async (
+  clinicianUserId: string,
+  clientId: string
+): Promise<boolean> => {
+  try {
+    // Check if clinician is assigned to this client
+    const client = await prisma.client.findFirst({
+      where: {
+        id: clientId,
+        OR: [
+          { primaryClinicianId: clinicianUserId },
+          { secondaryClinicianId: clinicianUserId },
+          // Also check if clinician has any appointments with this client
+          {
+            appointments: {
+              some: {
+                clinicianId: clinicianUserId,
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    if (client) {
+      return true;
+    }
+
+    // Check if supervisor has supervisees assigned to this client
+    const superviseeAccess = await prisma.user.findFirst({
+      where: {
+        supervisorId: clinicianUserId,
+        OR: [
+          {
+            primaryClients: {
+              some: { id: clientId },
+            },
+          },
+          {
+            secondaryClients: {
+              some: { id: clientId },
+            },
+          },
+        ],
+      },
+    });
+
+    return !!superviseeAccess;
+  } catch (error) {
+    logger.error('Error verifying clinician-client access', {
+      clinicianUserId,
+      clientId,
+      error,
+    });
+    return false;
+  }
 };

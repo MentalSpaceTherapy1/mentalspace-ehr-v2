@@ -3,7 +3,7 @@ import { ShieldCheckIcon, KeyIcon, ArrowPathIcon } from '@heroicons/react/24/out
 import api from '../../lib/api';
 
 interface MFAVerificationScreenProps {
-  onSuccess: (token: string) => void;
+  onSuccess: () => void; // Token is now in httpOnly cookie, no need to pass it
   onCancel?: () => void;
   email: string;
 }
@@ -49,13 +49,14 @@ export default function MFAVerificationScreen({
 
     try {
       const endpoint = useBackupCode ? '/mfa/verify-backup' : '/mfa/verify';
-      const response = await api.post(endpoint, {
+      await api.post(endpoint, {
         email,
         code
       });
 
-      const { accessToken } = response.data.data.tokens;
-      onSuccess(accessToken);
+      // HIPAA Security: Token is now in httpOnly cookie (set by backend)
+      // No need to extract or pass the token - browser handles cookies automatically
+      onSuccess();
     } catch (err: any) {
       if (useBackupCode) {
         setError(

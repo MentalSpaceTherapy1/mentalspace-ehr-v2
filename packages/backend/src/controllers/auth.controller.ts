@@ -1,27 +1,81 @@
-import { Request, Response } from 'express';
+import { Request, Response, CookieOptions } from 'express';
 import authService from '../services/auth.service';
 import sessionService from '../services/session.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ValidationError } from '../utils/errors';
+import config from '../config';
+
+// Cookie names for auth tokens
+const ACCESS_TOKEN_COOKIE = 'access_token';
+const REFRESH_TOKEN_COOKIE = 'refresh_token';
+
+/**
+ * Get cookie options for auth tokens
+ * HIPAA Security: httpOnly cookies prevent XSS token theft
+ */
+const getAccessTokenCookieOptions = (): CookieOptions => ({
+  ...config.cookieOptions,
+  maxAge: config.accessTokenCookieMaxAge,
+});
+
+const getRefreshTokenCookieOptions = (): CookieOptions => ({
+  ...config.cookieOptions,
+  maxAge: config.refreshTokenCookieMaxAge,
+});
+
+/**
+ * Set auth tokens as httpOnly cookies
+ * @param res - Express response object
+ * @param tokens - Object containing accessToken and refreshToken
+ */
+const setAuthCookies = (res: Response, tokens: { accessToken: string; refreshToken: string }) => {
+  res.cookie(ACCESS_TOKEN_COOKIE, tokens.accessToken, getAccessTokenCookieOptions());
+  res.cookie(REFRESH_TOKEN_COOKIE, tokens.refreshToken, getRefreshTokenCookieOptions());
+};
+
+/**
+ * Clear auth cookies on logout
+ * @param res - Express response object
+ */
+const clearAuthCookies = (res: Response) => {
+  const clearOptions: CookieOptions = {
+    ...config.cookieOptions,
+    maxAge: 0,
+  };
+  res.cookie(ACCESS_TOKEN_COOKIE, '', clearOptions);
+  res.cookie(REFRESH_TOKEN_COOKIE, '', clearOptions);
+};
 
 export class AuthController {
   /**
    * Register a new user
    * POST /api/v1/auth/register
+   *
+   * HIPAA Security: Tokens set as httpOnly cookies (not in response body)
    */
   register = asyncHandler(async (req: Request, res: Response) => {
     const result = await authService.register(req.body);
 
+    // Set tokens as httpOnly cookies if returned
+    if (result.tokens) {
+      setAuthCookies(res, result.tokens);
+    }
+
+    // Return user data without tokens in body
+    const { tokens, ...responseData } = result;
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      data: result,
+      data: responseData,
     });
   });
 
   /**
    * Login user with enhanced security (session + optional MFA)
    * POST /api/v1/auth/login
+   *
+   * HIPAA Security: Tokens are set as httpOnly cookies to prevent XSS attacks
+   * Response body only contains user data (no tokens exposed to JavaScript)
    */
   login = asyncHandler(async (req: Request, res: Response) => {
     const ipAddress = req.ip || 'unknown';
@@ -38,10 +92,17 @@ export class AuthController {
         user: result.user,
       });
     } else {
+      // Set tokens as httpOnly cookies (not accessible via JavaScript)
+      if (result.tokens) {
+        setAuthCookies(res, result.tokens);
+      }
+
+      // Return user data without tokens in body (HIPAA security)
+      const { tokens, ...responseData } = result;
       res.status(200).json({
         success: true,
         message: 'Login successful',
-        data: result,
+        data: responseData,
       });
     }
   });
@@ -49,6 +110,8 @@ export class AuthController {
   /**
    * Complete MFA login step
    * POST /api/v1/auth/mfa/verify
+   *
+   * HIPAA Security: Tokens set as httpOnly cookies after MFA verification
    */
   completeMFALogin = asyncHandler(async (req: Request, res: Response) => {
     const { userId, mfaCode } = req.body;
@@ -61,10 +124,17 @@ export class AuthController {
 
     const result = await authService.completeMFALogin(userId, mfaCode, ipAddress, userAgent);
 
+    // Set tokens as httpOnly cookies
+    if (result.tokens) {
+      setAuthCookies(res, result.tokens);
+    }
+
+    // Return user data without tokens in body
+    const { tokens, ...responseData } = result;
     res.status(200).json({
       success: true,
       message: 'MFA verification successful',
-      data: result,
+      data: responseData,
     });
   });
 
@@ -101,6 +171,8 @@ export class AuthController {
   /**
    * Logout user (terminate current session)
    * POST /api/v1/auth/logout
+   *
+   * HIPAA Security: Clears httpOnly auth cookies to ensure complete logout
    */
   logout = asyncHandler(async (req: Request, res: Response) => {
     const sessionId = req.session?.sessionId;
@@ -108,6 +180,9 @@ export class AuthController {
     if (sessionId) {
       await sessionService.terminateSession(sessionId);
     }
+
+    // Clear auth cookies (HIPAA security - ensure tokens cannot be reused)
+    clearAuthCookies(res);
 
     res.status(200).json({
       success: true,
@@ -118,9 +193,13 @@ export class AuthController {
   /**
    * Refresh access token
    * POST /api/v1/auth/refresh
+   *
+   * HIPAA Security: Reads refresh token from httpOnly cookie (not request body)
+   * Sets new tokens as httpOnly cookies
    */
   refresh = asyncHandler(async (req: Request, res: Response) => {
-    const { refreshToken } = req.body;
+    // Read refresh token from httpOnly cookie (primary) or body (legacy/fallback)
+    const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE] || req.body?.refreshToken;
 
     if (!refreshToken) {
       return res.status(400).json({
@@ -131,10 +210,18 @@ export class AuthController {
 
     const result = await authService.refreshToken(refreshToken);
 
+    // Set new tokens as httpOnly cookies
+    if (result.accessToken && result.refreshToken) {
+      setAuthCookies(res, {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      });
+    }
+
+    // Return success without exposing tokens in response body
     res.status(200).json({
       success: true,
       message: 'Token refreshed successfully',
-      data: result,
     });
   });
 }

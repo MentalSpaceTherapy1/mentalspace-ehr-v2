@@ -58,8 +58,9 @@ router.post('/logout', authenticate, authController.logout);
  * @route   POST /api/v1/auth/refresh
  * @desc    Refresh access token
  * @access  Public
+ * @security Rate limited to prevent token refresh abuse
  */
-router.post('/refresh', authController.refresh);
+router.post('/refresh', authRateLimiter, authController.refresh);
 
 /**
  * @route   POST /api/v1/auth/forgot-password

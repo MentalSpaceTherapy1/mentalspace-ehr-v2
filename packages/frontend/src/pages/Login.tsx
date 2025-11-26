@@ -37,14 +37,14 @@ export default function Login() {
         return;
       }
 
-      // Store token in localStorage (session-based auth)
-      localStorage.setItem('token', response.data.data.session.token);
+      // HIPAA Security: Auth token is now in httpOnly cookie (set by backend)
+      // We no longer store tokens in localStorage to prevent XSS token theft
 
+      // Store user data in localStorage (non-sensitive display data only)
       // Add backward compatibility: set both 'role' (singular) and 'roles' (array)
-      // Frontend components may use either user.role or user.roles
       const userData = {
         ...response.data.data.user,
-        role: response.data.data.user.roles?.[0] || response.data.data.user.role, // Use first role from array or existing role
+        role: response.data.data.user.roles?.[0] || response.data.data.user.role,
       };
       localStorage.setItem('user', JSON.stringify(userData));
 
@@ -77,11 +77,11 @@ export default function Login() {
     }
   };
 
-  const handleMFASuccess = (token: string) => {
-    // Store the token after successful MFA
-    localStorage.setItem('token', token);
+  const handleMFASuccess = () => {
+    // HIPAA Security: Auth token is now in httpOnly cookie (set by backend after MFA)
+    // We no longer receive or store tokens in localStorage
 
-    // Fetch and store user data
+    // Fetch and store user data (non-sensitive display data only)
     api.get('/auth/me').then(response => {
       // Add backward compatibility: set both 'role' (singular) and 'roles' (array)
       const userData = {

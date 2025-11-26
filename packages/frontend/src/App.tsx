@@ -198,10 +198,19 @@ import AdvancedMDSettings from './pages/Admin/AdvancedMDSettings';
 import { AdvancedMDProvider } from './components/AdvancedMD';
 
 
+/**
+ * PrivateRoute - Protects EHR routes requiring authentication
+ *
+ * HIPAA Security: Auth tokens are now in httpOnly cookies (not accessible via JS)
+ * We check for user data in localStorage as an indicator of login state.
+ * Actual authentication is verified server-side via httpOnly cookie on each API call.
+ */
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('token');
+  // Check for user data (stored after successful login)
+  // Note: Auth token is in httpOnly cookie, verified server-side on API calls
+  const user = localStorage.getItem('user');
 
-  if (!token) {
+  if (!user) {
     return <Navigate to="/login" />;
   }
 
@@ -210,14 +219,11 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function PortalRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('portalToken');
-  console.log('🟢 PortalRoute guard checking token:', token ? 'exists' : 'missing');
 
   if (!token) {
-    console.log('🔴 PortalRoute: No token, redirecting to login');
     return <Navigate to="/portal/login" />;
   }
 
-  console.log('🟢 PortalRoute: Token valid, rendering children');
   return <PortalLayout>{children}</PortalLayout>;
 }
 

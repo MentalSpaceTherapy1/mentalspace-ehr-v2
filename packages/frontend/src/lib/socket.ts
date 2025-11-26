@@ -18,15 +18,15 @@ export const initSocket = () => {
     });
 
     socket.on('connect', () => {
-      console.log('Socket connected:', socket?.id);
+      // Connection established
     });
 
     socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+      // Connection lost
     });
 
     socket.on('error', (error) => {
-      console.error('Socket error:', error);
+      // Socket error - errors are handled by reconnection logic
     });
   }
   return socket;

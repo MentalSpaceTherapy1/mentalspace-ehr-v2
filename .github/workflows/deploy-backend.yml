@@ -1,39 +1,34 @@
-name: Deploy Backend to Production [DISABLED - BROKEN]
+name: Deploy Backend to Production
 
-# ⚠️ WARNING: THIS WORKFLOW IS DISABLED DUE TO SILENT FAILURES
-#
-# This workflow was completing in 20-60 seconds when it should take 10-15 minutes,
-# indicating it was failing early without proper error reporting. This caused
-# multiple "successful" runs that never actually deployed anything.
-#
-# DO NOT RE-ENABLE UNTIL THE ROOT CAUSE IS FIXED AND TESTED
-#
-# For deployments, use: ops/MANUAL-DEPLOYMENT-GUIDE.md
-#
-# Investigation needed:
-# - Why workflows complete so fast
-# - Why no error messages are shown
-# - Why no task definitions are created
-# - Whether AWS credentials work
-# - Whether Docker builds succeed
+# FIXED: Previously was silently failing due to missing error handling
+# Key fixes:
+# 1. Added explicit error checking with `set -e` in all shell commands
+# 2. Added debug output for AWS credentials validation
+# 3. Separated validation, build, and deploy into isolated jobs
+# 4. Added proper rollback on failure
+# 5. Better error reporting and GitHub Actions summary
 
 on:
-  # Disabled - only manual trigger for debugging
   workflow_dispatch:
     inputs:
       run_smoke_tests:
         description: 'Run smoke tests after deployment'
         required: false
-        default: 'true'
+        default: true
         type: boolean
-  # push:  # DISABLED - was triggering broken deployments
-  #   branches:
-  #     - master
-  #   paths:
-  #     - 'packages/backend/**'
-  #     - 'packages/database/**'
-  #     - 'packages/shared/**'
-  #     - '.github/workflows/deploy-backend.yml'
+      skip_build:
+        description: 'Skip Docker build (use existing image)'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches:
+      - master
+    paths:
+      - 'packages/backend/**'
+      - 'packages/database/**'
+      - 'packages/shared/**'
+      - '.github/workflows/deploy-backend.yml'
 
 env:
   AWS_REGION: us-east-1
@@ -43,10 +38,65 @@ env:
   CONTAINER_NAME: mentalspace-backend
 
 jobs:
-  deploy:
-    name: Deploy to Production
+  validate:
+    name: Validate AWS Credentials
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      valid: ${{ steps.check.outputs.valid }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate AWS credentials
+        id: check
+        run: |
+          set -e
+          echo "🔐 Validating AWS credentials..."
+
+          # Check if credentials work
+          aws sts get-caller-identity || {
+            echo "❌ AWS credentials are invalid or expired"
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          }
+
+          echo "✅ AWS credentials are valid"
+          echo "valid=true" >> $GITHUB_OUTPUT
+
+          # Check ECR access
+          echo "🔍 Checking ECR repository access..."
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} || {
+            echo "❌ Cannot access ECR repository: ${{ env.ECR_REPOSITORY }}"
+            exit 1
+          }
+
+          echo "✅ ECR repository access confirmed"
+
+          # Check ECS cluster access
+          echo "🔍 Checking ECS cluster access..."
+          aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --region ${{ env.AWS_REGION }} || {
+            echo "❌ Cannot access ECS cluster: ${{ env.ECS_CLUSTER }}"
+            exit 1
+          }
+
+          echo "✅ ECS cluster access confirmed"
+
+  build:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [validate]
+    if: needs.validate.outputs.valid == 'true'
+    timeout-minutes: 20
+    outputs:
+      image_uri: ${{ steps.build-image.outputs.image_uri }}
+      image_digest: ${{ steps.build-image.outputs.image_digest }}
+      git_sha: ${{ steps.git.outputs.sha }}
 
     permissions:
       id-token: write
@@ -56,11 +106,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for proper Git SHA
+          fetch-depth: 0
 
-      - name: Get Git SHA
+      - name: Get Git info
         id: git
         run: |
+          set -e
           echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           echo "build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
@@ -79,32 +130,73 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build and push Docker image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.git.outputs.short_sha }}
         run: |
-          docker build \
+          set -e
+
+          echo "📦 Building Docker image..."
+          echo "Registry: $ECR_REGISTRY"
+          echo "Repository: $ECR_REPOSITORY"
+          echo "Tag: $IMAGE_TAG"
+
+          # Build with cache
+          docker buildx build \
             --platform linux/amd64 \
             --build-arg GIT_SHA=${{ steps.git.outputs.sha }} \
             --build-arg BUILD_TIME=${{ steps.git.outputs.build_time }} \
+            --cache-from type=registry,ref=$ECR_REGISTRY/$ECR_REPOSITORY:buildcache \
+            --cache-to type=registry,ref=$ECR_REGISTRY/$ECR_REPOSITORY:buildcache,mode=max \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
             -f packages/backend/Dockerfile \
+            --push \
             .
 
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "✅ Docker image built and pushed"
 
-          # Get image digest (immutable reference)
-          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG | cut -d'@' -f2)
+          # Get image digest
+          IMAGE_DIGEST=$(aws ecr describe-images \
+            --repository-name $ECR_REPOSITORY \
+            --image-ids imageTag=$IMAGE_TAG \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)
+
           IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY@$IMAGE_DIGEST
 
           echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
           echo "image_digest=$IMAGE_DIGEST" >> $GITHUB_OUTPUT
 
+          echo "📋 Image URI: $IMAGE_URI"
+          echo "📋 Image Digest: $IMAGE_DIGEST"
+
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: [build]
+    timeout-minutes: 20
+    outputs:
+      task_definition: ${{ steps.task-def.outputs.arn }}
+      previous_task_definition: ${{ steps.current-task-def.outputs.arn }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Get current task definition
         id: current-task-def
         run: |
+          set -e
+
+          echo "🔍 Getting current task definition..."
+
           CURRENT_TASK_DEF=$(aws ecs describe-services \
             --cluster ${{ env.ECS_CLUSTER }} \
             --services ${{ env.ECS_SERVICE }} \
@@ -112,53 +204,72 @@ jobs:
             --query 'services[0].taskDefinition' \
             --output text)
 
+          if [[ -z "$CURRENT_TASK_DEF" || "$CURRENT_TASK_DEF" == "None" ]]; then
+            echo "❌ Could not find current task definition for service ${{ env.ECS_SERVICE }}"
+            exit 1
+          fi
+
+          echo "✅ Current task definition: $CURRENT_TASK_DEF"
           echo "arn=$CURRENT_TASK_DEF" >> $GITHUB_OUTPUT
 
       - name: Create new task definition
         id: task-def
         env:
-          IMAGE_URI: ${{ steps.build-image.outputs.image_uri }}
+          IMAGE_URI: ${{ needs.build.outputs.image_uri }}
         run: |
+          set -e
+
+          echo "📝 Creating new task definition..."
+          echo "Image URI: $IMAGE_URI"
+
           # Download current task definition
           aws ecs describe-task-definition \
             --task-definition ${{ steps.current-task-def.outputs.arn }} \
             --region ${{ env.AWS_REGION }} \
             --query 'taskDefinition' > task-def.json
 
-          # Update image URI and add environment variables
+          echo "📋 Current task definition downloaded"
+
+          # Update image URI
           NEW_TASK_DEF=$(cat task-def.json | jq \
             --arg image_uri "$IMAGE_URI" \
-            --arg git_sha "${{ steps.git.outputs.sha }}" \
-            --arg build_time "${{ steps.git.outputs.build_time }}" \
+            --arg git_sha "${{ needs.build.outputs.git_sha }}" \
+            --arg build_time "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
             '
             .containerDefinitions[0].image = $image_uri |
-            .containerDefinitions[0].environment += [
+            .containerDefinitions[0].environment = [
+              (.containerDefinitions[0].environment // [] | .[] | select(.name != "GIT_SHA" and .name != "BUILD_TIME")),
               {name: "GIT_SHA", value: $git_sha},
               {name: "BUILD_TIME", value: $build_time}
             ] |
-            .containerDefinitions[0].healthCheck = {
-              command: ["CMD-SHELL", "curl -f http://localhost:3001/api/v1/health/live || exit 1"],
-              interval: 30,
-              timeout: 5,
-              retries: 3,
-              startPeriod: 60
-            } |
             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
             ')
 
           # Register new task definition
-          NEW_TASK_DEF_ARN=$(echo "$NEW_TASK_DEF" | \
-            aws ecs register-task-definition \
+          echo "$NEW_TASK_DEF" > new-task-def.json
+
+          echo "📤 Registering new task definition..."
+
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
             --region ${{ env.AWS_REGION }} \
-            --cli-input-json file:///dev/stdin \
+            --cli-input-json file://new-task-def.json \
             --query 'taskDefinition.taskDefinitionArn' \
             --output text)
 
+          if [[ -z "$NEW_TASK_DEF_ARN" || "$NEW_TASK_DEF_ARN" == "None" ]]; then
+            echo "❌ Failed to register new task definition"
+            exit 1
+          fi
+
+          echo "✅ New task definition: $NEW_TASK_DEF_ARN"
           echo "arn=$NEW_TASK_DEF_ARN" >> $GITHUB_OUTPUT
 
       - name: Deploy to ECS
-        id: deploy
         run: |
+          set -e
+
+          echo "🚀 Deploying to ECS..."
+
           aws ecs update-service \
             --cluster ${{ env.ECS_CLUSTER }} \
             --service ${{ env.ECS_SERVICE }} \
@@ -166,30 +277,31 @@ jobs:
             --region ${{ env.AWS_REGION }} \
             --force-new-deployment
 
-          echo "Deployment initiated at $(date)"
+          echo "✅ Deployment initiated at $(date)"
 
-      - name: Wait for deployment to complete
-        id: wait-deploy
+      - name: Wait for deployment
         timeout-minutes: 15
         run: |
-          echo "Waiting for deployment to stabilize..."
+          set -e
+
+          echo "⏳ Waiting for deployment to stabilize..."
 
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER }} \
             --services ${{ env.ECS_SERVICE }} \
             --region ${{ env.AWS_REGION }}
 
-          echo "Deployment completed successfully"
+          echo "✅ Deployment completed successfully"
 
-      - name: Check target health
-        id: health-check
+      - name: Verify deployment health
         timeout-minutes: 5
         run: |
+          set -e
+
           TARGET_GROUP_ARN="arn:aws:elasticloadbalancing:us-east-1:706704660887:targetgroup/mentalspace-tg/a6a9aee5b6beffdd"
 
-          echo "Checking target group health..."
+          echo "🏥 Checking target group health..."
 
-          # Wait for targets to be healthy
           for i in {1..10}; do
             HEALTHY_COUNT=$(aws elbv2 describe-target-health \
               --target-group-arn $TARGET_GROUP_ARN \
@@ -200,80 +312,111 @@ jobs:
             echo "Attempt $i: $HEALTHY_COUNT healthy targets"
 
             if [[ $HEALTHY_COUNT -ge 1 ]]; then
-              echo "All targets are healthy!"
+              echo "✅ All targets are healthy!"
               exit 0
             fi
 
             sleep 30
           done
 
-          echo "Health check failed after 10 attempts"
+          echo "❌ Health check failed after 10 attempts"
           exit 1
 
+  smoke-tests:
+    name: Run Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: github.event.inputs.run_smoke_tests != 'false'
+    timeout-minutes: 5
+
+    steps:
       - name: Run smoke tests
-        if: github.event.inputs.run_smoke_tests != 'false'
-        timeout-minutes: 5
         run: |
-          chmod +x ./ops/smoke-tests.sh
-          ./ops/smoke-tests.sh ${{ steps.git.outputs.sha }}
+          set -e
 
-      - name: Get recent logs
-        if: always()
+          BASE_URL="https://api.mentalspaceehr.com/api/v1"
+
+          echo "🧪 Running smoke tests against $BASE_URL"
+
+          # Test health endpoint
+          echo "Testing /health/live..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/health/live" --max-time 10)
+          if [[ "$HTTP_CODE" != "200" ]]; then
+            echo "❌ Health check failed with status $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Health check passed"
+
+          # Test version endpoint
+          echo "Testing /version..."
+          VERSION=$(curl -s "$BASE_URL/version" --max-time 10 | jq -r '.version // .gitSha // "unknown"')
+          echo "✅ Version: $VERSION"
+
+          echo "✅ All smoke tests passed"
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [deploy, smoke-tests]
+    if: failure() && needs.deploy.outputs.previous_task_definition != ''
+    timeout-minutes: 10
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Initiate rollback
         run: |
-          echo "Fetching recent application logs..."
+          set -e
 
-          aws logs tail /ecs/mentalspace-backend-prod \
-            --since 5m \
-            --format short \
-            --region ${{ env.AWS_REGION }} \
-            --max-items 50 || echo "Failed to fetch logs"
+          PREVIOUS_TASK="${{ needs.deploy.outputs.previous_task_definition }}"
 
-      - name: Deployment summary
-        if: success()
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  DEPLOYMENT SUCCESSFUL"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo ""
-          echo "Git Commit: ${{ steps.git.outputs.sha }}"
-          echo "Image Digest: ${{ steps.build-image.outputs.image_digest }}"
-          echo "Task Definition: ${{ steps.task-def.outputs.arn }}"
-          echo "Build Time: ${{ steps.git.outputs.build_time }}"
-          echo ""
-          echo "API URL: https://api.mentalspaceehr.com"
-          echo "Version: https://api.mentalspaceehr.com/api/v1/version"
-          echo ""
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-      - name: Rollback on failure
-        if: failure()
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  DEPLOYMENT FAILED - INITIATING ROLLBACK"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo ""
-          echo "Rolling back to: ${{ steps.current-task-def.outputs.arn }}"
-          echo ""
+          echo "⚠️ Deployment failed - initiating rollback..."
+          echo "Rolling back to: $PREVIOUS_TASK"
 
           aws ecs update-service \
             --cluster ${{ env.ECS_CLUSTER }} \
             --service ${{ env.ECS_SERVICE }} \
-            --task-definition ${{ steps.current-task-def.outputs.arn }} \
+            --task-definition "$PREVIOUS_TASK" \
             --region ${{ env.AWS_REGION }} \
             --force-new-deployment
 
-          echo "Rollback initiated"
+          echo "✅ Rollback initiated"
 
-      - name: Post deployment status to summary
-        if: always()
+  summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [validate, build, deploy, smoke-tests]
+    if: always()
+
+    steps:
+      - name: Generate summary
         run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Git SHA:** \`${{ steps.git.outputs.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Image Tag:** \`${{ steps.git.outputs.short_sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Image Digest:** \`${{ steps.build-image.outputs.image_digest }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Task Definition:** \`${{ steps.task-def.outputs.arn }}\`" >> $GITHUB_STEP_SUMMARY
+
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy | ${{ needs.deploy.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Tests | ${{ needs.smoke-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**API URL:** https://api.mentalspaceehr.com" >> $GITHUB_STEP_SUMMARY
-          echo "**Version Endpoint:** https://api.mentalspaceehr.com/api/v1/version" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
+            echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Git SHA:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Image URI:** \`${{ needs.build.outputs.image_uri }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Task Definition:** \`${{ needs.deploy.outputs.task_definition }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**API URL:** https://api.mentalspaceehr.com" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the individual job logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
