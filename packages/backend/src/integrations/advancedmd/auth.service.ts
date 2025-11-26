@@ -14,19 +14,18 @@
  * @module integrations/advancedmd/auth.service
  */
 
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import {
   PartnerLoginRequest,
-  PartnerLoginResponse,
   RedirectLoginRequest,
-  SessionTokenResponse,
   AdvancedMDAuthConfig,
   SessionState,
   AdvancedMDError,
 } from '../../../../shared/src/types/advancedmd.types';
 import { getAdvancedMDConfig as getEnvConfig } from '../../config/advancedmd.config';
+import logger from '../../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -71,32 +70,19 @@ export class AdvancedMDAuthService {
    */
   async initialize(): Promise<void> {
     try {
-      console.log('[AMD Auth] Initializing...');
-      console.log('[AMD Auth] this:', this);
-      console.log('[AMD Auth] this.constructor.name:', this.constructor.name);
-      console.log('[AMD Auth] DATABASE_URL:', process.env.DATABASE_URL?.substring(0, 60) + '...');
-      console.log('[AMD Auth] ADVANCEDMD_ENV:', process.env.ADVANCEDMD_ENV || 'sandbox');
+      logger.info('AdvancedMD Auth initializing', {
+        environment: process.env.ADVANCEDMD_ENV || 'sandbox'
+      });
 
       const configRecord = await prisma.advancedMDConfig.findFirst({
         where: { environment: process.env.ADVANCEDMD_ENV || 'sandbox' },
       });
 
-      console.log('[AMD Auth] Config record found:', !!configRecord);
-      if (configRecord) {
-        console.log('[AMD Auth] Config data:', {
-          officeKey: configRecord.officeKey,
-          partnerUsername: configRecord.partnerUsername,
-          hasPartnerPassword: !!configRecord.partnerPassword,
-          hasAppPassword: !!configRecord.appPassword,
-        });
-      }
-
       if (!configRecord) {
-        console.log('[AMD Auth] No config in database, using environment variables...');
+        logger.info('No AdvancedMD config in database, using environment variables');
 
         // Fallback to environment configuration
         const envConfig = getEnvConfig();
-        console.log('[AMD Auth] Env config result:', envConfig);
         this.config = {
           officeKey: envConfig.officeKey,
           partnerUsername: envConfig.username,
@@ -107,15 +93,10 @@ export class AdvancedMDAuthService {
           environment: (process.env.NODE_ENV === 'production' ? 'production' : 'sandbox') as 'sandbox' | 'production',
         };
 
-        console.log('[AMD Auth] Using environment config - Office Key:', this.config.officeKey);
+        logger.info('AdvancedMD using environment config', { officeKey: this.config.officeKey });
       } else {
-        console.log('[AMD Auth] Decrypting passwords...');
         const partnerPassword = this.decrypt(configRecord.partnerPassword);
         const appPassword = this.decrypt(configRecord.appPassword);
-        console.log('[AMD Auth] Passwords decrypted successfully');
-
-        console.log('[AMD Auth] About to create config object...');
-        console.log('[AMD Auth] partnerLoginURL:', configRecord.partnerLoginURL);
 
         this.config = {
           officeKey: configRecord.officeKey,
@@ -127,9 +108,7 @@ export class AdvancedMDAuthService {
           environment: configRecord.environment as 'sandbox' | 'production',
         };
 
-        console.log('[AMD Auth] Config object created');
-        console.log('[AMD Auth] this.config:', this.config);
-        console.log('[AMD Auth] Using database config - Office Key:', this.config?.officeKey);
+        logger.info('AdvancedMD using database config', { officeKey: this.config.officeKey });
       }
 
       // Restore session if token is still valid (only if config was from database)
@@ -150,14 +129,13 @@ export class AdvancedMDAuthService {
             redirectURLScheduler: configRecord.redirectURLScheduler,
           };
 
-          console.log('[AMD Auth] Restored valid session from database');
+          logger.info('AdvancedMD restored valid session from database');
         } else {
-          console.log('[AMD Auth] Stored session expired, will re-authenticate');
+          logger.info('AdvancedMD stored session expired, will re-authenticate');
         }
       }
-    } catch (error) {
-      console.error('[AMD Auth] Initialization error:', error);
-      console.error('[AMD Auth] Error stack:', error.stack);
+    } catch (error: any) {
+      logger.error('AdvancedMD Auth initialization error', { error: error.message });
       throw new Error(`Failed to initialize AdvancedMD auth: ${error.message}`);
     }
   }
@@ -176,7 +154,7 @@ export class AdvancedMDAuthService {
     }
 
     // Token expired or not exist, perform authentication
-    console.log('[AMD Auth] Token invalid or expired, performing authentication...');
+    logger.info('AdvancedMD token invalid or expired, performing authentication');
     await this.authenticate();
 
     if (!this.session?.token) {
@@ -214,10 +192,10 @@ export class AdvancedMDAuthService {
    */
   private async authenticate(): Promise<void> {
     try {
-      console.log('[AMD Auth] Step 1: Partner login to get redirect URLs...');
+      logger.info('AdvancedMD Step 1: Partner login to get redirect URLs');
       const redirectURLs = await this.performPartnerLogin();
 
-      console.log('[AMD Auth] Step 2: Redirect login to get session token...');
+      logger.info('AdvancedMD Step 2: Redirect login to get session token');
       const token = await this.performRedirectLogin(redirectURLs.redirectURLXMLRPC);
 
       // Create session state
@@ -237,8 +215,8 @@ export class AdvancedMDAuthService {
       // Persist session to database
       await this.persistSession();
 
-      console.log('[AMD Auth] Authentication successful, token valid until', expiresAt);
-    } catch (error) {
+      logger.info('AdvancedMD authentication successful', { tokenExpiresAt: expiresAt });
+    } catch (error: any) {
       throw new Error(`Authentication failed: ${error.message}`);
     }
   }
@@ -276,7 +254,7 @@ export class AdvancedMDAuthService {
       // Extract usercontext with server URLs (may be present even with errors)
       const usercontext = results.Results?.usercontext;
       if (usercontext && usercontext['@webserver']) {
-        console.log('[AMD Auth] Received redirect to:', usercontext['@webserver']);
+        logger.debug('AdvancedMD received redirect URL', { webserver: usercontext['@webserver'] });
 
         return {
           redirectURLXMLRPC: usercontext['@webserver'] + '/xmlrpc/processrequest.aspx',
@@ -341,7 +319,7 @@ export class AdvancedMDAuthService {
       const tokenCookie = cookies.find((c: string) => c.startsWith('token='));
       if (tokenCookie) {
         const token = tokenCookie.split(';')[0].split('=')[1];
-        console.log('[AMD Auth] Token received via cookie');
+        logger.debug('AdvancedMD token received via cookie');
         return token;
       }
     }
@@ -353,7 +331,7 @@ export class AdvancedMDAuthService {
       // Check for usercontext with token
       const usercontext = results.Results?.usercontext;
       if (usercontext && usercontext['#text']) {
-        console.log('[AMD Auth] Token received via usercontext');
+        logger.debug('AdvancedMD token received via usercontext');
         return usercontext['#text'];
       }
 
@@ -374,7 +352,7 @@ export class AdvancedMDAuthService {
       }
 
       if (ppmdmsg.token) {
-        console.log('[AMD Auth] Token received via ppmdmsg');
+        logger.debug('AdvancedMD token received via ppmdmsg');
         return ppmdmsg.token;
       }
     }
@@ -419,8 +397,8 @@ export class AdvancedMDAuthService {
           redirectURLScheduler: this.session.redirectURLScheduler,
         },
       });
-    } catch (error) {
-      console.error('[AMD Auth] Failed to persist session:', error);
+    } catch (error: any) {
+      logger.error('AdvancedMD failed to persist session', { error: error.message });
       // Don't throw - session is still valid in memory
     }
   }
@@ -503,7 +481,12 @@ export class AdvancedMDAuthService {
       retryable: error.response?.status >= 500 || error.code === 'ECONNABORTED',
     };
 
-    console.error('[AMD Auth] HTTP Error:', amdError);
+    logger.error('AdvancedMD HTTP Error', {
+      code: amdError.code,
+      endpoint: amdError.endpoint,
+      httpStatus: amdError.httpStatus,
+      message: amdError.message
+    });
 
     throw amdError;
   }
@@ -512,7 +495,7 @@ export class AdvancedMDAuthService {
    * Force re-authentication (invalidate current session)
    */
   async forceReAuthenticate(): Promise<void> {
-    console.log('[AMD Auth] Force re-authentication requested');
+    logger.info('AdvancedMD force re-authentication requested');
     this.session = null;
     await this.authenticate();
   }

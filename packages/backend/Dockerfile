@@ -34,6 +34,10 @@ COPY packages/shared ./packages/shared
 WORKDIR /app/packages/database
 RUN npx prisma generate
 
+# Build TypeScript to JavaScript
+WORKDIR /app/packages/backend
+RUN npx tsc --project tsconfig.json
+
 # Stage 2: Production - use Debian slim for better OpenSSL compatibility with Prisma
 FROM node:20-slim
 

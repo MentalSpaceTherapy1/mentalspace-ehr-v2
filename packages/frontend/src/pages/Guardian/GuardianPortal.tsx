@@ -60,7 +60,7 @@ import axios from 'axios';
 dayjs.extend(isBetween);
 dayjs.extend(relativeTime);
 
-const API_BASE_URL = 'http://localhost:3001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 interface Minor {
   id: string;

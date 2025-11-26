@@ -13,6 +13,7 @@ import * as vendorService from '../services/vendor.service';
 import * as budgetService from '../services/budget.service';
 import * as poService from '../services/purchase-order.service';
 import { PrismaClient } from '@prisma/client';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -20,7 +21,7 @@ const prisma = new PrismaClient();
  * Main monitoring job function
  */
 export async function monitorVendorFinancial(): Promise<void> {
-  console.log('[VENDOR-FINANCIAL-MONITOR] Starting vendor & financial monitoring job...');
+  logger.info('Starting vendor & financial monitoring job');
 
   try {
     await Promise.all([
@@ -33,9 +34,9 @@ export async function monitorVendorFinancial(): Promise<void> {
       checkPendingApprovals(),
     ]);
 
-    console.log('[VENDOR-FINANCIAL-MONITOR] Monitoring job completed successfully');
+    logger.info('Vendor & financial monitoring job completed successfully');
   } catch (error) {
-    console.error('[VENDOR-FINANCIAL-MONITOR] Error during monitoring job:', error);
+    logger.error('Error during vendor & financial monitoring job', { error: error instanceof Error ? error.message : error });
     throw error;
   }
 }
@@ -49,29 +50,31 @@ async function checkVendorContractsExpiringSoon(): Promise<void> {
     const { contractsExpiringSoon } = vendorsRequiringAttention;
 
     if (contractsExpiringSoon.length > 0) {
-      console.log(
-        `[VENDOR-MONITOR] ${contractsExpiringSoon.length} vendor contract(s) expiring within 90 days:`
-      );
-
-      for (const vendor of contractsExpiringSoon) {
+      const vendorDetails = contractsExpiringSoon.map(vendor => {
         const daysUntilExpiration = vendor.contractEnd
           ? Math.ceil(
               (vendor.contractEnd.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
             )
           : 0;
+        return {
+          companyName: vendor.companyName,
+          daysUntilExpiration,
+          contractEnd: vendor.contractEnd?.toISOString().split('T')[0]
+        };
+      });
 
-        console.log(
-          `  - ${vendor.companyName}: Expires in ${daysUntilExpiration} days (${vendor.contractEnd?.toISOString().split('T')[0]})`
-        );
+      logger.warn('Vendor contracts expiring within 90 days', {
+        count: contractsExpiringSoon.length,
+        vendors: vendorDetails
+      });
 
-        // TODO: Send email notification to procurement team
-        // await sendContractExpirationAlert(vendor, daysUntilExpiration);
-      }
+      // TODO: Send email notification to procurement team
+      // await sendContractExpirationAlert(vendor, daysUntilExpiration);
     } else {
-      console.log('[VENDOR-MONITOR] No vendor contracts expiring soon');
+      logger.info('No vendor contracts expiring soon');
     }
   } catch (error) {
-    console.error('[VENDOR-MONITOR] Error checking contracts expiring soon:', error);
+    logger.error('Error checking contracts expiring soon', { error: error instanceof Error ? error.message : error });
   }
 }
 
@@ -84,30 +87,32 @@ async function checkVendorInsuranceExpiringSoon(): Promise<void> {
     const { insuranceExpiringSoon } = vendorsRequiringAttention;
 
     if (insuranceExpiringSoon.length > 0) {
-      console.log(
-        `[VENDOR-MONITOR] ${insuranceExpiringSoon.length} vendor insurance certificate(s) expiring within 30 days:`
-      );
-
-      for (const vendor of insuranceExpiringSoon) {
+      const vendorDetails = insuranceExpiringSoon.map(vendor => {
         const daysUntilExpiration = vendor.insuranceExpiration
           ? Math.ceil(
               (vendor.insuranceExpiration.getTime() - new Date().getTime()) /
                 (1000 * 60 * 60 * 24)
             )
           : 0;
+        return {
+          companyName: vendor.companyName,
+          daysUntilExpiration,
+          insuranceExpiration: vendor.insuranceExpiration?.toISOString().split('T')[0]
+        };
+      });
 
-        console.log(
-          `  - ${vendor.companyName}: Insurance expires in ${daysUntilExpiration} days (${vendor.insuranceExpiration?.toISOString().split('T')[0]})`
-        );
+      logger.warn('Vendor insurance expiring within 30 days', {
+        count: insuranceExpiringSoon.length,
+        vendors: vendorDetails
+      });
 
-        // TODO: Send email notification to risk management
-        // await sendInsuranceExpirationAlert(vendor, daysUntilExpiration);
-      }
+      // TODO: Send email notification to risk management
+      // await sendInsuranceExpirationAlert(vendor, daysUntilExpiration);
     } else {
-      console.log('[VENDOR-MONITOR] No vendor insurance certificates expiring soon');
+      logger.info('No vendor insurance certificates expiring soon');
     }
   } catch (error) {
-    console.error('[VENDOR-MONITOR] Error checking insurance expiring soon:', error);
+    logger.error('Error checking insurance expiring soon', { error: error instanceof Error ? error.message : error });
   }
 }
 
@@ -120,27 +125,31 @@ async function checkExpiredVendorContracts(): Promise<void> {
     const { expiredContracts } = vendorsRequiringAttention;
 
     if (expiredContracts.length > 0) {
-      console.log(`[VENDOR-MONITOR] ${expiredContracts.length} vendor contract(s) EXPIRED:`);
-
-      for (const vendor of expiredContracts) {
+      const vendorDetails = expiredContracts.map(vendor => {
         const daysExpired = vendor.contractEnd
           ? Math.ceil(
               (new Date().getTime() - vendor.contractEnd.getTime()) / (1000 * 60 * 60 * 24)
             )
           : 0;
+        return {
+          companyName: vendor.companyName,
+          daysExpired,
+          contractEnd: vendor.contractEnd?.toISOString().split('T')[0]
+        };
+      });
 
-        console.log(
-          `  - ${vendor.companyName}: Expired ${daysExpired} days ago (${vendor.contractEnd?.toISOString().split('T')[0]})`
-        );
+      logger.error('Expired vendor contracts', {
+        count: expiredContracts.length,
+        vendors: vendorDetails
+      });
 
-        // TODO: Send urgent notification to procurement team
-        // await sendExpiredContractAlert(vendor, daysExpired);
-      }
+      // TODO: Send urgent notification to procurement team
+      // await sendExpiredContractAlert(vendor, daysExpired);
     } else {
-      console.log('[VENDOR-MONITOR] No expired vendor contracts');
+      logger.info('No expired vendor contracts');
     }
   } catch (error) {
-    console.error('[VENDOR-MONITOR] Error checking expired contracts:', error);
+    logger.error('Error checking expired contracts', { error: error instanceof Error ? error.message : error });
   }
 }
 
@@ -153,30 +162,32 @@ async function checkExpiredVendorInsurance(): Promise<void> {
     const { expiredInsurance } = vendorsRequiringAttention;
 
     if (expiredInsurance.length > 0) {
-      console.log(
-        `[VENDOR-MONITOR] ${expiredInsurance.length} vendor insurance certificate(s) EXPIRED:`
-      );
-
-      for (const vendor of expiredInsurance) {
+      const vendorDetails = expiredInsurance.map(vendor => {
         const daysExpired = vendor.insuranceExpiration
           ? Math.ceil(
               (new Date().getTime() - vendor.insuranceExpiration.getTime()) /
                 (1000 * 60 * 60 * 24)
             )
           : 0;
+        return {
+          companyName: vendor.companyName,
+          daysExpired,
+          insuranceExpiration: vendor.insuranceExpiration?.toISOString().split('T')[0]
+        };
+      });
 
-        console.log(
-          `  - ${vendor.companyName}: Insurance expired ${daysExpired} days ago (${vendor.insuranceExpiration?.toISOString().split('T')[0]})`
-        );
+      logger.error('Expired vendor insurance certificates', {
+        count: expiredInsurance.length,
+        vendors: vendorDetails
+      });
 
-        // TODO: Send urgent notification to risk management
-        // await sendExpiredInsuranceAlert(vendor, daysExpired);
-      }
+      // TODO: Send urgent notification to risk management
+      // await sendExpiredInsuranceAlert(vendor, daysExpired);
     } else {
-      console.log('[VENDOR-MONITOR] No expired vendor insurance certificates');
+      logger.info('No expired vendor insurance certificates');
     }
   } catch (error) {
-    console.error('[VENDOR-MONITOR] Error checking expired insurance:', error);
+    logger.error('Error checking expired insurance', { error: error instanceof Error ? error.message : error });
   }
 }
 
@@ -209,36 +220,42 @@ async function checkBudgetUtilization(): Promise<void> {
 
     // Log over-budget alerts
     if (overBudgets.length > 0) {
-      console.log(`[BUDGET-MONITOR] ${overBudgets.length} budget(s) OVER BUDGET:`);
-      for (const { budget, utilization } of overBudgets) {
-        console.log(
-          `  - ${budget.name} (${budget.category}): ${utilization.percentSpent.toFixed(1)}% spent ($${utilization.spentAmount.toFixed(2)} / $${utilization.allocatedAmount.toFixed(2)})`
-        );
-        // TODO: Send urgent alert to budget owner and finance team
-        // await sendOverBudgetAlert(budget, utilization);
-      }
+      const budgetDetails = overBudgets.map(({ budget, utilization }) => ({
+        name: budget.name,
+        category: budget.category,
+        percentSpent: utilization.percentSpent.toFixed(1),
+        spentAmount: utilization.spentAmount.toFixed(2),
+        allocatedAmount: utilization.allocatedAmount.toFixed(2)
+      }));
+      logger.error('Budgets OVER BUDGET', { count: overBudgets.length, budgets: budgetDetails });
+      // TODO: Send urgent alert to budget owner and finance team
+      // await sendOverBudgetAlert(budget, utilization);
     }
 
     // Log critical budget alerts (>90% spent)
     if (criticalBudgets.length > 0) {
-      console.log(`[BUDGET-MONITOR] ${criticalBudgets.length} budget(s) in CRITICAL status:`);
-      for (const { budget, utilization } of criticalBudgets) {
-        console.log(
-          `  - ${budget.name} (${budget.category}): ${utilization.percentSpent.toFixed(1)}% spent ($${utilization.spentAmount.toFixed(2)} / $${utilization.allocatedAmount.toFixed(2)})`
-        );
-        // TODO: Send alert to budget owner
-        // await sendCriticalBudgetAlert(budget, utilization);
-      }
+      const budgetDetails = criticalBudgets.map(({ budget, utilization }) => ({
+        name: budget.name,
+        category: budget.category,
+        percentSpent: utilization.percentSpent.toFixed(1),
+        spentAmount: utilization.spentAmount.toFixed(2),
+        allocatedAmount: utilization.allocatedAmount.toFixed(2)
+      }));
+      logger.warn('Budgets in CRITICAL status', { count: criticalBudgets.length, budgets: budgetDetails });
+      // TODO: Send alert to budget owner
+      // await sendCriticalBudgetAlert(budget, utilization);
     }
 
     // Log warning budget alerts (>80% spent)
     if (warningBudgets.length > 0) {
-      console.log(`[BUDGET-MONITOR] ${warningBudgets.length} budget(s) in WARNING status:`);
-      for (const { budget, utilization } of warningBudgets) {
-        console.log(
-          `  - ${budget.name} (${budget.category}): ${utilization.percentSpent.toFixed(1)}% spent ($${utilization.spentAmount.toFixed(2)} / $${utilization.allocatedAmount.toFixed(2)})`
-        );
-      }
+      const budgetDetails = warningBudgets.map(({ budget, utilization }) => ({
+        name: budget.name,
+        category: budget.category,
+        percentSpent: utilization.percentSpent.toFixed(1),
+        spentAmount: utilization.spentAmount.toFixed(2),
+        allocatedAmount: utilization.allocatedAmount.toFixed(2)
+      }));
+      logger.warn('Budgets in WARNING status', { count: warningBudgets.length, budgets: budgetDetails });
     }
 
     if (
@@ -246,10 +263,10 @@ async function checkBudgetUtilization(): Promise<void> {
       criticalBudgets.length === 0 &&
       warningBudgets.length === 0
     ) {
-      console.log('[BUDGET-MONITOR] All budgets in healthy status');
+      logger.info('All budgets in healthy status');
     }
   } catch (error) {
-    console.error('[BUDGET-MONITOR] Error checking budget utilization:', error);
+    logger.error('Error checking budget utilization', { error: error instanceof Error ? error.message : error });
   }
 }
 
@@ -261,27 +278,29 @@ async function checkOverduePurchaseOrders(): Promise<void> {
     const overduePOs = await poService.getOverduePurchaseOrders();
 
     if (overduePOs.length > 0) {
-      console.log(`[PO-MONITOR] ${overduePOs.length} purchase order(s) OVERDUE:`);
-
-      for (const po of overduePOs) {
+      const poDetails = overduePOs.map(po => {
         const daysOverdue = po.expectedDate
           ? Math.ceil(
               (new Date().getTime() - po.expectedDate.getTime()) / (1000 * 60 * 60 * 24)
             )
           : 0;
+        return {
+          poNumber: po.poNumber,
+          vendor: po.vendor.companyName,
+          daysOverdue,
+          expectedDate: po.expectedDate?.toISOString().split('T')[0]
+        };
+      });
 
-        console.log(
-          `  - PO ${po.poNumber} (${po.vendor.companyName}): ${daysOverdue} days overdue (Expected: ${po.expectedDate?.toISOString().split('T')[0]})`
-        );
+      logger.warn('Overdue purchase orders', { count: overduePOs.length, purchaseOrders: poDetails });
 
-        // TODO: Send notification to requester and procurement
-        // await sendOverduePOAlert(po, daysOverdue);
-      }
+      // TODO: Send notification to requester and procurement
+      // await sendOverduePOAlert(po, daysOverdue);
     } else {
-      console.log('[PO-MONITOR] No overdue purchase orders');
+      logger.info('No overdue purchase orders');
     }
   } catch (error) {
-    console.error('[PO-MONITOR] Error checking overdue purchase orders:', error);
+    logger.error('Error checking overdue purchase orders', { error: error instanceof Error ? error.message : error });
   }
 }
 
@@ -309,10 +328,7 @@ async function checkPendingApprovals(): Promise<void> {
     ]);
 
     if (pendingPOs.length > 0) {
-      console.log(`[APPROVAL-MONITOR] ${pendingPOs.length} purchase order(s) pending approval`);
-
       const totalPOValue = pendingPOs.reduce((sum, po) => sum + Number(po.total), 0);
-      console.log(`  Total pending PO value: $${totalPOValue.toFixed(2)}`);
 
       // Check for old pending POs (>7 days)
       const oldPendingPOs = pendingPOs.filter((po) => {
@@ -322,21 +338,23 @@ async function checkPendingApprovals(): Promise<void> {
         return daysOld > 7;
       });
 
+      logger.info('Purchase orders pending approval', {
+        count: pendingPOs.length,
+        totalValue: totalPOValue.toFixed(2),
+        pendingOver7Days: oldPendingPOs.length
+      });
+
       if (oldPendingPOs.length > 0) {
-        console.log(`  - ${oldPendingPOs.length} PO(s) pending for >7 days`);
         // TODO: Send reminder to approvers
         // await sendPendingPOReminder(oldPendingPOs);
       }
     }
 
     if (pendingExpenses.length > 0) {
-      console.log(`[APPROVAL-MONITOR] ${pendingExpenses.length} expense(s) pending approval`);
-
       const totalExpenseValue = pendingExpenses.reduce(
         (sum, exp) => sum + Number(exp.totalAmount),
         0
       );
-      console.log(`  Total pending expense value: $${totalExpenseValue.toFixed(2)}`);
 
       // Check for old pending expenses (>7 days)
       const oldPendingExpenses = pendingExpenses.filter((exp) => {
@@ -346,18 +364,23 @@ async function checkPendingApprovals(): Promise<void> {
         return daysOld > 7;
       });
 
+      logger.info('Expenses pending approval', {
+        count: pendingExpenses.length,
+        totalValue: totalExpenseValue.toFixed(2),
+        pendingOver7Days: oldPendingExpenses.length
+      });
+
       if (oldPendingExpenses.length > 0) {
-        console.log(`  - ${oldPendingExpenses.length} expense(s) pending for >7 days`);
         // TODO: Send reminder to approvers
         // await sendPendingExpenseReminder(oldPendingExpenses);
       }
     }
 
     if (pendingPOs.length === 0 && pendingExpenses.length === 0) {
-      console.log('[APPROVAL-MONITOR] No pending approvals');
+      logger.info('No pending approvals');
     }
   } catch (error) {
-    console.error('[APPROVAL-MONITOR] Error checking pending approvals:', error);
+    logger.error('Error checking pending approvals', { error: error instanceof Error ? error.message : error });
   }
 }
 
@@ -370,9 +393,9 @@ export function scheduleVendorFinancialMonitoring(): void {
 
   // Run daily at 8:00 AM
   cron.schedule('0 8 * * *', async () => {
-    console.log('[VENDOR-FINANCIAL-MONITOR] Running scheduled monitoring job');
+    logger.info('Running scheduled vendor & financial monitoring job');
     await monitorVendorFinancial();
   });
 
-  console.log('[VENDOR-FINANCIAL-MONITOR] Scheduled to run daily at 8:00 AM');
+  logger.info('Vendor & financial monitoring scheduled (daily at 8:00 AM)');
 }

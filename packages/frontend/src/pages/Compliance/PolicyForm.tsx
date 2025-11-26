@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { sanitizeHtml } from '../../utils/sanitizeHtml';
 import {
   Box,
   Card,
@@ -522,7 +523,7 @@ export default function PolicyForm() {
             </Stack>
             <Box
               sx={{ lineHeight: 1.8 }}
-              dangerouslySetInnerHTML={{ __html: formData.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(formData.content) }}
             />
           </CardContent>
         </Card>

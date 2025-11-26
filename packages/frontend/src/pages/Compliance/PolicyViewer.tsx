@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { sanitizeHtml } from '../../utils/sanitizeHtml';
 import {
   Box,
   Card,
@@ -320,7 +321,7 @@ export default function PolicyViewer() {
                 <Typography
                   variant="body1"
                   sx={{ lineHeight: 1.8, color: 'text.primary' }}
-                  dangerouslySetInnerHTML={{ __html: policy.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(policy.content) }}
                 />
               </Box>
             ))}

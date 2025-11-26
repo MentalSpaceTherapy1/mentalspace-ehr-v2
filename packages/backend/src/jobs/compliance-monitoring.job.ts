@@ -12,6 +12,7 @@ import cron from 'node-cron';
 import policyService from '../services/policy.service';
 import incidentService from '../services/incident.service';
 import { PrismaClient } from '@prisma/client';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -21,16 +22,16 @@ const prisma = new PrismaClient();
  */
 export const policyReviewReminders = cron.schedule('0 9 * * *', async () => {
   try {
-    console.log('🔔 Running policy review reminders job...');
+    logger.info('Running policy review reminders job');
 
     const policiesDueForReview = await policyService.getPoliciesDueForReview();
 
     if (policiesDueForReview.length === 0) {
-      console.log('✅ No policies due for review');
+      logger.info('No policies due for review');
       return;
     }
 
-    console.log(`📋 Found ${policiesDueForReview.length} policies due for review`);
+    logger.info('Policies due for review', { count: policiesDueForReview.length });
 
     // Group policies by owner
     const policiesByOwner: { [key: string]: any[] } = {};
@@ -49,14 +50,18 @@ export const policyReviewReminders = cron.schedule('0 9 * * *', async () => {
       });
 
       if (owner) {
-        console.log(`📧 Policy review reminder for ${owner.firstName} ${owner.lastName} (${owner.email})`);
-        console.log(`   - ${policies.length} policy/policies require review:`);
-
-        policies.forEach(policy => {
+        const overdueDetails = policies.map(policy => {
           const daysOverdue = Math.floor(
             (new Date().getTime() - policy.nextReviewDate!.getTime()) / (1000 * 60 * 60 * 24)
           );
-          console.log(`     • ${policy.policyNumber} - ${policy.policyName} (${daysOverdue} days overdue)`);
+          return { policyNumber: policy.policyNumber, policyName: policy.policyName, daysOverdue };
+        });
+
+        logger.info('Policy review reminder sent', {
+          ownerEmail: owner.email,
+          ownerName: `${owner.firstName} ${owner.lastName}`,
+          policyCount: policies.length,
+          policies: overdueDetails
         });
 
         // TODO: Send email notification using email service
@@ -64,9 +69,9 @@ export const policyReviewReminders = cron.schedule('0 9 * * *', async () => {
       }
     }
 
-    console.log('✅ Policy review reminders completed');
+    logger.info('Policy review reminders completed');
   } catch (error) {
-    console.error('❌ Error in policy review reminders job:', error);
+    logger.error('Error in policy review reminders job', { error: error instanceof Error ? error.message : error });
   }
 }); // TODO: Cron task - call .start() manually to begin
 
@@ -76,16 +81,16 @@ export const policyReviewReminders = cron.schedule('0 9 * * *', async () => {
  */
 export const incidentFollowUpCheck = cron.schedule('0 10 * * *', async () => {
   try {
-    console.log('🔔 Running incident follow-up check job...');
+    logger.info('Running incident follow-up check job');
 
     const incidentsRequiringFollowUp = await incidentService.getIncidentsRequiringFollowUp();
 
     if (incidentsRequiringFollowUp.length === 0) {
-      console.log('✅ No incidents requiring follow-up');
+      logger.info('No incidents requiring follow-up');
       return;
     }
 
-    console.log(`📋 Found ${incidentsRequiringFollowUp.length} incidents requiring follow-up`);
+    logger.info('Incidents requiring follow-up', { count: incidentsRequiringFollowUp.length });
 
     // Check for overdue follow-ups
     const now = new Date();
@@ -94,13 +99,13 @@ export const incidentFollowUpCheck = cron.schedule('0 10 * * *', async () => {
     );
 
     if (overdueIncidents.length > 0) {
-      console.log(`⚠️ ${overdueIncidents.length} incidents have OVERDUE follow-ups:`);
-      overdueIncidents.forEach(incident => {
+      const overdueDetails = overdueIncidents.map(incident => {
         const daysOverdue = Math.floor(
           (now.getTime() - incident.followUpDate!.getTime()) / (1000 * 60 * 60 * 24)
         );
-        console.log(`   • ${incident.incidentNumber} - ${incident.incidentType} (${daysOverdue} days overdue)`);
+        return { incidentNumber: incident.incidentNumber, incidentType: incident.incidentType, daysOverdue };
       });
+      logger.warn('Overdue incident follow-ups', { count: overdueIncidents.length, incidents: overdueDetails });
     }
 
     // Group by assigned investigator
@@ -122,17 +127,20 @@ export const incidentFollowUpCheck = cron.schedule('0 10 * * *', async () => {
       });
 
       if (investigator) {
-        console.log(`📧 Incident follow-up reminder for ${investigator.firstName} ${investigator.lastName}`);
-        console.log(`   - ${incidents.length} incident(s) require follow-up`);
+        logger.info('Incident follow-up reminder sent', {
+          investigatorName: `${investigator.firstName} ${investigator.lastName}`,
+          investigatorEmail: investigator.email,
+          incidentCount: incidents.length
+        });
 
         // TODO: Send email notification
         // await emailService.sendIncidentFollowUpReminder(investigator.email, incidents);
       }
     }
 
-    console.log('✅ Incident follow-up check completed');
+    logger.info('Incident follow-up check completed');
   } catch (error) {
-    console.error('❌ Error in incident follow-up check job:', error);
+    logger.error('Error in incident follow-up check job', { error: error instanceof Error ? error.message : error });
   }
 }); // TODO: Cron task - call .start() manually to begin
 
@@ -142,16 +150,16 @@ export const incidentFollowUpCheck = cron.schedule('0 10 * * *', async () => {
  */
 export const highSeverityIncidentMonitor = cron.schedule('0 */4 * * *', async () => {
   try {
-    console.log('🔔 Running high-severity incident monitor...');
+    logger.info('Running high-severity incident monitor');
 
     const highSeverityIncidents = await incidentService.getHighSeverityOpenIncidents();
 
     if (highSeverityIncidents.length === 0) {
-      console.log('✅ No high-severity open incidents');
+      logger.info('No high-severity open incidents');
       return;
     }
 
-    console.log(`⚠️ Found ${highSeverityIncidents.length} high-severity open incidents`);
+    logger.warn('High-severity open incidents found', { count: highSeverityIncidents.length });
 
     // Check for critical incidents without investigators
     const unassignedCritical = highSeverityIncidents.filter(
@@ -159,10 +167,11 @@ export const highSeverityIncidentMonitor = cron.schedule('0 */4 * * *', async ()
     );
 
     if (unassignedCritical.length > 0) {
-      console.log(`🚨 ALERT: ${unassignedCritical.length} CRITICAL incidents are UNASSIGNED:`);
-      unassignedCritical.forEach(incident => {
-        console.log(`   • ${incident.incidentNumber} - ${incident.incidentType}`);
-      });
+      const criticalDetails = unassignedCritical.map(incident => ({
+        incidentNumber: incident.incidentNumber,
+        incidentType: incident.incidentType
+      }));
+      logger.error('CRITICAL unassigned incidents', { count: unassignedCritical.length, incidents: criticalDetails });
 
       // TODO: Send urgent alert to compliance team
       // await emailService.sendCriticalIncidentAlert(unassignedCritical);
@@ -178,18 +187,18 @@ export const highSeverityIncidentMonitor = cron.schedule('0 */4 * * *', async ()
     );
 
     if (staleIncidents.length > 0) {
-      console.log(`⚠️ ${staleIncidents.length} high-severity incidents open for > 7 days:`);
-      staleIncidents.forEach(incident => {
+      const staleDetails = staleIncidents.map(incident => {
         const daysOpen = Math.floor(
           (new Date().getTime() - incident.incidentDate.getTime()) / (1000 * 60 * 60 * 24)
         );
-        console.log(`   • ${incident.incidentNumber} - ${daysOpen} days open`);
+        return { incidentNumber: incident.incidentNumber, daysOpen };
       });
+      logger.warn('High-severity incidents open > 7 days', { count: staleIncidents.length, incidents: staleDetails });
     }
 
-    console.log('✅ High-severity incident monitoring completed');
+    logger.info('High-severity incident monitoring completed');
   } catch (error) {
-    console.error('❌ Error in high-severity incident monitor:', error);
+    logger.error('Error in high-severity incident monitor', { error: error instanceof Error ? error.message : error });
   }
 }); // TODO: Cron task - call .start() manually to begin
 
@@ -199,7 +208,7 @@ export const highSeverityIncidentMonitor = cron.schedule('0 */4 * * *', async ()
  */
 export const weeklyComplianceReport = cron.schedule('0 8 * * 1', async () => {
   try {
-    console.log('🔔 Generating weekly compliance report...');
+    logger.info('Generating weekly compliance report');
 
     // Get policy compliance report
     const policyReport = await policyService.getComplianceReport();
@@ -214,34 +223,22 @@ export const weeklyComplianceReport = cron.schedule('0 8 * * 1', async () => {
       endDate
     });
 
-    console.log('\n📊 WEEKLY COMPLIANCE REPORT');
-    console.log('='.repeat(50));
-
-    console.log('\n📋 Policy Compliance:');
-    console.log(`   Total Policies: ${policyReport.summary.totalPolicies}`);
-    console.log(`   Compliance Rate: ${policyReport.summary.complianceRate}%`);
-    console.log(`   Pending Acknowledgments: ${policyReport.summary.pendingAcknowledgments}`);
-
-    console.log('\n🚨 Incident Summary (Past 7 Days):');
-    console.log(`   Total Incidents: ${incidentTrends.summary.totalIncidents}`);
-    console.log(`   Average Resolution: ${incidentTrends.summary.averageResolutionDays} days`);
-
-    console.log('\n📊 Incidents by Severity:');
-    Object.entries(incidentTrends.bySeverity).forEach(([severity, count]) => {
-      console.log(`   ${severity}: ${count}`);
+    logger.info('Weekly compliance report generated', {
+      report: {
+        policyCompliance: {
+          totalPolicies: policyReport.summary.totalPolicies,
+          complianceRate: policyReport.summary.complianceRate,
+          pendingAcknowledgments: policyReport.summary.pendingAcknowledgments
+        },
+        incidentSummary: {
+          totalIncidents: incidentTrends.summary.totalIncidents,
+          averageResolutionDays: incidentTrends.summary.averageResolutionDays,
+          bySeverity: incidentTrends.bySeverity,
+          byType: incidentTrends.byType,
+          investigationStatuses: incidentTrends.investigationStatuses
+        }
+      }
     });
-
-    console.log('\n📊 Incidents by Type:');
-    Object.entries(incidentTrends.byType).forEach(([type, count]) => {
-      console.log(`   ${type}: ${count}`);
-    });
-
-    console.log('\n📊 Investigation Status:');
-    Object.entries(incidentTrends.investigationStatuses).forEach(([status, count]) => {
-      console.log(`   ${status}: ${count}`);
-    });
-
-    console.log('\n' + '='.repeat(50));
 
     // TODO: Send email report to compliance team
     // await emailService.sendWeeklyComplianceReport({
@@ -249,9 +246,9 @@ export const weeklyComplianceReport = cron.schedule('0 8 * * 1', async () => {
     //   incidentTrends
     // });
 
-    console.log('✅ Weekly compliance report generated');
+    logger.info('Weekly compliance report completed');
   } catch (error) {
-    console.error('❌ Error generating weekly compliance report:', error);
+    logger.error('Error generating weekly compliance report', { error: error instanceof Error ? error.message : error });
   }
 }); // TODO: Cron task - call .start() manually to begin
 
@@ -259,35 +256,35 @@ export const weeklyComplianceReport = cron.schedule('0 8 * * 1', async () => {
  * Start all compliance monitoring jobs
  */
 export function startComplianceMonitoring() {
-  console.log('🚀 Starting compliance monitoring jobs...');
+  logger.info('Starting compliance monitoring jobs');
 
   policyReviewReminders.start();
-  console.log('✅ Policy review reminders scheduled (daily at 9:00 AM)');
+  logger.info('Scheduled: Policy review reminders (daily at 9:00 AM)');
 
   incidentFollowUpCheck.start();
-  console.log('✅ Incident follow-up checks scheduled (daily at 10:00 AM)');
+  logger.info('Scheduled: Incident follow-up checks (daily at 10:00 AM)');
 
   highSeverityIncidentMonitor.start();
-  console.log('✅ High-severity incident monitor scheduled (every 4 hours)');
+  logger.info('Scheduled: High-severity incident monitor (every 4 hours)');
 
   weeklyComplianceReport.start();
-  console.log('✅ Weekly compliance report scheduled (Mondays at 8:00 AM)');
+  logger.info('Scheduled: Weekly compliance report (Mondays at 8:00 AM)');
 
-  console.log('🎉 All compliance monitoring jobs started successfully');
+  logger.info('All compliance monitoring jobs started successfully');
 }
 
 /**
  * Stop all compliance monitoring jobs
  */
 export function stopComplianceMonitoring() {
-  console.log('🛑 Stopping compliance monitoring jobs...');
+  logger.info('Stopping compliance monitoring jobs');
 
   policyReviewReminders.stop();
   incidentFollowUpCheck.stop();
   highSeverityIncidentMonitor.stop();
   weeklyComplianceReport.stop();
 
-  console.log('✅ All compliance monitoring jobs stopped');
+  logger.info('All compliance monitoring jobs stopped');
 }
 
 export default {

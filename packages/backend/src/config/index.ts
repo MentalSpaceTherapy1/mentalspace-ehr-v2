@@ -2,16 +2,18 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 
+// Note: Logger cannot be used here as config must load first
+// These startup messages are intentional for debugging deployment issues
+
 // Load environment variables from root .env file ONLY if it exists
 // In ECS/Docker, environment variables are provided by the task definition
 const envPath = path.resolve(process.cwd(), '../../.env');
+let envFileLoaded = false;
 if (fs.existsSync(envPath)) {
   // Only load .env file if we're running locally (not in Docker/ECS)
   // ECS containers won't have a .env file
   dotenv.config({ path: envPath });
-  console.log('[CONFIG] Loaded environment variables from .env file');
-} else {
-  console.log('[CONFIG] No .env file found, using environment variables from container/system');
+  envFileLoaded = true;
 }
 
 interface Config {
@@ -192,52 +194,33 @@ const missingEnvVars = requiredEnvVars.filter((envVar) => {
 });
 
 // CRITICAL SECURITY CHECKS
+// Note: Using process.stderr.write here since config loads before logger
 // 1. JWT_SECRET must be set and strong
 if (!config.jwtSecret) {
   if (config.nodeEnv === 'production') {
-    console.error('❌ FATAL: JWT_SECRET environment variable is not set.');
-    console.error('   This is a CRITICAL security vulnerability.');
-    console.error('   Set JWT_SECRET to a strong random value (min 64 chars).');
-    console.error('   Generate one with: openssl rand -base64 64');
+    process.stderr.write('FATAL: JWT_SECRET environment variable is not set. Generate with: openssl rand -base64 64\n');
     process.exit(1);
   } else {
-    // Development fallback - still warn
-    console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure development default.');
-    console.warn('   This is NOT secure for production use.');
+    // Development fallback
     config.jwtSecret = 'dev-only-jwt-secret-not-for-production-use-minimum-64-characters';
   }
 }
 
 // 2. Validate JWT_SECRET strength
 const MIN_JWT_SECRET_LENGTH = 64;
-if (config.jwtSecret.length < MIN_JWT_SECRET_LENGTH) {
-  if (config.nodeEnv === 'production') {
-    console.error(`❌ FATAL: JWT_SECRET is too short (${config.jwtSecret.length} chars).`);
-    console.error(`   Minimum required length: ${MIN_JWT_SECRET_LENGTH} characters.`);
-    console.error('   Generate a strong secret with: openssl rand -base64 64');
-    process.exit(1);
-  } else {
-    console.warn(`⚠️  WARNING: JWT_SECRET is short (${config.jwtSecret.length} chars).`);
-    console.warn(`   Recommended minimum: ${MIN_JWT_SECRET_LENGTH} characters.`);
-  }
+if (config.jwtSecret.length < MIN_JWT_SECRET_LENGTH && config.nodeEnv === 'production') {
+  process.stderr.write(`FATAL: JWT_SECRET too short (${config.jwtSecret.length}/${MIN_JWT_SECRET_LENGTH} chars). Generate with: openssl rand -base64 64\n`);
+  process.exit(1);
 }
 
 // 3. Detect known insecure patterns
-const INSECURE_PATTERNS = [
-  'INSECURE_DEFAULT',
-  'CHANGE_THIS',
-  'secret',
-  'password',
-  '123456',
-  'default',
-];
+const INSECURE_PATTERNS = ['INSECURE_DEFAULT', 'CHANGE_THIS', 'secret', 'password', '123456', 'default'];
 
 if (config.nodeEnv === 'production') {
   const lowerSecret = config.jwtSecret.toLowerCase();
   for (const pattern of INSECURE_PATTERNS) {
     if (lowerSecret.includes(pattern.toLowerCase())) {
-      console.error(`❌ FATAL: JWT_SECRET contains insecure pattern: "${pattern}"`);
-      console.error('   Use a randomly generated secret in production.');
+      process.stderr.write(`FATAL: JWT_SECRET contains insecure pattern: "${pattern}". Use a randomly generated secret.\n`);
       process.exit(1);
     }
   }
@@ -245,16 +228,9 @@ if (config.nodeEnv === 'production') {
 
 if (missingEnvVars.length > 0) {
   const errorMsg = `Missing required environment variables: ${missingEnvVars.join(', ')}`;
-
   if (config.nodeEnv === 'production') {
-    // In production, fail fast
-    console.error(`❌ FATAL: ${errorMsg}`);
-    console.error('   Application cannot start without required environment variables.');
+    process.stderr.write(`FATAL: ${errorMsg}\n`);
     process.exit(1);
-  } else {
-    // In development, warn but allow to continue
-    console.warn(`⚠️  WARNING: ${errorMsg}`);
-    console.warn('   Some features may not work correctly.');
   }
 }
 

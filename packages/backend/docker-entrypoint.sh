@@ -25,4 +25,4 @@ echo "Migrations check complete"
 echo ""
 echo "Starting application server..."
 cd /app/packages/backend
-exec npx ts-node --transpile-only src/index.ts
+exec node dist/index.js

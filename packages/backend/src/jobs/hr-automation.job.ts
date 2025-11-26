@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import performanceReviewService from '../services/performance-review.service';
 import ptoService from '../services/pto.service';
 import { PrismaClient } from '@prisma/client';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -20,17 +21,15 @@ const prisma = new PrismaClient();
  */
 export const performanceReviewReminders = cron.schedule('0 9 * * *', async () => {
   try {
-    console.log('[HR-JOB] Running performance review reminders...');
+    logger.info('Running performance review reminders');
 
     // Get reviews due in next 30 days
     const upcomingReviews = await performanceReviewService.getUpcomingReviews();
 
     if (upcomingReviews.length === 0) {
-      console.log('[HR-JOB] No upcoming performance reviews');
+      logger.info('No upcoming performance reviews');
       return;
     }
-
-    console.log(`[HR-JOB] Found ${upcomingReviews.length} upcoming performance reviews`);
 
     // Group by time until due
     const reviewsIn7Days = upcomingReviews.filter(r => {
@@ -56,26 +55,39 @@ export const performanceReviewReminders = cron.schedule('0 9 * * *', async () =>
 
     // Log reminders (in production, this would send emails)
     if (reviewsIn7Days.length > 0) {
-      console.log(`[HR-JOB] URGENT: ${reviewsIn7Days.length} reviews due within 7 days`);
-      reviewsIn7Days.forEach(r => {
-        console.log(`  - ${r.user.firstName} ${r.user.lastName} (Due: ${new Date(r.nextReviewDate!).toLocaleDateString()})`);
+      const reviewDetails = reviewsIn7Days.map(r => ({
+        employee: `${r.user.firstName} ${r.user.lastName}`,
+        dueDate: new Date(r.nextReviewDate!).toLocaleDateString()
+      }));
+      logger.warn('URGENT: Performance reviews due within 7 days', {
+        count: reviewsIn7Days.length,
+        reviews: reviewDetails
       });
     }
 
     if (reviewsIn14Days.length > 0) {
-      console.log(`[HR-JOB] ${reviewsIn14Days.length} reviews due within 14 days`);
-      reviewsIn14Days.forEach(r => {
-        console.log(`  - ${r.user.firstName} ${r.user.lastName} (Due: ${new Date(r.nextReviewDate!).toLocaleDateString()})`);
+      const reviewDetails = reviewsIn14Days.map(r => ({
+        employee: `${r.user.firstName} ${r.user.lastName}`,
+        dueDate: new Date(r.nextReviewDate!).toLocaleDateString()
+      }));
+      logger.info('Performance reviews due within 14 days', {
+        count: reviewsIn14Days.length,
+        reviews: reviewDetails
       });
     }
 
     if (reviewsIn30Days.length > 0) {
-      console.log(`[HR-JOB] ${reviewsIn30Days.length} reviews due within 30 days`);
+      logger.info('Performance reviews due within 30 days', { count: reviewsIn30Days.length });
     }
 
-    console.log('[HR-JOB] Performance review reminders completed');
+    logger.info('Performance review reminders completed', {
+      totalUpcoming: upcomingReviews.length,
+      urgent7Days: reviewsIn7Days.length,
+      within14Days: reviewsIn14Days.length,
+      within30Days: reviewsIn30Days.length
+    });
   } catch (error) {
-    console.error('[HR-JOB] Error in performance review reminders:', error);
+    logger.error('Error in performance review reminders', { error: error instanceof Error ? error.message : error });
   }
 }); // TODO: Cron task - call .start() manually to begin
 
@@ -85,25 +97,24 @@ export const performanceReviewReminders = cron.schedule('0 9 * * *', async () =>
  */
 export const processPTOAccruals = cron.schedule('0 0 1 * *', async () => {
   try {
-    console.log('[HR-JOB] Processing PTO accruals...');
+    logger.info('Processing PTO accruals');
 
     const result = await ptoService.processAccruals();
 
-    console.log(`[HR-JOB] ${result.message}`);
-    console.log(`[HR-JOB] Accrued PTO for ${result.results.length} employees`);
-
     // Log sample of accruals
-    result.results.slice(0, 5).forEach(r => {
-      console.log(`  - User ${r.userId}: +${r.accrued} days (New balance: ${r.newBalance})`);
+    const sampleAccruals = result.results.slice(0, 5).map(r => ({
+      userId: r.userId,
+      accrued: r.accrued,
+      newBalance: r.newBalance
+    }));
+
+    logger.info('PTO accrual processing completed', {
+      message: result.message,
+      employeesProcessed: result.results.length,
+      sampleAccruals
     });
-
-    if (result.results.length > 5) {
-      console.log(`  ... and ${result.results.length - 5} more`);
-    }
-
-    console.log('[HR-JOB] PTO accrual processing completed');
   } catch (error) {
-    console.error('[HR-JOB] Error processing PTO accruals:', error);
+    logger.error('Error processing PTO accruals', { error: error instanceof Error ? error.message : error });
   }
 }); // TODO: Cron task - call .start() manually to begin
 
@@ -113,7 +124,7 @@ export const processPTOAccruals = cron.schedule('0 0 1 * *', async () => {
  */
 export const attendanceComplianceCheck = cron.schedule('0 8 * * 1', async () => {
   try {
-    console.log('[HR-JOB] Running attendance compliance check...');
+    logger.info('Running attendance compliance check');
 
     // Get date range for previous week
     const today = new Date();
@@ -135,7 +146,7 @@ export const attendanceComplianceCheck = cron.schedule('0 8 * * 1', async () => 
       },
     });
 
-    console.log(`[HR-JOB] Checking attendance for ${users.length} active employees`);
+    logger.info('Checking attendance for active employees', { employeeCount: users.length });
 
     const issues: any[] = [];
 
@@ -186,17 +197,17 @@ export const attendanceComplianceCheck = cron.schedule('0 8 * * 1', async () => 
 
     // Report issues
     if (issues.length === 0) {
-      console.log('[HR-JOB] No attendance compliance issues found');
+      logger.info('No attendance compliance issues found');
     } else {
-      console.log(`[HR-JOB] Found ${issues.length} attendance compliance issue(s):`);
-      issues.forEach(issue => {
-        console.log(`  - ${issue.user}: ${issue.issue}`);
+      logger.warn('Attendance compliance issues found', {
+        issueCount: issues.length,
+        issues: issues
       });
     }
 
-    console.log('[HR-JOB] Attendance compliance check completed');
+    logger.info('Attendance compliance check completed');
   } catch (error) {
-    console.error('[HR-JOB] Error in attendance compliance check:', error);
+    logger.error('Error in attendance compliance check', { error: error instanceof Error ? error.message : error });
   }
 }); // TODO: Cron task - call .start() manually to begin
 
@@ -206,7 +217,7 @@ export const attendanceComplianceCheck = cron.schedule('0 8 * * 1', async () => 
  */
 export const expiringPTOAlert = cron.schedule('0 10 15 * *', async () => {
   try {
-    console.log('[HR-JOB] Checking for expiring PTO balances...');
+    logger.info('Checking for expiring PTO balances');
 
     // Get all PTO balances
     const balances = await prisma.pTOBalance.findMany({
@@ -242,17 +253,17 @@ export const expiringPTOAlert = cron.schedule('0 10 15 * *', async () => {
     });
 
     if (alerts.length === 0) {
-      console.log('[HR-JOB] No expiring PTO balance alerts');
+      logger.info('No expiring PTO balance alerts');
     } else {
-      console.log(`[HR-JOB] Found ${alerts.length} PTO balance alert(s):`);
-      alerts.forEach(alert => {
-        console.log(`  - ${alert.user}: ${alert.totalBalance} days total (PTO: ${alert.ptoBalance}, Vacation: ${alert.vacationBalance})`);
+      logger.warn('High PTO balance alerts', {
+        alertCount: alerts.length,
+        alerts: alerts
       });
     }
 
-    console.log('[HR-JOB] Expiring PTO alert check completed');
+    logger.info('Expiring PTO alert check completed');
   } catch (error) {
-    console.error('[HR-JOB] Error checking expiring PTO:', error);
+    logger.error('Error checking expiring PTO', { error: error instanceof Error ? error.message : error });
   }
 }); // TODO: Cron task - call .start() manually to begin
 
@@ -260,35 +271,35 @@ export const expiringPTOAlert = cron.schedule('0 10 15 * *', async () => {
  * Start all HR automation jobs
  */
 export function startHRJobs() {
-  console.log('[HR-JOB] Starting HR automation jobs...');
+  logger.info('Starting HR automation jobs');
 
   performanceReviewReminders.start();
-  console.log('[HR-JOB] - Performance review reminders (daily at 9:00 AM)');
+  logger.info('Scheduled: Performance review reminders (daily at 9:00 AM)');
 
   processPTOAccruals.start();
-  console.log('[HR-JOB] - PTO accrual processing (1st of month at 12:00 AM)');
+  logger.info('Scheduled: PTO accrual processing (1st of month at 12:00 AM)');
 
   attendanceComplianceCheck.start();
-  console.log('[HR-JOB] - Attendance compliance check (Mondays at 8:00 AM)');
+  logger.info('Scheduled: Attendance compliance check (Mondays at 8:00 AM)');
 
   expiringPTOAlert.start();
-  console.log('[HR-JOB] - Expiring PTO alerts (15th of month at 10:00 AM)');
+  logger.info('Scheduled: Expiring PTO alerts (15th of month at 10:00 AM)');
 
-  console.log('[HR-JOB] All HR automation jobs started');
+  logger.info('All HR automation jobs started');
 }
 
 /**
  * Stop all HR automation jobs
  */
 export function stopHRJobs() {
-  console.log('[HR-JOB] Stopping HR automation jobs...');
+  logger.info('Stopping HR automation jobs');
 
   performanceReviewReminders.stop();
   processPTOAccruals.stop();
   attendanceComplianceCheck.stop();
   expiringPTOAlert.stop();
 
-  console.log('[HR-JOB] All HR automation jobs stopped');
+  logger.info('All HR automation jobs stopped');
 }
 
 // Export individual jobs for manual triggering
