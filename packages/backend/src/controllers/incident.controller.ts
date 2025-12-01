@@ -6,6 +6,7 @@
  */
 
 import { Request, Response } from 'express';
+import { logControllerError } from '../utils/logger';
 import incidentService, {
   CreateIncidentDto,
   UpdateIncidentDto,
@@ -40,7 +41,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in createIncident controller:', error);
+      logControllerError('Error in createIncident controller', error);
       res.status(500).json({
         error: 'Failed to create incident',
         details: error.message
@@ -65,7 +66,7 @@ export class IncidentController {
 
       res.status(200).json(incident);
     } catch (error: any) {
-      console.error('Error in getIncidentById controller:', error);
+      logControllerError('Error in getIncidentById controller', error);
       res.status(500).json({
         error: 'Failed to fetch incident',
         details: error.message
@@ -90,7 +91,7 @@ export class IncidentController {
 
       res.status(200).json(incident);
     } catch (error: any) {
-      console.error('Error in getIncidentByNumber controller:', error);
+      logControllerError('Error in getIncidentByNumber controller', error);
       res.status(500).json({
         error: 'Failed to fetch incident',
         details: error.message
@@ -145,7 +146,7 @@ export class IncidentController {
         incidents
       });
     } catch (error: any) {
-      console.error('Error in listIncidents controller:', error);
+      logControllerError('Error in listIncidents controller', error);
       res.status(500).json({
         error: 'Failed to list incidents',
         details: error.message
@@ -169,7 +170,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in updateIncident controller:', error);
+      logControllerError('Error in updateIncident controller', error);
       res.status(500).json({
         error: 'Failed to update incident',
         details: error.message
@@ -198,7 +199,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in assignInvestigator controller:', error);
+      logControllerError('Error in assignInvestigator controller', error);
       res.status(500).json({
         error: 'Failed to assign investigator',
         details: error.message
@@ -227,7 +228,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in updateInvestigationNotes controller:', error);
+      logControllerError('Error in updateInvestigationNotes controller', error);
       res.status(500).json({
         error: 'Failed to update investigation notes',
         details: error.message
@@ -256,7 +257,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in addRootCause controller:', error);
+      logControllerError('Error in addRootCause controller', error);
       res.status(500).json({
         error: 'Failed to add root cause',
         details: error.message
@@ -285,7 +286,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in addCorrectiveActions controller:', error);
+      logControllerError('Error in addCorrectiveActions controller', error);
       res.status(500).json({
         error: 'Failed to add corrective actions',
         details: error.message
@@ -314,7 +315,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in addPreventiveActions controller:', error);
+      logControllerError('Error in addPreventiveActions controller', error);
       res.status(500).json({
         error: 'Failed to add preventive actions',
         details: error.message
@@ -348,7 +349,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in updateCorrectiveActionStatus controller:', error);
+      logControllerError('Error in updateCorrectiveActionStatus controller', error);
       res.status(500).json({
         error: 'Failed to update corrective action status',
         details: error.message
@@ -372,7 +373,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in resolveIncident controller:', error);
+      logControllerError('Error in resolveIncident controller', error);
       res.status(500).json({
         error: 'Failed to resolve incident',
         details: error.message
@@ -395,7 +396,7 @@ export class IncidentController {
         incident
       });
     } catch (error: any) {
-      console.error('Error in closeIncident controller:', error);
+      logControllerError('Error in closeIncident controller', error);
       res.status(500).json({
         error: 'Failed to close incident',
         details: error.message
@@ -435,7 +436,7 @@ export class IncidentController {
 
       res.status(200).json(analysis);
     } catch (error: any) {
-      console.error('Error in getTrendAnalysis controller:', error);
+      logControllerError('Error in getTrendAnalysis controller', error);
       res.status(500).json({
         error: 'Failed to generate trend analysis',
         details: error.message
@@ -456,7 +457,7 @@ export class IncidentController {
         incidents
       });
     } catch (error: any) {
-      console.error('Error in getIncidentsRequiringFollowUp controller:', error);
+      logControllerError('Error in getIncidentsRequiringFollowUp controller', error);
       res.status(500).json({
         error: 'Failed to fetch incidents requiring follow-up',
         details: error.message
@@ -477,7 +478,7 @@ export class IncidentController {
         incidents
       });
     } catch (error: any) {
-      console.error('Error in getHighSeverityOpenIncidents controller:', error);
+      logControllerError('Error in getHighSeverityOpenIncidents controller', error);
       res.status(500).json({
         error: 'Failed to fetch high severity open incidents',
         details: error.message
@@ -498,7 +499,7 @@ export class IncidentController {
         data: stats
       });
     } catch (error: any) {
-      console.error('Error in getStats controller:', error);
+      logControllerError('Error in getStats controller', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to fetch incident statistics',

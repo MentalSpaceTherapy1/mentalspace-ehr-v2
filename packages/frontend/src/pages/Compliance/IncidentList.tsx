@@ -113,6 +113,8 @@ export default function IncidentList() {
       const aValue = a[orderBy as keyof typeof a];
       const bValue = b[orderBy as keyof typeof b];
 
+      if (aValue === undefined || bValue === undefined) return 0;
+
       if (order === 'asc') {
         return aValue < bValue ? -1 : 1;
       } else {

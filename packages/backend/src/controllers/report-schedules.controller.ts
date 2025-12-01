@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@mentalspace/database';
+import { logControllerError } from '../utils/logger';
 import {
   createSchedule,
   updateSchedule,
@@ -70,7 +71,7 @@ export const reportSchedulesController = {
 
       res.status(201).json(schedule);
     } catch (error) {
-      console.error('Error creating schedule:', error);
+      logControllerError('Error creating schedule', error);
       res.status(500).json({ error: 'Failed to create schedule' });
     }
   },
@@ -88,7 +89,7 @@ export const reportSchedulesController = {
 
       res.json(schedules);
     } catch (error) {
-      console.error('Error fetching schedules:', error);
+      logControllerError('Error fetching schedules', error);
       res.status(500).json({ error: 'Failed to fetch schedules' });
     }
   },
@@ -123,7 +124,7 @@ export const reportSchedulesController = {
 
       res.json(schedule);
     } catch (error) {
-      console.error('Error fetching schedule:', error);
+      logControllerError('Error fetching schedule', error);
       res.status(500).json({ error: 'Failed to fetch schedule' });
     }
   },
@@ -196,7 +197,7 @@ export const reportSchedulesController = {
 
       res.json(schedule);
     } catch (error) {
-      console.error('Error updating schedule:', error);
+      logControllerError('Error updating schedule', error);
       res.status(500).json({ error: 'Failed to update schedule' });
     }
   },
@@ -227,7 +228,7 @@ export const reportSchedulesController = {
 
       res.json({ message: 'Schedule deleted successfully' });
     } catch (error) {
-      console.error('Error deleting schedule:', error);
+      logControllerError('Error deleting schedule', error);
       res.status(500).json({ error: 'Failed to delete schedule' });
     }
   },
@@ -258,7 +259,7 @@ export const reportSchedulesController = {
 
       res.json(updatedSchedule);
     } catch (error) {
-      console.error('Error pausing schedule:', error);
+      logControllerError('Error pausing schedule', error);
       res.status(500).json({ error: 'Failed to pause schedule' });
     }
   },
@@ -289,7 +290,7 @@ export const reportSchedulesController = {
 
       res.json(updatedSchedule);
     } catch (error) {
-      console.error('Error resuming schedule:', error);
+      logControllerError('Error resuming schedule', error);
       res.status(500).json({ error: 'Failed to resume schedule' });
     }
   },
@@ -320,7 +321,7 @@ export const reportSchedulesController = {
 
       res.json({ message: 'Schedule executed successfully' });
     } catch (error) {
-      console.error('Error executing schedule:', error);
+      logControllerError('Error executing schedule', error);
       res.status(500).json({ error: 'Failed to execute schedule' });
     }
   },
@@ -352,7 +353,7 @@ export const reportSchedulesController = {
 
       res.json(history);
     } catch (error) {
-      console.error('Error fetching schedule history:', error);
+      logControllerError('Error fetching schedule history', error);
       res.status(500).json({ error: 'Failed to fetch schedule history' });
     }
   },
@@ -383,7 +384,7 @@ export const reportSchedulesController = {
 
       res.json(stats);
     } catch (error) {
-      console.error('Error fetching schedule stats:', error);
+      logControllerError('Error fetching schedule stats', error);
       res.status(500).json({ error: 'Failed to fetch schedule stats' });
     }
   }

@@ -7,6 +7,7 @@
  */
 
 import { Request, Response } from 'express';
+import { logControllerError } from '../utils/logger';
 import * as budgetService from '../services/budget.service';
 import { BudgetCategory } from '@prisma/client';
 
@@ -19,7 +20,7 @@ export async function createBudget(req: Request, res: Response): Promise<void> {
     const budget = await budgetService.createBudget(req.body);
     res.status(201).json(budget);
   } catch (error: any) {
-    console.error('Error creating budget:', error);
+    logControllerError('Error creating budget', error);
     res.status(400).json({ error: error.message });
   }
 }
@@ -43,7 +44,7 @@ export async function getBudget(req: Request, res: Response): Promise<void> {
 
     res.json(budget);
   } catch (error: any) {
-    console.error('Error fetching budget:', error);
+    logControllerError('Error fetching budget', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -78,7 +79,7 @@ export async function listBudgets(req: Request, res: Response): Promise<void> {
 
     res.json(result);
   } catch (error: any) {
-    console.error('Error listing budgets:', error);
+    logControllerError('Error listing budgets', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -93,7 +94,7 @@ export async function updateBudget(req: Request, res: Response): Promise<void> {
     const budget = await budgetService.updateBudget(id, req.body);
     res.json(budget);
   } catch (error: any) {
-    console.error('Error updating budget:', error);
+    logControllerError('Error updating budget', error);
     res.status(400).json({ error: error.message });
   }
 }
@@ -108,7 +109,7 @@ export async function getBudgetUtilization(req: Request, res: Response): Promise
     const utilization = await budgetService.getBudgetUtilization(id);
     res.json(utilization);
   } catch (error: any) {
-    console.error('Error fetching budget utilization:', error);
+    logControllerError('Error fetching budget utilization', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -134,7 +135,7 @@ export async function getDepartmentSummary(req: Request, res: Response): Promise
 
     res.json(summary);
   } catch (error: any) {
-    console.error('Error fetching department summary:', error);
+    logControllerError('Error fetching department summary', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -158,7 +159,7 @@ export async function getOrganizationSummary(req: Request, res: Response): Promi
 
     res.json(summary);
   } catch (error: any) {
-    console.error('Error fetching organization summary:', error);
+    logControllerError('Error fetching organization summary', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -180,7 +181,7 @@ export async function checkBudgetAvailability(req: Request, res: Response): Prom
     const result = await budgetService.checkBudgetAvailability(id, requestedAmount);
     res.json(result);
   } catch (error: any) {
-    console.error('Error checking budget availability:', error);
+    logControllerError('Error checking budget availability', error);
     res.status(500).json({ error: error.message });
   }
 }

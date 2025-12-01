@@ -42,6 +42,7 @@
     "@types/node": "^20.12.0",
     "@typescript-eslint/eslint-plugin": "^7.5.0",
     "@typescript-eslint/parser": "^7.5.0",
+    "esbuild": "^0.27.0",
     "eslint": "^8.57.0",
     "playwright": "^1.56.1",
     "prettier": "^3.2.5",
@@ -52,7 +53,9 @@
     "npm": ">=10.0.0"
   },
   "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
     "bcrypt": "^6.0.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "redis": "^5.10.0"
   }
 }

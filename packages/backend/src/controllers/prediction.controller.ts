@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import predictionService from '../services/prediction.service';
+import { logControllerError } from '../utils/logger';
 
 /**
  * GET /api/v1/predictions/noshow/:appointmentId
@@ -21,7 +22,7 @@ export const predictNoShow = async (req: Request, res: Response): Promise<void> 
       data: prediction
     });
   } catch (error: any) {
-    console.error('[Prediction Controller] Error predicting no-show:', error);
+    logControllerError('[Prediction Controller] Error predicting no-show', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to predict no-show risk'
@@ -44,7 +45,7 @@ export const updateAppointmentRisk = async (req: Request, res: Response): Promis
       message: 'Appointment risk updated successfully'
     });
   } catch (error: any) {
-    console.error('[Prediction Controller] Error updating appointment risk:', error);
+    logControllerError('[Prediction Controller] Error updating appointment risk', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to update appointment risk'
@@ -67,7 +68,7 @@ export const predictDropout = async (req: Request, res: Response): Promise<void>
       data: prediction
     });
   } catch (error: any) {
-    console.error('[Prediction Controller] Error predicting dropout:', error);
+    logControllerError('[Prediction Controller] Error predicting dropout', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to predict dropout risk'
@@ -100,7 +101,7 @@ export const forecastRevenue = async (req: Request, res: Response): Promise<void
       data: forecast
     });
   } catch (error: any) {
-    console.error('[Prediction Controller] Error forecasting revenue:', error);
+    logControllerError('[Prediction Controller] Error forecasting revenue', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to forecast revenue'
@@ -133,7 +134,7 @@ export const forecastDemand = async (req: Request, res: Response): Promise<void>
       data: forecast
     });
   } catch (error: any) {
-    console.error('[Prediction Controller] Error forecasting demand:', error);
+    logControllerError('[Prediction Controller] Error forecasting demand', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to forecast demand'
@@ -154,7 +155,7 @@ export const listModels = async (req: Request, res: Response): Promise<void> => 
       data: models
     });
   } catch (error: any) {
-    console.error('[Prediction Controller] Error listing models:', error);
+    logControllerError('[Prediction Controller] Error listing models', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to list prediction models'
@@ -207,7 +208,7 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
       }
     });
   } catch (error: any) {
-    console.error('[Prediction Controller] Error getting dashboard data:', error);
+    logControllerError('[Prediction Controller] Error getting dashboard data', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to get dashboard data'

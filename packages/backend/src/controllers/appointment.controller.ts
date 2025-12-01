@@ -302,7 +302,7 @@ export const createAppointment = async (req: Request, res: Response) => {
     // Extract userId with proper fallback and validation
     const userId = (req as any).user?.userId || (req as any).user?.id;
     if (!userId) {
-      console.error('User authentication context missing:', {
+      logControllerError('User authentication context missing', new Error('No userId in request'), {
         reqUser: (req as any).user,
         headers: req.headers.authorization ? 'Present' : 'Missing'
       });

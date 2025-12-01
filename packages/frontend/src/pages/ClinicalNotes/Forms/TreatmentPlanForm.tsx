@@ -214,9 +214,9 @@ export default function TreatmentPlanForm() {
 
           const objectives = objectivesText
             .split('\n')
-            .filter(line => line.trim().startsWith('Objective'))
-            .map(line => line.replace(/^\s*Objective \d+:\s*/, '').trim())
-            .filter(obj => obj.length > 0);
+            .filter((line: string) => line.trim().startsWith('Objective'))
+            .map((line: string) => line.replace(/^\s*Objective \d+:\s*/, '').trim())
+            .filter((obj: string) => obj.length > 0);
 
           if (goal) {
             parsedGoals.push({
@@ -239,7 +239,7 @@ export default function TreatmentPlanForm() {
 
         const modalitiesMatch = objective.match(/Treatment Modalities:\s*(.+?)(?:\n|$)/);
         if (modalitiesMatch) {
-          const modalities = modalitiesMatch[1].split(',').map(m => m.trim());
+          const modalities = modalitiesMatch[1].split(',').map((m: string) => m.trim());
           setTreatmentModality(modalities);
         }
 

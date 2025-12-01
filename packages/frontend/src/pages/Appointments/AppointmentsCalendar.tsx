@@ -506,7 +506,7 @@ export default function AppointmentsCalendar() {
                 <div className="space-y-4 mb-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Client</label>
-                    <p className="text-lg">{selectedAppointment.client.firstName} {selectedAppointment.client.lastName}</p>
+                    <p className="text-lg">{selectedAppointment.client?.firstName} {selectedAppointment.client?.lastName}</p>
                   </div>
 
                   <div>

@@ -521,7 +521,7 @@ const PerformanceReviewForm: React.FC<PerformanceReviewFormProps> = ({
 
   const renderSummary = () => {
     const averageRating =
-      formData.categories?.reduce((sum, cat) => sum + cat.rating, 0) /
+      (formData.categories?.reduce((sum, cat) => sum + cat.rating, 0) ?? 0) /
       (formData.categories?.length || 1);
 
     return (

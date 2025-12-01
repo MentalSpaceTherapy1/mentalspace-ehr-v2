@@ -197,7 +197,6 @@ export default function SchedulingRules() {
       }
     } catch (error: any) {
       toast.error('Failed to load scheduling rules');
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -210,7 +209,7 @@ export default function SchedulingRules() {
         setClinicians(response.data.data || []);
       }
     } catch (error: any) {
-      console.error('Failed to load clinicians', error);
+      toast.error('Failed to load clinicians');
     }
   };
 
@@ -382,8 +381,8 @@ export default function SchedulingRules() {
       blockoutPeriods: [
         ...prev.blockoutPeriods,
         {
-          startDate: newBlockout.startDate.format('YYYY-MM-DD'),
-          endDate: newBlockout.endDate.format('YYYY-MM-DD'),
+          startDate: newBlockout.startDate!.format('YYYY-MM-DD'),
+          endDate: newBlockout.endDate!.format('YYYY-MM-DD'),
           reason: newBlockout.reason.trim(),
         },
       ],

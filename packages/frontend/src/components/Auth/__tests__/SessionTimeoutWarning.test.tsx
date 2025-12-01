@@ -327,8 +327,9 @@ describe('SessionTimeoutWarning Component', () => {
       );
 
       const dialog = screen.getByRole('dialog');
-      expect(document.activeElement).toBe(dialog) ||
-        expect(dialog.contains(document.activeElement)).toBe(true);
+      // Focus should be on the dialog or within it
+      const isFocused = document.activeElement === dialog || dialog.contains(document.activeElement);
+      expect(isFocused).toBe(true);
     });
 
     it('should trap focus within modal', () => {

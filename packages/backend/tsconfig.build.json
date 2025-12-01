@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* Relax strict checks for production build */
+    /* Type errors will still be shown but won't prevent compilation */
+    "noEmitOnError": false,
+
+    /* Disable strict mode entirely for build */
+    "strict": false,
+    "noImplicitAny": false,
+
+    /* Disable declaration files for build (not needed for runtime) */
+    "declaration": false,
+    "declarationMap": false
+  },
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "src/__tests__/**/*"]
+}

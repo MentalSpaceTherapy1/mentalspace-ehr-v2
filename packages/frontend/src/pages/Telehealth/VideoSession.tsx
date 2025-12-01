@@ -415,7 +415,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
     });
 
     // Disconnect from room (use current state)
-    setRoom(currentRoom => {
+    setRoom((currentRoom: any) => {
       if (currentRoom) {
         try {
           currentRoom.disconnect();

@@ -25,6 +25,7 @@ import {
   getPatternStatistics
 } from '../services/patternRecognition.service';
 import { PrismaClient } from '@prisma/client';
+import { logControllerError } from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -154,7 +155,7 @@ export async function generateSuggestions(req: Request, res: Response) {
       }
     });
   } catch (error: any) {
-    console.error('Error generating scheduling suggestions:', error);
+    logControllerError('Error generating scheduling suggestions', error);
     res.status(500).json({
       error: 'Failed to generate scheduling suggestions',
       details: error.message
@@ -232,7 +233,7 @@ export async function acceptSchedulingSuggestion(req: Request, res: Response) {
       }
     });
   } catch (error: any) {
-    console.error('Error accepting scheduling suggestion:', error);
+    logControllerError('Error accepting scheduling suggestion', error);
     res.status(500).json({
       error: 'Failed to accept scheduling suggestion',
       details: error.message
@@ -297,7 +298,7 @@ export async function getCompatibilityScore(req: Request, res: Response) {
       compatibility: result
     });
   } catch (error: any) {
-    console.error('Error calculating compatibility score:', error);
+    logControllerError('Error calculating compatibility score', error);
     res.status(500).json({
       error: 'Failed to calculate compatibility score',
       details: error.message
@@ -359,7 +360,7 @@ export async function getCompatibleProviders(req: Request, res: Response) {
       }))
     });
   } catch (error: any) {
-    console.error('Error getting compatible providers:', error);
+    logControllerError('Error getting compatible providers', error);
     res.status(500).json({
       error: 'Failed to get compatible providers',
       details: error.message
@@ -440,7 +441,7 @@ export async function getSuggestionsHistory(req: Request, res: Response) {
       suggestions
     });
   } catch (error: any) {
-    console.error('Error getting suggestions history:', error);
+    logControllerError('Error getting suggestions history', error);
     res.status(500).json({
       error: 'Failed to get suggestions history',
       details: error.message
@@ -466,7 +467,7 @@ export async function getSchedulingStats(req: Request, res: Response) {
       `;
       tableExists = result[0]?.exists || false;
     } catch (error) {
-      console.error('Error checking table existence:', error);
+      logControllerError('Error checking table existence', error);
       tableExists = false;
     }
 
@@ -526,7 +527,7 @@ export async function getSchedulingStats(req: Request, res: Response) {
       topProviders = top;
     } catch (error: any) {
       // If Prisma model calls fail, return empty stats
-      console.error('Error querying scheduling suggestions:', error);
+      logControllerError('Error querying scheduling suggestions', error);
       return res.status(200).json({
         message: 'AI Scheduling feature not yet enabled',
         stats: {
@@ -570,7 +571,7 @@ export async function getSchedulingStats(req: Request, res: Response) {
       }
     });
   } catch (error: any) {
-    console.error('Error getting scheduling stats:', error);
+    logControllerError('Error getting scheduling stats', error);
 
     // Return graceful fallback for any database errors
     res.status(200).json({
@@ -626,7 +627,7 @@ export async function parseNaturalLanguageRequest(req: Request, res: Response) {
       ...parseResult
     });
   } catch (error: any) {
-    console.error('Error parsing natural language request:', error);
+    logControllerError('Error parsing natural language request', error);
     res.status(500).json({
       error: 'Failed to parse natural language request',
       details: error.message
@@ -676,7 +677,7 @@ export async function executeNaturalLanguageRequest(req: Request, res: Response)
       `;
       tableExists = result[0]?.exists || false;
     } catch (error) {
-      console.error('Error checking table existence:', error);
+      logControllerError('Error checking table existence', error);
       tableExists = false;
     }
 
@@ -723,7 +724,7 @@ export async function executeNaturalLanguageRequest(req: Request, res: Response)
       result: executionResult
     });
   } catch (error: any) {
-    console.error('Error executing natural language request:', error);
+    logControllerError('Error executing natural language request', error);
 
     // Return graceful fallback for any errors
     res.status(200).json({
@@ -779,7 +780,7 @@ export async function getProviderLoadMetrics(req: Request, res: Response) {
       metrics
     });
   } catch (error: any) {
-    console.error('Error getting provider load metrics:', error);
+    logControllerError('Error getting provider load metrics', error);
     res.status(500).json({
       error: 'Failed to get provider load metrics',
       details: error.message
@@ -800,7 +801,7 @@ export async function getTeamLoadDistribution(req: Request, res: Response) {
       distribution
     });
   } catch (error: any) {
-    console.error('Error analyzing team load distribution:', error);
+    logControllerError('Error analyzing team load distribution', error);
     res.status(500).json({
       error: 'Failed to analyze team load distribution',
       details: error.message
@@ -822,7 +823,7 @@ export async function getLoadRecommendations(req: Request, res: Response) {
       recommendations
     });
   } catch (error: any) {
-    console.error('Error getting load balancing recommendations:', error);
+    logControllerError('Error getting load balancing recommendations', error);
     res.status(500).json({
       error: 'Failed to get load balancing recommendations',
       details: error.message
@@ -854,7 +855,7 @@ export async function getProviderCapacity(req: Request, res: Response) {
       providers
     });
   } catch (error: any) {
-    console.error('Error getting provider capacity:', error);
+    logControllerError('Error getting provider capacity', error);
     res.status(500).json({
       error: 'Failed to get provider capacity',
       details: error.message
@@ -881,7 +882,7 @@ export async function runPatternDetection(req: Request, res: Response) {
       patterns
     });
   } catch (error: any) {
-    console.error('Error running pattern detection:', error);
+    logControllerError('Error running pattern detection', error);
     res.status(500).json({
       error: 'Failed to run pattern detection',
       details: error.message
@@ -908,7 +909,7 @@ export async function getPatterns(req: Request, res: Response) {
       patterns
     });
   } catch (error: any) {
-    console.error('Error getting patterns:', error);
+    logControllerError('Error getting patterns', error);
     res.status(500).json({
       error: 'Failed to get patterns',
       details: error.message
@@ -929,7 +930,7 @@ export async function getPatternsStats(req: Request, res: Response) {
       stats
     });
   } catch (error: any) {
-    console.error('Error getting pattern statistics:', error);
+    logControllerError('Error getting pattern statistics', error);
     res.status(500).json({
       error: 'Failed to get pattern statistics',
       details: error.message
@@ -971,7 +972,7 @@ export async function resolvePatternController(req: Request, res: Response) {
       message: 'Pattern marked as resolved successfully'
     });
   } catch (error: any) {
-    console.error('Error resolving pattern:', error);
+    logControllerError('Error resolving pattern', error);
     res.status(500).json({
       error: 'Failed to resolve pattern',
       details: error.message
@@ -1013,7 +1014,7 @@ export async function ignorePatternController(req: Request, res: Response) {
       message: 'Pattern marked as ignored successfully'
     });
   } catch (error: any) {
-    console.error('Error ignoring pattern:', error);
+    logControllerError('Error ignoring pattern', error);
     res.status(500).json({
       error: 'Failed to ignore pattern',
       details: error.message

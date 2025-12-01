@@ -7,6 +7,7 @@
  */
 
 import { Request, Response } from 'express';
+import { logControllerError } from '../utils/logger';
 import * as vendorService from '../services/vendor.service';
 import { VendorCategory } from '@prisma/client';
 
@@ -19,7 +20,7 @@ export async function createVendor(req: Request, res: Response): Promise<void> {
     const vendor = await vendorService.createVendor(req.body);
     res.status(201).json(vendor);
   } catch (error: any) {
-    console.error('Error creating vendor:', error);
+    logControllerError('Error creating vendor', error);
     res.status(400).json({ error: error.message });
   }
 }
@@ -43,7 +44,7 @@ export async function getVendor(req: Request, res: Response): Promise<void> {
 
     res.json(vendor);
   } catch (error: any) {
-    console.error('Error fetching vendor:', error);
+    logControllerError('Error fetching vendor', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -76,7 +77,7 @@ export async function listVendors(req: Request, res: Response): Promise<void> {
 
     res.json(result);
   } catch (error: any) {
-    console.error('Error listing vendors:', error);
+    logControllerError('Error listing vendors', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -91,7 +92,7 @@ export async function updateVendor(req: Request, res: Response): Promise<void> {
     const vendor = await vendorService.updateVendor(id, req.body);
     res.json(vendor);
   } catch (error: any) {
-    console.error('Error updating vendor:', error);
+    logControllerError('Error updating vendor', error);
     res.status(400).json({ error: error.message });
   }
 }
@@ -106,7 +107,7 @@ export async function deactivateVendor(req: Request, res: Response): Promise<voi
     const vendor = await vendorService.deactivateVendor(id);
     res.json(vendor);
   } catch (error: any) {
-    console.error('Error deactivating vendor:', error);
+    logControllerError('Error deactivating vendor', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -121,7 +122,7 @@ export async function getVendorPerformance(req: Request, res: Response): Promise
     const metrics = await vendorService.getVendorPerformanceMetrics(id);
     res.json(metrics);
   } catch (error: any) {
-    console.error('Error fetching vendor performance:', error);
+    logControllerError('Error fetching vendor performance', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -135,7 +136,7 @@ export async function getVendorsRequiringAttention(req: Request, res: Response):
     const result = await vendorService.getVendorsRequiringAttention();
     res.json(result);
   } catch (error: any) {
-    console.error('Error fetching vendors requiring attention:', error);
+    logControllerError('Error fetching vendors requiring attention', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -156,7 +157,7 @@ export async function getVendorSpending(req: Request, res: Response): Promise<vo
 
     res.json(summary);
   } catch (error: any) {
-    console.error('Error fetching vendor spending:', error);
+    logControllerError('Error fetching vendor spending', error);
     res.status(500).json({ error: error.message });
   }
 }

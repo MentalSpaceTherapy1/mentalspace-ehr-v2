@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import * as duplicateDetectionService from '../services/duplicateDetection.service';
+import { logControllerError } from '../utils/logger';
 
 /**
  * POST /api/v1/clients/check-duplicates
@@ -67,7 +68,7 @@ export async function checkDuplicates(req: Request, res: Response) {
       })),
     });
   } catch (error) {
-    console.error('Error checking for duplicates:', error);
+    logControllerError('Error checking for duplicates', error);
     res.status(500).json({
       error: 'Failed to check for duplicates',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -100,7 +101,7 @@ export async function saveDuplicates(req: Request, res: Response) {
       message: `Saved ${matches.length} potential duplicate(s) for review`,
     });
   } catch (error) {
-    console.error('Error saving duplicates:', error);
+    logControllerError('Error saving duplicates', error);
     res.status(500).json({
       error: 'Failed to save duplicates',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -143,7 +144,7 @@ export async function getPendingDuplicates(req: Request, res: Response) {
       })),
     });
   } catch (error) {
-    console.error('Error fetching pending duplicates:', error);
+    logControllerError('Error fetching pending duplicates', error);
     res.status(500).json({
       error: 'Failed to fetch pending duplicates',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -197,7 +198,7 @@ export async function mergeDuplicate(req: Request, res: Response) {
       targetClientId,
     });
   } catch (error) {
-    console.error('Error merging clients:', error);
+    logControllerError('Error merging clients', error);
     res.status(500).json({
       error: 'Failed to merge clients',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -233,7 +234,7 @@ export async function dismissDuplicate(req: Request, res: Response) {
       message: 'Duplicate dismissed successfully',
     });
   } catch (error) {
-    console.error('Error dismissing duplicate:', error);
+    logControllerError('Error dismissing duplicate', error);
     res.status(500).json({
       error: 'Failed to dismiss duplicate',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -269,7 +270,7 @@ export async function getDuplicateStats(req: Request, res: Response) {
       }),
     });
   } catch (error) {
-    console.error('Error fetching duplicate stats:', error);
+    logControllerError('Error fetching duplicate stats', error);
     res.status(500).json({
       error: 'Failed to fetch duplicate stats',
       details: error instanceof Error ? error.message : 'Unknown error',

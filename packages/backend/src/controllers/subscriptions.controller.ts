@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@mentalspace/database';
 import { getDeliveryHistory } from '../services/delivery-tracker.service';
+import { logControllerError } from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -52,7 +53,7 @@ export const subscriptionsController = {
 
       res.status(201).json(subscription);
     } catch (error) {
-      console.error('Error creating subscription:', error);
+      logControllerError('Error creating subscription', error);
       res.status(500).json({ error: 'Failed to create subscription' });
     }
   },
@@ -73,7 +74,7 @@ export const subscriptionsController = {
 
       res.json(subscriptions);
     } catch (error) {
-      console.error('Error fetching subscriptions:', error);
+      logControllerError('Error fetching subscriptions', error);
       res.status(500).json({ error: 'Failed to fetch subscriptions' });
     }
   },
@@ -101,7 +102,7 @@ export const subscriptionsController = {
 
       res.json(subscription);
     } catch (error) {
-      console.error('Error fetching subscription:', error);
+      logControllerError('Error fetching subscription', error);
       res.status(500).json({ error: 'Failed to fetch subscription' });
     }
   },
@@ -165,7 +166,7 @@ export const subscriptionsController = {
 
       res.json(subscription);
     } catch (error) {
-      console.error('Error updating subscription:', error);
+      logControllerError('Error updating subscription', error);
       res.status(500).json({ error: 'Failed to update subscription' });
     }
   },
@@ -198,7 +199,7 @@ export const subscriptionsController = {
 
       res.json({ message: 'Subscription deleted successfully' });
     } catch (error) {
-      console.error('Error deleting subscription:', error);
+      logControllerError('Error deleting subscription', error);
       res.status(500).json({ error: 'Failed to delete subscription' });
     }
   },
@@ -232,7 +233,7 @@ export const subscriptionsController = {
 
       res.json(updatedSubscription);
     } catch (error) {
-      console.error('Error pausing subscription:', error);
+      logControllerError('Error pausing subscription', error);
       res.status(500).json({ error: 'Failed to pause subscription' });
     }
   },
@@ -266,7 +267,7 @@ export const subscriptionsController = {
 
       res.json(updatedSubscription);
     } catch (error) {
-      console.error('Error resuming subscription:', error);
+      logControllerError('Error resuming subscription', error);
       res.status(500).json({ error: 'Failed to resume subscription' });
     }
   },
@@ -310,7 +311,7 @@ export const subscriptionsController = {
 
       res.json(history);
     } catch (error) {
-      console.error('Error fetching subscription history:', error);
+      logControllerError('Error fetching subscription history', error);
       res.status(500).json({ error: 'Failed to fetch subscription history' });
     }
   }

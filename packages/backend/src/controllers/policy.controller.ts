@@ -6,6 +6,7 @@
  */
 
 import { Request, Response } from 'express';
+import { logControllerError } from '../utils/logger';
 import policyService, { CreatePolicyDto, UpdatePolicyDto, AcknowledgePolicyDto, PolicySearchFilters, ComplianceReportFilters } from '../services/policy.service';
 import { PolicyCategory, PolicyStatus } from '@prisma/client';
 
@@ -33,7 +34,7 @@ export class PolicyController {
         policy
       });
     } catch (error: any) {
-      console.error('Error in createPolicy controller:', error);
+      logControllerError('Error in createPolicy controller', error);
       res.status(500).json({
         error: 'Failed to create policy',
         details: error.message
@@ -58,7 +59,7 @@ export class PolicyController {
 
       res.status(200).json(policy);
     } catch (error: any) {
-      console.error('Error in getPolicyById controller:', error);
+      logControllerError('Error in getPolicyById controller', error);
       res.status(500).json({
         error: 'Failed to fetch policy',
         details: error.message
@@ -83,7 +84,7 @@ export class PolicyController {
 
       res.status(200).json(policy);
     } catch (error: any) {
-      console.error('Error in getPolicyByNumber controller:', error);
+      logControllerError('Error in getPolicyByNumber controller', error);
       res.status(500).json({
         error: 'Failed to fetch policy',
         details: error.message
@@ -138,7 +139,7 @@ export class PolicyController {
         policies
       });
     } catch (error: any) {
-      console.error('Error in listPolicies controller:', error);
+      logControllerError('Error in listPolicies controller', error);
       res.status(500).json({
         error: 'Failed to list policies',
         details: error.message
@@ -162,7 +163,7 @@ export class PolicyController {
         policy
       });
     } catch (error: any) {
-      console.error('Error in updatePolicy controller:', error);
+      logControllerError('Error in updatePolicy controller', error);
       res.status(500).json({
         error: 'Failed to update policy',
         details: error.message
@@ -185,7 +186,7 @@ export class PolicyController {
         policy
       });
     } catch (error: any) {
-      console.error('Error in deletePolicy controller:', error);
+      logControllerError('Error in deletePolicy controller', error);
       res.status(500).json({
         error: 'Failed to delete policy',
         details: error.message
@@ -214,7 +215,7 @@ export class PolicyController {
         policy
       });
     } catch (error: any) {
-      console.error('Error in createNewVersion controller:', error);
+      logControllerError('Error in createNewVersion controller', error);
       res.status(500).json({
         error: 'Failed to create new version',
         details: error.message
@@ -243,7 +244,7 @@ export class PolicyController {
         policy
       });
     } catch (error: any) {
-      console.error('Error in distributePolicy controller:', error);
+      logControllerError('Error in distributePolicy controller', error);
       res.status(500).json({
         error: 'Failed to distribute policy',
         details: error.message
@@ -279,7 +280,7 @@ export class PolicyController {
         acknowledgment
       });
     } catch (error: any) {
-      console.error('Error in acknowledgePolicy controller:', error);
+      logControllerError('Error in acknowledgePolicy controller', error);
       res.status(500).json({
         error: 'Failed to acknowledge policy',
         details: error.message
@@ -302,7 +303,7 @@ export class PolicyController {
         policies
       });
     } catch (error: any) {
-      console.error('Error in getPendingAcknowledgments controller:', error);
+      logControllerError('Error in getPendingAcknowledgments controller', error);
       res.status(500).json({
         error: 'Failed to fetch pending acknowledgments',
         details: error.message
@@ -342,7 +343,7 @@ export class PolicyController {
 
       res.status(200).json(report);
     } catch (error: any) {
-      console.error('Error in getComplianceReport controller:', error);
+      logControllerError('Error in getComplianceReport controller', error);
       res.status(500).json({
         error: 'Failed to generate compliance report',
         details: error.message
@@ -363,7 +364,7 @@ export class PolicyController {
         policies
       });
     } catch (error: any) {
-      console.error('Error in getPoliciesDueForReview controller:', error);
+      logControllerError('Error in getPoliciesDueForReview controller', error);
       res.status(500).json({
         error: 'Failed to fetch policies due for review',
         details: error.message
@@ -392,7 +393,7 @@ export class PolicyController {
         policy
       });
     } catch (error: any) {
-      console.error('Error in approvePolicy controller:', error);
+      logControllerError('Error in approvePolicy controller', error);
       res.status(500).json({
         error: 'Failed to approve policy',
         details: error.message

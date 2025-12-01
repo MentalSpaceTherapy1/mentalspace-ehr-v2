@@ -597,18 +597,18 @@ export default function IntakeAssessmentForm() {
 
     // Handle symptoms - convert from AI format to component format
     if (data.selectedSymptoms && Array.isArray(data.selectedSymptoms)) {
-      const formattedSymptoms = data.selectedSymptoms.map((symptomLabel: string) => {
+      const formattedSymptoms: { id: string; label: string; severity: string; extra?: string }[] = [];
+      data.selectedSymptoms.forEach((symptomLabel: string) => {
         const symptomDef = SYMPTOMS.find(s => s.label === symptomLabel || s.id === symptomLabel);
         if (symptomDef) {
-          return {
+          formattedSymptoms.push({
             id: symptomDef.id,
             label: symptomDef.label,
             severity: 'Moderate',
             extra: symptomDef.hasExtra ? 'N/A' : undefined
-          };
+          });
         }
-        return null;
-      }).filter(Boolean);
+      });
       setSelectedSymptoms(formattedSymptoms);
     }
 

@@ -1058,8 +1058,8 @@ export default function ClientProgress() {
                 }
                 sx={{ mb: 2 }}
               >
-                {sleepMetrics?.sleepDebt > 0 ? '+' : ''}
-                {sleepMetrics?.sleepDebt.toFixed(1)} hrs
+                {(sleepMetrics?.sleepDebt ?? 0) > 0 ? '+' : ''}
+                {(sleepMetrics?.sleepDebt ?? 0).toFixed(1)} hrs
               </Typography>
 
               <Divider sx={{ my: 2 }} />
@@ -1080,12 +1080,12 @@ export default function ClientProgress() {
               <Typography variant="subtitle2" gutterBottom>
                 Recommendations
               </Typography>
-              {sleepMetrics?.averageHours30Day < 7 && (
+              {sleepMetrics && sleepMetrics.averageHours30Day < 7 && (
                 <Alert severity="warning" sx={{ mb: 1 }}>
                   Consider earlier bedtime (avg {sleepMetrics.averageHours30Day.toFixed(1)} hrs)
                 </Alert>
               )}
-              {sleepMetrics?.consistencyScore > 80 && (
+              {sleepMetrics && sleepMetrics.consistencyScore > 80 && (
                 <Alert severity="success" sx={{ mb: 1 }}>
                   Sleep consistency is excellent!
                 </Alert>

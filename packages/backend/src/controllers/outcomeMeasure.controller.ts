@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { outcomeMeasureService } from '../services/outcomeMeasure.service';
 import { OutcomeMeasureType } from '@prisma/client';
+import { logControllerError } from '../utils/logger';
 
 /**
  * Outcome Measure Controller
@@ -30,7 +31,7 @@ export async function getQuestionnaireDefinition(req: Request, res: Response) {
       data: definition,
     });
   } catch (error: any) {
-    console.error('Error getting questionnaire definition:', error);
+    logControllerError('Error getting questionnaire definition', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get questionnaire definition',
@@ -94,7 +95,7 @@ export async function administerOutcomeMeasure(req: Request, res: Response) {
       data: outcomeMeasure,
     });
   } catch (error: any) {
-    console.error('Error administering outcome measure:', error);
+    logControllerError('Error administering outcome measure', error);
     res.status(500).json({
       success: false,
       message: 'Failed to administer outcome measure',
@@ -154,7 +155,7 @@ export async function getClientOutcomeMeasures(req: Request, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error('Error getting client outcome measures:', error);
+    logControllerError('Error getting client outcome measures', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get client outcome measures',
@@ -179,7 +180,7 @@ export async function getOutcomeMeasureById(req: Request, res: Response) {
       data: measure,
     });
   } catch (error: any) {
-    console.error('Error getting outcome measure:', error);
+    logControllerError('Error getting outcome measure', error);
 
     if (error.message.includes('not found')) {
       return res.status(404).json({
@@ -232,7 +233,7 @@ export async function getProgressData(req: Request, res: Response) {
       data: progressData,
     });
   } catch (error: any) {
-    console.error('Error getting progress data:', error);
+    logControllerError('Error getting progress data', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get progress data',
@@ -257,7 +258,7 @@ export async function getClientStatistics(req: Request, res: Response) {
       data: statistics,
     });
   } catch (error: any) {
-    console.error('Error getting client statistics:', error);
+    logControllerError('Error getting client statistics', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get client statistics',
@@ -295,7 +296,7 @@ export async function updateClinicalNotes(req: Request, res: Response) {
       data: updated,
     });
   } catch (error: any) {
-    console.error('Error updating clinical notes:', error);
+    logControllerError('Error updating clinical notes', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update clinical notes',
@@ -333,7 +334,7 @@ export async function linkToClinicalNote(req: Request, res: Response) {
       data: updated,
     });
   } catch (error: any) {
-    console.error('Error linking to clinical note:', error);
+    logControllerError('Error linking to clinical note', error);
     res.status(500).json({
       success: false,
       message: 'Failed to link to clinical note',
@@ -357,7 +358,7 @@ export async function deleteOutcomeMeasure(req: Request, res: Response) {
       message: 'Outcome measure deleted successfully',
     });
   } catch (error: any) {
-    console.error('Error deleting outcome measure:', error);
+    logControllerError('Error deleting outcome measure', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete outcome measure',

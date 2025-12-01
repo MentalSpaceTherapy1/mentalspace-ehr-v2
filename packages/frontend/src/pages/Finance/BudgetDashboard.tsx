@@ -339,7 +339,7 @@ const BudgetDashboard: React.FC = () => {
                       tooltip: {
                         callbacks: {
                           label: (context) => {
-                            return `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`;
+                            return `${context.dataset.label}: $${(context.parsed.y ?? 0).toLocaleString()}`;
                           },
                         },
                       },

@@ -496,17 +496,4 @@ export function sanitizeId(id: string): string {
   return id.replace(/[^a-zA-Z0-9\-_]/g, '').substring(0, 100);
 }
 
-// =============================================================================
-// EXPORT
-// =============================================================================
-
-export {
-  escapeHtml,
-  stripDangerousHtml,
-  containsSqlInjection,
-  containsNoSqlInjection,
-  containsPathTraversal,
-  containsCommandInjection,
-  sanitizeString,
-  sanitizeValue,
-};
+// Note: All functions are exported inline with 'export function' declarations above

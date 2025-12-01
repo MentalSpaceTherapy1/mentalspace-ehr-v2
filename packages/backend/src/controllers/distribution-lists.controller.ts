@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@mentalspace/database';
+import { logControllerError } from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -45,7 +46,7 @@ export const distributionListsController = {
 
       res.status(201).json(distributionList);
     } catch (error) {
-      console.error('Error creating distribution list:', error);
+      logControllerError('Error creating distribution list', error);
       res.status(500).json({ error: 'Failed to create distribution list' });
     }
   },
@@ -82,7 +83,7 @@ export const distributionListsController = {
 
       res.json(listsWithCount);
     } catch (error) {
-      console.error('Error fetching distribution lists:', error);
+      logControllerError('Error fetching distribution lists', error);
       res.status(500).json({ error: 'Failed to fetch distribution lists' });
     }
   },
@@ -120,7 +121,7 @@ export const distributionListsController = {
 
       res.json(distributionList);
     } catch (error) {
-      console.error('Error fetching distribution list:', error);
+      logControllerError('Error fetching distribution list', error);
       res.status(500).json({ error: 'Failed to fetch distribution list' });
     }
   },
@@ -177,7 +178,7 @@ export const distributionListsController = {
 
       res.json(distributionList);
     } catch (error) {
-      console.error('Error updating distribution list:', error);
+      logControllerError('Error updating distribution list', error);
       res.status(500).json({ error: 'Failed to update distribution list' });
     }
   },
@@ -210,7 +211,7 @@ export const distributionListsController = {
 
       res.json({ message: 'Distribution list deleted successfully' });
     } catch (error) {
-      console.error('Error deleting distribution list:', error);
+      logControllerError('Error deleting distribution list', error);
       res.status(500).json({ error: 'Failed to delete distribution list' });
     }
   },
@@ -264,7 +265,7 @@ export const distributionListsController = {
 
       res.json(updatedList);
     } catch (error) {
-      console.error('Error adding email to list:', error);
+      logControllerError('Error adding email to list', error);
       res.status(500).json({ error: 'Failed to add email to list' });
     }
   },
@@ -312,7 +313,7 @@ export const distributionListsController = {
 
       res.json(updatedList);
     } catch (error) {
-      console.error('Error removing email from list:', error);
+      logControllerError('Error removing email from list', error);
       res.status(500).json({ error: 'Failed to remove email from list' });
     }
   }

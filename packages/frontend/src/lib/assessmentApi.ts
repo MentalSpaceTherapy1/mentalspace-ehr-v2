@@ -111,6 +111,14 @@ export const ASSESSMENT_TYPES = {
     scoringRange: '0-10',
     purpose: 'Screen for drug abuse and dependence',
   },
+  Custom: {
+    name: 'Custom Assessment',
+    fullName: 'Custom Assessment',
+    description: 'Custom or organization-specific assessment',
+    questions: 0,
+    scoringRange: 'Variable',
+    purpose: 'Custom assessment for specific needs',
+  },
 } as const;
 
 /**

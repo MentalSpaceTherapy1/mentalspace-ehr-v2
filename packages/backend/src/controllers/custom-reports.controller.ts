@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { logControllerError } from '../utils/logger';
 import queryBuilderService, { QueryConfig } from '../services/query-builder.service';
 
 const prisma = new PrismaClient();
@@ -124,7 +125,7 @@ export const getDataSources = async (req: Request, res: Response) => {
     const dataSources = queryBuilderService.getAvailableDataSources();
     res.json(dataSources);
   } catch (error) {
-    console.error('Error fetching data sources:', error);
+    logControllerError('Error fetching data sources', error);
     res.status(500).json({ error: 'Failed to fetch data sources' });
   }
 };
@@ -142,7 +143,7 @@ export const getTemplates = async (req: Request, res: Response) => {
 
     res.json(templates);
   } catch (error) {
-    console.error('Error fetching templates:', error);
+    logControllerError('Error fetching templates', error);
     res.status(500).json({ error: 'Failed to fetch templates' });
   }
 };
@@ -194,7 +195,7 @@ export const createReport = async (req: Request, res: Response) => {
 
     res.status(201).json(report);
   } catch (error) {
-    console.error('Error creating report:', error);
+    logControllerError('Error creating report', error);
     res.status(500).json({ error: 'Failed to create report' });
   }
 };
@@ -247,7 +248,7 @@ export const getReports = async (req: Request, res: Response) => {
 
     res.json(reports);
   } catch (error) {
-    console.error('Error fetching reports:', error);
+    logControllerError('Error fetching reports', error);
     res.status(500).json({ error: 'Failed to fetch reports' });
   }
 };
@@ -302,7 +303,7 @@ export const getReportById = async (req: Request, res: Response) => {
 
     res.json(report);
   } catch (error) {
-    console.error('Error fetching report:', error);
+    logControllerError('Error fetching report', error);
     res.status(500).json({ error: 'Failed to fetch report' });
   }
 };
@@ -374,7 +375,7 @@ export const updateReport = async (req: Request, res: Response) => {
 
     res.json(report);
   } catch (error) {
-    console.error('Error updating report:', error);
+    logControllerError('Error updating report', error);
     res.status(500).json({ error: 'Failed to update report' });
   }
 };
@@ -407,7 +408,7 @@ export const deleteReport = async (req: Request, res: Response) => {
 
     res.json({ message: 'Report deleted successfully' });
   } catch (error) {
-    console.error('Error deleting report:', error);
+    logControllerError('Error deleting report', error);
     res.status(500).json({ error: 'Failed to delete report' });
   }
 };
@@ -472,7 +473,7 @@ export const executeReport = async (req: Request, res: Response) => {
       executedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error executing report:', error);
+    logControllerError('Error executing report', error);
     res.status(500).json({ error: 'Failed to execute report' });
   }
 };
@@ -531,7 +532,7 @@ export const cloneReport = async (req: Request, res: Response) => {
 
     res.status(201).json(clonedReport);
   } catch (error) {
-    console.error('Error cloning report:', error);
+    logControllerError('Error cloning report', error);
     res.status(500).json({ error: 'Failed to clone report' });
   }
 };
@@ -566,7 +567,7 @@ export const shareReport = async (req: Request, res: Response) => {
 
     res.json(report);
   } catch (error) {
-    console.error('Error sharing report:', error);
+    logControllerError('Error sharing report', error);
     res.status(500).json({ error: 'Failed to share report' });
   }
 };
@@ -615,7 +616,7 @@ export const getReportVersions = async (req: Request, res: Response) => {
 
     res.json(versions);
   } catch (error) {
-    console.error('Error fetching versions:', error);
+    logControllerError('Error fetching versions', error);
     res.status(500).json({ error: 'Failed to fetch versions' });
   }
 };
@@ -674,7 +675,7 @@ export const rollbackToVersion = async (req: Request, res: Response) => {
 
     res.json(updatedReport);
   } catch (error) {
-    console.error('Error rolling back version:', error);
+    logControllerError('Error rolling back version', error);
     res.status(500).json({ error: 'Failed to rollback version' });
   }
 };
@@ -690,7 +691,7 @@ export const validateQuery = async (req: Request, res: Response) => {
 
     res.json(validation);
   } catch (error) {
-    console.error('Error validating query:', error);
+    logControllerError('Error validating query', error);
     res.status(500).json({ error: 'Failed to validate query' });
   }
 };
@@ -735,7 +736,7 @@ export const previewQuery = async (req: Request, res: Response) => {
       previewNote: 'Limited to 10 rows for preview'
     });
   } catch (error) {
-    console.error('Error previewing query:', error);
+    logControllerError('Error previewing query', error);
     res.status(500).json({ error: 'Failed to preview query' });
   }
 };

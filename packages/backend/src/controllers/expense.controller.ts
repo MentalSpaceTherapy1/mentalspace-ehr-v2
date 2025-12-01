@@ -7,6 +7,7 @@
  */
 
 import { Request, Response } from 'express';
+import { logControllerError } from '../utils/logger';
 import * as expenseService from '../services/expense.service';
 import { ExpenseStatus, BudgetCategory } from '@prisma/client';
 
@@ -19,7 +20,7 @@ export async function createExpense(req: Request, res: Response): Promise<void> 
     const expense = await expenseService.createExpense(req.body);
     res.status(201).json(expense);
   } catch (error: any) {
-    console.error('Error creating expense:', error);
+    logControllerError('Error creating expense', error);
     res.status(400).json({ error: error.message });
   }
 }
@@ -40,7 +41,7 @@ export async function getExpense(req: Request, res: Response): Promise<void> {
 
     res.json(expense);
   } catch (error: any) {
-    console.error('Error fetching expense:', error);
+    logControllerError('Error fetching expense', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -85,7 +86,7 @@ export async function listExpenses(req: Request, res: Response): Promise<void> {
 
     res.json(result);
   } catch (error: any) {
-    console.error('Error listing expenses:', error);
+    logControllerError('Error listing expenses', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -100,7 +101,7 @@ export async function updateExpense(req: Request, res: Response): Promise<void> 
     const expense = await expenseService.updateExpense(id, req.body);
     res.json(expense);
   } catch (error: any) {
-    console.error('Error updating expense:', error);
+    logControllerError('Error updating expense', error);
     res.status(400).json({ error: error.message });
   }
 }
@@ -122,7 +123,7 @@ export async function approveExpense(req: Request, res: Response): Promise<void>
     const expense = await expenseService.approveExpense(id, approvedById, approvalNotes);
     res.json(expense);
   } catch (error: any) {
-    console.error('Error approving expense:', error);
+    logControllerError('Error approving expense', error);
     res.status(400).json({ error: error.message });
   }
 }
@@ -144,7 +145,7 @@ export async function denyExpense(req: Request, res: Response): Promise<void> {
     const expense = await expenseService.denyExpense(id, approvedById, approvalNotes);
     res.json(expense);
   } catch (error: any) {
-    console.error('Error denying expense:', error);
+    logControllerError('Error denying expense', error);
     res.status(400).json({ error: error.message });
   }
 }
@@ -165,7 +166,7 @@ export async function markExpensePaid(req: Request, res: Response): Promise<void
 
     res.json(expense);
   } catch (error: any) {
-    console.error('Error marking expense as paid:', error);
+    logControllerError('Error marking expense as paid', error);
     res.status(400).json({ error: error.message });
   }
 }
@@ -187,7 +188,7 @@ export async function getExpenseSummary(req: Request, res: Response): Promise<vo
 
     res.json(summary);
   } catch (error: any) {
-    console.error('Error fetching expense summary:', error);
+    logControllerError('Error fetching expense summary', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -204,7 +205,7 @@ export async function getPendingExpenses(req: Request, res: Response): Promise<v
     );
     res.json(expenses);
   } catch (error: any) {
-    console.error('Error fetching pending expenses:', error);
+    logControllerError('Error fetching pending expenses', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -226,7 +227,7 @@ export async function getUserExpenseHistory(req: Request, res: Response): Promis
 
     res.json(result);
   } catch (error: any) {
-    console.error('Error fetching user expense history:', error);
+    logControllerError('Error fetching user expense history', error);
     res.status(500).json({ error: error.message });
   }
 }

@@ -42,8 +42,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePolicy, Policy } from '../../hooks/usePolicy';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import TiptapEditor from '../../components/editor/TiptapEditor';
 
 const categories = [
   'HIPAA',
@@ -156,16 +155,6 @@ export default function PolicyForm() {
     }
   };
 
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'color': [] }, { 'background': [] }],
-      ['link', 'image'],
-      ['clean']
-    ]
-  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -326,27 +315,11 @@ export default function PolicyForm() {
                 <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                   Policy Content
                 </Typography>
-                <Box
-                  sx={{
-                    '& .ql-container': {
-                      minHeight: 400,
-                      borderBottomLeftRadius: 8,
-                      borderBottomRightRadius: 8
-                    },
-                    '& .ql-toolbar': {
-                      borderTopLeftRadius: 8,
-                      borderTopRightRadius: 8,
-                      background: alpha('#667EEA', 0.05)
-                    }
-                  }}
-                >
-                  <ReactQuill
-                    theme="snow"
-                    value={formData.content}
-                    onChange={(value) => handleChange('content', value)}
-                    modules={modules}
-                  />
-                </Box>
+                <TiptapEditor
+                  value={formData.content}
+                  onChange={(value) => handleChange('content', value)}
+                  minHeight={400}
+                />
               </Grid>
 
               {id && (

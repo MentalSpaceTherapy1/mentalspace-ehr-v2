@@ -51,17 +51,19 @@ export const SleepQualityChart: React.FC<SleepQualityChartProps> = ({
 
   const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
+      const hoursEntry = payload.find((p: any) => p.dataKey === 'hoursSlept');
+      const qualityEntry = payload.find((p: any) => p.dataKey === 'quality');
       return (
         <div className="bg-white border-2 border-indigo-200 rounded-lg shadow-lg p-3">
           <p className="font-semibold text-gray-900 mb-2">{label}</p>
-          {showHours && payload.find((p: any) => p.dataKey === 'hoursSlept') && (
+          {showHours && hoursEntry && (
             <p className="text-sm text-indigo-600">
-              Hours: {payload.find((p: any) => p.dataKey === 'hoursSlept').value.toFixed(1)}
+              Hours: {hoursEntry.value.toFixed(1)}
             </p>
           )}
-          {showQuality && payload.find((p: any) => p.dataKey === 'quality') && (
+          {showQuality && qualityEntry && (
             <p className="text-sm text-purple-600">
-              Quality: {payload.find((p: any) => p.dataKey === 'quality').value}/5
+              Quality: {qualityEntry.value}/5
             </p>
           )}
         </div>

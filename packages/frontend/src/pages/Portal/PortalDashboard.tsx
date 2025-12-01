@@ -320,11 +320,11 @@ export default function PortalDashboard() {
           </div>
 
           {/* Pending Tasks */}
-          {(dashboardData?.pendingTasks?.homework > 0 || dashboardData?.pendingTasks?.activeGoals > 0) && (
+          {((dashboardData?.pendingTasks?.homework ?? 0) > 0 || (dashboardData?.pendingTasks?.activeGoals ?? 0) > 0) && dashboardData && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Pending Tasks</h3>
               <div className="space-y-3">
-                {dashboardData.pendingTasks.homework > 0 && (
+                {(dashboardData.pendingTasks?.homework ?? 0) > 0 && (
                   <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -332,10 +332,10 @@ export default function PortalDashboard() {
                       </svg>
                       <span className="text-sm font-medium text-gray-900">Homework</span>
                     </div>
-                    <span className="text-sm font-semibold text-yellow-600">{dashboardData.pendingTasks.homework}</span>
+                    <span className="text-sm font-semibold text-yellow-600">{dashboardData.pendingTasks?.homework ?? 0}</span>
                   </div>
                 )}
-                {dashboardData.pendingTasks.activeGoals > 0 && (
+                {(dashboardData.pendingTasks?.activeGoals ?? 0) > 0 && (
                   <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -343,7 +343,7 @@ export default function PortalDashboard() {
                       </svg>
                       <span className="text-sm font-medium text-gray-900">Active Goals</span>
                     </div>
-                    <span className="text-sm font-semibold text-blue-600">{dashboardData.pendingTasks.activeGoals}</span>
+                    <span className="text-sm font-semibold text-blue-600">{dashboardData.pendingTasks?.activeGoals ?? 0}</span>
                   </div>
                 )}
               </div>

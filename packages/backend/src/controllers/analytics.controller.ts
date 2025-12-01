@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { logControllerError } from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -119,7 +120,7 @@ export const getProviderUtilization = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Error getting provider utilization:', error);
+    logControllerError('Error getting provider utilization', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to get provider utilization',
@@ -285,7 +286,7 @@ export const getNoShowRates = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Error getting no-show rates:', error);
+    logControllerError('Error getting no-show rates', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to get no-show rates',
@@ -391,7 +392,7 @@ export const getRevenueAnalysis = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Error getting revenue analysis:', error);
+    logControllerError('Error getting revenue analysis', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to get revenue analysis',
@@ -530,7 +531,7 @@ export const getCancellationPatterns = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Error getting cancellation patterns:', error);
+    logControllerError('Error getting cancellation patterns', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to get cancellation patterns',
@@ -641,7 +642,7 @@ export const getCapacityPlanning = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Error getting capacity planning:', error);
+    logControllerError('Error getting capacity planning', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to get capacity planning',
