@@ -622,10 +622,11 @@ model Client {
   deceasedDate     DateTime?
 
   // Assignment
-  primaryTherapistId String
-  primaryTherapist   User    @relation("ClientTherapist", fields: [primaryTherapistId], references: [id])
-  psychiatristId     String?
-  caseManagerId      String?
+  primaryTherapistId   String
+  primaryTherapist     User    @relation("ClientTherapist", fields: [primaryTherapistId], references: [id])
+  secondaryTherapistId String?
+  psychiatristId       String?
+  caseManagerId        String?
 
   // Consents
   treatmentConsent         Boolean   @default(false)
