@@ -92,17 +92,21 @@ export class AuthController {
         user: result.user,
       });
     } else {
-      // Set tokens as httpOnly cookies (not accessible via JavaScript)
-      if (result.tokens) {
-        setAuthCookies(res, result.tokens);
+      // Set session token as httpOnly cookie (not accessible via JavaScript)
+      // The session token is used for authentication on subsequent requests
+      if (result.session?.token) {
+        setAuthCookies(res, {
+          accessToken: result.session.token,
+          refreshToken: result.session.token
+        });
       }
 
       // Return user data without tokens in body (HIPAA security)
-      const { tokens, ...responseData } = result;
+      const { tokens, session, ...responseData } = result;
       res.status(200).json({
         success: true,
         message: 'Login successful',
-        data: responseData,
+        data: { ...responseData, session: { sessionId: session?.sessionId } },
       });
     }
   });
@@ -124,17 +128,20 @@ export class AuthController {
 
     const result = await authService.completeMFALogin(userId, mfaCode, ipAddress, userAgent);
 
-    // Set tokens as httpOnly cookies
-    if (result.tokens) {
-      setAuthCookies(res, result.tokens);
+    // Set session token as httpOnly cookie
+    if (result.session?.token) {
+      setAuthCookies(res, {
+        accessToken: result.session.token,
+        refreshToken: result.session.token
+      });
     }
 
     // Return user data without tokens in body
-    const { tokens, ...responseData } = result;
+    const { tokens, session, ...responseData } = result;
     res.status(200).json({
       success: true,
       message: 'MFA verification successful',
-      data: responseData,
+      data: { ...responseData, session: { sessionId: session?.sessionId } },
     });
   });
 

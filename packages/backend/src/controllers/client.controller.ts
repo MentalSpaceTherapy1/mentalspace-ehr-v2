@@ -56,7 +56,7 @@ export const getAllClients = async (req: Request, res: Response) => {
       where.primaryTherapistId = therapistId;
     }
 
-    const scopedWhere = applyClientScope(req.user, where, { allowBillingView: true });
+    const scopedWhere = await applyClientScope(req.user, where, { allowBillingView: true });
 
     const [clients, total] = await Promise.all([
       prisma.client.findMany({
@@ -342,7 +342,7 @@ export const deleteClient = async (req: Request, res: Response) => {
 // Get client statistics
 export const getClientStats = async (req: Request, res: Response) => {
   try {
-    const baseWhere = applyClientScope(req.user, {}, { allowBillingView: true });
+    const baseWhere = await applyClientScope(req.user, {}, { allowBillingView: true });
     const withStatus = (status: ClientStatus) => ({ ...baseWhere, status });
 
     const [total, active, inactive, discharged] = await Promise.all([

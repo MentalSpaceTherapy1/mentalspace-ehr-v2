@@ -186,7 +186,7 @@ export const getAllAppointments = async (req: Request, res: Response) => {
       baseWhere.appointmentDate = dateRange;
     }
 
-    const scopedWhere = applyAppointmentScope(req.user, baseWhere, { allowBillingView: true });
+    const scopedWhere = await applyAppointmentScope(req.user, baseWhere, { allowBillingView: true });
 
     const [appointments, total] = await Promise.all([
       prisma.appointment.findMany({

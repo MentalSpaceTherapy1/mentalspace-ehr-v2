@@ -57,7 +57,18 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
   // Skip CSRF for health check
-  if (req.path === '/v1/health') {
+  if (req.path === '/v1/health' || req.path.startsWith('/v1/health/')) {
+    return next();
+  }
+  // Skip CSRF for auth endpoints (login, register, etc.) - they don't have cookies yet
+  // These endpoints use rate limiting and account lockout for protection
+  if (req.path.startsWith('/v1/auth/login') ||
+      req.path.startsWith('/v1/auth/register') ||
+      req.path.startsWith('/v1/auth/forgot-password') ||
+      req.path.startsWith('/v1/auth/reset-password') ||
+      req.path.startsWith('/v1/auth/verify-email') ||
+      req.path.startsWith('/v1/auth/resend-verification') ||
+      req.path.startsWith('/v1/auth/mfa/complete')) {
     return next();
   }
   return csrfProtection(req, res, next);
