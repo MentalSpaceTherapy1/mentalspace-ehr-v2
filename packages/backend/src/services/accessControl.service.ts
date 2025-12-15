@@ -207,7 +207,6 @@ export const assertCanAccessClient = async (
       select: {
         primaryTherapistId: true,
         secondaryTherapistId: true,
-        organizationId: true,
       },
     }));
 
@@ -320,7 +319,6 @@ export const assertCanAccessClinicalNote = async (
       select: {
         clientId: true,
         clinicianId: true,
-        client: { select: { organizationId: true } },
       },
     }));
 
@@ -431,7 +429,6 @@ export const assertCanAccessAppointment = async (
       select: {
         clientId: true,
         clinicianId: true,
-        organizationId: true,
       },
     }));
 

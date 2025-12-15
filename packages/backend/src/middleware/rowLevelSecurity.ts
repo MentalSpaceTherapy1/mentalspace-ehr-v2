@@ -192,7 +192,6 @@ export async function canAccessAppointment(
     select: {
       clientId: true,
       clinicianId: true,
-      organizationId: true,
     },
   });
 
@@ -235,9 +234,6 @@ export async function canAccessClinicalNote(
     select: {
       clientId: true,
       clinicianId: true,
-      client: {
-        select: { organizationId: true },
-      },
     },
   });
 
