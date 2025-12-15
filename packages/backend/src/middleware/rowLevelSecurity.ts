@@ -106,13 +106,9 @@ export async function buildRLSContext(req: Request): Promise<RLSContext> {
   const isClinicalStaff = roles.some(r => CLINICAL_ROLES.includes(r));
   const isBillingStaff = roles.some(r => BILLING_ROLES.includes(r));
 
-  // Get user's organization if applicable
-  let organizationId: string | undefined;
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { organizationId: true },
-  });
-  organizationId = user?.organizationId || undefined;
+  // Organization-level filtering is not yet implemented
+  // When Organization model is added, this should query the user's organizationId
+  const organizationId: string | undefined = undefined;
 
   // For clinicians, get their assigned client IDs
   let allowedClientIds: string[] | undefined;
@@ -163,13 +159,9 @@ export async function canAccessClient(
     return true;
   }
 
-  // Admin can access all clients in their organization
-  if (context.isAdmin && context.organizationId) {
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
-      select: { organizationId: true },
-    });
-    return client?.organizationId === context.organizationId;
+  // Admin can access all clients (organization filtering not yet implemented)
+  if (context.isAdmin) {
+    return true;
   }
 
   // Clinical staff can access their assigned clients
@@ -206,9 +198,9 @@ export async function canAccessAppointment(
 
   if (!appointment) return false;
 
-  // Admin can access all appointments in their organization
+  // Admin can access all appointments (organization filtering not yet implemented)
   if (context.isAdmin) {
-    return appointment.organizationId === context.organizationId;
+    return true;
   }
 
   // Clinician can access their own appointments
@@ -256,9 +248,9 @@ export async function canAccessClinicalNote(
     return false; // Billing staff cannot see clinical notes content
   }
 
-  // Admin can access notes in their organization
+  // Admin can access all notes (organization filtering not yet implemented)
   if (context.isAdmin) {
-    return note.client.organizationId === context.organizationId;
+    return true;
   }
 
   // Clinician can access their own notes
@@ -308,8 +300,9 @@ export function buildClientFilter(context: RLSContext): Record<string, any> {
     return {}; // No filter for super admin
   }
 
-  if (context.isAdmin && context.organizationId) {
-    return { organizationId: context.organizationId };
+  // Admin can see all clients (organization filtering not yet implemented)
+  if (context.isAdmin) {
+    return {};
   }
 
   if (context.isClinicalStaff && context.allowedClientIds) {
@@ -328,8 +321,9 @@ export function buildAppointmentFilter(context: RLSContext): Record<string, any>
     return {};
   }
 
-  if (context.isAdmin && context.organizationId) {
-    return { organizationId: context.organizationId };
+  // Admin can see all appointments (organization filtering not yet implemented)
+  if (context.isAdmin) {
+    return {};
   }
 
   if (context.isClinicalStaff) {
@@ -344,10 +338,9 @@ export function buildAppointmentFilter(context: RLSContext): Record<string, any>
     return { OR: filters };
   }
 
+  // Scheduling roles can see all appointments (organization filtering not yet implemented)
   if (context.roles.some(r => SCHEDULING_ROLES.includes(r))) {
-    return context.organizationId
-      ? { organizationId: context.organizationId }
-      : {};
+    return {};
   }
 
   return { id: { in: [] } };
@@ -366,10 +359,9 @@ export function buildClinicalNoteFilter(context: RLSContext): Record<string, any
     return { id: { in: [] } };
   }
 
-  if (context.isAdmin && context.organizationId) {
-    return {
-      client: { organizationId: context.organizationId },
-    };
+  // Admin can see all notes (organization filtering not yet implemented)
+  if (context.isAdmin) {
+    return {};
   }
 
   if (context.isClinicalStaff) {

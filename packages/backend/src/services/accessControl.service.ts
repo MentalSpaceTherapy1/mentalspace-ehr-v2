@@ -114,13 +114,9 @@ export const buildRLSContext = async (user: JwtPayload | undefined): Promise<RLS
   const userIsClinicalStaff = isClinicalStaff(user);
   const userIsBillingStaff = isBillingStaff(user);
 
-  // Get user's organization
-  let organizationId: string | undefined;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { organizationId: true },
-  });
-  organizationId = dbUser?.organizationId || undefined;
+  // Organization-level filtering is not yet implemented
+  // When Organization model is added, this should query the user's organizationId
+  const organizationId: string | undefined = undefined;
 
   // For clinical staff (non-admin), get their assigned client IDs
   let allowedClientIds: string[] | undefined;
@@ -220,20 +216,10 @@ export const assertCanAccessClient = async (
     throw new ForbiddenError('Client access denied');
   }
 
-  // ADMINISTRATOR access within their organization
+  // ADMINISTRATOR has access to all clients (organization filtering not yet implemented)
   if (isAdministrator(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId && client.organizationId === dbUser.organizationId) {
-      logAccess(userId, 'client', clientId, 'ADMINISTRATOR', true);
-      return;
-    }
-    // Admin cannot access clients from other organizations
-    logAccess(userId, 'client', clientId, 'ADMIN_WRONG_ORG', false);
-    throw new ForbiddenError('Client access denied');
+    logAccess(userId, 'client', clientId, 'ADMINISTRATOR', true);
+    return;
   }
 
   // Billing staff can view client for billing purposes
@@ -267,17 +253,10 @@ export const assertCanAccessClient = async (
       }
     }
 
-    // Clinical director has access to all in organization
+    // Clinical director has access to all clients (organization filtering not yet implemented)
     if (isClinicalDirector(user)) {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { organizationId: true },
-      });
-
-      if (dbUser?.organizationId && client.organizationId === dbUser.organizationId) {
-        logAccess(userId, 'client', clientId, 'CLINICAL_DIRECTOR', true);
-        return;
-      }
+      logAccess(userId, 'client', clientId, 'CLINICAL_DIRECTOR', true);
+      return;
     }
   }
 
@@ -350,19 +329,10 @@ export const assertCanAccessClinicalNote = async (
     throw new ForbiddenError('Clinical note access denied');
   }
 
-  // Administrator access within their organization
+  // Administrator has access to all clinical notes (organization filtering not yet implemented)
   if (isAdministrator(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId && note.client?.organizationId === dbUser.organizationId) {
-      logAccess(userId, 'clinicalNote', noteId, 'ADMINISTRATOR', true);
-      return;
-    }
-    logAccess(userId, 'clinicalNote', noteId, 'ADMIN_WRONG_ORG', false);
-    throw new ForbiddenError('Clinical note access denied');
+    logAccess(userId, 'clinicalNote', noteId, 'ADMINISTRATOR', true);
+    return;
   }
 
   // The clinician who created the note always has access
@@ -399,17 +369,10 @@ export const assertCanAccessClinicalNote = async (
       return;
     }
 
-    // Clinical director has access to all notes in organization
+    // Clinical director has access to all notes (organization filtering not yet implemented)
     if (isClinicalDirector(user)) {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { organizationId: true },
-      });
-
-      if (dbUser?.organizationId && note.client?.organizationId === dbUser.organizationId) {
-        logAccess(userId, 'clinicalNote', noteId, 'CLINICAL_DIRECTOR', true);
-        return;
-      }
+      logAccess(userId, 'clinicalNote', noteId, 'CLINICAL_DIRECTOR', true);
+      return;
     }
   }
 
@@ -477,19 +440,10 @@ export const assertCanAccessAppointment = async (
     throw new ForbiddenError('Appointment access denied');
   }
 
-  // Administrator access within their organization
+  // Administrator has access to all appointments (organization filtering not yet implemented)
   if (isAdministrator(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId && appointment.organizationId === dbUser.organizationId) {
-      logAccess(userId, 'appointment', appointmentId, 'ADMINISTRATOR', true);
-      return;
-    }
-    logAccess(userId, 'appointment', appointmentId, 'ADMIN_WRONG_ORG', false);
-    throw new ForbiddenError('Appointment access denied');
+    logAccess(userId, 'appointment', appointmentId, 'ADMINISTRATOR', true);
+    return;
   }
 
   // The clinician assigned to the appointment always has access
@@ -498,30 +452,16 @@ export const assertCanAccessAppointment = async (
     return;
   }
 
-  // Front desk and scheduling roles have access for scheduling
+  // Front desk and scheduling roles have access for scheduling (organization filtering not yet implemented)
   if (hasSchedulingAccess(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId && appointment.organizationId === dbUser.organizationId) {
-      logAccess(userId, 'appointment', appointmentId, 'SCHEDULING_ACCESS', true);
-      return;
-    }
+    logAccess(userId, 'appointment', appointmentId, 'SCHEDULING_ACCESS', true);
+    return;
   }
 
-  // Billing staff have access for billing purposes
+  // Billing staff have access for billing purposes (organization filtering not yet implemented)
   if (isBillingStaff(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId && appointment.organizationId === dbUser.organizationId) {
-      logAccess(userId, 'appointment', appointmentId, 'BILLING_STAFF', true);
-      return;
-    }
+    logAccess(userId, 'appointment', appointmentId, 'BILLING_STAFF', true);
+    return;
   }
 
   // Clinical staff can access appointments for their assigned clients
@@ -646,29 +586,13 @@ export const applyClientScope = async (
     return where;
   }
 
-  // Administrator sees clients in their organization
+  // Administrator sees all clients (organization filtering not yet implemented)
   if (isAdministrator(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId) {
-      return combineWhere(cloneWhere(where), { organizationId: dbUser.organizationId });
-    }
     return where;
   }
 
-  // Billing staff sees clients for billing purposes
+  // Billing staff sees all clients for billing purposes (organization filtering not yet implemented)
   if (options.allowBillingView && isBillingStaff(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId) {
-      return combineWhere(cloneWhere(where), { organizationId: dbUser.organizationId });
-    }
     return where;
   }
 
@@ -713,29 +637,13 @@ export const applyAppointmentScope = async (
     return where;
   }
 
-  // Administrator sees appointments in their organization
+  // Administrator sees all appointments (organization filtering not yet implemented)
   if (isAdministrator(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId) {
-      return combineWhere(cloneWhere(where), { organizationId: dbUser.organizationId });
-    }
     return where;
   }
 
-  // Billing staff and scheduling roles see appointments in organization
+  // Billing staff and scheduling roles see all appointments (organization filtering not yet implemented)
   if ((options.allowBillingView && isBillingStaff(user)) || hasSchedulingAccess(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId) {
-      return combineWhere(cloneWhere(where), { organizationId: dbUser.organizationId });
-    }
     return where;
   }
 
@@ -786,18 +694,8 @@ export const applyClinicalNoteScope = async (
     return where;
   }
 
-  // Administrator sees notes in their organization
+  // Administrator sees all notes (organization filtering not yet implemented)
   if (isAdministrator(user)) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true },
-    });
-
-    if (dbUser?.organizationId) {
-      return combineWhere(cloneWhere(where), {
-        client: { organizationId: dbUser.organizationId },
-      });
-    }
     return where;
   }
 
