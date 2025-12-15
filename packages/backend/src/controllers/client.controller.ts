@@ -137,7 +137,10 @@ export const getClientById = async (req: Request, res: Response) => {
     await assertCanAccessClient(req.user, {
       clientId: id,
       allowBillingView: true,
-      clientRecord: { primaryTherapistId: client.primaryTherapistId },
+      clientRecord: {
+        primaryTherapistId: client.primaryTherapistId,
+        secondaryTherapistId: client.secondaryTherapistId,
+      },
     });
 
     res.status(200).json({
