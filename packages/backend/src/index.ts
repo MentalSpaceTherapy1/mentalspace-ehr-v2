@@ -20,6 +20,7 @@ import {
   flushMetrics
 } from './services/monitoring';
 import { initializeSecrets, secretsManager } from './services/secrets';
+import { runSchemaCheck } from './services/schemaCheck.service';
 
 const PORT = config.port;
 
@@ -71,8 +72,16 @@ if (config.nodeEnv === 'production' || process.env.ENABLE_CLOUDWATCH === 'true')
 
 // Test database connection
 prisma.$connect()
-  .then(() => {
+  .then(async () => {
     logger.info('✅ Database connected successfully');
+
+    // Run schema check to ensure all required columns exist
+    // This prevents errors from schema mismatches between Prisma client and database
+    try {
+      await runSchemaCheck();
+    } catch (error) {
+      logger.error('Schema check failed, but continuing startup', { error });
+    }
 
     // Start productivity module scheduled jobs
     startAllProductivityJobs();
