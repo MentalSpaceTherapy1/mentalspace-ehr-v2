@@ -6,6 +6,7 @@ import { Prisma, ClientStatus } from '@mentalspace/database';
 import { applyClientScope, assertCanAccessClient } from '../services/accessControl.service';
 import logger, { logControllerError } from '../utils/logger';
 import { sanitizeSearchInput, sanitizePagination } from '../utils/sanitize';
+import { AppError } from '../utils/errors';
 
 // Generate Medical Record Number
 function generateMRN(): string {
@@ -90,6 +91,15 @@ export const getAllClients = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    // Handle known operational errors (ForbiddenError, UnauthorizedError, etc.)
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errorCode: error.errorCode,
+      });
+    }
+
     const errorId = logControllerError('Get clients error', error, {
       userId: (req as any).user?.userId,
       url: req.url,
@@ -148,6 +158,15 @@ export const getClientById = async (req: Request, res: Response) => {
       data: client,
     });
   } catch (error) {
+    // Handle known operational errors (ForbiddenError, UnauthorizedError, etc.)
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errorCode: error.errorCode,
+      });
+    }
+
     const errorId = logControllerError('Get client error', error, {
       userId: (req as any).user?.userId,
       clientId: req.params.id,
@@ -215,6 +234,15 @@ export const createClient = async (req: Request, res: Response) => {
         success: false,
         message: 'Validation failed',
         errors: formattedErrors,
+      });
+    }
+
+    // Handle known operational errors (ForbiddenError, UnauthorizedError, etc.)
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errorCode: error.errorCode,
       });
     }
 
@@ -286,6 +314,15 @@ export const updateClient = async (req: Request, res: Response) => {
       });
     }
 
+    // Handle known operational errors (ForbiddenError, UnauthorizedError, etc.)
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errorCode: error.errorCode,
+      });
+    }
+
     const errorId = logControllerError('Update client error', error, {
       userId: (req as any).user?.userId,
       clientId: req.params.id,
@@ -330,6 +367,15 @@ export const deleteClient = async (req: Request, res: Response) => {
       data: client,
     });
   } catch (error) {
+    // Handle known operational errors (ForbiddenError, UnauthorizedError, etc.)
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errorCode: error.errorCode,
+      });
+    }
+
     const errorId = logControllerError('Delete client error', error, {
       userId: (req as any).user?.userId,
       clientId: req.params.id,
@@ -365,6 +411,15 @@ export const getClientStats = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    // Handle known operational errors (ForbiddenError, UnauthorizedError, etc.)
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errorCode: error.errorCode,
+      });
+    }
+
     const errorId = logControllerError('Get client stats error', error, {
       userId: (req as any).user?.userId,
     });

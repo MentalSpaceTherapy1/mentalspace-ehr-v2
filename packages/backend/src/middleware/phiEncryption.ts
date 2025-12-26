@@ -223,17 +223,26 @@ export function encryptPHIFields(modelName: string, data: any): any {
     }
   }
 
-  // Generate lookup hashes for searchable encrypted fields
+  // NOTE: Hash fields are currently disabled because the database schema
+  // doesn't have the corresponding hash columns (e.g., medicalRecordNumberHash).
+  // To enable hash-based lookups for encrypted fields, add these columns:
+  // - Client: medicalRecordNumberHash, emailHash, primaryPhoneHash
+  // - InsuranceInformation: subscriberSSNHash, memberIdHash
+  // - User: emailHash
+  // - PortalAccount: emailHash
+  //
+  // Uncomment this block after adding the hash columns to the schema:
+  /*
   const hashableFields = HASHABLE_FIELDS[modelName];
   if (hashableFields) {
     for (const field of hashableFields) {
       if (field in data && data[field] !== null && data[field] !== undefined) {
         const hashFieldName = `${field}Hash`;
-        // Only set hash if the model has this field
         encrypted[hashFieldName] = hashForLookup(String(data[field]));
       }
     }
   }
+  */
 
   return encrypted;
 }

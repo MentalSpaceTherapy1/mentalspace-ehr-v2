@@ -12,12 +12,35 @@ interface PortalTokenPayload {
   audience?: string;
 }
 
+// Cookie name for access token (must match auth.ts)
+const ACCESS_TOKEN_COOKIE = 'access_token';
+
+/**
+ * Extract token from request
+ * For portal users: Authorization header (Bearer token)
+ * For staff users: httpOnly cookie (preferred) or Authorization header
+ */
+const extractToken = (req: Request): { token: string | null; source: 'cookie' | 'header' | null } => {
+  // 1. Check Authorization header first (for portal users)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return { token: authHeader.substring(7), source: 'header' };
+  }
+
+  // 2. Check httpOnly cookie (for staff users)
+  if (req.cookies?.[ACCESS_TOKEN_COOKIE]) {
+    return { token: req.cookies[ACCESS_TOKEN_COOKIE], source: 'cookie' };
+  }
+
+  return { token: null, source: null };
+};
+
 /**
  * Dual authentication middleware that accepts BOTH staff tokens AND portal tokens
  *
  * This middleware tries:
- * 1. First, portal authentication (client portal tokens)
- * 2. If that fails, staff authentication (staff JWT tokens)
+ * 1. First, portal authentication (client portal tokens from Authorization header)
+ * 2. If that fails, staff authentication (staff session tokens from cookies or header)
  *
  * This allows endpoints to be accessed by both:
  * - Clients accessing their own data via portal
@@ -27,16 +50,14 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
   logger.debug('[DUAL AUTH] Middleware executing', { method: req.method, url: req.url });
 
   try {
-    const authHeader = req.headers.authorization;
+    const { token, source } = extractToken(req);
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
       return res.status(401).json({
         success: false,
         message: 'No authorization token provided',
       });
     }
-
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
     // Try portal authentication first (most common for progress tracking)
     try {
@@ -296,8 +317,8 @@ export const verifyClinicianClientAccess = async (
       where: {
         id: clientId,
         OR: [
-          { primaryClinicianId: clinicianUserId },
-          { secondaryClinicianId: clinicianUserId },
+          { primaryTherapistId: clinicianUserId },
+          { secondaryTherapistId: clinicianUserId },
           // Also check if clinician has any appointments with this client
           {
             appointments: {
@@ -315,25 +336,17 @@ export const verifyClinicianClientAccess = async (
     }
 
     // Check if supervisor has supervisees assigned to this client
-    const superviseeAccess = await prisma.user.findFirst({
+    // Query clients where the supervisor's supervisees are assigned as primary therapist
+    const superviseeClient = await prisma.client.findFirst({
       where: {
-        supervisorId: clinicianUserId,
-        OR: [
-          {
-            primaryClients: {
-              some: { id: clientId },
-            },
-          },
-          {
-            secondaryClients: {
-              some: { id: clientId },
-            },
-          },
-        ],
+        id: clientId,
+        primaryTherapist: {
+          supervisorId: clinicianUserId,
+        },
       },
     });
 
-    return !!superviseeAccess;
+    return !!superviseeClient;
   } catch (error) {
     logger.error('Error verifying clinician-client access', {
       clinicianUserId,
