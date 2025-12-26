@@ -311,7 +311,7 @@ function getRelationModelName(parentModel: string, fieldName: string): string | 
     Client: {
       emergencyContacts: 'EmergencyContact',
       legalGuardians: 'LegalGuardian',
-      insuranceInformation: 'InsuranceInformation',
+      insuranceInfo: 'InsuranceInformation', // Fixed: was 'insuranceInformation', should match schema relation name
       diagnoses: 'ClientDiagnosis',
       medications: 'Medication',
       clinicalNotes: 'ClinicalNote',
