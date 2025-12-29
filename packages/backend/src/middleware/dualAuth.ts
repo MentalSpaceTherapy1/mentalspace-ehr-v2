@@ -47,24 +47,55 @@ const extractToken = (req: Request): { token: string | null; source: 'cookie' | 
  * - Staff (clinicians/admins) accessing client data
  */
 export const authenticateDual = async (req: Request, res: Response, next: NextFunction) => {
-  logger.debug('[DUAL AUTH] Middleware executing', { method: req.method, url: req.url });
+  // DETAILED DEBUG LOGGING for tracking route issues
+  logger.info('[DUAL AUTH] Middleware executing', {
+    method: req.method,
+    url: req.url,
+    hasCookies: !!req.cookies,
+    cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
+    hasAuthHeader: !!req.headers.authorization,
+    hasAccessTokenCookie: !!req.cookies?.access_token,
+    origin: req.headers.origin,
+    referer: req.headers.referer,
+  });
 
   try {
     const { token, source } = extractToken(req);
+    logger.info('[DUAL AUTH] Token extraction result', {
+      hasToken: !!token,
+      source,
+      tokenLength: token ? token.length : 0,
+    });
 
     if (!token) {
+      logger.warn('[DUAL AUTH] No token found', {
+        url: req.url,
+        cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
+        hasAccessTokenCookie: !!req.cookies?.access_token,
+        origin: req.headers.origin,
+      });
       return res.status(401).json({
         success: false,
         message: 'No authorization token provided',
+        debug: {
+          hasCookies: !!req.cookies,
+          cookieCount: req.cookies ? Object.keys(req.cookies).length : 0,
+          hasAccessToken: !!req.cookies?.access_token,
+        },
       });
     }
 
     // Try portal authentication first (most common for progress tracking)
+    logger.info('[DUAL AUTH] Attempting portal JWT authentication', {
+      tokenLength: token.length,
+      tokenPrefix: token.substring(0, 10),
+    });
     try {
       const decoded = jwt.verify(token, config.jwtSecret, {
         audience: 'mentalspace-portal',
         issuer: 'mentalspace-ehr',
       }) as PortalTokenPayload;
+      logger.info('[DUAL AUTH] JWT verify succeeded (portal token)');
 
       // Verify token type/audience
       if (decoded.type && decoded.type !== 'client_portal') {
@@ -132,19 +163,28 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
       return next();
     } catch (portalError: any) {
       // Portal authentication failed, try staff authentication
-      logger.debug('Portal authentication failed, trying staff auth', {
+      logger.info('[DUAL AUTH] Portal JWT failed, trying staff session auth', {
         error: portalError.message,
+        errorName: portalError.name,
       });
 
       // Try staff authentication (session-based token validation)
       try {
         // Import session service dynamically to avoid circular dependency
+        logger.info('[DUAL AUTH] Loading session service...');
         const sessionService = (await import('../services/session.service')).default;
+        logger.info('[DUAL AUTH] Session service loaded, validating session...');
 
         // Validate session token
         const sessionData = await sessionService.validateSession(token);
+        logger.info('[DUAL AUTH] Session validation result', {
+          hasSessionData: !!sessionData,
+          userId: sessionData?.userId,
+          sessionId: sessionData?.sessionId,
+        });
 
         if (!sessionData) {
+          logger.warn('[DUAL AUTH] Session validation returned null');
           throw new Error('Invalid session token');
         }
 
@@ -187,17 +227,26 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
         // Update session activity
         await sessionService.updateActivity(sessionData.sessionId);
 
-        logger.debug('Dual auth: Staff authentication successful', {
+        logger.info('[DUAL AUTH] Staff authentication successful', {
           userId: user.id,
+          roles: user.roles,
         });
 
         return next();
       } catch (staffError: any) {
-        logger.debug('Staff authentication also failed', {
+        logger.warn('[DUAL AUTH] Staff authentication FAILED', {
           error: staffError.message,
+          errorName: staffError.name,
+          stack: staffError.stack?.substring(0, 200),
         });
 
         // Both authentication methods failed
+        logger.error('[DUAL AUTH] ALL AUTH METHODS FAILED - returning 401', {
+          url: req.url,
+          method: req.method,
+          portalError: (portalError as any).message,
+          staffError: staffError.message,
+        });
         return res.status(401).json({
           success: false,
           message: 'Authentication failed. Invalid or expired token.',
