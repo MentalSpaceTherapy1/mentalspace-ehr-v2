@@ -78,9 +78,21 @@ export const joinWaitlist = async (req: PortalRequest, res: Response) => {
     const existingEntry = await prisma.waitlistEntry.findFirst({
       where: {
         clientId,
-        requestedClinicianId,
-        requestedAppointmentType: appointmentType.typeName,
-        status: { in: ['Waiting', 'Pending'] },
+        AND: [
+          {
+            OR: [
+              { clinicianId: requestedClinicianId },
+              { requestedClinicianId },
+            ],
+          },
+          {
+            OR: [
+              { appointmentType: appointmentType.typeName },
+              { requestedAppointmentType: appointmentType.typeName },
+            ],
+          },
+        ],
+        status: { in: ['ACTIVE', 'MATCHED'] },
       },
     });
 
@@ -140,7 +152,7 @@ export const leaveWaitlist = async (req: PortalRequest, res: Response) => {
       where: {
         id: entryId,
         clientId,
-        status: { in: ['Waiting', 'Pending'] },
+        status: { in: ['ACTIVE', 'MATCHED'] },
       },
     });
 
@@ -191,10 +203,10 @@ export const getMyWaitlistEntries = async (req: PortalRequest, res: Response) =>
     const entries = await prisma.waitlistEntry.findMany({
       where: {
         clientId,
-        status: { in: ['Waiting', 'Pending', 'Offered'] },
+        status: { in: ['ACTIVE', 'MATCHED'] },
       },
       include: {
-        requestedClinician: {
+        clinician: {
           select: {
             id: true,
             firstName: true,
@@ -210,15 +222,15 @@ export const getMyWaitlistEntries = async (req: PortalRequest, res: Response) =>
       success: true,
       data: entries.map(entry => ({
         id: entry.id,
-        clinicianId: entry.requestedClinicianId,
-        appointmentType: entry.requestedAppointmentType,
+        clinicianId: entry.clinicianId || entry.requestedClinicianId,
+        appointmentType: entry.appointmentType || entry.requestedAppointmentType,
         preferredDays: entry.preferredDays,
         preferredTimes: entry.preferredTimes,
         priority: entry.priority,
         status: entry.status,
-        joinedAt: entry.createdAt,
+        joinedAt: entry.joinedAt || entry.createdAt,
         notes: entry.notes,
-        clinician: entry.requestedClinician,
+        clinician: entry.clinician,
       })),
     });
   } catch (error: any) {
@@ -249,10 +261,10 @@ export const getMyWaitlistOffers = async (req: PortalRequest, res: Response) => 
     const entries = await prisma.waitlistEntry.findMany({
       where: {
         clientId,
-        status: 'Offered',
+        status: 'MATCHED',
       },
       include: {
-        requestedClinician: {
+        clinician: {
           select: {
             id: true,
             firstName: true,
@@ -262,7 +274,7 @@ export const getMyWaitlistOffers = async (req: PortalRequest, res: Response) => 
         },
         offers: {
           where: {
-            status: 'Pending',
+            status: 'PENDING',
           },
           include: {
             clinician: {
@@ -294,7 +306,7 @@ export const getMyWaitlistOffers = async (req: PortalRequest, res: Response) => 
         matchScore: offer.matchScore,
         matchReasons: offer.matchReasons,
         clinician: offer.clinician,
-        appointmentType: entry.requestedAppointmentType,
+        appointmentType: entry.appointmentType || entry.requestedAppointmentType,
       }))
     );
 

@@ -94,20 +94,30 @@ export const getDashboard = async (req: PortalRequest, res: Response) => {
     };
 
     // Get pending homework assignments count
-    const pendingHomework = await prisma.homework.count({
-      where: {
-        clientId,
-        status: { in: ['ASSIGNED', 'IN_PROGRESS'] },
-      },
-    });
+    let pendingHomework = 0;
+    try {
+      pendingHomework = await prisma.homeworkAssignment.count({
+        where: {
+          clientId,
+          status: { in: ['ASSIGNED', 'IN_PROGRESS'] },
+        },
+      });
+    } catch (error) {
+      logger.warn('Could not fetch homework count');
+    }
 
     // Get active goals count
-    const activeGoals = await prisma.clientGoal.count({
-      where: {
-        clientId,
-        status: { in: ['ACTIVE', 'IN_PROGRESS'] },
-      },
-    });
+    let activeGoals = 0;
+    try {
+      activeGoals = await prisma.therapeuticGoal.count({
+        where: {
+          clientId,
+          status: { in: ['ACTIVE', 'IN_PROGRESS'] },
+        },
+      });
+    } catch (error) {
+      logger.warn('Could not fetch goals count');
+    }
 
     res.status(200).json({
       success: true,
