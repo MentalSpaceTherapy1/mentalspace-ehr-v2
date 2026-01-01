@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart3,
   DollarSign,
@@ -80,6 +80,17 @@ export default function ReportsDashboard() {
   const missingTreatmentPlansQuery = useMissingTreatmentPlansReport();
   const clientDemographicsQuery = useClientDemographicsReport();
 
+  // Trigger refetch for manual-trigger reports when selectedReport changes
+  useEffect(() => {
+    if (selectedReport === 'unsigned-notes') {
+      unsignedNotesQuery.refetch();
+    } else if (selectedReport === 'missing-treatment-plans') {
+      missingTreatmentPlansQuery.refetch();
+    } else if (selectedReport === 'client-demographics') {
+      clientDemographicsQuery.refetch();
+    }
+  }, [selectedReport]);
+
   // Get current report query based on selectedReport
   const getCurrentReportQuery = () => {
     switch (selectedReport) {
@@ -108,10 +119,9 @@ export default function ReportsDashboard() {
 
   const handleViewReport = (reportType: ReportType) => {
     setSelectedReport(reportType);
-    const query = getCurrentReportQuery();
-    if (query && 'refetch' in query) {
-      query.refetch();
-    }
+    // Note: For manual-trigger reports (unsigned-notes, missing-treatment-plans, client-demographics),
+    // the useEffect above will call refetch() after state is updated.
+    // For date-based reports, they auto-fetch when dates become defined.
   };
 
   const handleCloseModal = () => {
@@ -331,20 +341,26 @@ export default function ReportsDashboard() {
         };
 
       case 'unsigned-notes':
+        const unsignedNotesData = query.data?.report || [];
         return {
           ...baseConfig,
           title: 'Unsigned Notes',
           description: 'Notes pending signature (Georgia 7-day compliance)',
+          data: Array.isArray(unsignedNotesData) ? unsignedNotesData : [],
           columns: [
             { key: 'clientName', label: 'Client' },
             { key: 'clinicianName', label: 'Clinician' },
             {
               key: 'sessionDate',
               label: 'Session Date',
-              format: (v: string) => new Date(v).toLocaleDateString(),
+              format: (v: string) => v ? new Date(v).toLocaleDateString() : 'N/A',
             },
             { key: 'status', label: 'Status' },
-            { key: 'daysOverdue', label: 'Days Overdue' },
+            { key: 'daysOverdue', label: 'Days Overdue', format: (v: number | null) => v !== null ? String(v) : 'N/A' },
+          ],
+          summary: [
+            { label: 'Total Unsigned', value: query.data?.totalUnsigned || 0 },
+            { label: 'Critical (>7 days)', value: query.data?.criticalCount || 0 },
           ],
           chartConfig: {
             xKey: 'clinicianName',
@@ -357,27 +373,61 @@ export default function ReportsDashboard() {
         };
 
       case 'missing-treatment-plans':
+        const missingPlansData = query.data?.report || [];
         return {
           ...baseConfig,
           title: 'Missing Treatment Plans',
           description: '90-day treatment plan compliance',
+          data: Array.isArray(missingPlansData) ? missingPlansData : [],
           columns: [
             { key: 'clientName', label: 'Client' },
-            { key: 'clinicianName', label: 'Primary Clinician' },
             {
-              key: 'lastPlanDate',
+              key: 'lastTreatmentPlanDate',
               label: 'Last Plan Date',
               format: (v: string) => (v ? new Date(v).toLocaleDateString() : 'Never'),
             },
             { key: 'daysOverdue', label: 'Days Overdue' },
           ],
+          summary: [
+            { label: 'Total Missing', value: query.data?.totalMissing || 0 },
+            { label: 'Critical (>30 days)', value: query.data?.criticalCount || 0 },
+          ],
         };
 
       case 'client-demographics':
+        // Transform demographics data from objects to array format
+        const demographicsData: Array<{ category: string; value: string; count: number; percentage: number }> = [];
+        const totalActive = query.data?.totalActive || 0;
+
+        // Add age groups
+        if (query.data?.ageGroups) {
+          Object.entries(query.data.ageGroups).forEach(([age, count]) => {
+            demographicsData.push({
+              category: 'Age',
+              value: age,
+              count: count as number,
+              percentage: totalActive > 0 ? ((count as number) / totalActive) * 100 : 0,
+            });
+          });
+        }
+
+        // Add gender distribution
+        if (query.data?.genderDistribution) {
+          Object.entries(query.data.genderDistribution).forEach(([gender, count]) => {
+            demographicsData.push({
+              category: 'Gender',
+              value: gender.charAt(0).toUpperCase() + gender.slice(1),
+              count: count as number,
+              percentage: totalActive > 0 ? ((count as number) / totalActive) * 100 : 0,
+            });
+          });
+        }
+
         return {
           ...baseConfig,
           title: 'Client Demographics',
           description: 'Age, gender, and status distribution',
+          data: demographicsData,
           columns: [
             { key: 'category', label: 'Category' },
             { key: 'value', label: 'Value' },
@@ -387,6 +437,9 @@ export default function ReportsDashboard() {
               label: 'Percentage',
               format: (v: number) => `${v.toFixed(1)}%`,
             },
+          ],
+          summary: [
+            { label: 'Total Active Clients', value: totalActive },
           ],
           chartConfig: {
             xKey: 'value',

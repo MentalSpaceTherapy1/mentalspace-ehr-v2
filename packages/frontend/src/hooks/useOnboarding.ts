@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import api from '../lib/api';
 
 export interface OnboardingProcess {
   id: string;
@@ -87,11 +85,7 @@ export const useOnboarding = () => {
       if (filters?.mentorId) params.append('mentorId', filters.mentorId);
       if (filters?.search) params.append('search', filters.search);
 
-      const response = await axios.get(`${API_BASE_URL}/onboarding?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/onboarding?${params.toString()}`);
       setOnboardings(response.data);
       setError(null);
     } catch (err: any) {
@@ -103,11 +97,7 @@ export const useOnboarding = () => {
 
   const getOnboardingById = async (id: string): Promise<OnboardingProcess | null> => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/onboarding/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/onboarding/${id}`);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch onboarding');
@@ -117,11 +107,7 @@ export const useOnboarding = () => {
 
   const createOnboarding = async (data: Partial<OnboardingProcess>): Promise<OnboardingProcess | null> => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/onboarding`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.post('/onboarding', data);
       await fetchOnboardings();
       return response.data;
     } catch (err: any) {
@@ -132,11 +118,7 @@ export const useOnboarding = () => {
 
   const updateOnboarding = async (id: string, data: Partial<OnboardingProcess>): Promise<OnboardingProcess | null> => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/onboarding/${id}`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.put(`/onboarding/${id}`, data);
       await fetchOnboardings();
       return response.data;
     } catch (err: any) {
@@ -147,11 +129,7 @@ export const useOnboarding = () => {
 
   const getStats = async (): Promise<OnboardingStats | null> => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/onboarding/stats`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get('/onboarding/stats');
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch stats');
@@ -183,11 +161,7 @@ export const useOnboardingChecklist = (onboardingId: string) => {
   const fetchChecklist = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/onboarding/${onboardingId}/checklist`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/onboarding/${onboardingId}/checklist`);
       setChecklist(response.data);
       setError(null);
     } catch (err: any) {
@@ -199,11 +173,7 @@ export const useOnboardingChecklist = (onboardingId: string) => {
 
   const addChecklistItem = async (data: Partial<OnboardingChecklist>): Promise<OnboardingChecklist | null> => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/onboarding/${onboardingId}/checklist`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.post(`/onboarding/${onboardingId}/checklist`, data);
       await fetchChecklist();
       return response.data;
     } catch (err: any) {
@@ -214,11 +184,7 @@ export const useOnboardingChecklist = (onboardingId: string) => {
 
   const updateChecklistItem = async (itemId: string, data: Partial<OnboardingChecklist>): Promise<OnboardingChecklist | null> => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/onboarding/${onboardingId}/checklist/${itemId}`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.put(`/onboarding/${onboardingId}/checklist/${itemId}`, data);
       await fetchChecklist();
       return response.data;
     } catch (err: any) {
@@ -229,14 +195,9 @@ export const useOnboardingChecklist = (onboardingId: string) => {
 
   const toggleChecklistItem = async (itemId: string, isCompleted: boolean): Promise<boolean> => {
     try {
-      await axios.patch(
-        `${API_BASE_URL}/onboarding/${onboardingId}/checklist/${itemId}/toggle`,
-        { isCompleted },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      await api.patch(
+        `/onboarding/${onboardingId}/checklist/${itemId}/toggle`,
+        { isCompleted }
       );
       await fetchChecklist();
       return true;
@@ -269,11 +230,7 @@ export const useOnboardingMilestones = (onboardingId: string) => {
   const fetchMilestones = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/onboarding/${onboardingId}/milestones`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/onboarding/${onboardingId}/milestones`);
       setMilestones(response.data);
       setError(null);
     } catch (err: any) {
@@ -285,14 +242,9 @@ export const useOnboardingMilestones = (onboardingId: string) => {
 
   const completeMilestone = async (milestoneId: string): Promise<boolean> => {
     try {
-      await axios.patch(
-        `${API_BASE_URL}/onboarding/${onboardingId}/milestones/${milestoneId}/complete`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      await api.patch(
+        `/onboarding/${onboardingId}/milestones/${milestoneId}/complete`,
+        {}
       );
       await fetchMilestones();
       return true;
@@ -304,11 +256,7 @@ export const useOnboardingMilestones = (onboardingId: string) => {
 
   const addMilestone = async (data: Partial<OnboardingMilestone>): Promise<OnboardingMilestone | null> => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/onboarding/${onboardingId}/milestones`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.post(`/onboarding/${onboardingId}/milestones`, data);
       await fetchMilestones();
       return response.data;
     } catch (err: any) {

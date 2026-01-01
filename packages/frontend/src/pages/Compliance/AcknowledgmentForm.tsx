@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { sanitizeHtml } from '../../utils/sanitizeHtml';
 import {
   Box,
@@ -108,7 +109,7 @@ export default function AcknowledgmentForm() {
     setQuizPassed(passed);
 
     if (!passed) {
-      alert('You must score at least 70% to acknowledge this policy. Please review the policy and try again.');
+      toast.error('You must score at least 70% to acknowledge this policy. Please review the policy and try again.');
       setQuizAnswers({});
     }
   };
@@ -127,17 +128,17 @@ export default function AcknowledgmentForm() {
 
   const handleSubmit = async () => {
     if (!hasRead) {
-      alert('Please confirm that you have read and understood the policy');
+      toast.error('Please confirm that you have read and understood the policy');
       return;
     }
 
     if (showQuiz && !quizPassed) {
-      alert('Please complete and pass the quiz before acknowledging');
+      toast.error('Please complete and pass the quiz before acknowledging');
       return;
     }
 
     if (!signature) {
-      alert('Please provide your signature');
+      toast.error('Please provide your signature');
       return;
     }
 

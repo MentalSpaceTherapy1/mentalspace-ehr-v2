@@ -24,28 +24,39 @@ import RecordingPlayback from '../../components/Telehealth/RecordingPlayback';
 import { io, Socket } from 'socket.io-client';
 
 // Import Twilio Video SDK - ensure it's available globally
-let Video: any;
-if (typeof window !== 'undefined') {
+// Using a more resilient loading approach that doesn't break other components
+let Video: any = null;
+let twilioLoadError: Error | null = null;
+
+const loadTwilioSDK = async () => {
+  if (typeof window === 'undefined') return;
+
   // Try to load from window first (if loaded via script tag)
   Video = (window as any).Twilio?.Video;
+  if (Video) {
+    console.log('✅ Twilio Video SDK already available on window');
+    return;
+  }
 
   // If not available, try dynamic import
-  if (!Video) {
-    import('twilio-video').then((module) => {
-      Video = module;
-      // Also expose on window for compatibility
-      if (!(window as any).Twilio) {
-        (window as any).Twilio = {};
-      }
-      (window as any).Twilio.Video = module;
-      console.log('✅ Twilio Video SDK loaded via import');
-    }).catch((error) => {
-      console.error('Failed to load Twilio Video SDK:', error);
-    });
-  } else {
-    console.log('✅ Twilio Video SDK already available on window');
+  try {
+    const module = await import('twilio-video');
+    Video = module;
+    // Also expose on window for compatibility
+    if (!(window as any).Twilio) {
+      (window as any).Twilio = {};
+    }
+    (window as any).Twilio.Video = module;
+    console.log('✅ Twilio Video SDK loaded via import');
+  } catch (error) {
+    twilioLoadError = error as Error;
+    // Log but don't throw - this shouldn't break other parts of the app
+    console.warn('Twilio Video SDK could not be loaded. Video calls will be unavailable:', error);
   }
-}
+};
+
+// Start loading in the background - don't block the app
+loadTwilioSDK();
 
 interface VideoSessionProps {
   // Props if needed

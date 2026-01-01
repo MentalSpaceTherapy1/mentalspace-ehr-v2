@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import {
   Pause,
   Play,
@@ -51,6 +53,14 @@ export const ReportSubscriptions: React.FC = () => {
     scheduleId: null,
     history: []
   });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string }>({
+    isOpen: false,
+    id: '',
+  });
+  const [executeConfirm, setExecuteConfirm] = useState<{ isOpen: boolean; id: string }>({
+    isOpen: false,
+    id: '',
+  });
 
   useEffect(() => {
     fetchSchedules();
@@ -59,7 +69,7 @@ export const ReportSubscriptions: React.FC = () => {
   const fetchSchedules = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/v1/report-schedules');
+      const response = await api.get('/report-schedules');
       setSchedules(response.data);
       setError(null);
     } catch (err: any) {
@@ -72,43 +82,50 @@ export const ReportSubscriptions: React.FC = () => {
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     try {
       const endpoint = currentStatus === 'ACTIVE' ? 'pause' : 'resume';
-      await axios.post(`/api/v1/report-schedules/${id}/${endpoint}`);
+      await api.post(`/report-schedules/${id}/${endpoint}`);
       fetchSchedules();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to update schedule status');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this schedule?')) {
-      return;
-    }
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirm({ isOpen: true, id });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.id) return;
 
     try {
-      await axios.delete(`/api/v1/report-schedules/${id}`);
+      await api.delete(`/report-schedules/${deleteConfirm.id}`);
+      toast.success('Schedule deleted successfully');
       fetchSchedules();
+      setDeleteConfirm({ isOpen: false, id: '' });
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete schedule');
+      toast.error(err.response?.data?.error || 'Failed to delete schedule');
     }
   };
 
-  const handleExecuteNow = async (id: string) => {
-    if (!window.confirm('Execute this report schedule now?')) {
-      return;
-    }
+  const handleExecuteClick = (id: string) => {
+    setExecuteConfirm({ isOpen: true, id });
+  };
+
+  const confirmExecute = async () => {
+    if (!executeConfirm.id) return;
 
     try {
-      await axios.post(`/api/v1/report-schedules/${id}/execute`);
-      alert('Report execution started. Check your email shortly.');
+      await api.post(`/report-schedules/${executeConfirm.id}/execute`);
+      toast.success('Report execution started. Check your email shortly.');
       fetchSchedules();
+      setExecuteConfirm({ isOpen: false, id: '' });
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to execute schedule');
+      toast.error(err.response?.data?.error || 'Failed to execute schedule');
     }
   };
 
   const handleViewHistory = async (scheduleId: string) => {
     try {
-      const response = await axios.get(`/api/v1/report-schedules/${scheduleId}/history`);
+      const response = await api.get(`/report-schedules/${scheduleId}/history`);
       setHistoryDialog({
         open: true,
         scheduleId,
@@ -269,7 +286,7 @@ export const ReportSubscriptions: React.FC = () => {
                             {schedule.status === 'ACTIVE' ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                           </button>
                           <button
-                            onClick={() => handleExecuteNow(schedule.id)}
+                            onClick={() => handleExecuteClick(schedule.id)}
                             disabled={schedule.status !== 'ACTIVE'}
                             className="p-2 rounded-lg hover:bg-green-100 transition-all duration-200 text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Run Now"
@@ -284,7 +301,7 @@ export const ReportSubscriptions: React.FC = () => {
                             <History className="w-5 h-5" />
                           </button>
                           <button
-                            onClick={() => handleDelete(schedule.id)}
+                            onClick={() => handleDeleteClick(schedule.id)}
                             className="p-2 rounded-lg hover:bg-red-100 transition-all duration-200 text-red-600"
                             title="Delete"
                           >
@@ -299,6 +316,30 @@ export const ReportSubscriptions: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmModal
+          isOpen={deleteConfirm.isOpen}
+          onClose={() => setDeleteConfirm({ isOpen: false, id: '' })}
+          onConfirm={confirmDelete}
+          title="Delete Schedule"
+          message="Are you sure you want to delete this schedule? This action cannot be undone."
+          confirmText="Delete"
+          cancelText="Cancel"
+          icon="danger"
+        />
+
+        {/* Execute Confirmation Modal */}
+        <ConfirmModal
+          isOpen={executeConfirm.isOpen}
+          onClose={() => setExecuteConfirm({ isOpen: false, id: '' })}
+          onConfirm={confirmExecute}
+          title="Execute Report Now"
+          message="Execute this report schedule now? The report will be generated and emailed to the recipients."
+          confirmText="Execute"
+          cancelText="Cancel"
+          icon="info"
+        />
 
         {/* History Dialog */}
         {historyDialog.open && (

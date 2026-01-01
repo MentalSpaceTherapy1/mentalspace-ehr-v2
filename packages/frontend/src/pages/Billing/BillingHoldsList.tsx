@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface BillingHold {
   id: string;
@@ -37,6 +39,14 @@ const BillingHoldsList: React.FC = () => {
     count: 0,
     byReason: {},
   });
+  const [resolveConfirm, setResolveConfirm] = useState<{ isOpen: boolean; id: string }>({
+    isOpen: false,
+    id: '',
+  });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string }>({
+    isOpen: false,
+    id: '',
+  });
 
   useEffect(() => {
     fetchHolds();
@@ -46,7 +56,7 @@ const BillingHoldsList: React.FC = () => {
   const fetchHolds = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/v1/billing-holds');
+      const response = await api.get('/billing-holds');
       setHolds(response.data.data);
       setError(null);
     } catch (err: any) {
@@ -59,8 +69,8 @@ const BillingHoldsList: React.FC = () => {
   const fetchStats = async () => {
     try {
       const [countRes, byReasonRes] = await Promise.all([
-        axios.get('/api/v1/billing-holds/count'),
-        axios.get('/api/v1/billing-holds/by-reason'),
+        api.get('/billing-holds/count'),
+        api.get('/billing-holds/by-reason'),
       ]);
       setHoldStats({
         count: countRes.data.data.count,
@@ -71,31 +81,39 @@ const BillingHoldsList: React.FC = () => {
     }
   };
 
-  const handleResolve = async (holdId: string) => {
-    if (!window.confirm('Mark this hold as resolved? The note will become available for billing.')) {
-      return;
-    }
+  const handleResolveClick = (holdId: string) => {
+    setResolveConfirm({ isOpen: true, id: holdId });
+  };
+
+  const confirmResolve = async () => {
+    if (!resolveConfirm.id) return;
 
     try {
-      await axios.put(`/api/v1/billing-holds/${holdId}/resolve`);
+      await api.put(`/billing-holds/${resolveConfirm.id}/resolve`);
       fetchHolds();
       fetchStats();
+      toast.success('Hold resolved successfully');
+      setResolveConfirm({ isOpen: false, id: '' });
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to resolve hold');
+      toast.error(err.response?.data?.message || 'Failed to resolve hold');
     }
   };
 
-  const handleDelete = async (holdId: string) => {
-    if (!window.confirm('Permanently delete this hold? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteClick = (holdId: string) => {
+    setDeleteConfirm({ isOpen: true, id: holdId });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.id) return;
 
     try {
-      await axios.delete(`/api/v1/billing-holds/${holdId}`);
+      await api.delete(`/billing-holds/${deleteConfirm.id}`);
       fetchHolds();
       fetchStats();
+      toast.success('Hold deleted successfully');
+      setDeleteConfirm({ isOpen: false, id: '' });
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete hold');
+      toast.error(err.response?.data?.message || 'Failed to delete hold');
     }
   };
 
@@ -299,14 +317,14 @@ const BillingHoldsList: React.FC = () => {
                       </button>
                       {hold.isActive && (
                         <button
-                          onClick={() => handleResolve(hold.id)}
+                          onClick={() => handleResolveClick(hold.id)}
                           className="text-green-600 hover:text-green-900 mr-3"
                         >
                           Resolve
                         </button>
                       )}
                       <button
-                        onClick={() => handleDelete(hold.id)}
+                        onClick={() => handleDeleteClick(hold.id)}
                         className="text-red-600 hover:text-red-900"
                       >
                         Delete
@@ -319,6 +337,30 @@ const BillingHoldsList: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Resolve Confirmation Modal */}
+      <ConfirmModal
+        isOpen={resolveConfirm.isOpen}
+        onClose={() => setResolveConfirm({ isOpen: false, id: '' })}
+        onConfirm={confirmResolve}
+        title="Resolve Hold"
+        message="Mark this hold as resolved? The note will become available for billing."
+        confirmText="Resolve"
+        cancelText="Cancel"
+        icon="success"
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, id: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Hold"
+        message="Permanently delete this hold? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        icon="danger"
+      />
     </div>
   );
 };

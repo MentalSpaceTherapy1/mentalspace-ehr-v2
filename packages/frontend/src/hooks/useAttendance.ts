@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import api from '../lib/api';
 
 export interface TimeEntry {
   id: string;
@@ -50,11 +48,11 @@ export const useAttendance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/attendance/clock-in`, {
+      const response = await api.post(`/attendance/clock-in`, {
         employeeId,
         notes,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to clock in');
       throw err;
@@ -67,11 +65,11 @@ export const useAttendance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/attendance/clock-out`, {
+      const response = await api.post(`/attendance/clock-out`, {
         employeeId,
         notes,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to clock out');
       throw err;
@@ -84,10 +82,10 @@ export const useAttendance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/attendance/break-start`, {
+      const response = await api.post(`/attendance/break-start`, {
         employeeId,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to start break');
       throw err;
@@ -100,10 +98,10 @@ export const useAttendance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/attendance/break-end`, {
+      const response = await api.post(`/attendance/break-end`, {
         employeeId,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to end break');
       throw err;
@@ -116,8 +114,8 @@ export const useAttendance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/attendance/current/${employeeId}`);
-      return response.data;
+      const response = await api.get(`/attendance/current/${employeeId}`);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to get status');
       throw err;
@@ -134,10 +132,10 @@ export const useAttendance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/attendance/entries`, {
+      const response = await api.get(`/attendance/entries`, {
         params: filters,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch time entries');
       throw err;
@@ -154,10 +152,10 @@ export const useAttendance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/attendance/records`, {
+      const response = await api.get(`/attendance/records`, {
         params: filters,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch attendance records');
       throw err;
@@ -170,10 +168,10 @@ export const useAttendance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/attendance/stats/${employeeId}`, {
+      const response = await api.get(`/attendance/stats/${employeeId}`, {
         params: { startDate, endDate },
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch attendance stats');
       throw err;
@@ -191,7 +189,7 @@ export const useAttendance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/attendance/export`, {
+      const response = await api.get(`/attendance/export`, {
         params: filters,
         responseType: 'blob',
       });

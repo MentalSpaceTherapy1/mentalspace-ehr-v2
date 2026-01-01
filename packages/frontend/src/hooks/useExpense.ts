@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 export interface Expense {
   id: string;
@@ -45,7 +43,6 @@ export const useExpenses = (filters?: {
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
 
       const params = new URLSearchParams();
       if (filters?.status) params.append('status', filters.status);
@@ -53,11 +50,8 @@ export const useExpenses = (filters?: {
       if (filters?.startDate) params.append('startDate', filters.startDate);
       if (filters?.endDate) params.append('endDate', filters.endDate);
 
-      const response = await axios.get(
-        `${API_URL}/api/expenses?${params.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setExpenses(response.data);
+      const response = await api.get(`/expenses?${params.toString()}`);
+      setExpenses(response.data.data || response.data);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch expenses');
@@ -82,11 +76,8 @@ export const useExpense = (id: string) => {
     const fetchExpense = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/api/expenses/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setExpense(response.data);
+        const response = await api.get(`/expenses/${id}`);
+        setExpense(response.data.data || response.data);
         setError(null);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch expense');
@@ -110,11 +101,8 @@ export const useExpenseStats = () => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/api/expenses/stats`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setStats(response.data);
+        const response = await api.get(`/expenses/stats`);
+        setStats(response.data.data || response.data);
         setError(null);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch stats');
@@ -130,57 +118,39 @@ export const useExpenseStats = () => {
 };
 
 export const createExpense = async (data: Partial<Expense>) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(`${API_URL}/api/expenses`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  const response = await api.post(`/expenses`, data);
+  return response.data.data || response.data;
 };
 
 export const updateExpense = async (id: string, data: Partial<Expense>) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.put(`${API_URL}/api/expenses/${id}`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  const response = await api.put(`/expenses/${id}`, data);
+  return response.data.data || response.data;
 };
 
 export const approveExpense = async (id: string, notes?: string) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_URL}/api/expenses/${id}/approve`,
-    { notes },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return response.data;
+  const response = await api.post(`/expenses/${id}/approve`, { notes });
+  return response.data.data || response.data;
 };
 
 export const denyExpense = async (id: string, notes: string) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_URL}/api/expenses/${id}/deny`,
-    { notes },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return response.data;
+  const response = await api.post(`/expenses/${id}/deny`, { notes });
+  return response.data.data || response.data;
 };
 
 export const uploadReceipt = async (expenseId: string, file: File) => {
-  const token = localStorage.getItem('token');
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axios.post(
-    `${API_URL}/api/expenses/${expenseId}/receipt`,
+  const response = await api.post(
+    `/expenses/${expenseId}/receipt`,
     formData,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
         'Content-Type': 'multipart/form-data'
       }
     }
   );
-  return response.data;
+  return response.data.data || response.data;
 };
 
 export const exportExpenses = async (filters?: {
@@ -189,19 +159,15 @@ export const exportExpenses = async (filters?: {
   startDate?: string;
   endDate?: string;
 }) => {
-  const token = localStorage.getItem('token');
   const params = new URLSearchParams();
   if (filters?.status) params.append('status', filters.status);
   if (filters?.category) params.append('category', filters.category);
   if (filters?.startDate) params.append('startDate', filters.startDate);
   if (filters?.endDate) params.append('endDate', filters.endDate);
 
-  const response = await axios.get(
-    `${API_URL}/api/expenses/export?${params.toString()}`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: 'blob'
-    }
+  const response = await api.get(
+    `/expenses/export?${params.toString()}`,
+    { responseType: 'blob' }
   );
   return response.data;
 };

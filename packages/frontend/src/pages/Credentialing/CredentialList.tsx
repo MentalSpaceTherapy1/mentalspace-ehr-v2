@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import {
   Shield,
@@ -21,6 +22,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { useCredentials, useDeleteCredential } from '../../hooks/useCredentialing';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -30,6 +32,11 @@ export default function CredentialList() {
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: '',
+  });
 
   const { data: credentials, isLoading } = useCredentials({
     type: typeFilter || undefined,
@@ -139,13 +146,18 @@ export default function CredentialList() {
     );
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete this credential for ${name}?`)) {
-      try {
-        await deleteCredential.mutateAsync(id);
-      } catch (error) {
-        alert('Failed to delete credential');
-      }
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteConfirm({ isOpen: true, id, name });
+  };
+
+  const confirmDelete = async () => {
+    const { id } = deleteConfirm;
+    setDeleteConfirm({ isOpen: false, id: '', name: '' });
+    try {
+      await deleteCredential.mutateAsync(id);
+      toast.success('Credential deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete credential');
     }
   };
 
@@ -337,7 +349,7 @@ export default function CredentialList() {
                           <Edit className="w-5 h-5 text-green-600 group-hover:scale-110 transition-transform" />
                         </button>
                         <button
-                          onClick={() => handleDelete(credential.id, credential.staffName)}
+                          onClick={() => handleDeleteClick(credential.id, credential.staffName)}
                           className="p-2 hover:bg-red-100 rounded-lg transition-all group"
                           title="Delete"
                         >
@@ -394,6 +406,16 @@ export default function CredentialList() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, id: '', name: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Credential"
+        message={`Are you sure you want to delete this credential for ${deleteConfirm.name}?`}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

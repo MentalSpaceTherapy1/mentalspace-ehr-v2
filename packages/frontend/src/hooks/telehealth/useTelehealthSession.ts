@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface TelehealthSession {
   id: string;
@@ -32,16 +32,9 @@ export function useTelehealthSession(appointmentId: string, userRole: 'clinician
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
-      const response = await axios.post<{ success: boolean; data: JoinSessionResponse }>(
+      const response = await api.post<{ success: boolean; data: JoinSessionResponse }>(
         `/telehealth/sessions/${appointmentId}/join`,
-        { userRole },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
+        { userRole }
       );
 
       if (response.data.success) {
@@ -59,17 +52,7 @@ export function useTelehealthSession(appointmentId: string, userRole: 'clinician
 
   const endSession = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `/telehealth/sessions/${session?.id}/end`,
-        { endReason: 'Normal' },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      await api.post(`/telehealth/sessions/${session?.id}/end`, { endReason: 'Normal' });
     } catch (err) {
       console.error('Failed to end session:', err);
     }
@@ -77,16 +60,9 @@ export function useTelehealthSession(appointmentId: string, userRole: 'clinician
 
   const startRecording = useCallback(async (consent: boolean) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
+      const response = await api.post(
         `/telehealth/sessions/${session?.id}/recording/start`,
-        { consent },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
+        { consent }
       );
 
       if (response.data.success) {
@@ -100,17 +76,7 @@ export function useTelehealthSession(appointmentId: string, userRole: 'clinician
 
   const stopRecording = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `/telehealth/sessions/${session?.id}/recording/stop`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      await api.post(`/telehealth/sessions/${session?.id}/recording/stop`, {});
 
       setSession((prev) => (prev ? { ...prev, recordingEnabled: false } : null));
     } catch (err) {

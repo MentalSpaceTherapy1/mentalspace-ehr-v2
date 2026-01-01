@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface DemandForecast {
   period: number;
@@ -60,7 +60,7 @@ export const DemandForecast: React.FC<DemandForecastProps> = ({
   const fetchForecast = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/v1/predictions/demand?period=${selectedPeriod}`);
+      const response = await api.get(`/predictions/demand?period=${selectedPeriod}`);
       setForecast(response.data.data);
       setError(null);
     } catch (err: any) {

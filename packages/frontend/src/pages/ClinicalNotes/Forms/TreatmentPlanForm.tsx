@@ -20,6 +20,7 @@ import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppo
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidatedField from '../../../components/ClinicalNotes/ValidatedField';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
+import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
 
 interface TreatmentGoal {
   goal: string;
@@ -83,6 +84,22 @@ export default function TreatmentPlanForm() {
   const { validateNote, summary, isFieldRequired, getFieldHelpText } = useNoteValidation('Treatment Plan');
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [showValidation, setShowValidation] = useState(false);
+
+  // Session-safe saving (handles session timeout with local storage backup)
+  const {
+    sessionError,
+    clearSessionError,
+    backupToLocalStorage,
+    clearBackup,
+    handleSaveError,
+    hasRecoveredDraft,
+    applyRecoveredDraft,
+    discardRecoveredDraft,
+  } = useSessionSafeSave({
+    noteType: 'TreatmentPlan',
+    clientId: clientId || '',
+    noteId,
+  });
 
   // Fetch client data
   const { data: clientData } = useQuery({
@@ -320,31 +337,61 @@ export default function TreatmentPlanForm() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       if (isEditMode) {
         return api.put(`/clinical-notes/${noteId}`, data);
       }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
+    },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
     },
   });
 
   const saveDraftMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       if (isEditMode) {
         return api.put(`/clinical-notes/${noteId}`, data);
       }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
+    },
   });
+
+  // Handle recovering draft data
+  const handleRecoverDraft = () => {
+    const recovered = applyRecoveredDraft();
+    if (recovered) {
+      if (recovered.sessionDate) {
+        const date = new Date(recovered.sessionDate);
+        setSessionDate(date.toISOString().split('T')[0]);
+      }
+      if (recovered.goals) setGoals(recovered.goals);
+      if (recovered.diagnosisCodes) setDiagnosisCodes(recovered.diagnosisCodes);
+      if (recovered.cptCode) setCptCode(recovered.cptCode);
+      if (recovered.billable !== undefined) setBillable(recovered.billable);
+      if (recovered.appointmentId) setSelectedAppointmentId(recovered.appointmentId);
+    }
+  };
 
   // AI Handler Functions
   const handleGenerateFromTranscription = async (sessionNotes: string) => {
@@ -536,6 +583,19 @@ export default function TreatmentPlanForm() {
           </h1>
           <p className="text-gray-600 mt-2">Formal treatment planning and goal setting</p>
         </div>
+
+        {/* Session Expired Alert */}
+        {sessionError && (
+          <SessionExpiredAlert message={sessionError} onDismiss={clearSessionError} />
+        )}
+
+        {/* Recovered Draft Alert */}
+        {hasRecoveredDraft && (
+          <RecoveredDraftAlert
+            onRecover={handleRecoverDraft}
+            onDiscard={discardRecoveredDraft}
+          />
+        )}
 
         {/* Client ID Validation */}
         {!clientId && (

@@ -85,6 +85,32 @@ export const apiRateLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter for token refresh endpoint
+ * More lenient than login since refresh is automatic and requires a valid token
+ * Separated from authRateLimiter to prevent auto-refresh from consuming login quota
+ */
+export const refreshRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Maximum 30 refresh attempts per window (auto-refresh is frequent)
+  message: {
+    success: false,
+    message: 'Too many token refresh attempts, please try again later',
+    errorCode: 'RATE_LIMIT_EXCEEDED',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+
+  handler: (req, res, next, options) => {
+    logSecurity('Rate limit exceeded on token refresh', 'medium', {
+      ip: req.ip,
+      path: req.path,
+    });
+
+    res.status(429).json(options.message);
+  },
+});
+
+/**
  * Rate limiter for account creation
  * Prevents automated account creation spam
  */

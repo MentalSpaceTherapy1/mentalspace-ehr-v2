@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 interface UnlockRequestModalProps {
   isOpen: boolean;
@@ -32,12 +33,12 @@ const UnlockRequestModal: React.FC<UnlockRequestModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
       queryClient.invalidateQueries({ queryKey: ['clinical-notes'] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
-      alert(`Unlock request submitted successfully. ${data.notifiedTo} has been notified.`);
+      toast.success(`Unlock request submitted successfully. ${data.notifiedTo} has been notified.`);
       setUnlockReason('');
       onClose();
     },
     onError: (error: any) => {
-      alert(error.response?.data?.error || 'Failed to submit unlock request');
+      toast.error(error.response?.data?.error || 'Failed to submit unlock request');
     },
   });
 
@@ -45,12 +46,12 @@ const UnlockRequestModal: React.FC<UnlockRequestModalProps> = ({
     e.preventDefault();
 
     if (!unlockReason.trim()) {
-      alert('Please provide a reason for unlocking this note');
+      toast.error('Please provide a reason for unlocking this note');
       return;
     }
 
     if (unlockReason.trim().length < 20) {
-      alert('Please provide a more detailed reason (at least 20 characters)');
+      toast.error('Please provide a more detailed reason (at least 20 characters)');
       return;
     }
 

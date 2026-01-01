@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
+import ConfirmModal from '../ConfirmModal';
 
 /**
  * Module 3 Phase 2.2: Waitlist Offer Dialog
@@ -33,6 +34,7 @@ export default function WaitlistOfferDialog({
   const queryClient = useQueryClient();
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [notificationMethod, setNotificationMethod] = useState<'Email' | 'SMS' | 'Portal'>('Email');
+  const [bookConfirm, setBookConfirm] = useState(false);
 
   // Fetch available slots
   const { data: availableSlots, isLoading } = useQuery({
@@ -107,15 +109,19 @@ export default function WaitlistOfferDialog({
     });
   };
 
-  const handleBookDirect = () => {
+  const handleBookDirectClick = () => {
     if (!selectedSlot) {
       toast.error('Please select a slot');
       return;
     }
+    setBookConfirm(true);
+  };
 
-    if (confirm('Book this appointment directly without sending an offer?')) {
+  const confirmBookDirect = () => {
+    if (selectedSlot) {
       bookDirectMutation.mutate(selectedSlot);
     }
+    setBookConfirm(false);
   };
 
   if (!isOpen || !entry) return null;
@@ -270,7 +276,7 @@ export default function WaitlistOfferDialog({
           </button>
           <div className="flex space-x-3">
             <button
-              onClick={handleBookDirect}
+              onClick={handleBookDirectClick}
               disabled={!selectedSlot || bookDirectMutation.isPending}
               className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -286,6 +292,17 @@ export default function WaitlistOfferDialog({
           </div>
         </div>
       </div>
+
+      {/* Book Direct Confirmation Modal */}
+      <ConfirmModal
+        isOpen={bookConfirm}
+        onClose={() => setBookConfirm(false)}
+        onConfirm={confirmBookDirect}
+        title="Confirm Direct Booking"
+        message="Book this appointment directly without sending an offer?"
+        confirmText="Book Direct"
+        confirmVariant="primary"
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Save, Trash2, Copy, X, Minimize2, Maximize2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../ConfirmModal';
 
 interface QuickNotesPanelProps {
   sessionId: string;
@@ -16,6 +17,7 @@ export default function QuickNotesPanel({
   const [isMinimized, setIsMinimized] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -97,14 +99,17 @@ export default function QuickNotesPanel({
   };
 
   // Clear notes
-  const clearNotes = () => {
-    if (window.confirm('Are you sure you want to clear all notes? This cannot be undone.')) {
-      setNotes('');
-      localStorage.removeItem(`session-notes-${sessionId}`);
-      localStorage.removeItem(`session-notes-time-${sessionId}`);
-      setLastSaved(null);
-      toast.success('Notes cleared');
-    }
+  const handleClearClick = () => {
+    setShowClearConfirm(true);
+  };
+
+  const confirmClear = () => {
+    setNotes('');
+    localStorage.removeItem(`session-notes-${sessionId}`);
+    localStorage.removeItem(`session-notes-time-${sessionId}`);
+    setLastSaved(null);
+    toast.success('Notes cleared');
+    setShowClearConfirm(false);
   };
 
   // Focus textarea when panel opens
@@ -245,7 +250,7 @@ export default function QuickNotesPanel({
               </button>
 
               <button
-                onClick={clearNotes}
+                onClick={handleClearClick}
                 disabled={!notes.trim()}
                 className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Clear All Notes"
@@ -256,6 +261,17 @@ export default function QuickNotesPanel({
           </div>
         </>
       )}
+
+      {/* Clear Notes Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={confirmClear}
+        title="Clear All Notes"
+        message="Are you sure you want to clear all notes? This cannot be undone."
+        confirmText="Clear Notes"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

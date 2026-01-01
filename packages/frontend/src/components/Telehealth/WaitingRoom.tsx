@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Clock, Video, Mic, Volume2, CheckCircle, AlertTriangle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../../lib/api';
 import ConsentSigningModal from './ConsentSigningModal';
+import toast from 'react-hot-toast';
 
 interface WaitingRoomProps {
   appointmentId: string;
@@ -137,7 +138,7 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
       setDeviceTestComplete(true);
     } catch (error) {
       console.error('❌ Failed to access devices:', error);
-      alert('Please allow camera and microphone access to join the session');
+      toast.error('Please allow camera and microphone access to join the session');
     }
   };
 
@@ -159,7 +160,7 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
 
   // Handle consent decline
   const handleConsentDecline = () => {
-    alert('Telehealth consent is required to join the session. Returning to dashboard.');
+    toast.error('Telehealth consent is required to join the session. Returning to dashboard.');
     window.location.href = '/dashboard';
   };
 

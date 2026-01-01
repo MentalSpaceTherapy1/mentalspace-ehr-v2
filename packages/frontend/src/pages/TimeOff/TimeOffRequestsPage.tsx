@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import TimeOffRequestDialog from '../../components/Availability/TimeOffRequestDialog';
+import ConfirmModal from '../../components/ConfirmModal';
 import { format } from 'date-fns';
 import api from '../../lib/api';
 
@@ -60,6 +61,10 @@ export default function TimeOffRequestsPage() {
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
   const [denialReason, setDenialReason] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'denied'>('all');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; requestId: string | null }>({
+    open: false,
+    requestId: null,
+  });
 
   const isAdmin = user?.roles?.includes('ADMINISTRATOR') || user?.roles?.includes('SUPER_ADMIN');
 
@@ -163,16 +168,18 @@ export default function TimeOffRequestsPage() {
     }
   };
 
-  const handleDelete = async (requestId: string) => {
-    if (!confirm('Are you sure you want to delete this time-off request?')) {
-      return;
-    }
+  const handleDeleteClick = (requestId: string) => {
+    setDeleteConfirm({ open: true, requestId });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.requestId) return;
 
     try {
       setError(null);
       setSuccess(null);
 
-      const response = await api.delete(`/time-off/${requestId}`);
+      const response = await api.delete(`/time-off/${deleteConfirm.requestId}`);
 
       if (response.data.success) {
         setSuccess('Time-off request deleted successfully');
@@ -182,6 +189,8 @@ export default function TimeOffRequestsPage() {
     } catch (err: any) {
       console.error('Error deleting request:', err);
       setError(err.response?.data?.message || 'Failed to delete request');
+    } finally {
+      setDeleteConfirm({ open: false, requestId: null });
     }
   };
 
@@ -426,7 +435,7 @@ export default function TimeOffRequestsPage() {
                     )}
                     {request.status === 'PENDING' && request.requestedBy === user?.id && (
                       <button
-                        onClick={() => handleDelete(request.id)}
+                        onClick={() => handleDeleteClick(request.id)}
                         className="px-4 py-2 bg-gradient-to-r from-gray-500 to-slate-600 text-white rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold text-sm flex items-center"
                       >
                         <span className="mr-2">🗑️</span> Delete
@@ -493,6 +502,17 @@ export default function TimeOffRequestsPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, requestId: null })}
+        onConfirm={confirmDelete}
+        title="Delete Time-Off Request"
+        message="Are you sure you want to delete this time-off request?"
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

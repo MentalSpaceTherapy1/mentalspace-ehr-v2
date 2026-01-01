@@ -107,16 +107,22 @@ export default function MyNotes() {
     return 0;
   });
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  // Timezone-safe date formatting - parses ISO string directly to avoid timezone shifts
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return 'Not specified';
+    const datePart = date.split('T')[0];
+    if (!datePart) return 'Not specified';
+    const [year, month, day] = datePart.split('-');
+    if (!year || !month || !day) return 'Not specified';
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
   };
 
-  const getDaysAgo = (date: string) => {
-    const days = Math.floor((new Date().getTime() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
+  const getDaysAgo = (date: string | null | undefined) => {
+    if (!date) return 'Unknown';
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime()) || parsed.getTime() === 0) return 'Unknown';
+    const days = Math.floor((new Date().getTime() - parsed.getTime()) / (1000 * 60 * 60 * 24));
     if (days === 0) return 'Today';
     if (days === 1) return 'Yesterday';
     return `${days} days ago`;

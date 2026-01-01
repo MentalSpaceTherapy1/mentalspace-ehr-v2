@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 export interface Budget {
   id: string;
@@ -48,15 +46,12 @@ export const useBudgets = (fiscalYear?: number) => {
   const fetchBudgets = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       const url = fiscalYear
-        ? `${API_URL}/api/budgets?fiscalYear=${fiscalYear}`
-        : `${API_URL}/api/budgets`;
+        ? `/budgets?fiscalYear=${fiscalYear}`
+        : `/budgets`;
 
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setBudgets(response.data);
+      const response = await api.get(url);
+      setBudgets(response.data.data || response.data);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch budgets');
@@ -81,11 +76,8 @@ export const useBudget = (id: string) => {
     const fetchBudget = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/api/budgets/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setBudget(response.data);
+        const response = await api.get(`/budgets/${id}`);
+        setBudget(response.data.data || response.data);
         setError(null);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch budget');
@@ -109,12 +101,10 @@ export const useBudgetUtilization = (fiscalYear: number) => {
     const fetchUtilization = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        const response = await axios.get(
-          `${API_URL}/api/budgets/utilization?fiscalYear=${fiscalYear}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const response = await api.get(
+          `/budgets/utilization?fiscalYear=${fiscalYear}`
         );
-        setUtilization(response.data);
+        setUtilization(response.data.data || response.data);
         setError(null);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch utilization');
@@ -130,29 +120,19 @@ export const useBudgetUtilization = (fiscalYear: number) => {
 };
 
 export const createBudget = async (data: Partial<Budget>) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(`${API_URL}/api/budgets`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  const response = await api.post(`/budgets`, data);
+  return response.data.data || response.data;
 };
 
 export const updateBudget = async (id: string, data: Partial<Budget>) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.put(`${API_URL}/api/budgets/${id}`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  const response = await api.put(`/budgets/${id}`, data);
+  return response.data.data || response.data;
 };
 
 export const exportBudgetReport = async (fiscalYear: number) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(
-    `${API_URL}/api/budgets/export?fiscalYear=${fiscalYear}`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: 'blob'
-    }
+  const response = await api.get(
+    `/budgets/export?fiscalYear=${fiscalYear}`,
+    { responseType: 'blob' }
   );
   return response.data;
 };

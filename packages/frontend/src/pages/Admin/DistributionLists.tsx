@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import axios from 'axios';
 import {
   Container,
@@ -34,6 +35,7 @@ import {
   Email as EmailIcon,
   PersonAdd as PersonAddIcon
 } from '@mui/icons-material';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface DistributionList {
   id: string;
@@ -57,6 +59,11 @@ export const DistributionLists: React.FC = () => {
   const [viewDialog, setViewDialog] = useState<{ open: boolean; list: DistributionList | null }>({
     open: false,
     list: null
+  });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: ''
   });
 
   // Form state
@@ -139,16 +146,19 @@ export const DistributionLists: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this distribution list?')) {
-      return;
-    }
+  const handleDeleteClick = (list: DistributionList) => {
+    setDeleteConfirm({ isOpen: true, id: list.id, name: list.name });
+  };
 
+  const confirmDelete = async () => {
     try {
-      await axios.delete(`/api/v1/distribution-lists/${id}`);
+      await axios.delete(`/api/v1/distribution-lists/${deleteConfirm.id}`);
+      toast.success('Distribution list deleted successfully');
       fetchLists();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete distribution list');
+      toast.error(err.response?.data?.error || 'Failed to delete distribution list');
+    } finally {
+      setDeleteConfirm({ isOpen: false, id: '', name: '' });
     }
   };
 
@@ -253,7 +263,7 @@ export const DistributionLists: React.FC = () => {
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Delete">
-                          <IconButton size="small" color="error" onClick={() => handleDelete(list.id)}>
+                          <IconButton size="small" color="error" onClick={() => handleDeleteClick(list)}>
                             <DeleteIcon />
                           </IconButton>
                         </Tooltip>
@@ -404,6 +414,17 @@ export const DistributionLists: React.FC = () => {
             <Button onClick={() => setViewDialog({ open: false, list: null })}>Close</Button>
           </DialogActions>
         </Dialog>
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmModal
+          isOpen={deleteConfirm.isOpen}
+          onClose={() => setDeleteConfirm({ isOpen: false, id: '', name: '' })}
+          onConfirm={confirmDelete}
+          title="Delete Distribution List"
+          message={`Are you sure you want to delete the distribution list "${deleteConfirm.name}"? This action cannot be undone.`}
+          confirmText="Delete"
+          confirmVariant="danger"
+        />
       </Box>
     </Container>
   );

@@ -2214,22 +2214,28 @@ export async function getUnsignedNotesReport(req: Request, res: Response) {
       },
     });
 
-    const report = unsignedNotes.map((note) => ({
-      noteId: note.id,
-      clientName: `${note.client.firstName} ${note.client.lastName}`,
-      clinicianName: `${note.clinician.firstName} ${note.clinician.lastName}`,
-      sessionDate: note.sessionDate,
-      noteType: note.noteType,
-      status: note.status,
-      daysOverdue: Math.floor((new Date().getTime() - note.sessionDate.getTime()) / (1000 * 60 * 60 * 24)),
-    }));
+    const report = unsignedNotes.map((note) => {
+      const sessionDate = note.sessionDate ? new Date(note.sessionDate) : null;
+      const daysOverdue = sessionDate
+        ? Math.floor((new Date().getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24))
+        : null;
+      return {
+        noteId: note.id,
+        clientName: `${note.client.firstName} ${note.client.lastName}`,
+        clinicianName: `${note.clinician.firstName} ${note.clinician.lastName}`,
+        sessionDate: note.sessionDate,
+        noteType: note.noteType,
+        status: note.status,
+        daysOverdue,
+      };
+    });
 
     res.json({
       success: true,
       data: {
         report,
         totalUnsigned: unsignedNotes.length,
-        criticalCount: report.filter((r) => r.daysOverdue > 7).length, // Georgia 7-day rule
+        criticalCount: report.filter((r) => r.daysOverdue !== null && r.daysOverdue > 7).length, // Georgia 7-day rule
       },
     });
   } catch (error) {
@@ -2502,9 +2508,14 @@ export async function getClientDemographicsReport(req: Request, res: Response) {
     });
 
     // Age distribution
-    const ageGroups = { '0-17': 0, '18-25': 0, '26-40': 0, '41-60': 0, '60+': 0 };
+    const ageGroups: Record<string, number> = { '0-17': 0, '18-25': 0, '26-40': 0, '41-60': 0, '60+': 0, 'Unknown': 0 };
     clients.forEach((client) => {
-      const age = Math.floor((new Date().getTime() - client.dateOfBirth.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+      if (!client.dateOfBirth) {
+        ageGroups['Unknown']++;
+        return;
+      }
+      const dob = new Date(client.dateOfBirth);
+      const age = Math.floor((new Date().getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
       if (age < 18) ageGroups['0-17']++;
       else if (age < 26) ageGroups['18-25']++;
       else if (age < 41) ageGroups['26-40']++;
@@ -2518,6 +2529,7 @@ export async function getClientDemographicsReport(req: Request, res: Response) {
       female: clients.filter((c) => c.gender === 'FEMALE').length,
       other: clients.filter((c) => c.gender === 'OTHER' || c.gender === 'NON_BINARY').length,
       preferNotToSay: clients.filter((c) => c.gender === 'PREFER_NOT_TO_SAY').length,
+      unknown: clients.filter((c) => !c.gender).length,
     };
 
     res.json({
@@ -2546,9 +2558,14 @@ export async function getClientDemographicsDeepDiveReport(req: Request, res: Res
     });
 
     // Age distribution
-    const ageGroups = { '0-17': 0, '18-25': 0, '26-40': 0, '41-60': 0, '60+': 0 };
+    const ageGroups: Record<string, number> = { '0-17': 0, '18-25': 0, '26-40': 0, '41-60': 0, '60+': 0, 'Unknown': 0 };
     clients.forEach((client) => {
-      const age = Math.floor((new Date().getTime() - client.dateOfBirth.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+      if (!client.dateOfBirth) {
+        ageGroups['Unknown']++;
+        return;
+      }
+      const dob = new Date(client.dateOfBirth);
+      const age = Math.floor((new Date().getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
       if (age < 18) ageGroups['0-17']++;
       else if (age < 26) ageGroups['18-25']++;
       else if (age < 41) ageGroups['26-40']++;
@@ -2559,15 +2576,17 @@ export async function getClientDemographicsDeepDiveReport(req: Request, res: Res
     // Race/ethnicity
     const raceMap = new Map<string, number>();
     clients.forEach(c => {
-      c.race.forEach(r => {
-        raceMap.set(r, (raceMap.get(r) || 0) + 1);
-      });
+      if (c.race && Array.isArray(c.race)) {
+        c.race.forEach(r => {
+          raceMap.set(r, (raceMap.get(r) || 0) + 1);
+        });
+      }
     });
 
     // Geographic distribution
     const geoMap = new Map<string, number>();
     clients.forEach(c => {
-      const zip = c.addressZipCode.substring(0, 5);
+      const zip = c.addressZipCode ? c.addressZipCode.substring(0, 5) : 'Unknown';
       geoMap.set(zip, (geoMap.get(zip) || 0) + 1);
     });
 

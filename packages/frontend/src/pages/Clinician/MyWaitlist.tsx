@@ -180,7 +180,7 @@ export default function MyWaitlist() {
     queryKey: ['currentUser'],
     queryFn: async () => {
       const response = await api.get('/auth/me');
-      return response.data.user;
+      return response.data.data;
     },
   });
 

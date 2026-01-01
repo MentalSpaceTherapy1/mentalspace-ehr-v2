@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../lib/api';
 
 interface GroupSession {
@@ -35,6 +35,7 @@ interface GroupSession {
 
 export default function GroupSessionsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [groups, setGroups] = useState<GroupSession[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [appointmentTypes, setAppointmentTypes] = useState<any[]>([]);
@@ -47,6 +48,7 @@ export default function GroupSessionsPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('ACTIVE');
+  const [pendingEditId, setPendingEditId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     groupName: '',
@@ -73,6 +75,27 @@ export default function GroupSessionsPage() {
   useEffect(() => {
     loadData();
   }, [filterStatus]);
+
+  // Handle incoming edit request from GroupDetailsPage
+  useEffect(() => {
+    const state = location.state as { editGroupId?: string } | null;
+    if (state?.editGroupId) {
+      setPendingEditId(state.editGroupId);
+      // Clear the state to prevent re-opening on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // Open edit dialog once groups are loaded and we have a pending edit
+  useEffect(() => {
+    if (pendingEditId && groups.length > 0 && !loading) {
+      const groupToEdit = groups.find(g => g.id === pendingEditId);
+      if (groupToEdit) {
+        handleOpenDialog(groupToEdit);
+      }
+      setPendingEditId(null);
+    }
+  }, [pendingEditId, groups, loading]);
 
   const loadData = async () => {
     try {

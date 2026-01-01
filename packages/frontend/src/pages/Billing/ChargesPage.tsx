@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Charge {
   id: string;
@@ -35,6 +37,14 @@ export default function ChargesPage() {
     status: '',
     search: '',
   });
+  const [syncConfirm, setSyncConfirm] = useState<{ open: boolean; chargeId: string | null }>({
+    open: false,
+    chargeId: null,
+  });
+  const [voidConfirm, setVoidConfirm] = useState<{ open: boolean; chargeId: string | null }>({
+    open: false,
+    chargeId: null,
+  });
 
   // Fetch charges
   const { data: charges, isLoading } = useQuery({
@@ -67,12 +77,12 @@ export default function ChargesPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['charges'] });
-      alert(`Charge successfully submitted to AdvancedMD!\nAMD Charge ID: ${data.amdChargeId}`);
+      toast.success(`Charge successfully submitted to AdvancedMD! AMD Charge ID: ${data.amdChargeId}`);
     },
     onError: (error: any) => {
       const errorMsg = error.response?.data?.error || 'Failed to sync charge';
       const validationErrors = error.response?.data?.validationErrors?.join(', ') || '';
-      alert(`Failed to sync charge to AdvancedMD:\n${errorMsg}${validationErrors ? '\n\nValidation Errors:\n' + validationErrors : ''}`);
+      toast.error(`Failed to sync charge: ${errorMsg}${validationErrors ? ' - ' + validationErrors : ''}`);
     },
   });
 
@@ -111,6 +121,28 @@ export default function ChargesPage() {
       );
     }
     return null;
+  };
+
+  const handleSyncClick = (chargeId: string) => {
+    setSyncConfirm({ open: true, chargeId });
+  };
+
+  const confirmSync = () => {
+    if (syncConfirm.chargeId) {
+      syncToAMDMutation.mutate(syncConfirm.chargeId);
+    }
+    setSyncConfirm({ open: false, chargeId: null });
+  };
+
+  const handleVoidClick = (chargeId: string) => {
+    setVoidConfirm({ open: true, chargeId });
+  };
+
+  const confirmVoid = () => {
+    if (voidConfirm.chargeId) {
+      deleteMutation.mutate(voidConfirm.chargeId);
+    }
+    setVoidConfirm({ open: false, chargeId: null });
   };
 
   if (isLoading) {
@@ -215,7 +247,11 @@ export default function ChargesPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {charges?.map((charge) => {
-                  const balance = charge.chargeAmount - (charge.paymentAmount || 0) - (charge.adjustmentAmount || 0);
+                  // Convert amounts to numbers (API may return strings)
+                  const chargeAmt = Number(charge.chargeAmount) || 0;
+                  const paymentAmt = Number(charge.paymentAmount) || 0;
+                  const adjustmentAmt = Number(charge.adjustmentAmount) || 0;
+                  const balance = chargeAmt - paymentAmt - adjustmentAmt;
                   return (
                     <tr key={charge.id} className="hover:bg-purple-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -230,10 +266,10 @@ export default function ChargesPage() {
                         {charge.cptCode || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        ${charge.chargeAmount.toFixed(2)}
+                        ${chargeAmt.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
-                        ${(charge.paymentAmount || 0).toFixed(2)}
+                        ${paymentAmt.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-amber-600">
                         ${balance.toFixed(2)}
@@ -256,11 +292,7 @@ export default function ChargesPage() {
                           </button>
                           {!charge.advancedMDChargeId && charge.chargeStatus === 'Pending' && (
                             <button
-                              onClick={() => {
-                                if (confirm('Submit this charge to AdvancedMD?')) {
-                                  syncToAMDMutation.mutate(charge.id);
-                                }
-                              }}
+                              onClick={() => handleSyncClick(charge.id)}
                               disabled={syncToAMDMutation.isPending || !charge.client.advancedMDPatientId}
                               className="text-blue-600 hover:text-blue-900 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                               title={!charge.client.advancedMDPatientId ? 'Patient must be synced to AMD first' : 'Sync to AdvancedMD'}
@@ -269,11 +301,7 @@ export default function ChargesPage() {
                             </button>
                           )}
                           <button
-                            onClick={() => {
-                              if (confirm('Are you sure you want to void this charge?')) {
-                                deleteMutation.mutate(charge.id);
-                              }
-                            }}
+                            onClick={() => handleVoidClick(charge.id)}
                             className="text-red-600 hover:text-red-900 font-semibold"
                           >
                             Void
@@ -314,6 +342,28 @@ export default function ChargesPage() {
             onClose={() => setSelectedCharge(null)}
           />
         )}
+
+        {/* Sync Confirmation Modal */}
+        <ConfirmModal
+          isOpen={syncConfirm.open}
+          onClose={() => setSyncConfirm({ open: false, chargeId: null })}
+          onConfirm={confirmSync}
+          title="Submit to AdvancedMD"
+          message="Are you sure you want to submit this charge to AdvancedMD?"
+          confirmText="Submit"
+          confirmVariant="primary"
+        />
+
+        {/* Void Confirmation Modal */}
+        <ConfirmModal
+          isOpen={voidConfirm.open}
+          onClose={() => setVoidConfirm({ open: false, chargeId: null })}
+          onConfirm={confirmVoid}
+          title="Void Charge"
+          message="Are you sure you want to void this charge?"
+          confirmText="Void"
+          confirmVariant="danger"
+        />
       </div>
     </div>
   );
@@ -332,6 +382,8 @@ function CreateChargeModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [clientSearch, setClientSearch] = useState('');
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [selectedClientName, setSelectedClientName] = useState('');
 
   // Fetch clients for search
   const { data: clients } = useQuery({
@@ -354,12 +406,18 @@ function CreateChargeModal({ onClose, onSuccess }: { onClose: () => void; onSucc
       onSuccess();
     },
     onError: (error: any) => {
+      console.error('Charge creation error:', error);
       if (error.response?.data?.errors) {
         const newErrors: Record<string, string> = {};
         error.response.data.errors.forEach((err: any) => {
           newErrors[err.path[0]] = err.message;
         });
         setErrors(newErrors);
+      } else {
+        // Show general error message
+        setErrors({
+          general: error.response?.data?.message || error.message || 'Failed to create charge. Please try again.'
+        });
       }
     },
   });
@@ -399,37 +457,75 @@ function CreateChargeModal({ onClose, onSuccess }: { onClose: () => void; onSucc
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* General Error Message */}
+          {errors.general && (
+            <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl">
+              {errors.general}
+            </div>
+          )}
+
           {/* Client Selection */}
-          <div>
+          <div className="relative">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Client <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              placeholder="Search for client..."
-              value={clientSearch}
-              onChange={(e) => setClientSearch(e.target.value)}
-              className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
-            />
-            {clientSearch.length > 2 && clients && clients.length > 0 && (
-              <div className="max-h-48 overflow-y-auto bg-white border-2 border-purple-200 rounded-xl">
-                {clients.map((client: any) => (
-                  <button
-                    key={client.id}
-                    type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, clientId: client.id });
-                      setClientSearch(`${client.firstName} ${client.lastName}`);
-                    }}
-                    className={`w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors ${
-                      formData.clientId === client.id ? 'bg-purple-100' : ''
-                    }`}
-                  >
-                    <div className="font-semibold">{client.firstName} {client.lastName}</div>
-                    <div className="text-sm text-gray-600">{client.email}</div>
-                  </button>
-                ))}
+            {selectedClientName ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-4 py-3 bg-purple-100 border-2 border-purple-300 rounded-xl">
+                  <span className="font-semibold text-purple-800">{selectedClientName}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData({ ...formData, clientId: '' });
+                    setSelectedClientName('');
+                    setClientSearch('');
+                    setShowClientDropdown(false);
+                  }}
+                  className="px-3 py-3 bg-gray-200 text-gray-600 rounded-xl hover:bg-gray-300 transition-colors"
+                >
+                  Clear
+                </button>
               </div>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  placeholder="Search for client (type at least 3 characters)..."
+                  value={clientSearch}
+                  onChange={(e) => {
+                    setClientSearch(e.target.value);
+                    setShowClientDropdown(e.target.value.length > 2);
+                  }}
+                  onFocus={() => setShowClientDropdown(clientSearch.length > 2)}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                {showClientDropdown && clients && clients.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto bg-white border-2 border-purple-200 rounded-xl shadow-lg">
+                    {clients.map((client: any) => (
+                      <button
+                        key={client.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, clientId: client.id });
+                          setSelectedClientName(`${client.firstName} ${client.lastName}`);
+                          setClientSearch('');
+                          setShowClientDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="font-semibold">{client.firstName} {client.lastName}</div>
+                        <div className="text-sm text-gray-600">{client.email}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {showClientDropdown && clientSearch.length > 2 && (!clients || clients.length === 0) && (
+                  <div className="absolute z-10 w-full mt-1 p-4 bg-white border-2 border-purple-200 rounded-xl shadow-lg text-gray-500">
+                    No clients found matching "{clientSearch}"
+                  </div>
+                )}
+              </>
             )}
             {errors.clientId && <p className="text-red-500 text-sm mt-1">{errors.clientId}</p>}
           </div>

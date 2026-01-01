@@ -4,6 +4,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import DuplicateMatchCard from '../../components/Clients/DuplicateMatchCard';
 import MergeDuplicatesDialog from '../../components/Clients/MergeDuplicatesDialog';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
+
+interface DismissConfirmState {
+  isOpen: boolean;
+  duplicateId: string;
+}
 
 interface Client {
   id: string;
@@ -40,6 +47,10 @@ export default function DuplicateDetectionPage() {
   const queryClient = useQueryClient();
   const [selectedDuplicate, setSelectedDuplicate] = useState<DuplicateRecord | null>(null);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [dismissConfirm, setDismissConfirm] = useState<DismissConfirmState>({
+    isOpen: false,
+    duplicateId: '',
+  });
 
   // Fetch pending duplicates
   const { data: duplicatesData, isLoading: duplicatesLoading, error: duplicatesError } = useQuery({
@@ -75,14 +86,18 @@ export default function DuplicateDetectionPage() {
     },
   });
 
-  const handleDismiss = async (duplicateId: string) => {
-    if (window.confirm('Are you sure you want to dismiss this potential duplicate?')) {
-      try {
-        await dismissMutation.mutateAsync(duplicateId);
-      } catch (error) {
-        console.error('Error dismissing duplicate:', error);
-        alert('Failed to dismiss duplicate. Please try again.');
-      }
+  const handleDismissClick = (duplicateId: string) => {
+    setDismissConfirm({ isOpen: true, duplicateId });
+  };
+
+  const confirmDismiss = async () => {
+    try {
+      await dismissMutation.mutateAsync(dismissConfirm.duplicateId);
+    } catch (error) {
+      console.error('Error dismissing duplicate:', error);
+      toast.error('Failed to dismiss duplicate. Please try again.');
+    } finally {
+      setDismissConfirm({ isOpen: false, duplicateId: '' });
     }
   };
 
@@ -255,7 +270,7 @@ export default function DuplicateDetectionPage() {
                 key={duplicate.id}
                 duplicate={duplicate}
                 onMerge={() => handleMerge(duplicate)}
-                onDismiss={() => handleDismiss(duplicate.id)}
+                onDismiss={() => handleDismissClick(duplicate.id)}
                 dismissing={dismissMutation.isPending}
               />
             ))}
@@ -275,6 +290,17 @@ export default function DuplicateDetectionPage() {
           onMergeComplete={handleMergeComplete}
         />
       )}
+
+      {/* Dismiss Confirmation Modal */}
+      <ConfirmModal
+        isOpen={dismissConfirm.isOpen}
+        onClose={() => setDismissConfirm({ isOpen: false, duplicateId: '' })}
+        onConfirm={confirmDismiss}
+        title="Dismiss Potential Duplicate"
+        message="Are you sure you want to dismiss this potential duplicate? This action indicates that these are not the same client."
+        confirmText="Dismiss"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

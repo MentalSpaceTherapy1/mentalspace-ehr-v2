@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 export interface Vendor {
   id: string;
@@ -41,11 +39,8 @@ export const useVendors = () => {
   const fetchVendors = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/vendors`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setVendors(response.data);
+      const response = await api.get(`/vendors`);
+      setVendors(response.data.data || response.data);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch vendors');
@@ -70,11 +65,8 @@ export const useVendor = (id: string) => {
     const fetchVendor = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/api/vendors/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setVendor(response.data);
+        const response = await api.get(`/vendors/${id}`);
+        setVendor(response.data.data || response.data);
         setError(null);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch vendor');
@@ -90,42 +82,31 @@ export const useVendor = (id: string) => {
 };
 
 export const createVendor = async (data: Partial<Vendor>) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(`${API_URL}/api/vendors`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  const response = await api.post(`/vendors`, data);
+  return response.data.data || response.data;
 };
 
 export const updateVendor = async (id: string, data: Partial<Vendor>) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.put(`${API_URL}/api/vendors/${id}`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  const response = await api.put(`/vendors/${id}`, data);
+  return response.data.data || response.data;
 };
 
 export const deleteVendor = async (id: string) => {
-  const token = localStorage.getItem('token');
-  await axios.delete(`${API_URL}/api/vendors/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  await api.delete(`/vendors/${id}`);
 };
 
 export const uploadW9 = async (vendorId: string, file: File) => {
-  const token = localStorage.getItem('token');
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await axios.post(
-    `${API_URL}/api/vendors/${vendorId}/w9`,
+  const response = await api.post(
+    `/vendors/${vendorId}/w9`,
     formData,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
         'Content-Type': 'multipart/form-data'
       }
     }
   );
-  return response.data;
+  return response.data.data || response.data;
 };

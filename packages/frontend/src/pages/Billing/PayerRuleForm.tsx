@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface PayerRuleFormData {
   clinicianCredential: string;
@@ -63,7 +63,7 @@ const PayerRuleForm: React.FC = () => {
 
   const fetchPayer = async () => {
     try {
-      const response = await axios.get(`/api/v1/payers/${payerId}`);
+      const response = await api.get(`/payers/${payerId}`);
       setPayerName(response.data.data.name);
     } catch (err) {
       console.error('Failed to fetch payer:', err);
@@ -73,7 +73,7 @@ const PayerRuleForm: React.FC = () => {
   const fetchRule = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/v1/payer-rules/${id}`);
+      const response = await api.get(`/payer-rules/${id}`);
       const rule = response.data.data;
 
       setFormData({
@@ -118,9 +118,9 @@ const PayerRuleForm: React.FC = () => {
       };
 
       if (isEditMode) {
-        await axios.put(`/api/v1/payer-rules/${id}`, payload);
+        await api.put(`/payer-rules/${id}`, payload);
       } else {
-        await axios.post('/api/v1/payer-rules', payload);
+        await api.post('/payer-rules', payload);
       }
       navigate(`/billing/payers/${payerId}/rules`);
     } catch (err: any) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
+import toast from 'react-hot-toast';
 
 interface ValidationResult {
   passed: boolean;
@@ -57,7 +58,7 @@ const BillingReadinessChecker: React.FC = () => {
     try {
       setLoading(true);
       // Fetch recently signed notes
-      const response = await axios.get('/api/v1/notes?status=SIGNED&limit=50');
+      const response = await api.get('/notes?status=SIGNED&limit=50');
       setNotes(response.data.data || []);
     } catch (err) {
       console.error('Failed to fetch notes:', err);
@@ -70,7 +71,7 @@ const BillingReadinessChecker: React.FC = () => {
   const handleCheck = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedNoteId) {
-      alert('Please select a note');
+      toast.error('Please select a note');
       return;
     }
 
@@ -79,8 +80,8 @@ const BillingReadinessChecker: React.FC = () => {
     setResult(null);
 
     try {
-      const response = await axios.post(
-        `/api/v1/billing-readiness/validate/${selectedNoteId}`,
+      const response = await api.post(
+        `/billing-readiness/validate/${selectedNoteId}`,
         { createHolds }
       );
       setResult(response.data.data);

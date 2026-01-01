@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   Download,
   Printer,
@@ -30,7 +31,7 @@ export default function CertificateViewer() {
       await downloadMutation.mutateAsync(enrollmentId);
     } catch (error) {
       console.error('Error downloading certificate:', error);
-      alert('Failed to download certificate');
+      toast.error('Failed to download certificate');
     }
   };
 
@@ -42,7 +43,7 @@ export default function CertificateViewer() {
     const link = `${window.location.origin}/certificates/verify/${enrollmentId}`;
     setShareLink(link);
     navigator.clipboard.writeText(link);
-    alert('Share link copied to clipboard!');
+    toast.success('Share link copied to clipboard!');
   };
 
   const generateVerificationCode = (enrollmentId: string) => {
@@ -378,7 +379,7 @@ export default function CertificateViewer() {
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(shareLink);
-                        alert('Copied!');
+                        toast.success('Copied!');
                       }}
                       className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >

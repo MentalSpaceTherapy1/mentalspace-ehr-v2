@@ -13,6 +13,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import EmergencyModal from './EmergencyModal';
+import toast from 'react-hot-toast';
 
 interface EmergencyContact {
   name: string;
@@ -173,7 +174,7 @@ export default function VideoControls({
         await onStartRecording(true);
         setShowRecordingConsent(false);
       } catch (error) {
-        alert('Failed to start recording');
+        toast.error('Failed to start recording');
       }
     } else {
       setShowRecordingConsent(false);

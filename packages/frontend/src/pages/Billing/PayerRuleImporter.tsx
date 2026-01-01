@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
+import toast from 'react-hot-toast';
 
 interface ImportResult {
   success: boolean;
@@ -35,7 +36,7 @@ const PayerRuleImporter: React.FC = () => {
     e.preventDefault();
 
     if (!file) {
-      alert('Please select a CSV file');
+      toast.error('Please select a CSV file');
       return;
     }
 
@@ -49,7 +50,7 @@ const PayerRuleImporter: React.FC = () => {
       formData.append('payerId', payerId || '');
       formData.append('dryRun', dryRun.toString());
 
-      const response = await axios.post('/api/v1/payer-rules/import', formData, {
+      const response = await api.post('/payer-rules/import', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

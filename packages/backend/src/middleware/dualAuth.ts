@@ -172,7 +172,7 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
       try {
         // Import session service dynamically to avoid circular dependency
         logger.info('[DUAL AUTH] Loading session service...');
-        const sessionService = (await import('../services/session.service')).default;
+        const sessionService = (await import('../services/session.service.js')).default;
         logger.info('[DUAL AUTH] Session service loaded, validating session...');
 
         // Validate session token

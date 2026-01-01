@@ -282,7 +282,7 @@ export default function ClientProgress() {
     queryKey: ['currentUser'],
     queryFn: async () => {
       const response = await api.get('/auth/me');
-      return response.data.user;
+      return response.data.data;
     },
   });
 
@@ -291,45 +291,74 @@ export default function ClientProgress() {
     queryKey: ['assignedClients', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) return [];
-      const response = await api.get(`/clients?clinicianId=${currentUser.id}`);
+      const response = await api.get(`/clients?therapistId=${currentUser.id}`);
       return response.data.data;
     },
     enabled: !!currentUser?.id,
   });
 
-  // Fetch health score
-  const { data: healthScore, isLoading: loadingHealthScore } = useQuery<HealthScore>({
-    queryKey: ['healthScore', selectedClient?.id, dateRange],
+  // Calculate date range for API calls
+  const getDateRange = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(dateRange));
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+    };
+  };
+
+  // Fetch combined analytics (includes healthScore, patterns, correlations)
+  const { data: combinedAnalytics, isLoading: loadingHealthScore } = useQuery({
+    queryKey: ['combinedAnalytics', selectedClient?.id, dateRange],
     queryFn: async () => {
+      const { startDate, endDate } = getDateRange();
       const response = await api.get(
-        `/tracking/analytics/health-score?clientId=${selectedClient!.id}&days=${dateRange}`
+        `/tracking/analytics/${selectedClient!.id}/combined?startDate=${startDate}&endDate=${endDate}`
       );
       return response.data.data;
     },
     enabled: !!selectedClient?.id,
   });
+
+  // Extract health score from combined analytics
+  const healthScore: HealthScore | undefined = combinedAnalytics ? {
+    overallScore: combinedAnalytics.healthScore || 0,
+    symptomScore: combinedAnalytics.symptoms?.averageSeverity ? Math.max(0, 100 - combinedAnalytics.symptoms.averageSeverity * 10) : 0,
+    sleepScore: combinedAnalytics.sleep?.averageQuality ? combinedAnalytics.sleep.averageQuality * 20 : 0,
+    exerciseScore: combinedAnalytics.exercise?.totalMinutes ? Math.min(100, (combinedAnalytics.exercise.totalMinutes / 150) * 100) : 0,
+    trend: 'STABLE' as const,
+    trendChange: 0,
+  } : undefined;
 
   // Fetch engagement metrics
   const { data: engagement, isLoading: loadingEngagement } = useQuery<EngagementMetrics>({
     queryKey: ['engagement', selectedClient?.id, dateRange],
     queryFn: async () => {
       const response = await api.get(
-        `/tracking/analytics/engagement?clientId=${selectedClient!.id}&days=${dateRange}`
+        `/tracking/reminders/${selectedClient!.id}/engagement?days=${dateRange}`
       );
-      return response.data.data;
+      // Transform the response to match expected format
+      const engagementScore = response.data.data?.engagementScore || 0;
+      return {
+        engagementRate: engagementScore,
+        currentStreak: 0, // Not available from this endpoint
+        longestStreak: 0,
+        totalDaysLogged: Math.round(engagementScore * parseInt(dateRange) / 100),
+        totalDays: parseInt(dateRange),
+      };
     },
     enabled: !!selectedClient?.id,
   });
 
-  // Fetch alerts
-  const { data: alerts } = useQuery<Alert[]>({
-    queryKey: ['alerts', selectedClient?.id],
-    queryFn: async () => {
-      const response = await api.get(`/tracking/analytics/alerts?clientId=${selectedClient!.id}`);
-      return response.data.data;
-    },
-    enabled: !!selectedClient?.id,
-  });
+  // Alerts derived from combined analytics patterns (no separate endpoint)
+  const alerts: Alert[] = combinedAnalytics?.patterns?.filter((p: any) => p.confidence >= 70).map((p: any, idx: number) => ({
+    id: `pattern-${idx}`,
+    type: p.type.includes('INCONSISTENT') || p.type.includes('POOR') ? 'WARNING' as const : 'INFO' as const,
+    message: p.description,
+    detectedAt: new Date().toISOString(),
+    acknowledged: false,
+  })) || [];
 
   // Fetch symptom data (lazy load on tab view)
   const { data: symptomLogs, isLoading: loadingSymptoms } = useQuery<SymptomLog[]>({
@@ -347,7 +376,7 @@ export default function ClientProgress() {
     queryKey: ['symptomTrends', selectedClient?.id, dateRange],
     queryFn: async () => {
       const response = await api.get(
-        `/tracking/symptoms/trends?clientId=${selectedClient!.id}&days=${dateRange}`
+        `/tracking/symptoms/${selectedClient!.id}/trends?days=${dateRange}`
       );
       return response.data.data;
     },
@@ -358,7 +387,7 @@ export default function ClientProgress() {
     queryKey: ['symptomSummary', selectedClient?.id, dateRange],
     queryFn: async () => {
       const response = await api.get(
-        `/tracking/symptoms/summary?clientId=${selectedClient!.id}&days=${dateRange}`
+        `/tracking/symptoms/${selectedClient!.id}/summary?days=${dateRange}`
       );
       return response.data.data;
     },
@@ -370,7 +399,7 @@ export default function ClientProgress() {
     queryKey: ['sleepLogs', selectedClient?.id, dateRange],
     queryFn: async () => {
       const response = await api.get(
-        `/tracking/sleep?clientId=${selectedClient!.id}&days=${dateRange}`
+        `/tracking/sleep/${selectedClient!.id}?days=${dateRange}`
       );
       return response.data.data;
     },
@@ -380,7 +409,7 @@ export default function ClientProgress() {
   const { data: sleepMetrics } = useQuery<SleepMetrics>({
     queryKey: ['sleepMetrics', selectedClient?.id],
     queryFn: async () => {
-      const response = await api.get(`/tracking/sleep/metrics?clientId=${selectedClient!.id}`);
+      const response = await api.get(`/tracking/sleep/${selectedClient!.id}/metrics`);
       return response.data.data;
     },
     enabled: !!selectedClient?.id && activeTab === 'sleep',
@@ -391,7 +420,7 @@ export default function ClientProgress() {
     queryKey: ['exerciseLogs', selectedClient?.id, dateRange],
     queryFn: async () => {
       const response = await api.get(
-        `/tracking/exercise?clientId=${selectedClient!.id}&days=${dateRange}`
+        `/tracking/exercise/${selectedClient!.id}?days=${dateRange}`
       );
       return response.data.data;
     },
@@ -401,51 +430,39 @@ export default function ClientProgress() {
   const { data: exerciseStats } = useQuery<ExerciseStats>({
     queryKey: ['exerciseStats', selectedClient?.id],
     queryFn: async () => {
-      const response = await api.get(`/tracking/exercise/stats?clientId=${selectedClient!.id}`);
+      const response = await api.get(`/tracking/exercise/${selectedClient!.id}/stats`);
       return response.data.data;
     },
     enabled: !!selectedClient?.id && activeTab === 'exercise',
   });
 
-  // Fetch combined analytics
-  const { data: patterns } = useQuery<Pattern[]>({
-    queryKey: ['patterns', selectedClient?.id],
-    queryFn: async () => {
-      const response = await api.get(`/tracking/analytics/patterns?clientId=${selectedClient!.id}`);
-      return response.data.data;
-    },
-    enabled: !!selectedClient?.id && activeTab === 'analytics',
-  });
+  // Patterns and correlations come from combined analytics
+  const patterns: Pattern[] = combinedAnalytics?.patterns?.map((p: any) => ({
+    id: p.type,
+    name: p.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+    description: p.description,
+    confidence: p.confidence >= 70 ? 'HIGH' : p.confidence >= 40 ? 'MEDIUM' : 'LOW',
+    dataPoints: 0, // Not available from backend
+    clinicalSignificance: p.confidence >= 70 ? 'HIGH' : p.confidence >= 40 ? 'MEDIUM' : 'LOW',
+  })) || [];
 
-  const { data: correlations } = useQuery<Correlation[]>({
-    queryKey: ['correlations', selectedClient?.id],
-    queryFn: async () => {
-      const response = await api.get(
-        `/tracking/analytics/correlations?clientId=${selectedClient!.id}`
-      );
-      return response.data.data;
-    },
-    enabled: !!selectedClient?.id && activeTab === 'analytics',
-  });
+  const correlations: Correlation[] = combinedAnalytics?.correlations?.map((c: any) => ({
+    variable1: c.metric1,
+    variable2: c.metric2,
+    coefficient: c.correlation,
+    strength: c.strength as 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE',
+  })) || [];
 
-  // Fetch clinician notes
-  const { data: clinicianNotes } = useQuery<ClinicianNote[]>({
-    queryKey: ['clinicianNotes', selectedClient?.id],
-    queryFn: async () => {
-      const response = await api.get(`/tracking/notes?clientId=${selectedClient!.id}`);
-      return response.data.data;
-    },
-    enabled: !!selectedClient?.id,
-  });
+  // Clinician notes - placeholder (no backend endpoint yet)
+  // TODO: Implement /tracking/notes endpoint on backend
+  const clinicianNotes: ClinicianNote[] = [];
 
-  // Save clinician note mutation
+  // Save clinician note mutation - disabled until backend endpoint is added
   const saveNoteMutation = useMutation({
     mutationFn: async (content: string) => {
-      const response = await api.post('/tracking/notes', {
-        clientId: selectedClient!.id,
-        content,
-      });
-      return response.data;
+      // Backend endpoint not yet implemented
+      console.warn('Clinician notes endpoint not yet implemented');
+      throw new Error('Feature not yet available');
     },
     onSuccess: () => {
       toast.success('Note saved successfully');
@@ -453,15 +470,16 @@ export default function ClientProgress() {
       queryClient.invalidateQueries({ queryKey: ['clinicianNotes', selectedClient?.id] });
     },
     onError: () => {
-      toast.error('Failed to save note');
+      toast.error('Notes feature coming soon');
     },
   });
 
   // Export data
   const exportData = async (type: 'symptoms' | 'sleep' | 'exercise' | 'all') => {
     try {
+      const { startDate, endDate } = getDateRange();
       const response = await api.get(
-        `/tracking/export?clientId=${selectedClient!.id}&type=${type}`,
+        `/tracking/export/${selectedClient!.id}/csv?startDate=${startDate}&endDate=${endDate}`,
         { responseType: 'blob' }
       );
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -480,9 +498,11 @@ export default function ClientProgress() {
   // Export full report
   const exportFullReport = async () => {
     try {
-      const response = await api.get(`/tracking/report?clientId=${selectedClient!.id}`, {
-        responseType: 'blob',
-      });
+      const { startDate, endDate } = getDateRange();
+      const response = await api.get(
+        `/tracking/analytics/${selectedClient!.id}/report?startDate=${startDate}&endDate=${endDate}`,
+        { responseType: 'blob' }
+      );
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;

@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/api';
+import toast from 'react-hot-toast';
 import {
   UserGroupIcon,
   CheckCircleIcon,
   XCircleIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
+import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
 
 interface GroupMember {
   id: string;
@@ -78,6 +80,22 @@ export default function GroupTherapyNoteForm() {
   const [assessment, setAssessment] = useState('');
   const [plan, setPlan] = useState('');
 
+  // Session-safe saving (handles session timeout with local storage backup)
+  const {
+    sessionError,
+    clearSessionError,
+    backupToLocalStorage,
+    clearBackup,
+    handleSaveError,
+    hasRecoveredDraft,
+    applyRecoveredDraft,
+    discardRecoveredDraft,
+  } = useSessionSafeSave({
+    noteType: 'GroupTherapyNote',
+    clientId: clientId || 'group',
+    noteId: appointmentId,
+  });
+
   // Attendance tracking
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [attendanceNotes, setAttendanceNotes] = useState<{ [key: string]: string }>({});
@@ -144,15 +162,44 @@ export default function GroupTherapyNoteForm() {
   // Create note mutation
   const createNoteMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       const response = await api.post('/group-therapy-notes', data);
       return response.data;
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clinical-notes`);
     },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
+    },
   });
+
+  // Handle recovering draft data
+  const handleRecoverDraft = () => {
+    const recovered = applyRecoveredDraft();
+    if (recovered) {
+      if (recovered.groupId) setGroupId(recovered.groupId);
+      if (recovered.sessionDate) setSessionDate(recovered.sessionDate);
+      if (recovered.duration) setDuration(recovered.duration);
+      if (recovered.sessionTopic) setSessionTopic(recovered.sessionTopic);
+      if (recovered.sessionObjectives) setSessionObjectives(recovered.sessionObjectives);
+      if (recovered.interventionsUsed) setInterventionsUsed(recovered.interventionsUsed);
+      if (recovered.groupDynamics) setGroupDynamics(recovered.groupDynamics);
+      if (recovered.therapeuticFactors) setTherapeuticFactors(recovered.therapeuticFactors);
+      if (recovered.progressTowardGoals) setProgressTowardGoals(recovered.progressTowardGoals);
+      if (recovered.challengesEncountered) setChallengesEncountered(recovered.challengesEncountered);
+      if (recovered.planForNextSession) setPlanForNextSession(recovered.planForNextSession);
+      if (recovered.subjective) setSubjective(recovered.subjective);
+      if (recovered.objective) setObjective(recovered.objective);
+      if (recovered.assessment) setAssessment(recovered.assessment);
+      if (recovered.plan) setPlan(recovered.plan);
+    }
+  };
 
   const handleAttendanceToggle = (memberId: string) => {
     setAttendance(prev =>
@@ -184,12 +231,12 @@ export default function GroupTherapyNoteForm() {
 
     // Validate: either need groupId (formal group) or isAdHocGroup (appointment-based group)
     if (!isAdHocGroup && !groupId) {
-      alert('Please select a group.');
+      toast.error('Please select a group.');
       return;
     }
 
     if (!appointmentId) {
-      alert('An appointment must be selected for this note.');
+      toast.error('An appointment must be selected for this note.');
       return;
     }
 
@@ -254,6 +301,19 @@ export default function GroupTherapyNoteForm() {
             </div>
           </div>
         </div>
+
+        {/* Session Expired Alert */}
+        {sessionError && (
+          <SessionExpiredAlert message={sessionError} onDismiss={clearSessionError} />
+        )}
+
+        {/* Recovered Draft Alert */}
+        {hasRecoveredDraft && (
+          <RecoveredDraftAlert
+            onRecover={handleRecoverDraft}
+            onDiscard={discardRecoveredDraft}
+          />
+        )}
 
         {/* Error Display */}
         {createNoteMutation.isError && (

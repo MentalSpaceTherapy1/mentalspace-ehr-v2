@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { useState } from 'react';
+import api from '../lib/api';
 
 interface Policy {
   id: string;
@@ -67,9 +65,7 @@ export const usePolicy = () => {
       if (filters?.category) params.append('category', filters.category);
       if (filters?.search) params.append('search', filters.search);
 
-      const response = await axios.get(`${API_URL}/api/policies?${params}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get(`/policies?${params}`);
       setPolicies(response.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch policies');
@@ -82,9 +78,7 @@ export const usePolicy = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/policies/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get(`/policies/${id}`);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch policy');
@@ -98,9 +92,7 @@ export const usePolicy = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API_URL}/api/policies`, policyData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.post('/policies', policyData);
       await fetchPolicies();
       return response.data;
     } catch (err: any) {
@@ -115,9 +107,7 @@ export const usePolicy = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.put(`${API_URL}/api/policies/${id}`, policyData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.put(`/policies/${id}`, policyData);
       await fetchPolicies();
       return response.data;
     } catch (err: any) {
@@ -132,9 +122,7 @@ export const usePolicy = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.delete(`${API_URL}/api/policies/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      await api.delete(`/policies/${id}`);
       await fetchPolicies();
       return true;
     } catch (err: any) {
@@ -155,9 +143,7 @@ export const usePolicy = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.post(`${API_URL}/api/policies/${policyId}/acknowledge`, acknowledgmentData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      await api.post(`/policies/${policyId}/acknowledge`, acknowledgmentData);
       return true;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to acknowledge policy');
@@ -180,9 +166,7 @@ export const usePolicy = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.post(`${API_URL}/api/policies/${policyId}/distribute`, distributionData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      await api.post(`/policies/${policyId}/distribute`, distributionData);
       return true;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to distribute policy');
@@ -196,9 +180,7 @@ export const usePolicy = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/policies/${policyId}/acknowledgments`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get(`/policies/${policyId}/acknowledgments`);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch acknowledgments');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface DashboardStats {
   payers: {
@@ -43,19 +43,19 @@ const PayerDashboard: React.FC = () => {
     try {
       setLoading(true);
       const [payersRes, rulesRes, holdsCountRes, holdsByReasonRes, recentHoldsRes] = await Promise.all([
-        axios.get('/api/v1/payers/stats'),
-        axios.get('/api/v1/payer-rules/stats'),
-        axios.get('/api/v1/billing-holds/count'),
-        axios.get('/api/v1/billing-holds/by-reason'),
-        axios.get('/api/v1/billing-holds?limit=5'),
+        api.get('/payers/stats'),
+        api.get('/payer-rules/stats'),
+        api.get('/billing-holds/count'),
+        api.get('/billing-holds/by-reason'),
+        api.get('/billing-holds?limit=5'),
       ]);
 
       setStats({
         payers: payersRes.data.data,
         rules: rulesRes.data.data,
         holds: {
-          count: holdsCountRes.data.data.count,
-          byReason: holdsByReasonRes.data.data,
+          count: holdsCountRes.data.data?.count ?? 0,
+          byReason: holdsByReasonRes.data.data ?? {},
         },
       });
 
@@ -348,17 +348,17 @@ const PayerDashboard: React.FC = () => {
               <div className="flex items-center">
                 <div
                   className={`h-3 w-3 rounded-full mr-2 ${
-                    stats?.holds.count === 0 ? 'bg-green-500' : 'bg-yellow-500'
+                    !stats?.holds.count ? 'bg-green-500' : 'bg-yellow-500'
                   }`}
                 ></div>
                 <span className="text-sm text-gray-700">Billing Holds</span>
               </div>
               <span
                 className={`text-sm font-medium ${
-                  stats?.holds.count === 0 ? 'text-green-600' : 'text-yellow-600'
+                  !stats?.holds.count ? 'text-green-600' : 'text-yellow-600'
                 }`}
               >
-                {stats?.holds.count === 0 ? 'All Clear' : `${stats?.holds.count} Active`}
+                {!stats?.holds.count ? 'All Clear' : `${stats.holds.count} Active`}
               </span>
             </div>
 

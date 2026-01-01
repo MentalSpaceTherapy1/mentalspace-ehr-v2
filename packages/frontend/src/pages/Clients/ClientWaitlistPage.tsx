@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface WaitlistEntry {
   id: string;
@@ -37,6 +38,10 @@ export default function ClientWaitlistPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [leaveConfirm, setLeaveConfirm] = useState<{ isOpen: boolean; id: string }>({
+    isOpen: false,
+    id: '',
+  });
 
   // Form state
   const [selectedClinician, setSelectedClinician] = useState<string>('');
@@ -50,7 +55,7 @@ export default function ClientWaitlistPage() {
     queryKey: ['currentUser'],
     queryFn: async () => {
       const response = await api.get('/auth/me');
-      return response.data.user;
+      return response.data.data;
     },
   });
 
@@ -312,15 +317,7 @@ export default function ClientWaitlistPage() {
 
                 {entry.status === 'ACTIVE' && (
                   <button
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          'Are you sure you want to leave the waitlist?'
-                        )
-                      ) {
-                        cancelMutation.mutate(entry.id);
-                      }
-                    }}
+                    onClick={() => setLeaveConfirm({ isOpen: true, id: entry.id })}
                     className="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
                   >
                     Leave Waitlist
@@ -466,6 +463,24 @@ export default function ClientWaitlistPage() {
           </div>
         </div>
       )}
+
+      {/* Leave Waitlist Confirmation Modal */}
+      <ConfirmModal
+        isOpen={leaveConfirm.isOpen}
+        onClose={() => setLeaveConfirm({ isOpen: false, id: '' })}
+        onConfirm={() => {
+          if (leaveConfirm.id) {
+            cancelMutation.mutate(leaveConfirm.id);
+            setLeaveConfirm({ isOpen: false, id: '' });
+          }
+        }}
+        title="Leave Waitlist"
+        message="Are you sure you want to leave the waitlist? You will lose your position."
+        confirmText="Leave"
+        cancelText="Stay"
+        icon="warning"
+        isLoading={cancelMutation.isPending}
+      />
     </div>
   );
 }

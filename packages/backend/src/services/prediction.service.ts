@@ -674,7 +674,7 @@ export class DemandForecaster {
     const providers = await prisma.user.count({
       where: {
         roles: { hasSome: ['CLINICIAN', 'ADMINISTRATOR'] },
-        status: 'ACTIVE'
+        isActive: true
       }
     });
 

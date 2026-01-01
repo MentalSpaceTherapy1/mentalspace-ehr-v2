@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import UseSessionDialog from './UseSessionDialog';
 import RenewalDialog from './RenewalDialog';
+import ConfirmModal from '../ConfirmModal';
 
 interface PriorAuthorization {
   id: string;
@@ -45,6 +46,7 @@ export default function AuthorizationCard({ authorization, onEdit }: Authorizati
   const [showUseSessionDialog, setShowUseSessionDialog] = useState(false);
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -57,10 +59,13 @@ export default function AuthorizationCard({ authorization, onEdit }: Authorizati
     },
   });
 
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete authorization ${authorization.authorizationNumber}?`)) {
-      deleteMutation.mutate();
-    }
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    deleteMutation.mutate();
+    setShowDeleteConfirm(false);
   };
 
   // Calculate progress percentage
@@ -282,7 +287,7 @@ export default function AuthorizationCard({ authorization, onEdit }: Authorizati
             Edit
           </button>
           <button
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
             disabled={deleteMutation.isPending}
             className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-500 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-bold text-sm disabled:opacity-50"
           >
@@ -305,6 +310,17 @@ export default function AuthorizationCard({ authorization, onEdit }: Authorizati
           onClose={() => setShowRenewalDialog(false)}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Authorization"
+        message={`Are you sure you want to delete authorization ${authorization.authorizationNumber}?`}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
     </>
   );
 }

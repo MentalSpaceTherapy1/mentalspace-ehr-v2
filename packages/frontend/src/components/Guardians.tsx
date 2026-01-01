@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from './ConfirmModal';
 import { GUARDIAN_RELATIONSHIP_OPTIONS } from '../constants/clientFormOptions';
 
 interface GuardiansProps {
@@ -25,6 +27,11 @@ export default function Guardians({ clientId }: GuardiansProps) {
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: '',
+  });
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -40,10 +47,7 @@ export default function Guardians({ clientId }: GuardiansProps) {
   const { data: guardians, isLoading } = useQuery({
     queryKey: ['guardians', clientId],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`/guardians/client/${clientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/guardians/client/${clientId}`);
       return response.data.data as Guardian[];
     },
   });
@@ -51,50 +55,69 @@ export default function Guardians({ clientId }: GuardiansProps) {
   // Create guardian
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        '/guardians',
-        { ...data, clientId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.post('/guardians', { ...data, clientId });
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guardians', clientId] });
+      toast.success('Guardian created successfully');
       resetForm();
       setIsAdding(false);
+    },
+    onError: (error: any) => {
+      console.error('Failed to create guardian:', error);
+      toast.error(error.response?.data?.error || 'Failed to create guardian');
     },
   });
 
   // Update guardian
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<typeof formData> }) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.patch(`/guardians/${id}`, data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.patch(`/guardians/${id}`, data);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guardians', clientId] });
+      toast.success('Guardian updated successfully');
       resetForm();
       setEditingId(null);
+    },
+    onError: (error: any) => {
+      console.error('Failed to update guardian:', error);
+      toast.error(error.response?.data?.error || 'Failed to update guardian');
     },
   });
 
   // Delete guardian
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete(`/guardians/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.delete(`/guardians/${id}`);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guardians', clientId] });
+      toast.success('Guardian deleted successfully');
+      setDeleteConfirm({ isOpen: false, id: '', name: '' });
+    },
+    onError: (error: any) => {
+      console.error('Failed to delete guardian:', error);
+      toast.error(error.response?.data?.error || 'Failed to delete guardian');
     },
   });
+
+  const handleDeleteClick = (guardian: Guardian) => {
+    setDeleteConfirm({
+      isOpen: true,
+      id: guardian.id,
+      name: `${guardian.firstName} ${guardian.lastName}`,
+    });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm.id) {
+      deleteMutation.mutate(deleteConfirm.id);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -220,12 +243,9 @@ export default function Guardians({ clientId }: GuardiansProps) {
                     Edit
                   </button>
                   <button
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to delete this guardian?')) {
-                        deleteMutation.mutate(guardian.id);
-                      }
-                    }}
-                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors duration-200"
+                    onClick={() => handleDeleteClick(guardian)}
+                    disabled={deleteMutation.isPending}
+                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors duration-200 disabled:opacity-50"
                   >
                     Delete
                   </button>
@@ -379,6 +399,19 @@ export default function Guardians({ clientId }: GuardiansProps) {
           </div>
         </form>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, id: '', name: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Guardian"
+        message={`Are you sure you want to delete ${deleteConfirm.name}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        icon="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

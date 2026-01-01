@@ -40,6 +40,15 @@ import ClinicalNoteReminderSettings from './pages/Settings/ClinicalNoteReminderS
 import AppointmentTypes from './pages/Settings/AppointmentTypes';
 import ProviderAvailability from './pages/Settings/ProviderAvailability';
 import VideoSession from './pages/Telehealth/VideoSession';
+import TelehealthDashboard from './pages/Telehealth/TelehealthDashboard';
+import SelfScheduleDashboard from './pages/SelfSchedule/SelfScheduleDashboard';
+import ClientPortalManagement from './pages/ClientPortal/ClientPortalManagement';
+import ProgressTrackingDashboard from './pages/ProgressTracking/ProgressTrackingDashboard';
+import AssignMeasures from './pages/ProgressTracking/AssignMeasures';
+import ProgressReports from './pages/ProgressTracking/ProgressReports';
+import GuardianPortalDashboard from './pages/Guardian/GuardianPortalDashboard';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import ClinicianToolsDashboard from './pages/Clinician/ClinicianToolsDashboard';
 import BillingDashboard from './pages/Billing/BillingDashboard';
 import ChargesPage from './pages/Billing/ChargesPage';
 import PaymentsPage from './pages/Billing/PaymentsPage';
@@ -56,6 +65,7 @@ import SupervisorDashboard from './pages/Productivity/SupervisorDashboard';
 import AdministratorDashboard from './pages/Productivity/AdministratorDashboard';
 import ReportsDashboard from './pages/Reports/ReportsDashboard';
 import CustomReportsList from './pages/Reports/CustomReportsList';
+import { ReportSubscriptions } from './pages/Reports/ReportSubscriptions';
 import CustomReportBuilder from './pages/Reports/CustomReportBuilder';
 import AnalyticsDashboard from './pages/Analytics/AnalyticsDashboard';
 import PortalLayout from './components/PortalLayout';
@@ -102,6 +112,7 @@ import ClientProgress from './pages/Clinician/ClientProgress';
 import MyWaitlist from './pages/Clinician/MyWaitlist';
 import DashboardList from './pages/Dashboards/DashboardList';
 import DashboardBuilder from './pages/Dashboards/DashboardBuilder';
+import PredictionsDashboard from './pages/Predictions/PredictionsDashboard';
 
 // Module 9: Credentialing
 import CredentialingDashboard from './pages/Credentialing/CredentialingDashboard';
@@ -556,10 +567,82 @@ function App() {
           }
         />
         <Route
+          path="/telehealth"
+          element={
+            <PrivateRoute>
+              <TelehealthDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/telehealth/session/:appointmentId"
           element={
             <PrivateRoute>
               <VideoSession />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/self-schedule"
+          element={
+            <PrivateRoute>
+              <SelfScheduleDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/client-portal"
+          element={
+            <PrivateRoute>
+              <ClientPortalManagement />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/progress-tracking"
+          element={
+            <PrivateRoute>
+              <ProgressTrackingDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/progress-tracking/assign-measures"
+          element={
+            <PrivateRoute>
+              <AssignMeasures />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/progress-tracking/reports"
+          element={
+            <PrivateRoute>
+              <ProgressReports />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/guardian-portal"
+          element={
+            <PrivateRoute>
+              <GuardianPortalDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute>
+              <AdminDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clinician"
+          element={
+            <PrivateRoute>
+              <ClinicianToolsDashboard />
             </PrivateRoute>
           }
         />
@@ -987,6 +1070,14 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/reports/subscriptions"
+          element={
+            <PrivateRoute>
+              <ReportSubscriptions />
+            </PrivateRoute>
+          }
+        />
 
         {/* Module 8: Customizable Dashboards */}
         <Route
@@ -1010,6 +1101,14 @@ function App() {
           element={
             <PrivateRoute>
               <AnalyticsDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/predictions"
+          element={
+            <PrivateRoute>
+              <PredictionsDashboard />
             </PrivateRoute>
           }
         />
@@ -1414,6 +1513,10 @@ function App() {
 
         {/* MODULE 9: HR FUNCTIONS */}
         <Route
+          path="/hr"
+          element={<Navigate to="/hr/performance" replace />}
+        />
+        <Route
           path="/hr/performance"
           element={
             <PrivateRoute>
@@ -1666,6 +1769,11 @@ function App() {
               <VendorForm />
             </PrivateRoute>
           }
+        />
+        {/* MODULE 8: VENDORS & FINANCE */}
+        <Route
+          path="/finance"
+          element={<Navigate to="/finance/budget" replace />}
         />
         <Route
           path="/finance/budget"

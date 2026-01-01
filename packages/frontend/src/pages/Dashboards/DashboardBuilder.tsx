@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from 'react-grid-layout';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import api from '../../lib/api';
 import DashboardGrid from '../../components/Dashboard/DashboardGrid';
 import WidgetLibrary, { WIDGET_DEFINITIONS } from '../../components/Dashboard/WidgetLibrary';
 import { Dashboard, Widget, WidgetData, WidgetType } from '../../types/dashboard.types';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 const DashboardBuilder: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +23,10 @@ const DashboardBuilder: React.FC = () => {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [configureDialogOpen, setConfigureDialogOpen] = useState(false);
+  const [widgetToConfigure, setWidgetToConfigure] = useState<Widget | null>(null);
+  const [widgetTitle, setWidgetTitle] = useState('');
+  const [widgetRefreshRate, setWidgetRefreshRate] = useState(60);
 
   // Form state
   const [dashboardName, setDashboardName] = useState('');
@@ -71,11 +73,7 @@ const DashboardBuilder: React.FC = () => {
   const loadDashboard = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/dashboards/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/dashboards/${id}`);
 
       const dashboardData = response.data.data;
       setDashboard(dashboardData);
@@ -97,11 +95,7 @@ const DashboardBuilder: React.FC = () => {
 
     try {
       setLoadingWidgets((prev) => ({ ...prev, [widgetId]: true }));
-      const response = await axios.get(`${API_BASE_URL}/dashboards/${dashboard.id}/data`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/dashboards/${dashboard.id}/data`);
 
       const widgetData = response.data.data.widgets.find(
         (w: WidgetData) => w.widgetId === widgetId
@@ -131,19 +125,11 @@ const DashboardBuilder: React.FC = () => {
 
       if (id) {
         // Update existing dashboard
-        await axios.put(`${API_BASE_URL}/dashboards/${id}`, dashboardData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+        await api.put(`/dashboards/${id}`, dashboardData);
         toast.success('Dashboard updated successfully');
       } else {
         // Create new dashboard
-        const response = await axios.post(`${API_BASE_URL}/dashboards`, dashboardData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+        const response = await api.post(`/dashboards`, dashboardData);
         const newDashboard = response.data.data;
         setDashboard(newDashboard);
         navigate(`/dashboards/${newDashboard.id}`, { replace: true });
@@ -175,14 +161,9 @@ const DashboardBuilder: React.FC = () => {
         refreshRate: 60,
       };
 
-      const response = await axios.post(
-        `${API_BASE_URL}/dashboards/${dashboard.id}/widgets`,
-        widgetData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await api.post(
+        `/dashboards/${dashboard.id}/widgets`,
+        widgetData
       );
 
       const newWidget = response.data.data;
@@ -200,11 +181,7 @@ const DashboardBuilder: React.FC = () => {
 
   const handleRemoveWidget = async (widgetId: string) => {
     try {
-      await axios.delete(`${API_BASE_URL}/dashboards/widgets/${widgetId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      await api.delete(`/dashboards/widgets/${widgetId}`);
 
       setWidgets((prev) => prev.filter((w) => w.id !== widgetId));
       setWidgetsData((prev) => {
@@ -249,14 +226,9 @@ const DashboardBuilder: React.FC = () => {
       try {
         await Promise.all(
           updatedWidgets.map((widget) =>
-            axios.put(
-              `${API_BASE_URL}/dashboards/widgets/${widget.id}`,
-              { position: widget.position },
-              {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-              }
+            api.put(
+              `/dashboards/widgets/${widget.id}`,
+              { position: widget.position }
             )
           )
         );
@@ -270,11 +242,7 @@ const DashboardBuilder: React.FC = () => {
     if (!dashboard) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/dashboards/${dashboard.id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      await api.delete(`/dashboards/${dashboard.id}`);
       toast.success('Dashboard deleted');
       navigate('/dashboards');
     } catch (error: any) {
@@ -290,6 +258,45 @@ const DashboardBuilder: React.FC = () => {
       fetchWidgetData(widget.id);
     });
     toast.success('All widgets refreshed');
+  };
+
+  const handleConfigureWidget = (widgetId: string) => {
+    const widget = widgets.find((w) => w.id === widgetId);
+    if (widget) {
+      setWidgetToConfigure(widget);
+      setWidgetTitle(widget.title);
+      setWidgetRefreshRate(widget.refreshRate || 60);
+      setConfigureDialogOpen(true);
+    }
+  };
+
+  const handleSaveWidgetConfig = async () => {
+    if (!widgetToConfigure) return;
+
+    try {
+      await api.put(
+        `/dashboards/widgets/${widgetToConfigure.id}`,
+        {
+          title: widgetTitle,
+          refreshRate: widgetRefreshRate,
+        }
+      );
+
+      setWidgets((prev) =>
+        prev.map((w) =>
+          w.id === widgetToConfigure.id
+            ? { ...w, title: widgetTitle, refreshRate: widgetRefreshRate }
+            : w
+        )
+      );
+
+      toast.success('Widget updated successfully');
+      setConfigureDialogOpen(false);
+      setWidgetToConfigure(null);
+    } catch (error: any) {
+      console.error('Failed to update widget:', error);
+      toast.error(error.response?.data?.error || 'Failed to update widget');
+    }
   };
 
   if (loading) {
@@ -415,6 +422,7 @@ const DashboardBuilder: React.FC = () => {
             onLayoutChange={handleLayoutChange}
             onRemoveWidget={handleRemoveWidget}
             onRefreshWidget={handleRefreshWidget}
+            onConfigureWidget={handleConfigureWidget}
             editable={true}
           />
         )}
@@ -542,6 +550,76 @@ const DashboardBuilder: React.FC = () => {
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-bold"
                 >
                   Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Widget Configuration Dialog */}
+      {configureDialogOpen && widgetToConfigure && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6">
+              <h2 className="text-2xl font-bold text-white flex items-center">
+                <span className="text-3xl mr-3">⚙️</span>
+                Configure Widget
+              </h2>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Widget Type
+                </label>
+                <div className="px-4 py-3 bg-gray-100 rounded-xl text-gray-600 font-medium">
+                  {widgetToConfigure.widgetType.replace(/_/g, ' ')}
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Widget Title
+                </label>
+                <input
+                  type="text"
+                  value={widgetTitle}
+                  onChange={(e) => setWidgetTitle(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:ring-4 focus:ring-purple-300 focus:border-purple-400 transition-all duration-200 font-medium"
+                  placeholder="Enter widget title..."
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Refresh Rate (seconds)
+                </label>
+                <select
+                  value={widgetRefreshRate}
+                  onChange={(e) => setWidgetRefreshRate(Number(e.target.value))}
+                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:ring-4 focus:ring-purple-300 focus:border-purple-400 transition-all duration-200 font-medium"
+                >
+                  <option value={30}>30 seconds</option>
+                  <option value={60}>1 minute</option>
+                  <option value={120}>2 minutes</option>
+                  <option value={300}>5 minutes</option>
+                  <option value={600}>10 minutes</option>
+                  <option value={0}>Manual only</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setConfigureDialogOpen(false);
+                    setWidgetToConfigure(null);
+                  }}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 font-bold transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveWidgetConfig}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-bold"
+                >
+                  Save
                 </button>
               </div>
             </div>

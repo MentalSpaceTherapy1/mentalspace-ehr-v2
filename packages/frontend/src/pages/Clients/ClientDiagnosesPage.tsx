@@ -5,6 +5,8 @@ import api from '../../lib/api';
 import DiagnosisCard from '../../components/Clients/DiagnosisCard';
 import DiagnosisForm from '../../components/Clients/DiagnosisForm';
 import ICD10SearchDialog from '../../components/Clients/ICD10SearchDialog';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface ClientDiagnosis {
   id: string;
@@ -59,6 +61,10 @@ export default function ClientDiagnosesPage() {
   const [showICD10Search, setShowICD10Search] = useState(false);
   const [viewMode, setViewMode] = useState<'grouped' | 'timeline'>('grouped');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'resolved'>('active');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; diagnosisId: string }>({
+    isOpen: false,
+    diagnosisId: '',
+  });
 
   // Fetch client data
   const { data: clientData } = useQuery({
@@ -100,10 +106,13 @@ export default function ClientDiagnosesPage() {
     },
   });
 
-  const handleDelete = (diagnosisId: string) => {
-    if (window.confirm('Are you sure you want to delete this diagnosis?')) {
-      deleteMutation.mutate(diagnosisId);
-    }
+  const handleDeleteClick = (diagnosisId: string) => {
+    setDeleteConfirm({ isOpen: true, diagnosisId });
+  };
+
+  const confirmDelete = () => {
+    deleteMutation.mutate(deleteConfirm.diagnosisId);
+    setDeleteConfirm({ isOpen: false, diagnosisId: '' });
   };
 
   const handleEdit = (diagnosis: ClientDiagnosis) => {
@@ -344,7 +353,7 @@ export default function ClientDiagnosesPage() {
                       key={diagnosis.id}
                       diagnosis={diagnosis}
                       onEdit={handleEdit}
-                      onDelete={handleDelete}
+                      onDelete={handleDeleteClick}
                     />
                   ))}
                 </div>
@@ -388,7 +397,7 @@ export default function ClientDiagnosesPage() {
                   <DiagnosisCard
                     diagnosis={diagnosis}
                     onEdit={handleEdit}
-                    onDelete={handleDelete}
+                    onDelete={handleDeleteClick}
                   />
                 </div>
               </div>
@@ -440,6 +449,17 @@ export default function ClientDiagnosesPage() {
           onClose={() => setShowICD10Search(false)}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, diagnosisId: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Diagnosis"
+        message="Are you sure you want to delete this diagnosis? This action cannot be undone."
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

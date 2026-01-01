@@ -56,6 +56,14 @@ interface GroupSession {
   };
 }
 
+// Helper to format date string without timezone conversion
+const formatLocalDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  // Take just the date portion (YYYY-MM-DD) and format as MM/DD/YYYY
+  const [year, month, day] = dateStr.split('T')[0].split('-');
+  return `${parseInt(month)}/${parseInt(day)}/${year}`;
+};
+
 export default function GroupDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -152,7 +160,7 @@ export default function GroupDetailsPage() {
           <Button
             variant="outlined"
             startIcon={<Edit />}
-            onClick={() => navigate('/groups')}
+            onClick={() => navigate('/groups', { state: { editGroupId: group.id } })}
           >
             Edit Group
           </Button>
@@ -264,8 +272,8 @@ export default function GroupDetailsPage() {
                 Dates
               </Typography>
               <Typography>
-                {new Date(group.startDate).toLocaleDateString()}
-                {group.endDate && ` - ${new Date(group.endDate).toLocaleDateString()}`}
+                {formatLocalDate(group.startDate)}
+                {group.endDate && ` - ${formatLocalDate(group.endDate)}`}
               </Typography>
             </Grid>
 

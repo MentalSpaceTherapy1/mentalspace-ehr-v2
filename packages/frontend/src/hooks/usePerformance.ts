@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import api from '../lib/api';
 
 export interface PerformanceReview {
   id: string;
@@ -75,10 +73,10 @@ export const usePerformance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/performance/reviews`, {
+      const response = await api.get(`/performance/reviews`, {
         params: filters,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch reviews');
       throw err;
@@ -91,8 +89,8 @@ export const usePerformance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/performance/reviews/${id}`);
-      return response.data;
+      const response = await api.get(`/performance/reviews/${id}`);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch review');
       throw err;
@@ -105,8 +103,8 @@ export const usePerformance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/performance/reviews`, data);
-      return response.data;
+      const response = await api.post(`/performance/reviews`, data);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create review');
       throw err;
@@ -119,8 +117,8 @@ export const usePerformance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.put(`${API_BASE_URL}/performance/reviews/${id}`, data);
-      return response.data;
+      const response = await api.put(`/performance/reviews/${id}`, data);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update review');
       throw err;
@@ -133,8 +131,8 @@ export const usePerformance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/performance/reviews/${id}/submit`);
-      return response.data;
+      const response = await api.post(`/performance/reviews/${id}/submit`);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to submit review');
       throw err;
@@ -147,11 +145,11 @@ export const usePerformance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/performance/reviews/${id}/sign`, {
+      const response = await api.post(`/performance/reviews/${id}/sign`, {
         signature,
         role,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to sign review');
       throw err;
@@ -164,8 +162,8 @@ export const usePerformance = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/performance/stats`);
-      return response.data;
+      const response = await api.get(`/performance/stats`);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch stats');
       throw err;
@@ -180,8 +178,8 @@ export const usePerformance = () => {
       setError(null);
       const formData = new FormData();
       formData.append('file', file);
-      const response = await axios.post(
-        `${API_BASE_URL}/performance/reviews/${reviewId}/attachments`,
+      const response = await api.post(
+        `/performance/reviews/${reviewId}/attachments`,
         formData,
         {
           headers: {
@@ -189,7 +187,7 @@ export const usePerformance = () => {
           },
         }
       );
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to upload attachment');
       throw err;

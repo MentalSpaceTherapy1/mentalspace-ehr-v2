@@ -1,5 +1,6 @@
 import { doubleCsrf } from 'csrf-csrf';
 import cookieParser from 'cookie-parser';
+import { Request } from 'express';
 
 /**
  * CSRF Protection Middleware
@@ -16,15 +17,31 @@ import cookieParser from 'cookie-parser';
 
 const {
   invalidCsrfTokenError,
-  generateToken,
+  generateCsrfToken: generateCsrfTokenFn,
   doubleCsrfProtection,
 } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || 'default-csrf-secret-change-me',
-  cookieName: '__Host-csrf',
+  // Session identifier for CSRF token binding
+  // Uses auth token if available, otherwise falls back to IP + User-Agent hash
+  getSessionIdentifier: (req: Request) => {
+    // Try to use auth token from httpOnly cookie
+    const authToken = req.cookies?.accessToken;
+    if (authToken) {
+      return authToken;
+    }
+    // Fallback: use combination of IP and User-Agent for unauthenticated requests
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const ua = req.headers['user-agent'] || 'unknown';
+    return `${ip}:${ua}`;
+  },
+  // Note: Using 'csrf-token' instead of '__Host-csrf' because __Host- prefix
+  // requires specific conditions (no Domain, Secure flag) that may not work
+  // consistently behind load balancers that terminate SSL
+  cookieName: 'csrf-token',
   cookieOptions: {
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
     httpOnly: true, // Prevent JavaScript access
-    sameSite: 'strict', // Strict same-site policy
+    sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
     path: '/',
     maxAge: 3600000, // 1 hour
   },
@@ -47,7 +64,7 @@ export const csrfProtection = doubleCsrfProtection;
  * Generate CSRF token for client
  * Call this in a GET endpoint to provide token to frontend
  */
-export const generateCsrfToken = generateToken;
+export const generateCsrfToken = generateCsrfTokenFn;
 
 /**
  * Error handler for CSRF token errors

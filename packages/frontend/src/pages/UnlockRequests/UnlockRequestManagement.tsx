@@ -7,6 +7,7 @@ import {
   ClockIcon,
   LockClosedIcon,
 } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 interface UnlockRequest {
   id: string;
@@ -73,12 +74,12 @@ const UnlockRequestManagement: React.FC = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['unlock-requests'] });
       queryClient.invalidateQueries({ queryKey: ['unlock-requests-stats'] });
-      alert(`Request approved. Note unlocked until ${new Date(data.unlockUntil).toLocaleString()}`);
+      toast.success(`Request approved. Note unlocked until ${new Date(data.unlockUntil).toLocaleString()}`);
       setShowApproveModal(false);
       setSelectedRequest(null);
     },
     onError: (error: any) => {
-      alert(error.response?.data?.error || 'Failed to approve request');
+      toast.error(error.response?.data?.error || 'Failed to approve request');
     },
   });
 
@@ -93,13 +94,13 @@ const UnlockRequestManagement: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unlock-requests'] });
       queryClient.invalidateQueries({ queryKey: ['unlock-requests-stats'] });
-      alert('Request denied. Clinician has been notified.');
+      toast.success('Request denied. Clinician has been notified.');
       setShowDenyModal(false);
       setSelectedRequest(null);
       setDenialReason('');
     },
     onError: (error: any) => {
-      alert(error.response?.data?.error || 'Failed to deny request');
+      toast.error(error.response?.data?.error || 'Failed to deny request');
     },
   });
 
@@ -121,7 +122,7 @@ const UnlockRequestManagement: React.FC = () => {
 
   const confirmDeny = () => {
     if (!denialReason.trim()) {
-      alert('Please provide a reason for denying this request');
+      toast.error('Please provide a reason for denying this request');
       return;
     }
 

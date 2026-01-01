@@ -6103,3 +6103,57 @@ model ICDCode {
   @@index([isBillable, isActive])
   @@map("icd_codes")
 }
+
+// ============================================================================
+// CLINICAL NOTE REMINDER CONFIGURATION
+// Module 4 Phase 2.5: Email Reminder System for Clinical Notes
+// ============================================================================
+
+enum NoteReminderConfigType {
+  PRACTICE   // Practice-wide defaults
+  USER       // User-specific overrides
+  NOTE_TYPE  // Note-type specific settings
+}
+
+// Configuration for clinical note completion reminders
+model ClinicalNoteReminderConfig {
+  id                       String                 @id @default(uuid())
+  configurationType        NoteReminderConfigType @default(PRACTICE)
+
+  // Optional associations based on type
+  userId                   String?
+  noteType                 String?                // e.g., "PROGRESS_NOTE", "INTAKE_ASSESSMENT"
+
+  // Core settings
+  enabled                  Boolean                @default(true)
+  reminderIntervals        Int[]                  @default([72, 48, 24]) // Hours before due
+
+  // Overdue reminder settings
+  sendOverdueReminders     Boolean                @default(true)
+  overdueReminderFrequency Int                    @default(24) // Hours between reminders
+  maxOverdueReminders      Int                    @default(3)
+
+  // Sunday warning (remind about notes due Monday)
+  enableSundayWarnings     Boolean                @default(true)
+  sundayWarningTime        String                 @default("17:00")
+
+  // Daily digest
+  enableDailyDigest        Boolean                @default(false)
+  digestTime               String                 @default("09:00")
+  digestDays               String[]               @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+
+  // Escalation settings
+  enableEscalation         Boolean                @default(true)
+  escalationAfterHours     Int                    @default(48) // Hours overdue before escalation
+  escalateTo               String[]               @default([]) // User IDs to escalate to
+  escalationMessage        String?
+
+  // Timestamps
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+
+  @@unique([configurationType, userId, noteType])
+  @@index([configurationType])
+  @@index([userId])
+  @@map("clinical_note_reminder_configs")
+}

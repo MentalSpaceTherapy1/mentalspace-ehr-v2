@@ -11,6 +11,9 @@ const DashboardList: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newDashboardName, setNewDashboardName] = useState('');
   const [newDashboardDescription, setNewDashboardDescription] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dashboardToDelete, setDashboardToDelete] = useState<Dashboard | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadDashboards();
@@ -52,18 +55,30 @@ const DashboardList: React.FC = () => {
     }
   };
 
-  const handleDeleteDashboard = async (dashboardId: string) => {
-    if (!confirm('Are you sure you want to delete this dashboard?')) {
-      return;
-    }
+  const openDeleteDialog = (dashboard: Dashboard) => {
+    setDashboardToDelete(dashboard);
+    setDeleteDialogOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setDashboardToDelete(null);
+  };
+
+  const handleDeleteDashboard = async () => {
+    if (!dashboardToDelete) return;
 
     try {
-      await api.delete(`/dashboards/${dashboardId}`);
-      toast.success('Dashboard deleted');
+      setDeleting(true);
+      await api.delete(`/dashboards/${dashboardToDelete.id}`);
+      toast.success('Dashboard deleted successfully');
+      closeDeleteDialog();
       loadDashboards();
     } catch (error: any) {
       console.error('Failed to delete dashboard:', error);
       toast.error(error.response?.data?.error || 'Failed to delete dashboard');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -170,7 +185,7 @@ const DashboardList: React.FC = () => {
                       ✏️
                     </button>
                     <button
-                      onClick={() => handleDeleteDashboard(dashboard.id)}
+                      onClick={() => openDeleteDialog(dashboard)}
                       className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-bold"
                     >
                       🗑️
@@ -228,6 +243,65 @@ const DashboardList: React.FC = () => {
                     className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl hover:from-cyan-700 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-bold disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     Create
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        {deleteDialogOpen && dashboardToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+              <div className="bg-gradient-to-r from-red-600 to-rose-600 p-6">
+                <h2 className="text-2xl font-bold text-white flex items-center">
+                  <span className="text-3xl mr-3">⚠️</span>
+                  Delete Dashboard
+                </h2>
+              </div>
+              <div className="p-6">
+                <div className="mb-6">
+                  <p className="text-gray-700 text-lg mb-2">
+                    Are you sure you want to delete this dashboard?
+                  </p>
+                  <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mt-4">
+                    <p className="font-bold text-red-800 text-lg">{dashboardToDelete.name}</p>
+                    {dashboardToDelete.description && (
+                      <p className="text-red-600 text-sm mt-1">{dashboardToDelete.description}</p>
+                    )}
+                    <p className="text-red-500 text-xs mt-2">
+                      {dashboardToDelete.widgets?.length || 0} widgets will be removed
+                    </p>
+                  </div>
+                  <p className="text-red-600 font-semibold mt-4 text-sm">
+                    This action cannot be undone.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={closeDeleteDialog}
+                    disabled={deleting}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 font-bold transition-all duration-200 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteDashboard}
+                    disabled={deleting}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-bold disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
+                  >
+                    {deleting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <span className="mr-2">🗑️</span>
+                        Delete
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

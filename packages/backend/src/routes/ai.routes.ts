@@ -386,12 +386,91 @@ router.post('/detect-billing-errors', async (req: Request, res: Response) => {
 });
 
 // ============================================================================
+// FINANCIAL AI (Anthropic Claude)
+// ============================================================================
+
+/**
+ * POST /api/ai/analyze-financial
+ * AI-powered financial data analysis
+ */
+router.post('/analyze-financial', async (req: Request, res: Response) => {
+  try {
+    const { revenue, expenses, appointments, period, additionalContext } = req.body;
+
+    const result = await anthropicService.analyzeFinancialData({
+      revenue,
+      expenses,
+      appointments,
+      period,
+      additionalContext,
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Financial analysis error:', error);
+    res.status(500).json({ error: error.message || 'Failed to analyze financial data' });
+  }
+});
+
+/**
+ * POST /api/ai/enhance-revenue-forecast
+ * Enhanced AI revenue forecasting with insights
+ */
+router.post('/enhance-revenue-forecast', async (req: Request, res: Response) => {
+  try {
+    const { dailyRevenue, appointmentCounts, noShowRates, seasonalFactors } = req.body;
+
+    if (!dailyRevenue || !appointmentCounts || !noShowRates) {
+      return res.status(400).json({ error: 'Historical data is required' });
+    }
+
+    const result = await anthropicService.enhanceRevenueForecast({
+      dailyRevenue,
+      appointmentCounts,
+      noShowRates,
+      seasonalFactors,
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Revenue forecast enhancement error:', error);
+    res.status(500).json({ error: error.message || 'Failed to enhance revenue forecast' });
+  }
+});
+
+/**
+ * POST /api/ai/generate-report-insights
+ * Generate AI insights for reports
+ */
+router.post('/generate-report-insights', async (req: Request, res: Response) => {
+  try {
+    const { reportType, metrics, comparisonPeriod, context } = req.body;
+
+    if (!reportType || !metrics) {
+      return res.status(400).json({ error: 'Report type and metrics are required' });
+    }
+
+    const result = await anthropicService.generateReportInsights({
+      reportType,
+      metrics,
+      comparisonPeriod,
+      context,
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Report insights error:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate report insights' });
+  }
+});
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 
 /**
  * GET /api/ai/health
- * Check AI service health
+ * Check AI service health (Anthropic Claude)
  */
 router.get('/health', async (req: Request, res: Response) => {
   try {
@@ -400,6 +479,7 @@ router.get('/health', async (req: Request, res: Response) => {
     res.json({
       status: isHealthy ? 'healthy' : 'unhealthy',
       service: 'Anthropic Claude AI',
+      purpose: 'Clinical Notes, Financial AI, Analytics, Reports, Billing Intelligence',
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {

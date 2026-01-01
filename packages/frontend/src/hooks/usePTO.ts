@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import api from '../lib/api';
 
 export interface PTORequest {
   id: string;
@@ -75,8 +73,8 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/pto/requests`, data);
-      return response.data;
+      const response = await api.post(`/pto/requests`, data);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create PTO request');
       throw err;
@@ -94,10 +92,10 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/pto/requests`, {
+      const response = await api.get(`/pto/requests`, {
         params: filters,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch PTO requests');
       throw err;
@@ -110,8 +108,8 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/pto/requests/${id}`);
-      return response.data;
+      const response = await api.get(`/pto/requests/${id}`);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch PTO request');
       throw err;
@@ -124,8 +122,8 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.put(`${API_BASE_URL}/pto/requests/${id}`, data);
-      return response.data;
+      const response = await api.put(`/pto/requests/${id}`, data);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update PTO request');
       throw err;
@@ -138,8 +136,8 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/pto/requests/${id}/cancel`);
-      return response.data;
+      const response = await api.post(`/pto/requests/${id}/cancel`);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to cancel PTO request');
       throw err;
@@ -152,10 +150,10 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/pto/requests/${id}/approve`, {
+      const response = await api.post(`/pto/requests/${id}/approve`, {
         notes,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to approve PTO request');
       throw err;
@@ -168,10 +166,10 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/pto/requests/${id}/deny`, {
+      const response = await api.post(`/pto/requests/${id}/deny`, {
         notes,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to deny PTO request');
       throw err;
@@ -184,8 +182,8 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/pto/balance/${employeeId}`);
-      return response.data;
+      const response = await api.get(`/pto/balance/${employeeId}`);
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch PTO balance');
       throw err;
@@ -198,10 +196,10 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/pto/team-calendar`, {
+      const response = await api.get(`/pto/team-calendar`, {
         params: { startDate, endDate, departmentId },
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch team calendar');
       throw err;
@@ -214,10 +212,10 @@ export const usePTO = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/pto/check-conflicts`, {
+      const response = await api.get(`/pto/check-conflicts`, {
         params: { startDate, endDate, departmentId },
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to check conflicts');
       throw err;

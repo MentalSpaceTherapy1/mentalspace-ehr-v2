@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as portalApi from '../../lib/portalApi';
 import FormSubmissionViewer from './FormSubmissionViewer';
+import ConfirmModal from '../ConfirmModal';
 
 interface PortalTabProps {
   clientId: string;
@@ -24,6 +25,21 @@ export default function PortalTab({ clientId }: PortalTabProps) {
 
   // Form submission viewer state
   const [viewingSubmission, setViewingSubmission] = useState<{ clientId: string; assignmentId: string } | null>(null);
+
+  // Revoke document confirmation state
+  const [revokeConfirm, setRevokeConfirm] = useState<{ isOpen: boolean; documentId: string }>({
+    isOpen: false,
+    documentId: '',
+  });
+
+  const handleRevokeClick = (documentId: string) => {
+    setRevokeConfirm({ isOpen: true, documentId });
+  };
+
+  const confirmRevoke = () => {
+    revokeDocumentMutation.mutate(revokeConfirm.documentId);
+    setRevokeConfirm({ isOpen: false, documentId: '' });
+  };
 
   // Fetch form library
   const { data: formLibrary = [], isLoading: loadingForms } = useQuery({
@@ -555,13 +571,7 @@ export default function PortalTab({ clientId }: PortalTabProps) {
                         Preview
                       </button>
                       <button
-                        onClick={() => {
-                          if (
-                            window.confirm('Are you sure you want to revoke access to this document?')
-                          ) {
-                            revokeDocumentMutation.mutate(document.id);
-                          }
-                        }}
+                        onClick={() => handleRevokeClick(document.id)}
                         disabled={revokeDocumentMutation.isPending}
                         className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
                       >
@@ -611,6 +621,17 @@ export default function PortalTab({ clientId }: PortalTabProps) {
           onClose={() => setViewingSubmission(null)}
         />
       )}
+
+      {/* Revoke Document Confirmation Modal */}
+      <ConfirmModal
+        isOpen={revokeConfirm.isOpen}
+        onClose={() => setRevokeConfirm({ isOpen: false, documentId: '' })}
+        onConfirm={confirmRevoke}
+        title="Revoke Document Access"
+        message="Are you sure you want to revoke access to this document?"
+        confirmText="Revoke Access"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

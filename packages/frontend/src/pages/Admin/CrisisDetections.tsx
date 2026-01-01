@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import {
   Box,
   Container,
@@ -174,7 +175,7 @@ export default function CrisisDetections() {
 
   const handleSubmitReview = async () => {
     if (!selectedLog || !reviewNotes.trim()) {
-      alert('Please provide review notes');
+      toast.error('Please provide review notes');
       return;
     }
 
@@ -192,9 +193,10 @@ export default function CrisisDetections() {
       await fetchStats();
 
       handleCloseReviewDialog();
+      toast.success('Review submitted successfully');
     } catch (err: any) {
       console.error('Failed to submit review:', err);
-      alert(err.response?.data?.message || 'Failed to submit review');
+      toast.error(err.response?.data?.message || 'Failed to submit review');
     } finally {
       setSubmitting(false);
     }

@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 export interface PurchaseOrder {
   id: string;
@@ -60,7 +58,6 @@ export const usePurchaseOrders = (filters?: {
   const fetchPurchaseOrders = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
 
       const params = new URLSearchParams();
       if (filters?.status) params.append('status', filters.status);
@@ -68,10 +65,7 @@ export const usePurchaseOrders = (filters?: {
       if (filters?.startDate) params.append('startDate', filters.startDate);
       if (filters?.endDate) params.append('endDate', filters.endDate);
 
-      const response = await axios.get(
-        `${API_URL}/api/purchase-orders?${params.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/purchase-orders?${params.toString()}`);
       setPurchaseOrders(response.data);
       setError(null);
     } catch (err: any) {
@@ -97,10 +91,7 @@ export const usePurchaseOrder = (id: string) => {
     const fetchPurchaseOrder = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/api/purchase-orders/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get(`/purchase-orders/${id}`);
         setPurchaseOrder(response.data);
         setError(null);
       } catch (err: any) {
@@ -125,10 +116,7 @@ export const usePOStats = () => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/api/purchase-orders/stats`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/purchase-orders/stats');
         setStats(response.data);
         setError(null);
       } catch (err: any) {
@@ -145,58 +133,32 @@ export const usePOStats = () => {
 };
 
 export const createPurchaseOrder = async (data: Partial<PurchaseOrder>) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(`${API_URL}/api/purchase-orders`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const response = await api.post('/purchase-orders', data);
   return response.data;
 };
 
 export const updatePurchaseOrder = async (id: string, data: Partial<PurchaseOrder>) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.put(`${API_URL}/api/purchase-orders/${id}`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const response = await api.put(`/purchase-orders/${id}`, data);
   return response.data;
 };
 
 export const approvePurchaseOrder = async (id: string, notes?: string) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_URL}/api/purchase-orders/${id}/approve`,
-    { notes },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const response = await api.post(`/purchase-orders/${id}/approve`, { notes });
   return response.data;
 };
 
 export const rejectPurchaseOrder = async (id: string, notes: string) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_URL}/api/purchase-orders/${id}/reject`,
-    { notes },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const response = await api.post(`/purchase-orders/${id}/reject`, { notes });
   return response.data;
 };
 
 export const receivePurchaseOrder = async (id: string) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_URL}/api/purchase-orders/${id}/receive`,
-    {},
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const response = await api.post(`/purchase-orders/${id}/receive`, {});
   return response.data;
 };
 
 export const cancelPurchaseOrder = async (id: string, reason: string) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_URL}/api/purchase-orders/${id}/cancel`,
-    { reason },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const response = await api.post(`/purchase-orders/${id}/cancel`, { reason });
   return response.data;
 };
 
@@ -206,19 +168,14 @@ export const exportPurchaseOrders = async (filters?: {
   startDate?: string;
   endDate?: string;
 }) => {
-  const token = localStorage.getItem('token');
   const params = new URLSearchParams();
   if (filters?.status) params.append('status', filters.status);
   if (filters?.vendorId) params.append('vendorId', filters.vendorId);
   if (filters?.startDate) params.append('startDate', filters.startDate);
   if (filters?.endDate) params.append('endDate', filters.endDate);
 
-  const response = await axios.get(
-    `${API_URL}/api/purchase-orders/export?${params.toString()}`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: 'blob'
-    }
-  );
+  const response = await api.get(`/purchase-orders/export?${params.toString()}`, {
+    responseType: 'blob'
+  });
   return response.data;
 };

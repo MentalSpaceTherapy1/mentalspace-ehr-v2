@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 interface Message {
   id: string;
@@ -46,11 +44,8 @@ export const useMessaging = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/messaging/messages`, {
+      const response = await api.get('/messaging/messages', {
         params: { channelId },
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
       });
       setMessages(response.data);
     } catch (err: any) {
@@ -64,11 +59,7 @@ export const useMessaging = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/messaging/channels`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get('/messaging/channels');
       setChannels(response.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch channels');
@@ -102,9 +93,8 @@ export const useMessaging = () => {
         });
       }
 
-      const response = await axios.post(`${API_URL}/api/messaging/messages`, formData, {
+      const response = await api.post('/messaging/messages', formData, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'multipart/form-data',
         },
       });
@@ -126,11 +116,7 @@ export const useMessaging = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API_URL}/api/messaging/channels`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.post('/messaging/channels', data);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create channel');
@@ -142,15 +128,7 @@ export const useMessaging = () => {
 
   const markAsRead = async (messageId: string) => {
     try {
-      await axios.patch(
-        `${API_URL}/api/messaging/messages/${messageId}/read`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
+      await api.patch(`/messaging/messages/${messageId}/read`, {});
     } catch (err: any) {
       console.error('Failed to mark message as read:', err);
     }
@@ -160,11 +138,8 @@ export const useMessaging = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/messaging/messages/search`, {
+      const response = await api.get('/messaging/messages/search', {
         params: { query },
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
       });
       return response.data;
     } catch (err: any) {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import {
   Save,
@@ -65,15 +66,15 @@ export default function CourseForm({ courseId, initialData }: CourseFormProps) {
     try {
       if (courseId) {
         await updateMutation.mutateAsync({ courseId, courseData: formData });
-        alert('Course updated successfully!');
+        toast.success('Course updated successfully!');
       } else {
         await createMutation.mutateAsync(formData);
-        alert('Course created successfully!');
+        toast.success('Course created successfully!');
       }
       navigate('/training/admin/courses');
     } catch (error) {
       console.error('Error saving course:', error);
-      alert('Failed to save course');
+      toast.error('Failed to save course');
     }
   };
 

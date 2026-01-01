@@ -283,13 +283,18 @@ export default function SmartNoteCreator() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  // Timezone-safe date formatting - parses ISO string directly to avoid timezone shifts
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'Not specified';
+    const datePart = dateString.split('T')[0];
+    if (!datePart) return 'Not specified';
+    const [year, month, day] = datePart.split('-');
+    if (!year || !month || !day) return 'Not specified';
+    // Create date using local timezone to get correct weekday
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${weekdayNames[date.getDay()]}, ${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
   };
 
   const getStatusColor = (status: string) => {

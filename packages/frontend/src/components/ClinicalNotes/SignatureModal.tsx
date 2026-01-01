@@ -18,7 +18,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface SignatureModalProps {
   open: boolean;
@@ -58,7 +58,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
     setAttestationLoading(true);
     setError('');
     try {
-      const response = await axios.get(
+      const response = await api.get(
         `/signatures/attestation/${noteType}`,
         {
           params: { signatureType },
@@ -76,7 +76,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
 
   const fetchSignatureStatus = async () => {
     try {
-      const response = await axios.get('/users/signature-status');
+      const response = await api.get('/users/signature-status');
       setHasPin(response.data.data.hasPinConfigured);
       setHasPassword(response.data.data.hasPasswordConfigured);
 

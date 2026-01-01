@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import { UserRole } from '@mentalspace/shared';
 
 interface User {
@@ -24,6 +27,7 @@ export default function UserDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['user', id],
@@ -40,6 +44,11 @@ export default function UserDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', id] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User deactivated successfully');
+      setShowDeactivateModal(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to deactivate user');
     },
   });
 
@@ -50,6 +59,10 @@ export default function UserDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', id] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User activated successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to activate user');
     },
   });
 
@@ -178,11 +191,7 @@ export default function UserDetail() {
               </button>
               {user.isActive ? (
                 <button
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to deactivate this user?')) {
-                      deactivateMutation.mutate();
-                    }
-                  }}
+                  onClick={() => setShowDeactivateModal(true)}
                   disabled={deactivateMutation.isPending}
                   className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:from-red-600 hover:to-pink-600 shadow-lg shadow-red-200 transform hover:scale-105 transition-all duration-200 font-bold disabled:opacity-50 flex items-center justify-center"
                 >
@@ -324,17 +333,13 @@ export default function UserDetail() {
                 <span className="mr-2">✏️</span> Edit Profile
               </button>
               <button
-                onClick={() => {
-                  alert('Password reset functionality coming soon');
-                }}
+                onClick={() => toast('Password reset functionality coming soon', { icon: '🔑' })}
                 className="w-full px-4 py-3 text-left text-sm font-bold text-white bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center"
               >
                 <span className="mr-2">🔑</span> Reset Password
               </button>
               <button
-                onClick={() => {
-                  alert('Activity log functionality coming soon');
-                }}
+                onClick={() => toast('Activity log functionality coming soon', { icon: '📝' })}
                 className="w-full px-4 py-3 text-left text-sm font-bold text-white bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center"
               >
                 <span className="mr-2">📝</span> View Activity Log
@@ -343,6 +348,19 @@ export default function UserDetail() {
           </div>
         </div>
       </div>
+
+      {/* Deactivate Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeactivateModal}
+        onClose={() => setShowDeactivateModal(false)}
+        onConfirm={() => deactivateMutation.mutate()}
+        title="Deactivate User"
+        message={`Are you sure you want to deactivate ${user?.firstName} ${user?.lastName}? They will no longer be able to access the system.`}
+        confirmText="Deactivate"
+        cancelText="Cancel"
+        icon="danger"
+        isLoading={deactivateMutation.isPending}
+      />
     </div>
   );
 }

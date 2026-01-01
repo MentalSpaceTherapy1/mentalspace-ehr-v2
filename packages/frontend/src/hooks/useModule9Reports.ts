@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 export interface Module9Report {
   id: string;
@@ -174,9 +172,7 @@ export const useModule9Reports = () => {
 
   const loadFavorites = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/reports/favorites`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get('/reports/favorites');
       setFavoriteReports(response.data.favorites || []);
     } catch (err) {
       console.error('Failed to load favorites:', err);
@@ -185,9 +181,7 @@ export const useModule9Reports = () => {
 
   const loadRecentReports = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/reports/recent`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get('/reports/recent');
       setRecentReports(response.data.reports || []);
     } catch (err) {
       console.error('Failed to load recent reports:', err);
@@ -198,15 +192,10 @@ export const useModule9Reports = () => {
     try {
       const isFavorite = favoriteReports.includes(reportId);
       if (isFavorite) {
-        await axios.delete(`${API_URL}/api/reports/favorites/${reportId}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        await api.delete(`/reports/favorites/${reportId}`);
         setFavoriteReports(prev => prev.filter(id => id !== reportId));
       } else {
-        await axios.post(`${API_URL}/api/reports/favorites`,
-          { reportId },
-          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-        );
+        await api.post('/reports/favorites', { reportId });
         setFavoriteReports(prev => [...prev, reportId]);
       }
     } catch (err) {
@@ -222,12 +211,10 @@ export const useModule9Reports = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API_URL}/api/reports/generate`, {
+      const response = await api.post('/reports/generate', {
         reportType,
         filters,
         dateRange
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
 
       loadRecentReports(); // Refresh recent reports
@@ -246,11 +233,10 @@ export const useModule9Reports = () => {
     options: any = {}
   ): Promise<Blob> => {
     try {
-      const response = await axios.post(`${API_URL}/api/reports/${reportId}/export`, {
+      const response = await api.post(`/reports/${reportId}/export`, {
         format,
         ...options
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         responseType: 'blob'
       });
 
@@ -286,9 +272,7 @@ export const useCustomReports = () => {
   const loadCustomReports = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/custom-reports`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get('/custom-reports');
       setCustomReports(response.data.reports || []);
     } catch (err) {
       console.error('Failed to load custom reports:', err);
@@ -301,9 +285,7 @@ export const useCustomReports = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API_URL}/api/custom-reports`, report, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.post('/custom-reports', report);
 
       await loadCustomReports();
       return response.data;
@@ -317,9 +299,7 @@ export const useCustomReports = () => {
 
   const deleteCustomReport = async (reportId: string) => {
     try {
-      await axios.delete(`${API_URL}/api/custom-reports/${reportId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      await api.delete(`/custom-reports/${reportId}`);
       await loadCustomReports();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete custom report');
@@ -360,9 +340,7 @@ export const useAuditLogs = () => {
         if (value) params.append(key, value.toString());
       });
 
-      const response = await axios.get(`${API_URL}/api/audit-logs?${params}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get(`/audit-logs?${params}`);
 
       setLogs(response.data.logs || []);
       setTotalCount(response.data.total || 0);
@@ -378,11 +356,10 @@ export const useAuditLogs = () => {
     format: 'csv' | 'excel'
   ): Promise<Blob> => {
     try {
-      const response = await axios.post(`${API_URL}/api/audit-logs/export`, {
+      const response = await api.post('/audit-logs/export', {
         filters,
         format
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         responseType: 'blob'
       });
 
@@ -414,9 +391,7 @@ export const useDashboardWidgets = () => {
   const loadDashboard = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/dashboards/widgets`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get('/dashboards/widgets');
       setWidgets(response.data.widgets || []);
     } catch (err) {
       console.error('Failed to load dashboard:', err);
@@ -427,10 +402,7 @@ export const useDashboardWidgets = () => {
 
   const saveDashboard = async (widgets: DashboardWidget[]) => {
     try {
-      await axios.post(`${API_URL}/api/dashboards/widgets`,
-        { widgets },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      await api.post('/dashboards/widgets', { widgets });
       setWidgets(widgets);
     } catch (err) {
       console.error('Failed to save dashboard:', err);

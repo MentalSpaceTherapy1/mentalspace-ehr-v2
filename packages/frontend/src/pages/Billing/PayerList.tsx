@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Payer {
   id: string;
@@ -26,6 +28,11 @@ const PayerList: React.FC = () => {
   const [stats, setStats] = useState<PayerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: '',
+  });
   const [filterType, setFilterType] = useState<string>('ALL');
   const [filterActive, setFilterActive] = useState<string>('ALL');
 
@@ -37,7 +44,7 @@ const PayerList: React.FC = () => {
   const fetchPayers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/v1/payers');
+      const response = await api.get('/payers');
       setPayers(response.data.data);
       setError(null);
     } catch (err: any) {
@@ -49,24 +56,27 @@ const PayerList: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('/api/v1/payers/stats');
+      const response = await api.get('/payers/stats');
       setStats(response.data.data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete ${name}? This will also delete all associated rules.`)) {
-      return;
-    }
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteConfirm({ isOpen: true, id, name });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteConfirm.id) return;
     try {
-      await axios.delete(`/api/v1/payers/${id}`);
+      await api.delete(`/payers/${deleteConfirm.id}`);
       fetchPayers();
       fetchStats();
+      toast.success('Payer deleted successfully');
+      setDeleteConfirm({ isOpen: false, id: '', name: '' });
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete payer');
+      toast.error(err.response?.data?.message || 'Failed to delete payer');
     }
   };
 
@@ -257,7 +267,7 @@ const PayerList: React.FC = () => {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(payer.id, payer.name)}
+                      onClick={() => handleDeleteClick(payer.id, payer.name)}
                       className="text-red-600 hover:text-red-900"
                     >
                       Delete
@@ -269,6 +279,18 @@ const PayerList: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, id: '', name: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Payer"
+        message={`Are you sure you want to delete ${deleteConfirm.name}? This will also delete all associated rules.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        icon="warning"
+      />
     </div>
   );
 };

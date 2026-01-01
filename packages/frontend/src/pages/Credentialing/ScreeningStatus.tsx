@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   Shield,
   Search,
@@ -13,21 +14,42 @@ import {
   FileText,
 } from 'lucide-react';
 import { useScreeningResults, useRunScreening } from '../../hooks/useCredentialing';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function ScreeningStatus() {
   const [selectedStaff, setSelectedStaff] = useState('');
   const { data: screenings, isLoading } = useScreeningResults(selectedStaff || undefined);
   const runScreening = useRunScreening();
 
-  const handleRunScreening = async (staffId: string, staffName: string, type: 'OIG' | 'SAM' | 'NPDB') => {
-    if (window.confirm(`Run ${type} screening for ${staffName}?`)) {
-      try {
-        await runScreening.mutateAsync({ staffId, screeningType: type });
-        alert('Screening initiated successfully');
-      } catch (error) {
-        alert('Failed to run screening');
-      }
+  const [screeningConfirm, setScreeningConfirm] = useState<{
+    isOpen: boolean;
+    staffId: string;
+    staffName: string;
+    type: 'OIG' | 'SAM' | 'NPDB';
+  }>({
+    isOpen: false,
+    staffId: '',
+    staffName: '',
+    type: 'OIG',
+  });
+
+  const handleRunScreeningClick = (staffId: string, staffName: string, type: 'OIG' | 'SAM' | 'NPDB') => {
+    setScreeningConfirm({ isOpen: true, staffId, staffName, type });
+  };
+
+  const confirmRunScreening = async () => {
+    const { staffId, type } = screeningConfirm;
+    setScreeningConfirm({ isOpen: false, staffId: '', staffName: '', type: 'OIG' });
+    try {
+      await runScreening.mutateAsync({ staffId, screeningType: type });
+      toast.success('Screening initiated successfully');
+    } catch (error) {
+      toast.error('Failed to run screening');
     }
+  };
+
+  const handleRunScreening = async (staffId: string, staffName: string, type: 'OIG' | 'SAM' | 'NPDB') => {
+    handleRunScreeningClick(staffId, staffName, type);
   };
 
   const getStatusBadge = (status: string) => {
@@ -126,21 +148,21 @@ export default function ScreeningStatus() {
         </p>
         <div className="flex gap-3">
           <button
-            onClick={() => alert('Running OIG screening for all staff...')}
+            onClick={() => toast('Running OIG screening for all staff...', { icon: '🔍' })}
             className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all font-bold"
           >
             <Shield className="w-5 h-5" />
             Run OIG Screening
           </button>
           <button
-            onClick={() => alert('Running SAM screening for all staff...')}
+            onClick={() => toast('Running SAM screening for all staff...', { icon: '🛡️' })}
             className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all font-bold"
           >
             <Shield className="w-5 h-5" />
             Run SAM Screening
           </button>
           <button
-            onClick={() => alert('Running NPDB screening for all staff...')}
+            onClick={() => toast('Running NPDB screening for all staff...', { icon: '📋' })}
             className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all font-bold"
           >
             <Shield className="w-5 h-5" />
@@ -205,6 +227,16 @@ export default function ScreeningStatus() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={screeningConfirm.isOpen}
+        onClose={() => setScreeningConfirm({ isOpen: false, staffId: '', staffName: '', type: 'OIG' })}
+        onConfirm={confirmRunScreening}
+        title="Run Screening"
+        message={`Run ${screeningConfirm.type} screening for ${screeningConfirm.staffName}?`}
+        confirmText="Run Screening"
+        confirmVariant="primary"
+      />
     </div>
   );
 }

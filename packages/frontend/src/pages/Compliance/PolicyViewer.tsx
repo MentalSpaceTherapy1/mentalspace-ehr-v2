@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { sanitizeHtml } from '../../utils/sanitizeHtml';
 import {
   Box,
@@ -89,7 +90,7 @@ export default function PolicyViewer() {
 
   const handleAcknowledge = async () => {
     if (readProgress < 90) {
-      alert('Please read through the entire policy before acknowledging');
+      toast.error('Please read through the entire policy before acknowledging');
       return;
     }
     const success = await acknowledgePolicy(id!, {});

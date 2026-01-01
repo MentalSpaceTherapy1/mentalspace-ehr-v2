@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useParams } from 'react-router-dom';
 import {
   Upload,
@@ -67,13 +68,13 @@ export default function DocumentUpload() {
       ];
 
       if (!allowedTypes.includes(file.type)) {
-        alert(`Invalid file type: ${file.name}`);
+        toast.error(`Invalid file type: ${file.name}`);
         return false;
       }
 
       // Validate file size (10MB max)
       if (file.size > 10 * 1024 * 1024) {
-        alert(`File too large: ${file.name} (max 10MB)`);
+        toast.error(`File too large: ${file.name} (max 10MB)`);
         return false;
       }
 

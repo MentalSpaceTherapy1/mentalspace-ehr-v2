@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Shield,
@@ -65,13 +66,13 @@ export default function CredentialForm() {
     // Validate file type
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Only PDF and image files are allowed');
+      toast.error('Only PDF and image files are allowed');
       return;
     }
 
     // Validate file size (10MB max)
     if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB');
+      toast.error('File size must be less than 10MB');
       return;
     }
 
@@ -145,7 +146,7 @@ export default function CredentialForm() {
 
       navigate('/credentialing/list');
     } catch (error) {
-      alert('Failed to save credential');
+      toast.error('Failed to save credential');
     }
   };
 

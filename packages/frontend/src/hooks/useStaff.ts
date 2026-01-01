@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import api from '../lib/api';
 
 export interface Staff {
   id: string;
@@ -83,11 +81,7 @@ export const useStaff = () => {
       if (filters?.status) params.append('status', filters.status);
       if (filters?.search) params.append('search', filters.search);
 
-      const response = await axios.get(`${API_BASE_URL}/staff?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/staff?${params.toString()}`);
       // Extract the staff array from the wrapped response
       setStaff(Array.isArray(response.data) ? response.data : (response.data?.data || []));
       setError(null);
@@ -101,11 +95,7 @@ export const useStaff = () => {
 
   const getStaffById = async (id: string): Promise<Staff | null> => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/staff/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/staff/${id}`);
       // Extract the staff member from the wrapped response
       return response.data?.data || response.data;
     } catch (err: any) {
@@ -116,11 +106,7 @@ export const useStaff = () => {
 
   const createStaff = async (data: Partial<Staff>): Promise<Staff | null> => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/staff`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.post(`/staff`, data);
       await fetchStaff();
       // Extract the staff member from the wrapped response
       return response.data?.data || response.data;
@@ -132,11 +118,7 @@ export const useStaff = () => {
 
   const updateStaff = async (id: string, data: Partial<Staff>): Promise<Staff | null> => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/staff/${id}`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.put(`/staff/${id}`, data);
       await fetchStaff();
       // Extract the staff member from the wrapped response
       return response.data?.data || response.data;
@@ -148,11 +130,7 @@ export const useStaff = () => {
 
   const deleteStaff = async (id: string): Promise<boolean> => {
     try {
-      await axios.delete(`${API_BASE_URL}/staff/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      await api.delete(`/staff/${id}`);
       await fetchStaff();
       return true;
     } catch (err: any) {
@@ -163,11 +141,7 @@ export const useStaff = () => {
 
   const getOrgChart = async (): Promise<OrgChartNode | null> => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/staff/org-chart`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/staff/org-chart`);
       // Extract the org chart from the wrapped response
       return response.data?.data || response.data;
     } catch (err: any) {
@@ -181,9 +155,8 @@ export const useStaff = () => {
       const formData = new FormData();
       formData.append('photo', file);
 
-      const response = await axios.post(`${API_BASE_URL}/staff/${staffId}/photo`, formData, {
+      const response = await api.post(`/staff/${staffId}/photo`, formData, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'multipart/form-data',
         },
       });
@@ -220,11 +193,7 @@ export const useStaffCredentials = (staffId: string) => {
   const fetchCredentials = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/staff/${staffId}/credentials`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/staff/${staffId}/credentials`);
       // Extract the credentials array from the wrapped response
       setCredentials(Array.isArray(response.data) ? response.data : (response.data?.data || []));
       setError(null);
@@ -238,11 +207,7 @@ export const useStaffCredentials = (staffId: string) => {
 
   const addCredential = async (data: Partial<Credential>): Promise<Credential | null> => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/staff/${staffId}/credentials`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.post(`/staff/${staffId}/credentials`, data);
       await fetchCredentials();
       // Extract the credential from the wrapped response
       return response.data?.data || response.data;
@@ -267,11 +232,7 @@ export const useStaffTraining = (staffId: string) => {
   const fetchTraining = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/staff/${staffId}/training`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/staff/${staffId}/training`);
       // Extract the training array from the wrapped response
       setTraining(Array.isArray(response.data) ? response.data : (response.data?.data || []));
       setError(null);
@@ -285,11 +246,7 @@ export const useStaffTraining = (staffId: string) => {
 
   const addTraining = async (data: Partial<Training>): Promise<Training | null> => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/staff/${staffId}/training`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.post(`/staff/${staffId}/training`, data);
       await fetchTraining();
       // Extract the training record from the wrapped response
       return response.data?.data || response.data;

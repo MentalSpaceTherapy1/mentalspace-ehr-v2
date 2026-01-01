@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import api from '../../lib/api';
 import { format } from 'date-fns';
 
@@ -151,7 +152,7 @@ export default function SupervisionSessionForm() {
       navigate('/supervision/sessions');
     } catch (error) {
       console.error('Error saving session:', error);
-      alert('Failed to save session. Please try again.');
+      toast.error('Failed to save session. Please try again.');
     } finally {
       setLoading(false);
     }

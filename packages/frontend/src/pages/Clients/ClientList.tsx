@@ -131,8 +131,8 @@ export default function ClientList() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-2xl shadow-xl mb-6 overflow-hidden">
-        <div className="p-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
+      <div className="bg-white rounded-2xl shadow-xl mb-6">
+        <div className="p-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100 rounded-t-2xl relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
             <div className="md:col-span-2">
@@ -162,13 +162,13 @@ export default function ClientList() {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:ring-4 focus:ring-indigo-300 focus:border-indigo-400 transition-all duration-200 font-medium"
+                className="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:ring-4 focus:ring-indigo-300 focus:border-indigo-400 transition-all duration-200 font-medium cursor-pointer appearance-auto bg-white"
               >
                 <option value="">All Status</option>
-                <option value="ACTIVE">✅ Active</option>
-                <option value="INACTIVE">⏸️ Inactive</option>
-                <option value="DISCHARGED">🔵 Discharged</option>
-                <option value="DECEASED">🔴 Deceased</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="DISCHARGED">Discharged</option>
+                <option value="DECEASED">Deceased</option>
               </select>
             </div>
           </div>
@@ -307,7 +307,7 @@ export default function ClientList() {
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-slate-50 border-t border-gray-200">
+          <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-slate-50 border-t border-gray-200 rounded-b-2xl">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}

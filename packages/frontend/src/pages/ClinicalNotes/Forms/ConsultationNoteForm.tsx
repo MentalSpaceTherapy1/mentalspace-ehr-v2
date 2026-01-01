@@ -17,6 +17,7 @@ import SessionInputBox from '../../../components/AI/SessionInputBox';
 import ReviewModal from '../../../components/AI/ReviewModal';
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
+import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
 
 export default function ConsultationNoteForm() {
   const { clientId, noteId } = useParams();
@@ -60,6 +61,22 @@ export default function ConsultationNoteForm() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  // Session-safe saving (handles session timeout with local storage backup)
+  const {
+    sessionError,
+    clearSessionError,
+    backupToLocalStorage,
+    clearBackup,
+    handleSaveError,
+    hasRecoveredDraft,
+    applyRecoveredDraft,
+    discardRecoveredDraft,
+  } = useSessionSafeSave({
+    noteType: 'ConsultationNote',
+    clientId: clientId || '',
+    noteId,
+  });
 
   // Fetch client data
   const { data: clientData } = useQuery({
@@ -168,31 +185,62 @@ export default function ConsultationNoteForm() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       if (isEditMode) {
         return api.put(`/clinical-notes/${noteId}`, data);
       }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
+    },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
     },
   });
 
   const saveDraftMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       if (isEditMode) {
         return api.put(`/clinical-notes/${noteId}`, data);
       }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
+    },
   });
+
+  // Handle recovering draft data
+  const handleRecoverDraft = () => {
+    const recovered = applyRecoveredDraft();
+    if (recovered) {
+      if (recovered.sessionDate) setSessionDate(recovered.sessionDate);
+      if (recovered.consultedPerson) setConsultedPerson(recovered.consultedPerson);
+      if (recovered.organization) setOrganization(recovered.organization);
+      if (recovered.reasonForConsultation) setReasonForConsultation(recovered.reasonForConsultation);
+      if (recovered.informationShared) setInformationShared(recovered.informationShared);
+      if (recovered.recommendationsReceived) setRecommendationsReceived(recovered.recommendationsReceived);
+      if (recovered.followUpActions) setFollowUpActions(recovered.followUpActions);
+      if (recovered.cptCode) setCptCode(recovered.cptCode);
+      if (recovered.billable !== undefined) setBillable(recovered.billable);
+      if (recovered.appointmentId) setSelectedAppointmentId(recovered.appointmentId);
+    }
+  };
 
   // AI Handler Functions
   const handleGenerateFromTranscription = async (sessionNotes: string) => {
@@ -331,6 +379,19 @@ export default function ConsultationNoteForm() {
           </h1>
           <p className="text-gray-600 mt-2">Document consultation with other providers</p>
         </div>
+
+        {/* Session Expired Alert */}
+        {sessionError && (
+          <SessionExpiredAlert message={sessionError} onDismiss={clearSessionError} />
+        )}
+
+        {/* Recovered Draft Alert */}
+        {hasRecoveredDraft && (
+          <RecoveredDraftAlert
+            onRecover={handleRecoverDraft}
+            onDiscard={discardRecoveredDraft}
+          />
+        )}
 
         {/* Client ID Validation */}
         {!clientId && (

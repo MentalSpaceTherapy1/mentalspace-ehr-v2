@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from './ConfirmModal';
 
 interface EmergencyContact {
   id: string;
@@ -24,6 +26,11 @@ export default function EmergencyContacts({ clientId }: EmergencyContactsProps) 
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<EmergencyContact | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: '',
+  });
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -41,10 +48,7 @@ export default function EmergencyContacts({ clientId }: EmergencyContactsProps) 
   const { data: contacts, isLoading } = useQuery({
     queryKey: ['emergency-contacts', clientId],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`/emergency-contacts/client/${clientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/emergency-contacts/client/${clientId}`);
       return response.data.data;
     },
   });
@@ -52,36 +56,39 @@ export default function EmergencyContacts({ clientId }: EmergencyContactsProps) 
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
       if (editingContact) {
-        const response = await axios.patch(`/emergency-contacts/${editingContact.id}`, data, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.patch(`/emergency-contacts/${editingContact.id}`, data);
         return response.data;
       } else {
-        const response = await axios.post('/emergency-contacts', { ...data, clientId }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.post('/emergency-contacts', { ...data, clientId });
         return response.data;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emergency-contacts', clientId] });
+      toast.success('Emergency contact saved successfully');
       resetForm();
+    },
+    onError: (error: any) => {
+      console.error('Failed to save emergency contact:', error);
+      toast.error(error.response?.data?.error || 'Failed to save emergency contact');
     },
   });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete(`/emergency-contacts/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.delete(`/emergency-contacts/${id}`);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emergency-contacts', clientId] });
+      toast.success('Emergency contact deleted successfully');
+      setDeleteConfirm({ isOpen: false, id: '', name: '' });
+    },
+    onError: (error: any) => {
+      console.error('Failed to delete emergency contact:', error);
+      toast.error(error.response?.data?.error || 'Failed to delete emergency contact');
     },
   });
 
@@ -103,8 +110,12 @@ export default function EmergencyContacts({ clientId }: EmergencyContactsProps) 
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      deleteMutation.mutate(id);
+    setDeleteConfirm({ isOpen: true, id, name });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm.id) {
+      deleteMutation.mutate(deleteConfirm.id);
     }
   };
 
@@ -428,6 +439,19 @@ export default function EmergencyContacts({ clientId }: EmergencyContactsProps) 
           <p className="text-sm text-gray-500 mt-1">Click "Add Contact" to create one</p>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, id: '', name: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Emergency Contact"
+        message={`Are you sure you want to delete ${deleteConfirm.name}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        icon="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

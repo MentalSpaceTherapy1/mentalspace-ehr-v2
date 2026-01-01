@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface PayerRule {
   id: string;
@@ -31,6 +33,15 @@ const PayerRuleList: React.FC = () => {
 
   const [payer, setPayer] = useState<Payer | null>(null);
   const [rules, setRules] = useState<PayerRule[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; credential: string }>({
+    isOpen: false,
+    id: '',
+    credential: '',
+  });
+  const [cloneConfirm, setCloneConfirm] = useState<{ isOpen: boolean; id: string }>({
+    isOpen: false,
+    id: '',
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterActive, setFilterActive] = useState<string>('ACTIVE');
@@ -43,7 +54,7 @@ const PayerRuleList: React.FC = () => {
 
   const fetchPayer = async () => {
     try {
-      const response = await axios.get(`/api/v1/payers/${payerId}`);
+      const response = await api.get(`/payers/${payerId}`);
       setPayer(response.data.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch payer');
@@ -53,7 +64,7 @@ const PayerRuleList: React.FC = () => {
   const fetchRules = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/v1/payer-rules?payerId=${payerId}`);
+      const response = await api.get(`/payer-rules?payerId=${payerId}`);
       setRules(response.data.data);
       setError(null);
     } catch (err: any) {
@@ -63,26 +74,35 @@ const PayerRuleList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (ruleId: string, credential: string) => {
-    if (!window.confirm(`Delete rule for ${credential}?`)) {
-      return;
-    }
+  const handleDeleteClick = (ruleId: string, credential: string) => {
+    setDeleteConfirm({ isOpen: true, id: ruleId, credential });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteConfirm.id) return;
     try {
-      await axios.delete(`/api/v1/payer-rules/${ruleId}`);
+      await api.delete(`/payer-rules/${deleteConfirm.id}`);
       fetchRules();
+      toast.success('Rule deleted successfully');
+      setDeleteConfirm({ isOpen: false, id: '', credential: '' });
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete rule');
+      toast.error(err.response?.data?.message || 'Failed to delete rule');
     }
   };
 
-  const handleClone = async (ruleId: string) => {
+  const handleCloneClick = (ruleId: string) => {
+    setCloneConfirm({ isOpen: true, id: ruleId });
+  };
+
+  const confirmClone = async () => {
+    if (!cloneConfirm.id) return;
     try {
-      const response = await axios.post(`/api/v1/payer-rules/${ruleId}/clone`);
+      await api.post(`/payer-rules/${cloneConfirm.id}/clone`);
       fetchRules();
-      alert('Rule cloned successfully! You can now edit the new rule.');
+      toast.success('Rule cloned successfully! You can now edit the new rule.');
+      setCloneConfirm({ isOpen: false, id: '' });
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to clone rule');
+      toast.error(err.response?.data?.message || 'Failed to clone rule');
     }
   };
 
@@ -262,13 +282,13 @@ const PayerRuleList: React.FC = () => {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleClone(rule.id)}
+                        onClick={() => handleCloneClick(rule.id)}
                         className="text-green-600 hover:text-green-900 mr-3"
                       >
                         Clone
                       </button>
                       <button
-                        onClick={() => handleDelete(rule.id, rule.clinicianCredential)}
+                        onClick={() => handleDeleteClick(rule.id, rule.clinicianCredential)}
                         className="text-red-600 hover:text-red-900"
                       >
                         Delete
@@ -307,6 +327,30 @@ const PayerRuleList: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, id: '', credential: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Rule"
+        message={`Are you sure you want to delete the rule for ${deleteConfirm.credential}?`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        icon="warning"
+      />
+
+      {/* Clone Confirmation Modal */}
+      <ConfirmModal
+        isOpen={cloneConfirm.isOpen}
+        onClose={() => setCloneConfirm({ isOpen: false, id: '' })}
+        onConfirm={confirmClone}
+        title="Clone Rule"
+        message="This will create a copy of this rule that you can edit. Continue?"
+        confirmText="Clone"
+        cancelText="Cancel"
+        icon="info"
+      />
     </div>
   );
 };

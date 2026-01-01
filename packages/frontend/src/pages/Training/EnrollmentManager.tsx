@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   Users,
   BookOpen,
@@ -45,7 +46,7 @@ export default function EnrollmentManager() {
 
   const handleBulkEnroll = async () => {
     if (selectedUsers.length === 0 || selectedCourses.length === 0) {
-      alert('Please select at least one user and one course');
+      toast.error('Please select at least one user and one course');
       return;
     }
 
@@ -54,12 +55,12 @@ export default function EnrollmentManager() {
         userIds: selectedUsers,
         courseIds: selectedCourses,
       });
-      alert(`Successfully enrolled ${selectedUsers.length} users in ${selectedCourses.length} courses!`);
+      toast.success(`Successfully enrolled ${selectedUsers.length} users in ${selectedCourses.length} courses!`);
       setSelectedUsers([]);
       setSelectedCourses([]);
     } catch (error) {
       console.error('Error enrolling users:', error);
-      alert('Failed to enroll users');
+      toast.error('Failed to enroll users');
     }
   };
 

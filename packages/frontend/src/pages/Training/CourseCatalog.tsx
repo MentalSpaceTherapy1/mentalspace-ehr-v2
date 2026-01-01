@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   Search,
   Filter,
@@ -38,10 +39,10 @@ export default function CourseCatalog() {
         userId: localStorage.getItem('userId') || '',
         courseId,
       });
-      alert('Successfully enrolled in course!');
+      toast.success('Successfully enrolled in course!');
     } catch (error) {
       console.error('Error enrolling:', error);
-      alert('Failed to enroll in course');
+      toast.error('Failed to enroll in course');
     }
   };
 

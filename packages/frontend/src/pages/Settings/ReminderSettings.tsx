@@ -97,13 +97,28 @@ export default function ReminderSettings() {
 
   const loadConfig = async () => {
     try {
-      const response = await api.get('/reminders/config');
+      // Try to load practice-wide reminder configuration
+      const response = await api.get('/reminder-config/practice');
       if (response.data.data) {
         setConfig(response.data.data);
       }
     } catch (error: any) {
-      setErrorMessage('Failed to load reminder configuration');
-      console.error('Error loading config:', error);
+      // If practice config doesn't exist, try to initialize defaults
+      if (error.response?.status === 404) {
+        try {
+          await api.post('/reminder-config/initialize');
+          const retryResponse = await api.get('/reminder-config/practice');
+          if (retryResponse.data.data) {
+            setConfig(retryResponse.data.data);
+          }
+        } catch (initError: any) {
+          console.error('Error initializing config:', initError);
+          // Use defaults already set in state
+        }
+      } else {
+        setErrorMessage('Failed to load reminder configuration');
+        console.error('Error loading config:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -112,7 +127,19 @@ export default function ReminderSettings() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await api.put('/reminders/config', config);
+      if (config.id) {
+        // Update existing config
+        await api.put(`/reminder-config/${config.id}`, config);
+      } else {
+        // Create new config
+        const response = await api.post('/reminder-config', {
+          ...config,
+          scope: 'PRACTICE',
+        });
+        if (response.data.data) {
+          setConfig(response.data.data);
+        }
+      }
       setSuccessMessage('Reminder settings saved successfully');
       setTimeout(() => setSuccessMessage(''), 5000);
     } catch (error: any) {

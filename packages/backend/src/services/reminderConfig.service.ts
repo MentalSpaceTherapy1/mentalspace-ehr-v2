@@ -224,16 +224,6 @@ export async function deleteReminderConfig(id: string) {
 export async function getAllConfigs() {
   try {
     const configs = await prisma.clinicalNoteReminderConfig.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
       orderBy: [
         { configurationType: 'asc' },
         { createdAt: 'desc' },

@@ -12,6 +12,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { getNavItems, NavItem } from '../config/navigation';
 import { useMenuState } from '../hooks/useMenuState';
 import api from '../lib/api';
+import SessionTimeoutWarning from './SessionTimeoutWarning';
+import NotificationDropdown from './NotificationDropdown';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -204,11 +206,8 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Notifications */}
-              <button className="relative p-2 rounded-lg hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200">
-                <span className="text-2xl">🔔</span>
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
+              {/* Notifications Dropdown */}
+              <NotificationDropdown />
 
               {/* Search */}
               <div className="hidden md:block">
@@ -232,6 +231,9 @@ export default function Layout({ children }: LayoutProps) {
         {/* Page Content */}
         <main>{children}</main>
       </div>
+
+      {/* Session Timeout Warning - HIPAA Compliance */}
+      <SessionTimeoutWarning />
     </div>
   );
 }

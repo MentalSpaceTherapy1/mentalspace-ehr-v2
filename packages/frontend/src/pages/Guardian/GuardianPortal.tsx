@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import {
   Box,
   Container,
@@ -133,6 +135,10 @@ const GuardianPortal: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string>('');
+  const [cancelConfirm, setCancelConfirm] = useState<{ isOpen: boolean; id: string }>({
+    isOpen: false,
+    id: '',
+  });
 
   useEffect(() => {
     fetchMinors();
@@ -279,21 +285,26 @@ const GuardianPortal: React.FC = () => {
     );
   };
 
-  const handleCancelAppointment = async (appointmentId: string) => {
-    if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
+  const handleCancelClick = (appointmentId: string) => {
+    setCancelConfirm({ isOpen: true, id: appointmentId });
+  };
+
+  const confirmCancelAppointment = async () => {
+    if (!cancelConfirm.id) return;
 
     try {
       const response = await axios.delete(
-        `${API_BASE_URL}/guardian/minors/${selectedMinorId}/appointments/${appointmentId}`,
+        `${API_BASE_URL}/guardian/minors/${selectedMinorId}/appointments/${cancelConfirm.id}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
 
       if (response.data.success) {
-        alert('Appointment cancelled successfully');
+        toast.success('Appointment cancelled successfully');
         fetchMinorData(selectedMinorId);
       }
+      setCancelConfirm({ isOpen: false, id: '' });
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to cancel appointment');
+      toast.error(err.response?.data?.message || 'Failed to cancel appointment');
     }
   };
 
@@ -557,7 +568,7 @@ const GuardianPortal: React.FC = () => {
                             variant="outlined"
                             size="small"
                             sx={{ borderColor: 'white', color: 'white' }}
-                            onClick={() => handleCancelAppointment(nextAppointment.id)}
+                            onClick={() => handleCancelClick(nextAppointment.id)}
                           >
                             Cancel
                           </Button>
@@ -814,6 +825,18 @@ const GuardianPortal: React.FC = () => {
           </Grid>
         </>
       )}
+
+      {/* Cancel Appointment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={cancelConfirm.isOpen}
+        onClose={() => setCancelConfirm({ isOpen: false, id: '' })}
+        onConfirm={confirmCancelAppointment}
+        title="Cancel Appointment"
+        message="Are you sure you want to cancel this appointment?"
+        confirmText="Cancel Appointment"
+        cancelText="Keep"
+        icon="warning"
+      />
     </Container>
   );
 };

@@ -17,6 +17,7 @@ import ScheduleHeader from '../../../components/ClinicalNotes/ScheduleHeader';
 import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppointmentModal';
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
+import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
 
 const CANCELLED_BY_OPTIONS = [
   { value: 'Client', label: 'Client' },
@@ -70,6 +71,22 @@ export default function CancellationNoteForm() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
+
+  // Session-safe saving (handles session timeout with local storage backup)
+  const {
+    sessionError,
+    clearSessionError,
+    backupToLocalStorage,
+    clearBackup,
+    handleSaveError,
+    hasRecoveredDraft,
+    applyRecoveredDraft,
+    discardRecoveredDraft,
+  } = useSessionSafeSave({
+    noteType: 'CancellationNote',
+    clientId: clientId || '',
+    noteId,
+  });
 
   // Fetch client data
   const { data: clientData } = useQuery({
@@ -179,31 +196,63 @@ export default function CancellationNoteForm() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       if (isEditMode) {
         return api.put(`/clinical-notes/${noteId}`, data);
       }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
+    },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
     },
   });
 
   const saveDraftMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       if (isEditMode) {
         return api.put(`/clinical-notes/${noteId}`, data);
       }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
     },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
+    },
   });
+
+  // Handle recovering draft data
+  const handleRecoverDraft = () => {
+    const recovered = applyRecoveredDraft();
+    if (recovered) {
+      if (recovered.cancellationDate) setCancellationDate(recovered.cancellationDate);
+      if (recovered.cancellationTime) setCancellationTime(recovered.cancellationTime);
+      if (recovered.cancelledBy) setCancelledBy(recovered.cancelledBy);
+      if (recovered.reason) setReason(recovered.reason);
+      if (recovered.notificationMethod) setNotificationMethod(recovered.notificationMethod);
+      if (recovered.rescheduled !== undefined) setRescheduled(recovered.rescheduled);
+      if (recovered.newAppointmentDate) setNewAppointmentDate(recovered.newAppointmentDate);
+      if (recovered.newAppointmentTime) setNewAppointmentTime(recovered.newAppointmentTime);
+      if (recovered.notes) setNotes(recovered.notes);
+      if (recovered.billable !== undefined) setBillable(recovered.billable);
+      if (recovered.appointmentId) setSelectedAppointmentId(recovered.appointmentId);
+    }
+  };
 
   // AI Handler Functions
   const handleGenerateFromTranscription = async (sessionNotes: string) => {
@@ -349,6 +398,19 @@ export default function CancellationNoteForm() {
           </h1>
           <p className="text-gray-600 mt-2">Document appointment cancellation</p>
         </div>
+
+        {/* Session Expired Alert */}
+        {sessionError && (
+          <SessionExpiredAlert message={sessionError} onDismiss={clearSessionError} />
+        )}
+
+        {/* Recovered Draft Alert */}
+        {hasRecoveredDraft && (
+          <RecoveredDraftAlert
+            onRecover={handleRecoverDraft}
+            onDiscard={discardRecoveredDraft}
+          />
+        )}
 
         {/* Client ID Validation */}
         {!clientId && (

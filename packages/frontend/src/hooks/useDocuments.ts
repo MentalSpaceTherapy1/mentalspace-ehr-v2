@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 interface Document {
   id: string;
@@ -50,11 +48,8 @@ export const useDocuments = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/documents`, {
+      const response = await api.get('/documents', {
         params: { folderId },
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
       });
       setDocuments(response.data);
     } catch (err: any) {
@@ -68,11 +63,7 @@ export const useDocuments = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/documents/folders`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get('/documents/folders');
       setFolders(response.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch folders');
@@ -100,9 +91,8 @@ export const useDocuments = () => {
       if (data.tags) formData.append('tags', JSON.stringify(data.tags));
       if (data.accessLevel) formData.append('accessLevel', data.accessLevel);
 
-      const response = await axios.post(`${API_URL}/api/documents`, formData, {
+      const response = await api.post('/documents', formData, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'multipart/form-data',
         },
       });
@@ -119,11 +109,7 @@ export const useDocuments = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API_URL}/api/documents/folders`, data, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.post('/documents/folders', data);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create folder');
@@ -137,11 +123,7 @@ export const useDocuments = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.delete(`${API_URL}/api/documents/${documentId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      await api.delete(`/documents/${documentId}`);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete document');
       throw err;
@@ -154,15 +136,7 @@ export const useDocuments = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.patch(
-        `${API_URL}/api/documents/${documentId}/move`,
-        { folderId },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
+      await api.patch(`/documents/${documentId}/move`, { folderId });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to move document');
       throw err;
@@ -175,11 +149,8 @@ export const useDocuments = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/documents/search`, {
+      const response = await api.get('/documents/search', {
         params: { query },
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
       });
       return response.data;
     } catch (err: any) {
@@ -194,11 +165,7 @@ export const useDocuments = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/documents/${documentId}/versions`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get(`/documents/${documentId}/versions`);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch versions');

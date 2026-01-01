@@ -85,12 +85,15 @@ export default function ComplianceDashboard() {
 
   const data = dashboardData?.data;
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  // Timezone-safe date formatting - parses ISO string directly to avoid timezone shifts
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return 'Not specified';
+    const datePart = date.split('T')[0];
+    if (!datePart) return 'Not specified';
+    const [year, month, day] = datePart.split('-');
+    if (!year || !month || !day) return 'Not specified';
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
   };
 
   const formatTime = (time: string) => {

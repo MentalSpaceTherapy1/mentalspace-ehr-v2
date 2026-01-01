@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../lib/api';
 import { RevenueForecast } from '../../components/Predictions/RevenueForecast';
 import { DemandForecast } from '../../components/Predictions/DemandForecast';
 
@@ -63,7 +63,7 @@ export const PredictionsDashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/v1/predictions/dashboard');
+      const response = await api.get('/predictions/dashboard');
       setDashboardData(response.data.data);
       setError(null);
     } catch (err: any) {

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import UnlockRequestModal from '../../components/UnlockRequestModal';
 import ReturnForRevisionModal from '../../components/ClinicalNotes/ReturnForRevisionModal';
 import { SignatureModal } from '../../components/ClinicalNotes/SignatureModal';
@@ -90,6 +92,7 @@ export default function ClinicalNoteDetail() {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [showAmendModal, setShowAmendModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'amendments'>('details');
 
 
@@ -132,22 +135,34 @@ export default function ClinicalNoteDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
+      toast.success('Draft note deleted successfully');
       navigate(`/clients/${clientId}/notes`);
+    },
+    onError: (error: any) => {
+      console.error('Failed to delete note:', error);
+      toast.error(error.response?.data?.error || 'Failed to delete note');
     },
   });
 
   const note: ClinicalNote = noteData;
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+  // Timezone-safe date formatting - parses ISO string directly to avoid timezone shifts
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return 'Not specified';
+    const datePart = date.split('T')[0];
+    if (!datePart) return 'Not specified';
+    const [year, month, day] = datePart.split('-');
+    if (!year || !month || !day) return 'Not specified';
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
   };
 
-  const formatDateTime = (date: string) => {
-    return new Date(date).toLocaleString('en-US', {
+  const formatDateTime = (date: string | null | undefined) => {
+    if (!date) return 'Not specified';
+    const parsed = new Date(date);
+    // Check for invalid date or Unix epoch (null/undefined dates)
+    if (isNaN(parsed.getTime()) || parsed.getTime() === 0) return 'Not specified';
+    return parsed.toLocaleString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -176,9 +191,12 @@ export default function ClinicalNoteDetail() {
   };
 
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this draft note? This action cannot be undone.')) {
-      deleteMutation.mutate();
-    }
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    deleteMutation.mutate();
+    setShowDeleteModal(false);
   };
 
   if (isLoading) {
@@ -619,6 +637,19 @@ export default function ClinicalNoteDetail() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title="Delete Draft Note"
+        message="Are you sure you want to delete this draft note? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        icon="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

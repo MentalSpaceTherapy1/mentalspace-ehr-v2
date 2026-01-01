@@ -173,15 +173,81 @@ export default function ClientForm() {
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log('[ClientForm] mutationFn started with data keys:', Object.keys(data));
+
       const url = isEditMode ? `/clients/${id}` : '/clients';
 
-      // Convert dateOfBirth to ISO string
-      const submitData: any = {
-        ...data,
-        dateOfBirth: new Date(data.dateOfBirth).toISOString(),
+      // Validate required fields before submission
+      if (!data.firstName?.trim()) {
+        throw new Error('First name is required');
+      }
+      if (!data.lastName?.trim()) {
+        throw new Error('Last name is required');
+      }
+      if (!data.dateOfBirth) {
+        throw new Error('Date of birth is required');
+      }
+      if (!data.primaryTherapistId) {
+        throw new Error('Primary therapist is required');
+      }
+      if (!data.primaryPhone?.trim()) {
+        throw new Error('Primary phone is required');
+      }
+      if (!data.email?.trim()) {
+        throw new Error('Email is required');
+      }
+      if (!data.addressCity?.trim()) {
+        throw new Error('City is required');
+      }
+      if (!data.addressState?.trim()) {
+        throw new Error('State is required');
+      }
+      if (!data.addressZipCode?.trim()) {
+        throw new Error('ZIP code is required');
+      }
+
+      // Convert dateOfBirth to ISO string with validation
+      const dobDate = new Date(data.dateOfBirth);
+      if (isNaN(dobDate.getTime())) {
+        throw new Error('Invalid date of birth format');
+      }
+
+      // Build submit data with only non-empty fields
+      const submitData: Record<string, any> = {
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        dateOfBirth: dobDate.toISOString(),
+        primaryTherapistId: data.primaryTherapistId,
+        primaryPhone: data.primaryPhone.trim(),
+        email: data.email.trim(),
+        addressCity: data.addressCity.trim(),
+        addressState: data.addressState.trim(),
+        addressZipCode: data.addressZipCode.trim(),
+        gender: data.gender || 'PREFER_NOT_TO_SAY',
+        maritalStatus: data.maritalStatus || 'SINGLE',
+        primaryLanguage: data.primaryLanguage || 'English',
+        okayToLeaveMessage: data.okayToLeaveMessage ?? true,
+        needsInterpreter: data.needsInterpreter ?? false,
       };
 
-      // Remove empty string values for optional UUID fields
+      // Add optional string fields if they have values
+      const optionalStringFields = [
+        'middleName', 'suffix', 'preferredName', 'pronouns',
+        'secondaryPhone', 'primaryPhoneType', 'secondaryPhoneType',
+        'preferredContactMethod', 'addressStreet1', 'addressStreet2', 'addressCounty',
+        'genderIdentity', 'sexualOrientation', 'religion', 'ethnicity',
+        'interpreterLanguage', 'education', 'employmentStatus', 'occupation',
+        'livingArrangement', 'housingStatus', 'guardianName', 'guardianPhone',
+        'guardianRelationship'
+      ];
+
+      optionalStringFields.forEach(field => {
+        if (data[field] && typeof data[field] === 'string' && data[field].trim()) {
+          submitData[field] = data[field].trim();
+        }
+      });
+
+      // Add optional UUID fields if they have values (not empty string)
       const optionalUUIDFields = [
         'secondaryTherapist1Id',
         'secondaryTherapist2Id',
@@ -191,17 +257,31 @@ export default function ClientForm() {
       ];
 
       optionalUUIDFields.forEach(field => {
-        if (submitData[field] === '') {
-          delete submitData[field];
+        if (data[field] && data[field] !== '') {
+          submitData[field] = data[field];
         }
       });
+
+      // Handle array fields
+      if (Array.isArray(data.race) && data.race.length > 0) {
+        submitData.race = data.race;
+      }
+      if (Array.isArray(data.otherLanguages) && data.otherLanguages.length > 0) {
+        submitData.otherLanguages = data.otherLanguages;
+      }
+
+      console.log('[ClientForm] Submitting to:', url);
+      console.log('[ClientForm] Submit data:', JSON.stringify(submitData, null, 2));
 
       const response = isEditMode
         ? await api.patch(url, submitData)
         : await api.post(url, submitData);
+
+      console.log('[ClientForm] API response:', response.data);
       return response.data;
     },
     onSuccess: () => {
+      console.log('[ClientForm] Save successful');
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       setSuccessMessage(isEditMode ? 'Client updated successfully!' : 'Client created successfully!');
       setErrorMessage('');
@@ -210,7 +290,28 @@ export default function ClientForm() {
       }, 1500);
     },
     onError: (error: any) => {
-      setErrorMessage(error.response?.data?.message || 'Failed to save client');
+      // Extract error message from various error formats
+      let message = 'Failed to save client';
+
+      if (error.response?.data?.message) {
+        // Axios error with server message
+        message = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        // Axios error with error field
+        message = error.response.data.error;
+      } else if (error.message) {
+        // Plain JavaScript Error
+        message = error.message;
+      }
+
+      console.error('[ClientForm] Save error:', {
+        message,
+        status: error.response?.status,
+        data: error.response?.data,
+        error: error
+      });
+
+      setErrorMessage(message);
       setSuccessMessage('');
     },
   });
@@ -234,6 +335,14 @@ export default function ClientForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[ClientForm] handleSubmit called');
+    console.log('[ClientForm] formData:', formData);
+
+    // Clear previous messages
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    // Trigger the mutation
     saveMutation.mutate(formData);
   };
 

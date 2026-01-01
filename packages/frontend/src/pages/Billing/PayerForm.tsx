@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../lib/api';
 
 interface PayerFormData {
   name: string;
@@ -34,7 +34,7 @@ const PayerForm: React.FC = () => {
   const fetchPayer = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/v1/payers/${id}`);
+      const response = await api.get(`/payers/${id}`);
       const payer = response.data.data;
       setFormData({
         name: payer.name,
@@ -57,9 +57,9 @@ const PayerForm: React.FC = () => {
 
     try {
       if (isEditMode) {
-        await axios.put(`/api/v1/payers/${id}`, formData);
+        await api.put(`/payers/${id}`, formData);
       } else {
-        await axios.post('/api/v1/payers', formData);
+        await api.post('/payers', formData);
       }
       navigate('/billing/payers');
     } catch (err: any) {

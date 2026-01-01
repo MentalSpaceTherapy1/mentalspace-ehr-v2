@@ -1,33 +1,32 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from './ConfirmModal';
 
+// Interface matches backend InsuranceInformation model
 interface Insurance {
   id: string;
-  rank: number;
-  insuranceType: string;
-  payerName: string;
-  payerId?: string;
-  memberNumber: string;
+  rank: string; // "Primary", "Secondary", "Tertiary"
+  insuranceCompany: string;
+  insuranceCompanyId?: string;
+  memberId: string;
   groupNumber?: string;
-  planName?: string;
-  planType?: string;
+  planName: string;
+  planType: string;
   effectiveDate: string;
   terminationDate?: string;
-  subscriberFirstName: string;
-  subscriberLastName: string;
-  subscriberDOB: string;
-  subscriberRelationship: string;
+  subscriberFirstName?: string;
+  subscriberLastName?: string;
+  subscriberDOB?: string;
+  relationshipToSubscriber?: string;
   subscriberSSN?: string;
   copay?: number;
   deductible?: number;
   outOfPocketMax?: number;
-  verificationStatus: string;
-  verificationDate?: string;
-  verifiedBy?: string;
-  authorizationRequired: boolean;
-  authorizationNumber?: string;
-  notes?: string;
+  lastVerificationDate?: string;
+  lastVerifiedBy?: string;
+  verificationNotes?: string;
 }
 
 interface InsuranceInfoProps {
@@ -38,6 +37,11 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingInsurance, setEditingInsurance] = useState<Insurance | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; payer: string }>({
+    isOpen: false,
+    id: '',
+    payer: '',
+  });
   const [formData, setFormData] = useState({
     rank: 1,
     insuranceType: 'COMMERCIAL',
@@ -66,10 +70,7 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
   const { data: insurance, isLoading } = useQuery({
     queryKey: ['insurance', clientId],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`/insurance/client/${clientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/insurance/client/${clientId}`);
       return response.data.data;
     },
   });
@@ -77,27 +78,46 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
+      // Map frontend field names to backend expected field names
+      const rankMap: Record<number, string> = {
+        1: 'Primary',
+        2: 'Secondary',
+        3: 'Tertiary',
+      };
+
       const submitData = {
-        ...data,
         clientId,
+        // Backend expects 'rank' as string ("Primary", "Secondary", "Tertiary")
+        rank: rankMap[data.rank] || 'Primary',
+        // Backend expects 'insuranceCompany' not 'payerName'
+        insuranceCompany: data.payerName,
+        // Backend expects 'insuranceCompanyId' not 'payerId'
+        insuranceCompanyId: data.payerId || undefined,
+        // Backend expects 'memberId' not 'memberNumber'
+        memberId: data.memberNumber,
+        groupNumber: data.groupNumber || undefined,
+        // planName and planType are required by backend
+        planName: data.planName || data.payerName, // Fallback to payerName if not provided
+        planType: data.planType || data.insuranceType || 'Commercial', // Fallback to insuranceType
+        effectiveDate: new Date(data.effectiveDate).toISOString(),
+        terminationDate: data.terminationDate ? new Date(data.terminationDate).toISOString() : undefined,
+        subscriberFirstName: data.subscriberFirstName || undefined,
+        subscriberLastName: data.subscriberLastName || undefined,
+        subscriberDOB: data.subscriberDOB ? new Date(data.subscriberDOB).toISOString() : undefined,
+        // Backend expects 'relationshipToSubscriber' not 'subscriberRelationship'
+        relationshipToSubscriber: data.subscriberRelationship || undefined,
+        subscriberSSN: data.subscriberSSN || undefined,
         copay: data.copay ? parseFloat(data.copay) : undefined,
         deductible: data.deductible ? parseFloat(data.deductible) : undefined,
         outOfPocketMax: data.outOfPocketMax ? parseFloat(data.outOfPocketMax) : undefined,
-        effectiveDate: new Date(data.effectiveDate).toISOString(),
-        terminationDate: data.terminationDate ? new Date(data.terminationDate).toISOString() : undefined,
-        subscriberDOB: new Date(data.subscriberDOB).toISOString(),
+        verificationNotes: data.notes || undefined,
       };
 
       if (editingInsurance) {
-        const response = await axios.patch(`/insurance/${editingInsurance.id}`, submitData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.patch(`/insurance/${editingInsurance.id}`, submitData);
         return response.data;
       } else {
-        const response = await axios.post('/insurance', submitData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.post('/insurance', submitData);
         return response.data;
       }
     },
@@ -105,67 +125,86 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
       queryClient.invalidateQueries({ queryKey: ['insurance', clientId] });
       resetForm();
     },
+    onError: (error: any) => {
+      console.error('Failed to save insurance:', error);
+      toast.error(error.response?.data?.error || 'Failed to save insurance');
+    },
   });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete(`/insurance/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.delete(`/insurance/${id}`);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['insurance', clientId] });
+      toast.success('Insurance deleted successfully');
+      setDeleteConfirm({ isOpen: false, id: '', payer: '' });
+    },
+    onError: (error: any) => {
+      console.error('Failed to delete insurance:', error);
+      toast.error(error.response?.data?.error || 'Failed to delete insurance');
     },
   });
 
   // Verify mutation
   const verifyMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`/insurance/${id}/verify`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.post(`/insurance/${id}/verify`, {});
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['insurance', clientId] });
+      toast.success('Insurance verified successfully');
+    },
+    onError: (error: any) => {
+      console.error('Failed to verify insurance:', error);
+      toast.error(error.response?.data?.error || 'Failed to verify insurance');
     },
   });
 
   const handleEdit = (ins: Insurance) => {
     setEditingInsurance(ins);
+    // Map backend field names to frontend form field names
+    const rankMap: Record<string, number> = {
+      'Primary': 1,
+      'Secondary': 2,
+      'Tertiary': 3,
+    };
     setFormData({
-      rank: ins.rank,
-      insuranceType: ins.insuranceType,
-      payerName: ins.payerName,
-      payerId: ins.payerId || '',
-      memberNumber: ins.memberNumber,
+      rank: rankMap[ins.rank] || 1,
+      insuranceType: ins.planType || 'COMMERCIAL',
+      payerName: ins.insuranceCompany,
+      payerId: ins.insuranceCompanyId || '',
+      memberNumber: ins.memberId,
       groupNumber: ins.groupNumber || '',
       planName: ins.planName || '',
       planType: ins.planType || '',
       effectiveDate: new Date(ins.effectiveDate).toISOString().split('T')[0],
       terminationDate: ins.terminationDate ? new Date(ins.terminationDate).toISOString().split('T')[0] : '',
-      subscriberFirstName: ins.subscriberFirstName,
-      subscriberLastName: ins.subscriberLastName,
-      subscriberDOB: new Date(ins.subscriberDOB).toISOString().split('T')[0],
-      subscriberRelationship: ins.subscriberRelationship,
+      subscriberFirstName: ins.subscriberFirstName || '',
+      subscriberLastName: ins.subscriberLastName || '',
+      subscriberDOB: ins.subscriberDOB ? new Date(ins.subscriberDOB).toISOString().split('T')[0] : '',
+      subscriberRelationship: ins.relationshipToSubscriber || 'SELF',
       subscriberSSN: ins.subscriberSSN || '',
       copay: ins.copay?.toString() || '',
       deductible: ins.deductible?.toString() || '',
       outOfPocketMax: ins.outOfPocketMax?.toString() || '',
-      authorizationRequired: ins.authorizationRequired,
-      authorizationNumber: ins.authorizationNumber || '',
-      notes: ins.notes || '',
+      authorizationRequired: false, // Not in backend model
+      authorizationNumber: '',
+      notes: ins.verificationNotes || '',
     });
     setIsFormOpen(true);
   };
 
   const handleDelete = (id: string, payer: string) => {
-    if (window.confirm(`Are you sure you want to delete insurance from ${payer}?`)) {
-      deleteMutation.mutate(id);
+    setDeleteConfirm({ isOpen: true, id, payer });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm.id) {
+      deleteMutation.mutate(deleteConfirm.id);
     }
   };
 
@@ -210,27 +249,35 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
     }));
   };
 
-  const getRankLabel = (rank: number) => {
+  const getRankLabel = (rank: string) => {
+    return rank || 'Primary';
+  };
+
+  const getRankColor = (rank: string) => {
     switch (rank) {
-      case 1: return 'Primary';
-      case 2: return 'Secondary';
-      case 3: return 'Tertiary';
-      default: return `Rank ${rank}`;
+      case 'Primary': return 'from-blue-500 to-cyan-500';
+      case 'Secondary': return 'from-purple-500 to-pink-500';
+      case 'Tertiary': return 'from-amber-500 to-orange-500';
+      default: return 'from-gray-500 to-slate-500';
     }
   };
 
-  const getRankColor = (rank: number) => {
-    switch (rank) {
-      case 1: return 'from-blue-500 to-cyan-500';
-      case 2: return 'from-purple-500 to-pink-500';
-      case 3: return 'from-amber-500 to-orange-500';
-      default: return 'from-gray-500 to-slate-500';
+  const getVerificationStatus = (ins: Insurance) => {
+    // Determine verification status based on lastVerificationDate
+    if (ins.lastVerificationDate) {
+      const verificationDate = new Date(ins.lastVerificationDate);
+      const daysSinceVerification = Math.floor((Date.now() - verificationDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceVerification <= 30) return 'VERIFIED';
+      if (daysSinceVerification <= 90) return 'NEEDS_REVERIFICATION';
+      return 'EXPIRED';
     }
+    return 'PENDING';
   };
 
   const getVerificationColor = (status: string) => {
     switch (status) {
       case 'VERIFIED': return 'bg-gradient-to-r from-green-500 to-emerald-500 text-white';
+      case 'NEEDS_REVERIFICATION': return 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white';
       case 'PENDING': return 'bg-gradient-to-r from-amber-500 to-orange-500 text-white';
       case 'EXPIRED': return 'bg-gradient-to-r from-red-500 to-rose-500 text-white';
       default: return 'bg-gray-200 text-gray-800';
@@ -579,93 +626,104 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
       {/* Insurance List */}
       {insurance && insurance.length > 0 ? (
         <div className="space-y-4">
-          {insurance.map((ins: Insurance) => (
-            <div
-              key={ins.id}
-              className={`p-4 rounded-xl border-2 bg-gradient-to-br from-${getRankColor(ins.rank).split(' ')[0].replace('from-', '')}/5 to-${getRankColor(ins.rank).split(' ')[2].replace('to-', '')}/5 border-${getRankColor(ins.rank).split(' ')[0].replace('from-', '')}/30 transition-all duration-200`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <span className={`px-3 py-1 bg-gradient-to-r ${getRankColor(ins.rank)} text-white text-sm font-bold rounded-full shadow-lg`}>
-                      {getRankLabel(ins.rank)}
-                    </span>
-                    <span className={`px-3 py-1 ${getVerificationColor(ins.verificationStatus)} text-sm font-bold rounded-full shadow-md`}>
-                      {ins.verificationStatus}
-                    </span>
+          {insurance.map((ins: Insurance) => {
+            const verificationStatus = getVerificationStatus(ins);
+            return (
+              <div
+                key={ins.id}
+                className="p-4 rounded-xl border-2 bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200 transition-all duration-200"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <span className={`px-3 py-1 bg-gradient-to-r ${getRankColor(ins.rank)} text-white text-sm font-bold rounded-full shadow-lg`}>
+                        {getRankLabel(ins.rank)}
+                      </span>
+                      <span className={`px-3 py-1 ${getVerificationColor(verificationStatus)} text-sm font-bold rounded-full shadow-md`}>
+                        {verificationStatus}
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{ins.insuranceCompany}</h3>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <span className="font-semibold text-gray-600">Plan:</span>{' '}
+                        <span className="text-gray-900">{ins.planName}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-600">Type:</span>{' '}
+                        <span className="text-gray-900">{ins.planType}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-600">Member #:</span>{' '}
+                        <span className="text-gray-900">{ins.memberId}</span>
+                      </div>
+                      {ins.groupNumber && (
+                        <div>
+                          <span className="font-semibold text-gray-600">Group #:</span>{' '}
+                          <span className="text-gray-900">{ins.groupNumber}</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-semibold text-gray-600">Effective:</span>{' '}
+                        <span className="text-gray-900">{new Date(ins.effectiveDate).toLocaleDateString()}</span>
+                      </div>
+                      {ins.subscriberFirstName && ins.subscriberLastName && (
+                        <div>
+                          <span className="font-semibold text-gray-600">Subscriber:</span>{' '}
+                          <span className="text-gray-900">{ins.subscriberFirstName} {ins.subscriberLastName}</span>
+                        </div>
+                      )}
+                      {ins.relationshipToSubscriber && (
+                        <div>
+                          <span className="font-semibold text-gray-600">Relationship:</span>{' '}
+                          <span className="text-gray-900">{ins.relationshipToSubscriber}</span>
+                        </div>
+                      )}
+                      {ins.copay && (
+                        <div>
+                          <span className="font-semibold text-gray-600">Copay:</span>{' '}
+                          <span className="text-gray-900">${ins.copay}</span>
+                        </div>
+                      )}
+                      {ins.deductible && (
+                        <div>
+                          <span className="font-semibold text-gray-600">Deductible:</span>{' '}
+                          <span className="text-gray-900">${ins.deductible}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{ins.payerName}</h3>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                    <div>
-                      <span className="font-semibold text-gray-600">Type:</span>{' '}
-                      <span className="text-gray-900">{ins.insuranceType}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-gray-600">Member #:</span>{' '}
-                      <span className="text-gray-900">{ins.memberNumber}</span>
-                    </div>
-                    {ins.groupNumber && (
-                      <div>
-                        <span className="font-semibold text-gray-600">Group #:</span>{' '}
-                        <span className="text-gray-900">{ins.groupNumber}</span>
-                      </div>
+                  <div className="flex flex-col items-end space-y-2 ml-4">
+                    {verificationStatus !== 'VERIFIED' && (
+                      <button
+                        onClick={() => verifyMutation.mutate(ins.id)}
+                        disabled={verifyMutation.isPending}
+                        className="px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-bold disabled:opacity-50"
+                      >
+                        ✓ Verify
+                      </button>
                     )}
-                    <div>
-                      <span className="font-semibold text-gray-600">Effective:</span>{' '}
-                      <span className="text-gray-900">{new Date(ins.effectiveDate).toLocaleDateString()}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-gray-600">Subscriber:</span>{' '}
-                      <span className="text-gray-900">{ins.subscriberFirstName} {ins.subscriberLastName}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-gray-600">Relationship:</span>{' '}
-                      <span className="text-gray-900">{ins.subscriberRelationship}</span>
-                    </div>
-                    {ins.copay && (
-                      <div>
-                        <span className="font-semibold text-gray-600">Copay:</span>{' '}
-                        <span className="text-gray-900">${ins.copay}</span>
-                      </div>
-                    )}
-                    {ins.deductible && (
-                      <div>
-                        <span className="font-semibold text-gray-600">Deductible:</span>{' '}
-                        <span className="text-gray-900">${ins.deductible}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end space-y-2 ml-4">
-                  {ins.verificationStatus !== 'VERIFIED' && (
                     <button
-                      onClick={() => verifyMutation.mutate(ins.id)}
-                      disabled={verifyMutation.isPending}
-                      className="px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-bold disabled:opacity-50"
+                      onClick={() => handleEdit(ins)}
+                      className="px-3 py-1 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-bold"
                     >
-                      ✓ Verify
+                      ✏️ Edit
                     </button>
-                  )}
-                  <button
-                    onClick={() => handleEdit(ins)}
-                    className="px-3 py-1 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-bold"
-                  >
-                    ✏️ Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(ins.id, ins.payerName)}
-                    disabled={deleteMutation.isPending}
-                    className="px-3 py-1 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-bold disabled:opacity-50"
-                  >
-                    🗑️ Delete
-                  </button>
+                    <button
+                      onClick={() => handleDelete(ins.id, ins.insuranceCompany)}
+                      disabled={deleteMutation.isPending}
+                      className="px-3 py-1 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-bold disabled:opacity-50"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-8">
@@ -674,6 +732,19 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
           <p className="text-sm text-gray-500 mt-1">Click "Add Insurance" to create one</p>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, id: '', payer: '' })}
+        onConfirm={confirmDelete}
+        title="Delete Insurance"
+        message={`Are you sure you want to delete insurance from ${deleteConfirm.payer}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        icon="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

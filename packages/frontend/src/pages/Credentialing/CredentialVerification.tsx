@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Shield,
@@ -42,12 +43,12 @@ export default function CredentialVerification() {
 
   const handleVerify = async (status: 'VERIFIED' | 'REJECTED') => {
     if (!notes.trim()) {
-      alert('Please add verification notes');
+      toast.error('Please add verification notes');
       return;
     }
 
     if (status === 'VERIFIED' && !documentReviewed) {
-      alert('Please confirm that you have reviewed the document');
+      toast.error('Please confirm that you have reviewed the document');
       return;
     }
 
@@ -59,7 +60,7 @@ export default function CredentialVerification() {
       });
       navigate('/credentialing/list');
     } catch (error) {
-      alert('Failed to verify credential');
+      toast.error('Failed to verify credential');
     }
   };
 

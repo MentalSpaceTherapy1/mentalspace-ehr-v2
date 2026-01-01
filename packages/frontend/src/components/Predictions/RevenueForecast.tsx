@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../lib/api';
 import {
   LineChart,
   Line,
@@ -61,7 +61,7 @@ export const RevenueForecast: React.FC<RevenueForecastProps> = ({
   const fetchForecast = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/v1/predictions/revenue?period=${selectedPeriod}`);
+      const response = await api.get(`/predictions/revenue?period=${selectedPeriod}`);
       setForecast(response.data.data);
       setError(null);
     } catch (err: any) {

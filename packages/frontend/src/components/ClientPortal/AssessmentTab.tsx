@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import * as assessmentApi from '../../lib/assessmentApi';
+import ConfirmModal from '../ConfirmModal';
 
 interface AssessmentTabProps {
   clientId: string;
@@ -14,6 +16,22 @@ export default function AssessmentTab({ clientId }: AssessmentTabProps) {
     useState<assessmentApi.AssessmentType | ''>('');
   const [dueDate, setDueDate] = useState('');
   const [instructions, setInstructions] = useState('');
+
+  // Remove confirmation state
+  const [removeConfirm, setRemoveConfirm] = useState<{ isOpen: boolean; assessmentId: string; assessmentName: string }>({
+    isOpen: false,
+    assessmentId: '',
+    assessmentName: '',
+  });
+
+  const handleRemoveClick = (assessmentId: string, assessmentName: string) => {
+    setRemoveConfirm({ isOpen: true, assessmentId, assessmentName });
+  };
+
+  const confirmRemove = () => {
+    removeAssessmentMutation.mutate(removeConfirm.assessmentId);
+    setRemoveConfirm({ isOpen: false, assessmentId: '', assessmentName: '' });
+  };
 
   // Fetch client assessments
   const { data: assessments = [], isLoading } = useQuery({
@@ -34,10 +52,10 @@ export default function AssessmentTab({ clientId }: AssessmentTabProps) {
       setSelectedAssessmentType('');
       setDueDate('');
       setInstructions('');
-      alert('Assessment assigned successfully!');
+      toast.success('Assessment assigned successfully!');
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || 'Failed to assign assessment');
+      toast.error(error.response?.data?.message || 'Failed to assign assessment');
     },
   });
 
@@ -47,10 +65,10 @@ export default function AssessmentTab({ clientId }: AssessmentTabProps) {
       assessmentApi.removeAssessmentAssignment(clientId, assessmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clientAssessments', clientId] });
-      alert('Assessment removed successfully!');
+      toast.success('Assessment removed successfully!');
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || 'Failed to remove assessment');
+      toast.error(error.response?.data?.message || 'Failed to remove assessment');
     },
   });
 
@@ -59,16 +77,16 @@ export default function AssessmentTab({ clientId }: AssessmentTabProps) {
     mutationFn: (assessmentId: string) =>
       assessmentApi.sendAssessmentReminder(clientId, assessmentId),
     onSuccess: () => {
-      alert('Reminder sent successfully!');
+      toast.success('Reminder sent successfully!');
     },
     onError: () => {
-      alert('Failed to send reminder');
+      toast.error('Failed to send reminder');
     },
   });
 
   const handleAssignAssessment = () => {
     if (!selectedAssessmentType) {
-      alert('Please select an assessment type');
+      toast.error('Please select an assessment type');
       return;
     }
 
@@ -289,11 +307,7 @@ export default function AssessmentTab({ clientId }: AssessmentTabProps) {
                         Send Reminder
                       </button>
                       <button
-                        onClick={() => {
-                          if (window.confirm('Are you sure you want to remove this assessment?')) {
-                            removeAssessmentMutation.mutate(assessment.id);
-                          }
-                        }}
+                        onClick={() => handleRemoveClick(assessment.id, assessment.assessmentName)}
                         disabled={removeAssessmentMutation.isPending}
                         className="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
                       >
@@ -361,7 +375,7 @@ export default function AssessmentTab({ clientId }: AssessmentTabProps) {
                       <div className="flex space-x-2 mt-3">
                         <button
                           onClick={() => {
-                            alert('View details feature coming soon!');
+                            toast('View details feature coming soon!', { icon: 'ℹ️' });
                           }}
                           className="px-3 py-1 bg-indigo-500 text-white text-sm font-semibold rounded-lg hover:bg-indigo-600 transition-colors"
                         >
@@ -369,7 +383,7 @@ export default function AssessmentTab({ clientId }: AssessmentTabProps) {
                         </button>
                         <button
                           onClick={() => {
-                            alert('Export PDF feature coming soon!');
+                            toast('Export PDF feature coming soon!', { icon: 'ℹ️' });
                           }}
                           className="px-3 py-1 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors"
                         >
@@ -384,6 +398,17 @@ export default function AssessmentTab({ clientId }: AssessmentTabProps) {
           </div>
         </div>
       </div>
+
+      {/* Remove Assessment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={removeConfirm.isOpen}
+        onClose={() => setRemoveConfirm({ isOpen: false, assessmentId: '', assessmentName: '' })}
+        onConfirm={confirmRemove}
+        title="Remove Assessment"
+        message={`Are you sure you want to remove the ${removeConfirm.assessmentName} assessment?`}
+        confirmText="Remove"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

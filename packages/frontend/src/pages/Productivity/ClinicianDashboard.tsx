@@ -111,11 +111,15 @@ export default function ClinicianDashboard() {
           title="Unsigned Notes"
           value={unsignedNotes.length}
           subtitle={unsignedNotes.length === 0 ? 'All caught up!' : `${unsignedNotes.filter((n: any) => {
-            const daysOld = Math.floor((Date.now() - new Date(n.appointmentDate).getTime()) / (1000 * 60 * 60 * 24));
+            const appointmentDate = n.appointmentDate ? new Date(n.appointmentDate) : null;
+            if (!appointmentDate || isNaN(appointmentDate.getTime())) return false;
+            const daysOld = Math.floor((Date.now() - appointmentDate.getTime()) / (1000 * 60 * 60 * 24));
             return daysOld > 7;
           }).length} overdue (>7 days)`}
           status={unsignedNotes.length === 0 ? 'success' : unsignedNotes.some((n: any) => {
-            const daysOld = Math.floor((Date.now() - new Date(n.appointmentDate).getTime()) / (1000 * 60 * 60 * 24));
+            const appointmentDate = n.appointmentDate ? new Date(n.appointmentDate) : null;
+            if (!appointmentDate || isNaN(appointmentDate.getTime())) return false;
+            const daysOld = Math.floor((Date.now() - appointmentDate.getTime()) / (1000 * 60 * 60 * 24));
             return daysOld > 7;
           }) ? 'danger' : 'warning'}
         />
@@ -140,8 +144,13 @@ export default function ClinicianDashboard() {
         ) : (
           <div className="space-y-3">
             {unsignedNotes.slice(0, 10).map((note: any) => {
-              const daysOld = Math.floor((Date.now() - new Date(note.appointmentDate).getTime()) / (1000 * 60 * 60 * 24));
-              const isOverdue = daysOld > 7;
+              // Safely calculate days old, handling invalid/null dates
+              const appointmentDate = note.appointmentDate ? new Date(note.appointmentDate) : null;
+              const isValidDate = appointmentDate && !isNaN(appointmentDate.getTime());
+              const daysOld = isValidDate 
+                ? Math.floor((Date.now() - appointmentDate.getTime()) / (1000 * 60 * 60 * 24))
+                : null;
+              const isOverdue = daysOld !== null && daysOld > 7;
 
               return (
                 <div
@@ -159,7 +168,8 @@ export default function ClinicianDashboard() {
                     <div>
                       <h4 className="font-semibold text-gray-900">{note.client?.firstName} {note.client?.lastName}</h4>
                       <p className="text-sm text-gray-600">
-                        {new Date(note.appointmentDate).toLocaleDateString()} - {daysOld} days old
+                        {isValidDate ? appointmentDate.toLocaleDateString() : 'Date unavailable'} 
+                        {daysOld !== null ? ` - ${daysOld} days old` : ''}
                         {isOverdue && <span className="text-red-700 font-semibold ml-2">OVERDUE</span>}
                       </p>
                     </div>

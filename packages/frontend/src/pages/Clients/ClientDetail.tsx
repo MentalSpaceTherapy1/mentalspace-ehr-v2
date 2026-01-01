@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import EmergencyContacts from '../../components/EmergencyContacts';
 import InsuranceInfo from '../../components/InsuranceInfo';
 import Guardians from '../../components/Guardians';
@@ -16,6 +18,7 @@ export default function ClientDetail() {
   const { id } = useParams();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'demographics' | 'appointments' | 'clinical-notes' | 'diagnoses' | 'portal' | 'assessments'>('demographics');
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
   // Fetch client data
   const { data: clientData, isLoading, error } = useQuery({
@@ -37,13 +40,21 @@ export default function ClientDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client', id] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      toast.success('Client deactivated successfully');
+      setShowDeactivateModal(false);
+    },
+    onError: (error: any) => {
+      console.error('Failed to deactivate client:', error);
+      toast.error(error.response?.data?.error || 'Failed to deactivate client');
     },
   });
 
   const handleDeactivate = () => {
-    if (window.confirm('Are you sure you want to deactivate this client?')) {
-      deactivateMutation.mutate();
-    }
+    setShowDeactivateModal(true);
+  };
+
+  const confirmDeactivate = () => {
+    deactivateMutation.mutate();
   };
 
   const formatDOB = (value: Date | string) => {
@@ -493,6 +504,19 @@ export default function ClientDetail() {
       {activeTab === 'portal' && <PortalTab clientId={id!} />}
 
       {activeTab === 'assessments' && <AssessmentTab clientId={id!} />}
+
+      {/* Deactivate Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeactivateModal}
+        onClose={() => setShowDeactivateModal(false)}
+        onConfirm={confirmDeactivate}
+        title="Deactivate Client"
+        message={`Are you sure you want to deactivate ${client?.firstName} ${client?.lastName}? This will mark the client as inactive.`}
+        confirmText="Deactivate"
+        cancelText="Cancel"
+        icon="warning"
+        isLoading={deactivateMutation.isPending}
+      />
     </div>
   );
 }

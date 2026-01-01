@@ -20,6 +20,7 @@ import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppo
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidatedField from '../../../components/ClinicalNotes/ValidatedField';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
+import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
 
 // Constants for dropdowns
 const RISK_LEVELS = ['None', 'Low', 'Moderate', 'High', 'Imminent'];
@@ -282,6 +283,22 @@ export default function IntakeAssessmentForm() {
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [showValidation, setShowValidation] = useState(false);
 
+  // Session-safe saving (handles session timeout with local storage backup)
+  const {
+    sessionError,
+    clearSessionError,
+    backupToLocalStorage,
+    clearBackup,
+    handleSaveError,
+    hasRecoveredDraft,
+    applyRecoveredDraft,
+    discardRecoveredDraft,
+  } = useSessionSafeSave({
+    noteType: 'IntakeAssessment',
+    clientId: clientId || '',
+    noteId,
+  });
+
   // Fetch client data
   const { data: clientData } = useQuery({
     queryKey: ['client', clientId],
@@ -490,6 +507,34 @@ export default function IntakeAssessmentForm() {
     }
   }, [existingNoteData, isEditMode]);
 
+  // Handle recovering draft data
+  const handleRecoverDraft = () => {
+    const recovered = applyRecoveredDraft();
+    if (recovered) {
+      // Apply recovered data to form fields
+      if (recovered.sessionDate) {
+        const date = new Date(recovered.sessionDate);
+        setSessionDate(date.toISOString().split('T')[0]);
+      }
+      if (recovered.chiefComplaint) setChiefComplaint(recovered.chiefComplaint);
+      if (recovered.presentingProblem) setPresentingProblem(recovered.presentingProblem);
+      if (recovered.psychiatricHistory) setPsychiatricHistory(recovered.psychiatricHistory);
+      if (recovered.medicalHistory) setMedicalHistory(recovered.medicalHistory);
+      if (recovered.medications) setMedications(recovered.medications);
+      if (recovered.familyHistory) setFamilyHistory(recovered.familyHistory);
+      if (recovered.socialHistory) setSocialHistory(recovered.socialHistory);
+      if (recovered.assessment) setAssessment(recovered.assessment);
+      if (recovered.plan) setPlan(recovered.plan);
+      if (recovered.diagnosisCodes) setDiagnosisCodes(recovered.diagnosisCodes);
+      if (recovered.cptCode) setCptCode(recovered.cptCode);
+      if (recovered.billable !== undefined) setBillable(recovered.billable);
+      if (recovered.riskLevel) setRiskLevel(recovered.riskLevel);
+      if (recovered.suicidalIdeation !== undefined) setSuicidalIdeation(recovered.suicidalIdeation);
+      if (recovered.homicidalIdeation !== undefined) setHomicidalIdeation(recovered.homicidalIdeation);
+      if (recovered.appointmentId) setSelectedAppointmentId(recovered.appointmentId);
+    }
+  };
+
   const handleAppointmentSelect = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
     setShowAppointmentPicker(false);
@@ -538,26 +583,40 @@ export default function IntakeAssessmentForm() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
+    },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
     },
   });
 
   const saveDraftMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       if (isEditMode) {
         return api.put(`/clinical-notes/${noteId}`, data);
       }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
+    },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
     },
   });
 
@@ -892,6 +951,19 @@ export default function IntakeAssessmentForm() {
           </h1>
           <p className="text-gray-600 mt-2">Comprehensive initial evaluation with V1 PRD specifications</p>
         </div>
+
+        {/* Session Expired Alert */}
+        {sessionError && (
+          <SessionExpiredAlert message={sessionError} onDismiss={clearSessionError} />
+        )}
+
+        {/* Recovered Draft Alert */}
+        {hasRecoveredDraft && (
+          <RecoveredDraftAlert
+            onRecover={handleRecoverDraft}
+            onDiscard={discardRecoveredDraft}
+          />
+        )}
 
         {/* Client ID Validation */}
         {!clientId && (

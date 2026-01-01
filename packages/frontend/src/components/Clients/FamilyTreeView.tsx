@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import ConfirmModal from '../ConfirmModal';
 
 interface RelatedClient {
   id: string;
@@ -36,6 +37,11 @@ interface FamilyTreeViewProps {
 export default function FamilyTreeView({ clientId, relationships, isLoading, onRefetch }: FamilyTreeViewProps) {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: '',
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -48,10 +54,13 @@ export default function FamilyTreeView({ clientId, relationships, isLoading, onR
     },
   });
 
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to remove the relationship with ${name}?`)) {
-      deleteMutation.mutate(id);
-    }
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteConfirm({ isOpen: true, id, name });
+  };
+
+  const confirmDelete = () => {
+    deleteMutation.mutate(deleteConfirm.id);
+    setDeleteConfirm({ isOpen: false, id: '', name: '' });
   };
 
   const getRelationshipIcon = (type: string) => {
@@ -240,7 +249,7 @@ export default function FamilyTreeView({ clientId, relationships, isLoading, onR
                   {/* Actions */}
                   <div className="flex flex-col space-y-2 ml-4">
                     <button
-                      onClick={() => handleDelete(rel.id, `${rel.relatedClient.firstName} ${rel.relatedClient.lastName}`)}
+                      onClick={() => handleDeleteClick(rel.id, `${rel.relatedClient.firstName} ${rel.relatedClient.lastName}`)}
                       disabled={deleteMutation.isPending}
                       className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-bold disabled:opacity-50"
                     >
@@ -253,6 +262,17 @@ export default function FamilyTreeView({ clientId, relationships, isLoading, onR
           </div>
         </div>
       ))}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, id: '', name: '' })}
+        onConfirm={confirmDelete}
+        title="Remove Relationship"
+        message={`Are you sure you want to remove the relationship with ${deleteConfirm.name}?`}
+        confirmText="Remove"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

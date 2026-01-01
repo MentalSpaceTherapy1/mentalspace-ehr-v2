@@ -69,6 +69,7 @@ export const getNavItems = (userRole?: string): NavItem[] => [
     submenu: [
       { path: '/notes', label: 'Compliance Dashboard' },
       { path: '/notes/my-notes', label: 'My Notes' },
+      { path: '/clinical-notes/new', label: 'Create New Note' },
     ]
   },
   {
@@ -111,38 +112,39 @@ export const getNavItems = (userRole?: string): NavItem[] => [
     ]
   },
   {
-    path: '/progress',
+    path: '/progress-tracking',
     icon: '📈',
     label: 'Progress Tracking',
     color: 'from-green-500 to-teal-600',
     hasSubmenu: true,
     submenu: [
-      { path: '/client/symptoms', label: 'Symptom Diary' },
-      { path: '/client/sleep', label: 'Sleep Diary' },
-      { path: '/client/exercise', label: 'Exercise Log' },
+      { path: '/progress-tracking', label: 'Progress Dashboard' },
+      { path: '/clinician/client-progress', label: 'Client Progress' },
     ]
   },
   {
-    path: '/guardian',
+    path: '/guardian-portal',
     icon: '👨‍👩‍👧',
     label: 'Guardian Portal',
     color: 'from-blue-500 to-indigo-600',
     hasSubmenu: true,
     submenu: [
+      { path: '/guardian-portal', label: 'Guardian Dashboard' },
       { path: '/guardian/portal', label: 'My Dependents' },
       { path: '/guardian/request-access', label: 'Request Access' },
+      { path: '/admin/guardian-verification', label: 'Guardian Verification' },
     ]
   },
   {
-    path: '/admin-menu',
+    path: '/admin',
     icon: '⚙️',
     label: 'Admin Tools',
     color: 'from-purple-600 to-pink-600',
     hasSubmenu: true,
     submenu: [
+      { path: '/admin', label: 'Admin Dashboard' },
       { path: '/admin/session-ratings', label: 'Session Ratings' },
       { path: '/admin/crisis-detections', label: 'Crisis Detections' },
-      { path: '/admin/guardian-verification', label: 'Guardian Verification' },
       { path: '/admin/scheduling-rules', label: 'Scheduling Rules' },
       { path: '/admin/waitlist-management', label: 'Waitlist Management' },
       { path: '/admin/advancedmd-sync', label: '🔄 AdvancedMD Sync' },
@@ -150,19 +152,20 @@ export const getNavItems = (userRole?: string): NavItem[] => [
     ]
   },
   {
-    path: '/clinician-menu',
+    path: '/clinician',
     icon: '👨‍⚕️',
     label: 'Clinician Tools',
     color: 'from-teal-500 to-cyan-600',
     hasSubmenu: true,
     submenu: [
+      { path: '/clinician', label: 'Clinician Dashboard' },
       { path: '/clinician/client-progress', label: 'Client Progress' },
       { path: '/clinician/my-waitlist', label: 'My Waitlist' },
     ]
   },
-  { path: '/telehealth/session/demo', icon: '📹', label: 'Telehealth', color: 'from-blue-600 to-indigo-600' },
-  { path: '/portal/dashboard', icon: '🌐', label: 'Client Portal', color: 'from-emerald-500 to-teal-500' },
-  { path: '/portal/schedule', icon: '📅', label: 'Self-Schedule', color: 'from-violet-500 to-purple-600' },
+  { path: '/telehealth', icon: '📹', label: 'Telehealth', color: 'from-blue-600 to-indigo-600' },
+  { path: '/client-portal', icon: '🌐', label: 'Client Portal', color: 'from-emerald-500 to-teal-500' },
+  { path: '/self-schedule', icon: '📅', label: 'Self-Schedule', color: 'from-violet-500 to-purple-600' },
   { path: '/supervision', icon: '👨‍🏫', label: 'Supervision', color: 'from-rose-500 to-red-500' },
   { path: getProductivityPath(userRole), icon: '📊', label: 'Productivity', color: 'from-violet-500 to-fuchsia-500' },
   { path: '/users', icon: '👥', label: 'Users', color: 'from-indigo-500 to-purple-500' },
@@ -302,10 +305,10 @@ export const MENU_KEYS = [
   '/notes',
   '/billing',
   '/settings',
-  '/progress',
-  '/guardian',
-  '/admin-menu',
-  '/clinician-menu',
+  '/progress-tracking',
+  '/guardian-portal',
+  '/admin',
+  '/clinician',
   '/reports',
   '/analytics',
   '/credentialing',

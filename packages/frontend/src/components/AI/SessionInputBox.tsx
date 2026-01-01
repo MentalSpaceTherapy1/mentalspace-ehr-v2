@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, Sparkles, FileText } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface SessionInputBoxProps {
   onGenerate: (sessionNotes: string) => Promise<void>;
@@ -17,7 +18,7 @@ const SessionInputBox: React.FC<SessionInputBoxProps> = ({
 
   const handleGenerate = async () => {
     if (!sessionNotes.trim()) {
-      alert('Please enter session notes or transcription before generating.');
+      toast.error('Please enter session notes or transcription before generating.');
       return;
     }
     await onGenerate(sessionNotes);

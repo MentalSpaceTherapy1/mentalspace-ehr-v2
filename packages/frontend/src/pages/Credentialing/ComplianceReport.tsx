@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   TrendingUp,
   Download,
@@ -46,7 +47,7 @@ export default function ComplianceReport() {
     : [];
 
   const handleExport = (format: 'PDF' | 'EXCEL') => {
-    alert(`Exporting report as ${format}...`);
+    toast(`Exporting report as ${format}...`, { icon: '📄' });
   };
 
   return (

@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import api from '../../lib/api';
 
 interface TimeOffRequestDialogProps {
   open: boolean;
@@ -48,16 +46,13 @@ export default function TimeOffRequestDialog({
       setCheckingImpact(true);
       setError(null);
 
-      const response = await axios.get(
-        `${API_URL}/time-off/affected-appointments`,
+      const response = await api.get(
+        '/time-off/affected-appointments',
         {
           params: {
             providerId,
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString(),
-          },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         }
       );
@@ -92,8 +87,8 @@ export default function TimeOffRequestDialog({
       setLoading(true);
       setError(null);
 
-      const response = await axios.post(
-        `${API_URL}/time-off`,
+      const response = await api.post(
+        '/time-off',
         {
           providerId,
           startDate: startDate.toISOString(),
@@ -103,11 +98,6 @@ export default function TimeOffRequestDialog({
           requestedBy,
           coverageProviderId: coverageProviderId || undefined,
           autoReschedule,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
         }
       );
 

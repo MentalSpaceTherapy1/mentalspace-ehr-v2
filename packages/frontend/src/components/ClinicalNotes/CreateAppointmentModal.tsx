@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, Clock, MapPin, Users, Save } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
 interface CreateAppointmentModalProps {
@@ -75,7 +76,7 @@ export default function CreateAppointmentModal({
     e.preventDefault();
 
     if (!appointmentDate || !startTime) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
 

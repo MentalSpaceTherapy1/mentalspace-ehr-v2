@@ -13,19 +13,22 @@ import { AdvancedMDChargeSyncService } from '../integrations/advancedmd/charge-s
 const createChargeSchema = z.object({
   clientId: z.string().uuid(),
   appointmentId: z.string().uuid().optional(),
-  serviceDate: z.string().datetime(),
-  providerId: z.string().uuid(),
+  serviceDate: z.string(), // Allow various date formats from frontend
+  providerId: z.string().uuid().optional(), // Made optional - will use current user if not provided
   supervisingProviderId: z.string().uuid().optional(),
-  cptCode: z.string().min(1),
-  cptDescription: z.string(),
+  cptCode: z.string().optional(), // Made optional for simpler charge entry
+  cptDescription: z.string().optional(), // Made optional
   modifiers: z.array(z.string()).optional(),
   units: z.number().int().min(1).default(1),
-  diagnosisCodesJson: z.any(), // Array of diagnosis objects
-  placeOfService: z.string(),
+  diagnosisCodesJson: z.any().optional(), // Made optional
+  diagnosis: z.string().optional(), // Added to support frontend field
+  placeOfService: z.string().optional().default('OFFICE'), // Made optional with default
   locationId: z.string().uuid().optional(),
   chargeAmount: z.number().min(0),
   primaryInsuranceId: z.string().uuid().optional(),
   secondaryInsuranceId: z.string().uuid().optional(),
+  chargeStatus: z.string().optional().default('Pending'), // Added to support frontend field
+  notes: z.string().optional(), // Added to support frontend field
   // AdvancedMD sync options
   syncToAdvancedMD: z.boolean().optional().default(false),
   autoSubmitClaim: z.boolean().optional().default(false),
@@ -141,20 +144,41 @@ export const createCharge = async (req: Request, res: Response) => {
     const validatedData = createChargeSchema.parse(req.body);
     const userId = (req as any).user?.userId;
 
+    // Parse service date - handle various formats
+    let serviceDate: Date;
+    try {
+      serviceDate = new Date(validatedData.serviceDate);
+      if (isNaN(serviceDate.getTime())) {
+        throw new Error('Invalid date');
+      }
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid service date format',
+      });
+    }
+
+    // Build diagnosis codes JSON from either diagnosisCodesJson or simple diagnosis string
+    let diagnosisCodes = validatedData.diagnosisCodesJson;
+    if (!diagnosisCodes && validatedData.diagnosis) {
+      diagnosisCodes = [{ code: validatedData.diagnosis, isPrimary: true }];
+    }
+
     const chargeData: Prisma.ChargeEntryUncheckedCreateInput = {
       clientId: validatedData.clientId,
       appointmentId: validatedData.appointmentId,
-      serviceDate: new Date(validatedData.serviceDate),
-      providerId: validatedData.providerId,
+      serviceDate,
+      providerId: validatedData.providerId || userId, // Default to current user
       supervisingProviderId: validatedData.supervisingProviderId,
-      cptCode: validatedData.cptCode,
-      cptDescription: validatedData.cptDescription,
+      cptCode: validatedData.cptCode || '',
+      cptDescription: validatedData.cptDescription || '',
       modifiers: validatedData.modifiers || [],
       units: validatedData.units,
-      diagnosisCodesJson: validatedData.diagnosisCodesJson,
-      placeOfService: validatedData.placeOfService,
+      diagnosisCodesJson: diagnosisCodes,
+      placeOfService: validatedData.placeOfService || 'OFFICE',
       locationId: validatedData.locationId,
       chargeAmount: validatedData.chargeAmount,
+      chargeStatus: validatedData.chargeStatus || 'Pending',
       primaryInsuranceId: validatedData.primaryInsuranceId,
       secondaryInsuranceId: validatedData.secondaryInsuranceId,
       createdBy: userId,

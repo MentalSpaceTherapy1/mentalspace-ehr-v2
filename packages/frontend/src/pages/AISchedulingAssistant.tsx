@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, Sparkles, TrendingUp, Users, Calendar, Clock } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface SchedulingSuggestion {
   id: string;
@@ -50,6 +51,10 @@ export default function AISchedulingAssistant() {
   const [parseResult, setParseResult] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<SchedulingSuggestion[]>([]);
   const [activeTab, setActiveTab] = useState<AITab>('suggestions');
+  const [acceptConfirm, setAcceptConfirm] = useState<{ isOpen: boolean; suggestionId: string }>({
+    isOpen: false,
+    suggestionId: ''
+  });
   const queryClient = useQueryClient();
 
   // Fetch AI scheduling statistics
@@ -110,10 +115,13 @@ export default function AISchedulingAssistant() {
     }
   };
 
-  const handleAcceptSuggestion = (suggestionId: string) => {
-    if (window.confirm('Accept this scheduling suggestion and create the appointment?')) {
-      acceptMutation.mutate(suggestionId);
-    }
+  const handleAcceptClick = (suggestionId: string) => {
+    setAcceptConfirm({ isOpen: true, suggestionId });
+  };
+
+  const confirmAccept = () => {
+    acceptMutation.mutate(acceptConfirm.suggestionId);
+    setAcceptConfirm({ isOpen: false, suggestionId: '' });
   };
 
   const getConfidenceBadgeColor = (level: string) => {
@@ -561,7 +569,7 @@ export default function AISchedulingAssistant() {
 
                 {/* Accept Button */}
                 <button
-                  onClick={() => handleAcceptSuggestion(suggestion.id)}
+                  onClick={() => handleAcceptClick(suggestion.id)}
                   disabled={acceptMutation.isPending}
                   className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
@@ -696,6 +704,17 @@ export default function AISchedulingAssistant() {
             </div>
           </div>
         )}
+
+        {/* Accept Suggestion Confirmation Modal */}
+        <ConfirmModal
+          isOpen={acceptConfirm.isOpen}
+          onClose={() => setAcceptConfirm({ isOpen: false, suggestionId: '' })}
+          onConfirm={confirmAccept}
+          title="Accept Scheduling Suggestion"
+          message="Accept this scheduling suggestion and create the appointment?"
+          confirmText="Accept & Create"
+          confirmVariant="primary"
+        />
       </div>
     </div>
   );

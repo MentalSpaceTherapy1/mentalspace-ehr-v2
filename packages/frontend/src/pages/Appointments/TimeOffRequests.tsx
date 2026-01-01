@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface ScheduleException {
   id: string;
@@ -25,6 +26,15 @@ export default function TimeOffRequests() {
   const queryClient = useQueryClient();
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedClinicianId, setSelectedClinicianId] = useState<string>('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; exceptionId: string | null }>({
+    open: false,
+    exceptionId: null,
+  });
+  const [denyModal, setDenyModal] = useState<{ open: boolean; exceptionId: string | null }>({
+    open: false,
+    exceptionId: null,
+  });
+  const [denialReason, setDenialReason] = useState('');
 
   const [formData, setFormData] = useState({
     clinicianId: '',
@@ -144,6 +154,36 @@ export default function TimeOffRequests() {
       reason: '',
       notes: '',
     });
+  };
+
+  const handleDeleteClick = (exceptionId: string) => {
+    setDeleteConfirm({ open: true, exceptionId });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm.exceptionId) {
+      deleteExceptionMutation.mutate(deleteConfirm.exceptionId);
+    }
+    setDeleteConfirm({ open: false, exceptionId: null });
+  };
+
+  const handleDenyClick = (exceptionId: string) => {
+    setDenialReason('');
+    setDenyModal({ open: true, exceptionId });
+  };
+
+  const confirmDeny = () => {
+    if (denyModal.exceptionId && denialReason.trim()) {
+      denyExceptionMutation.mutate({
+        exceptionId: denyModal.exceptionId,
+        denialReason: denialReason.trim(),
+      });
+    } else if (!denialReason.trim()) {
+      toast.error('Please provide a reason for denial');
+      return;
+    }
+    setDenyModal({ open: false, exceptionId: null });
+    setDenialReason('');
   };
 
   const getStatusColor = (status: string) => {
@@ -269,15 +309,7 @@ export default function TimeOffRequests() {
                                 Approve
                               </button>
                               <button
-                                onClick={() => {
-                                  const reason = prompt('Reason for denial:');
-                                  if (reason) {
-                                    denyExceptionMutation.mutate({
-                                      exceptionId: exception.id,
-                                      denialReason: reason,
-                                    });
-                                  }
-                                }}
+                                onClick={() => handleDenyClick(exception.id)}
                                 className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-semibold"
                               >
                                 Deny
@@ -285,11 +317,7 @@ export default function TimeOffRequests() {
                             </>
                           )}
                           <button
-                            onClick={() => {
-                              if (confirm('Delete this time off request?')) {
-                                deleteExceptionMutation.mutate(exception.id);
-                              }
-                            }}
+                            onClick={() => handleDeleteClick(exception.id)}
                             className="px-3 py-1 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-semibold"
                           >
                             Delete
@@ -460,6 +488,62 @@ export default function TimeOffRequests() {
                 className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50"
               >
                 {createExceptionMutation.isPending ? 'Submitting...' : 'Submit Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, exceptionId: null })}
+        onConfirm={confirmDelete}
+        title="Delete Time Off Request"
+        message="Are you sure you want to delete this time off request? This action cannot be undone."
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
+
+      {/* Deny Modal with Reason Input */}
+      {denyModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Deny Time Off Request</h2>
+              <p className="text-gray-600 text-sm mt-1">Please provide a reason for denying this request.</p>
+            </div>
+
+            <div className="p-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Reason for Denial <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={denialReason}
+                onChange={(e) => setDenialReason(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter reason for denial..."
+                autoFocus
+              />
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setDenyModal({ open: false, exceptionId: null });
+                  setDenialReason('');
+                }}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeny}
+                disabled={!denialReason.trim()}
+                className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Deny Request
               </button>
             </div>
           </div>

@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { useState } from 'react';
+import api from '../lib/api';
 
 interface Incident {
   id: string;
@@ -98,9 +96,7 @@ export const useIncident = () => {
       if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
       if (filters?.dateTo) params.append('dateTo', filters.dateTo);
 
-      const response = await axios.get(`${API_URL}/incidents?${params}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get(`/incidents?${params}`);
       setIncidents(response.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch incidents');
@@ -113,9 +109,7 @@ export const useIncident = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/incidents/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get(`/incidents/${id}`);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch incident');
@@ -129,9 +123,7 @@ export const useIncident = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API_URL}/incidents`, incidentData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.post('/incidents', incidentData);
       await fetchIncidents();
       return response.data;
     } catch (err: any) {
@@ -146,9 +138,7 @@ export const useIncident = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.put(`${API_URL}/incidents/${id}`, incidentData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.put(`/incidents/${id}`, incidentData);
       await fetchIncidents();
       return response.data;
     } catch (err: any) {
@@ -163,9 +153,7 @@ export const useIncident = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.post(`${API_URL}/incidents/${id}/assign`, { investigatorId }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      await api.post(`/incidents/${id}/assign`, { investigatorId });
       await fetchIncidents();
       return true;
     } catch (err: any) {
@@ -183,9 +171,7 @@ export const useIncident = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.put(`${API_URL}/incidents/${incidentId}/investigation`, investigationData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      await api.put(`/incidents/${incidentId}/investigation`, investigationData);
       return true;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update investigation');
@@ -199,9 +185,7 @@ export const useIncident = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.post(`${API_URL}/incidents/${id}/close`, { closureNotes }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      await api.post(`/incidents/${id}/close`, { closureNotes });
       await fetchIncidents();
       return true;
     } catch (err: any) {
@@ -223,9 +207,7 @@ export const useIncident = () => {
       if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
       if (filters?.dateTo) params.append('dateTo', filters.dateTo);
 
-      const response = await axios.get(`${API_URL}/incidents/stats?${params}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await api.get(`/incidents/stats?${params}`);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch stats');
@@ -239,8 +221,7 @@ export const useIncident = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/incidents/export`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      const response = await api.get('/incidents/export', {
         responseType: 'blob',
         params: filters
       });

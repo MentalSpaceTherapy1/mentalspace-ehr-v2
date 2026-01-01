@@ -40,12 +40,50 @@ export const getAllClients = async (req: Request, res: Response) => {
     if (search) {
       const sanitizedSearch = sanitizeSearchInput(search as string);
       if (sanitizedSearch) {
-        where.OR = [
-          { firstName: { contains: sanitizedSearch, mode: 'insensitive' } },
-          { lastName: { contains: sanitizedSearch, mode: 'insensitive' } },
-          { medicalRecordNumber: { contains: sanitizedSearch, mode: 'insensitive' } },
-          { email: { contains: sanitizedSearch, mode: 'insensitive' } },
-        ];
+        // Split search by spaces and filter empty strings
+        const searchTerms = sanitizedSearch.split(/\s+/).filter(term => term.length > 0);
+
+        if (searchTerms.length === 1) {
+          // Single word search - check all fields
+          where.OR = [
+            { firstName: { contains: searchTerms[0], mode: 'insensitive' } },
+            { lastName: { contains: searchTerms[0], mode: 'insensitive' } },
+            { medicalRecordNumber: { contains: searchTerms[0], mode: 'insensitive' } },
+            { email: { contains: searchTerms[0], mode: 'insensitive' } },
+          ];
+        } else {
+          // Multi-word search - likely "firstName lastName" format
+          // Match if: (firstName OR lastName contains first term) AND (firstName OR lastName contains second term)
+          // Also try exact firstName+lastName match
+          where.OR = [
+            // Try firstName + lastName combination
+            {
+              AND: [
+                { firstName: { contains: searchTerms[0], mode: 'insensitive' } },
+                { lastName: { contains: searchTerms.slice(1).join(' '), mode: 'insensitive' } },
+              ],
+            },
+            // Try lastName + firstName combination
+            {
+              AND: [
+                { lastName: { contains: searchTerms[0], mode: 'insensitive' } },
+                { firstName: { contains: searchTerms.slice(1).join(' '), mode: 'insensitive' } },
+              ],
+            },
+            // Try each word matching across firstName and lastName
+            {
+              AND: searchTerms.map(term => ({
+                OR: [
+                  { firstName: { contains: term, mode: 'insensitive' } },
+                  { lastName: { contains: term, mode: 'insensitive' } },
+                ],
+              })),
+            },
+            // Also check email and MRN with full string
+            { email: { contains: sanitizedSearch, mode: 'insensitive' } },
+            { medicalRecordNumber: { contains: sanitizedSearch, mode: 'insensitive' } },
+          ];
+        }
       }
     }
 
@@ -221,6 +259,14 @@ export const getClientById = async (req: Request, res: Response) => {
 
 // Create new client
 export const createClient = async (req: Request, res: Response) => {
+  // IMMEDIATE LOG - this should appear in CloudWatch immediately
+  console.log('[CLIENT CREATE] Request received', {
+    timestamp: new Date().toISOString(),
+    userId: (req as any).user?.userId,
+    bodyKeys: Object.keys(req.body || {}),
+    hasBody: !!req.body,
+  });
+
   try {
     const validatedData = createClientSchema.parse(req.body);
     const userId = (req as any).user.userId;
@@ -235,6 +281,17 @@ export const createClient = async (req: Request, res: Response) => {
       createdBy: userId,
       lastModifiedBy: userId,
     };
+
+    // Debug logging for client creation
+    logger.info('Creating client', {
+      mrn: medicalRecordNumber,
+      userId,
+      hasFirstName: !!clientData.firstName,
+      hasLastName: !!clientData.lastName,
+      hasDOB: !!clientData.dateOfBirth,
+      hasAddress: !!clientData.addressStreet1,
+      dataKeys: Object.keys(clientData),
+    });
 
     const client = await prisma.client.create({
       data: clientData,
@@ -285,6 +342,27 @@ export const createClient = async (req: Request, res: Response) => {
         errorCode: error.errorCode,
       });
     }
+
+    // CONSOLE LOG for CloudWatch visibility
+    console.error('[CLIENT CREATE ERROR]', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      prismaCode: (error as any)?.code,
+      prismaMeta: (error as any)?.meta,
+      userId: (req as any).user?.userId,
+    });
+
+    // Enhanced logging for debugging production issues
+    logger.error('Create client error - detailed', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      prismaCode: (error as any)?.code,
+      prismaClientVersion: (error as any)?.clientVersion,
+      prismaMeta: (error as any)?.meta,
+      userId: (req as any).user?.userId,
+      requestBody: Object.keys(req.body || {}),
+    });
 
     const errorId = logControllerError('Create client error', error, {
       userId: (req as any).user?.userId,

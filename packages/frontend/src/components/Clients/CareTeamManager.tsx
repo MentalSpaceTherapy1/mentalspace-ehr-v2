@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import AddProviderDialog from './AddProviderDialog';
+import ConfirmModal from '../ConfirmModal';
 
 interface Provider {
   id: string;
@@ -43,6 +44,11 @@ interface CareTeamManagerProps {
 export default function CareTeamManager({ clientId, careTeam, isLoading, onRefetch }: CareTeamManagerProps) {
   const queryClient = useQueryClient();
   const [isAddProviderOpen, setIsAddProviderOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: '',
+  });
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -55,10 +61,13 @@ export default function CareTeamManager({ clientId, careTeam, isLoading, onRefet
     },
   });
 
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to remove ${name} from the care team?`)) {
-      deleteMutation.mutate(id);
-    }
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteConfirm({ isOpen: true, id, name });
+  };
+
+  const confirmDelete = () => {
+    deleteMutation.mutate(deleteConfirm.id);
+    setDeleteConfirm({ isOpen: false, id: '', name: '' });
   };
 
   const getRoleIcon = (role: string) => {
@@ -268,7 +277,7 @@ export default function CareTeamManager({ clientId, careTeam, isLoading, onRefet
                   {/* Actions */}
                   <div className="flex flex-col space-y-2 ml-4">
                     <button
-                      onClick={() => handleDelete(member.id, providerName)}
+                      onClick={() => handleDeleteClick(member.id, providerName)}
                       disabled={deleteMutation.isPending}
                       className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-bold disabled:opacity-50"
                     >
@@ -301,6 +310,17 @@ export default function CareTeamManager({ clientId, careTeam, isLoading, onRefet
           onRefetch();
           setIsAddProviderOpen(false);
         }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, id: '', name: '' })}
+        onConfirm={confirmDelete}
+        title="Remove Care Team Member"
+        message={`Are you sure you want to remove ${deleteConfirm.name} from the care team?`}
+        confirmText="Remove"
+        confirmVariant="danger"
       />
     </div>
   );

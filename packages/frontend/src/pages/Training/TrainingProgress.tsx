@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   Play,
   Download,
@@ -27,7 +28,7 @@ export default function TrainingProgress() {
       await downloadCertificateMutation.mutateAsync(enrollmentId);
     } catch (error) {
       console.error('Error downloading certificate:', error);
-      alert('Failed to download certificate');
+      toast.error('Failed to download certificate');
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   Shield,
   AlertTriangle,
@@ -39,17 +40,17 @@ export default function ComplianceMonitor() {
 
   const handleSendReminders = async () => {
     if (selectedUsers.length === 0) {
-      alert('Please select at least one user');
+      toast.error('Please select at least one user');
       return;
     }
 
     try {
       await sendRemindersMutation.mutateAsync(selectedUsers);
-      alert(`Sent reminders to ${selectedUsers.length} users`);
+      toast.success(`Sent reminders to ${selectedUsers.length} users`);
       setSelectedUsers([]);
     } catch (error) {
       console.error('Error sending reminders:', error);
-      alert('Failed to send reminders');
+      toast.error('Failed to send reminders');
     }
   };
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Payment {
   id: string;
@@ -35,6 +36,10 @@ export default function PaymentsPage() {
     method: '',
     search: '',
   });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; paymentId: string | null }>({
+    open: false,
+    paymentId: null,
+  });
 
   // Fetch payments
   const { data: payments, isLoading } = useQuery({
@@ -59,6 +64,17 @@ export default function PaymentsPage() {
       setSelectedPayment(null);
     },
   });
+
+  const handleDeleteClick = (paymentId: string) => {
+    setDeleteConfirm({ open: true, paymentId });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm.paymentId) {
+      deleteMutation.mutate(deleteConfirm.paymentId);
+    }
+    setDeleteConfirm({ open: false, paymentId: null });
+  };
 
   const getMethodColor = (method: string) => {
     const colors: Record<string, string> = {
@@ -202,11 +218,7 @@ export default function PaymentsPage() {
                           View
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this payment?')) {
-                              deleteMutation.mutate(payment.id);
-                            }
-                          }}
+                          onClick={() => handleDeleteClick(payment.id)}
                           className="text-red-600 hover:text-red-900 font-semibold"
                         >
                           Delete
@@ -247,6 +259,17 @@ export default function PaymentsPage() {
             onClose={() => setSelectedPayment(null)}
           />
         )}
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmModal
+          isOpen={deleteConfirm.open}
+          onClose={() => setDeleteConfirm({ open: false, paymentId: null })}
+          onConfirm={confirmDelete}
+          title="Delete Payment"
+          message="Are you sure you want to delete this payment?"
+          confirmText="Delete"
+          confirmVariant="danger"
+        />
       </div>
     </div>
   );

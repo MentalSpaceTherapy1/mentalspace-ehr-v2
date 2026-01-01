@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import ConfirmModal from '../ConfirmModal';
 
 interface DiagnosisCardProps {
   diagnosis: {
@@ -40,6 +42,10 @@ interface DiagnosisCardProps {
 
 export default function DiagnosisCard({ diagnosis, onEdit, onDelete }: DiagnosisCardProps) {
   const queryClient = useQueryClient();
+  const [statusConfirm, setStatusConfirm] = useState<{ isOpen: boolean; newStatus: 'ACTIVE' | 'RESOLVED' | 'RULE_OUT_REJECTED' | null }>({
+    isOpen: false,
+    newStatus: null,
+  });
 
   // Update status mutation
   const updateStatusMutation = useMutation({
@@ -112,12 +118,17 @@ export default function DiagnosisCard({ diagnosis, onEdit, onDelete }: Diagnosis
 
   const handleStatusChange = (newStatus: 'ACTIVE' | 'RESOLVED' | 'RULE_OUT_REJECTED') => {
     if (newStatus === 'RESOLVED' || newStatus === 'RULE_OUT_REJECTED') {
-      if (window.confirm(`Are you sure you want to mark this diagnosis as ${newStatus.replace('_', ' ')}?`)) {
-        updateStatusMutation.mutate(newStatus);
-      }
+      setStatusConfirm({ isOpen: true, newStatus });
     } else {
       updateStatusMutation.mutate(newStatus);
     }
+  };
+
+  const confirmStatusChange = () => {
+    if (statusConfirm.newStatus) {
+      updateStatusMutation.mutate(statusConfirm.newStatus);
+    }
+    setStatusConfirm({ isOpen: false, newStatus: null });
   };
 
   return (
@@ -311,6 +322,17 @@ export default function DiagnosisCard({ diagnosis, onEdit, onDelete }: Diagnosis
           </button>
         </div>
       </div>
+
+      {/* Status Change Confirmation Modal */}
+      <ConfirmModal
+        isOpen={statusConfirm.isOpen}
+        onClose={() => setStatusConfirm({ isOpen: false, newStatus: null })}
+        onConfirm={confirmStatusChange}
+        title="Change Diagnosis Status"
+        message={`Are you sure you want to mark this diagnosis as ${statusConfirm.newStatus?.replace(/_/g, ' ') || ''}?`}
+        confirmText="Confirm"
+        confirmVariant="primary"
+      />
     </div>
   );
 }

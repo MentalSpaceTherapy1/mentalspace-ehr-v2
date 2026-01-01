@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   ZoomIn,
   ZoomOut,
@@ -48,7 +49,7 @@ const OrganizationalChart: React.FC = () => {
   const handleExportPNG = () => {
     if (chartRef.current) {
       // In a real implementation, use html2canvas or similar library
-      alert('Export to PNG functionality - integrate html2canvas library');
+      toast('Export to PNG functionality - integrate html2canvas library', { icon: 'ℹ️' });
     }
   };
 

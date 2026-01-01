@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, CheckCircle, Clock, History } from 'lucide-react';
 import { api } from '../../lib/api';
+import ConfirmModal from '../ConfirmModal';
 
 interface RevisionBannerProps {
   noteId: string;
@@ -22,12 +23,14 @@ export default function RevisionBanner({
   const [showHistory, setShowHistory] = useState(false);
   const [isResubmitting, setIsResubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [resubmitConfirm, setResubmitConfirm] = useState(false);
 
-  const handleResubmit = async () => {
-    if (!confirm('Are you sure you want to resubmit this note for review? Make sure you have addressed all required changes.')) {
-      return;
-    }
+  const handleResubmitClick = () => {
+    setResubmitConfirm(true);
+  };
 
+  const confirmResubmit = async () => {
+    setResubmitConfirm(false);
     setIsResubmitting(true);
     setError('');
 
@@ -115,7 +118,7 @@ export default function RevisionBanner({
             {/* Action Buttons */}
             <div className="flex items-center space-x-3">
               <button
-                onClick={handleResubmit}
+                onClick={handleResubmitClick}
                 disabled={isResubmitting}
                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-semibold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
@@ -279,6 +282,17 @@ export default function RevisionBanner({
           </div>
         </div>
       )}
+
+      {/* Resubmit Confirmation Modal */}
+      <ConfirmModal
+        isOpen={resubmitConfirm}
+        onClose={() => setResubmitConfirm(false)}
+        onConfirm={confirmResubmit}
+        title="Resubmit Note for Review"
+        message="Are you sure you want to resubmit this note for review? Make sure you have addressed all required changes."
+        confirmText="Resubmit"
+        confirmVariant="primary"
+      />
     </>
   );
 }

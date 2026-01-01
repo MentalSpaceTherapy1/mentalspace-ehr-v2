@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { parse, addDays, addWeeks, addMonths, setHours, setMinutes, startOfDay, isBefore, isAfter } from 'date-fns';
+import * as schedulingSuggestionsService from './schedulingSuggestions.service';
 
 const prisma = new PrismaClient();
 
@@ -631,8 +632,7 @@ export async function executeSchedulingRequest(
         }
 
         // Use the scheduling suggestions service
-        const { generateSchedulingSuggestions, acceptSuggestion } = await import('./schedulingSuggestions.service');
-        const suggestions = await generateSchedulingSuggestions({
+        const suggestions = await schedulingSuggestionsService.generateSchedulingSuggestions({
           clientId: entities.clientId || '',
           providerId: entities.providerId,
           appointmentTypeId: defaultAppointmentType.id,
@@ -645,7 +645,7 @@ export async function executeSchedulingRequest(
         // Auto-accept the best suggestion and create the appointment
         if (suggestions && suggestions.length > 0) {
           const bestSuggestion = suggestions[0];
-          const appointment = await acceptSuggestion(bestSuggestion.id, userId);
+          const appointment = await schedulingSuggestionsService.acceptSuggestion(bestSuggestion.id, userId);
           result = {
             success: true,
             message: 'Appointment created successfully',
@@ -663,8 +663,7 @@ export async function executeSchedulingRequest(
 
       case 'FIND_SLOT':
         // Similar to SCHEDULE but return suggestions without creating appointment
-        const { generateSchedulingSuggestions: findSlots } = await import('./schedulingSuggestions.service');
-        result = await findSlots({
+        result = await schedulingSuggestionsService.generateSchedulingSuggestions({
           clientId: entities.clientId || '',
           providerId: entities.providerId,
           appointmentTypeId: '',

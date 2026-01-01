@@ -53,6 +53,10 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ onSubs
     open: false,
     subscriptionId: null
   });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; subscriptionId: string | null }>({
+    open: false,
+    subscriptionId: null
+  });
 
   useEffect(() => {
     fetchSubscriptions();
@@ -81,16 +85,20 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ onSubs
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to unsubscribe from this report?')) {
-      return;
-    }
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirm({ open: true, subscriptionId: id });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.subscriptionId) return;
 
     try {
-      await axios.delete(`/api/v1/subscriptions/${id}`);
+      await axios.delete(`/api/v1/subscriptions/${deleteConfirm.subscriptionId}`);
       fetchSubscriptions();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to delete subscription');
+    } finally {
+      setDeleteConfirm({ open: false, subscriptionId: null });
     }
   };
 
@@ -176,7 +184,7 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ onSubs
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <IconButton size="small" color="error" onClick={() => handleDelete(subscription.id)}>
+                        <IconButton size="small" color="error" onClick={() => handleDeleteClick(subscription.id)}>
                           <DeleteIcon />
                         </IconButton>
                       </Tooltip>
@@ -188,6 +196,25 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({ onSubs
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, subscriptionId: null })}
+      >
+        <DialogTitle>Confirm Unsubscribe</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to unsubscribe from this report?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirm({ open: false, subscriptionId: null })}>
+            Cancel
+          </Button>
+          <Button onClick={confirmDelete} color="error" variant="contained">
+            Unsubscribe
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

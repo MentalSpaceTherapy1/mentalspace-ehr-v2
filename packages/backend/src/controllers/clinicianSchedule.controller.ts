@@ -107,9 +107,37 @@ export const getClinicianSchedule = async (req: Request, res: Response) => {
     );
 
     if (!schedule) {
-      return res.status(404).json({
-        success: false,
-        message: 'Schedule not found for this clinician',
+      // Return a default schedule instead of 404 to support AI Scheduling Assistant
+      // and other features that expect schedule data to exist
+      const defaultDaySchedule = {
+        isAvailable: true,
+        startTime: '09:00',
+        endTime: '17:00',
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          clinicianId,
+          weeklyScheduleJson: {
+            monday: defaultDaySchedule,
+            tuesday: defaultDaySchedule,
+            wednesday: defaultDaySchedule,
+            thursday: defaultDaySchedule,
+            friday: defaultDaySchedule,
+            saturday: { isAvailable: false, startTime: '09:00', endTime: '17:00' },
+            sunday: { isAvailable: false, startTime: '09:00', endTime: '17:00' },
+          },
+          acceptNewClients: true,
+          maxAppointmentsPerDay: null,
+          maxAppointmentsPerWeek: null,
+          bufferTimeBetweenAppointments: 0,
+          availableLocations: ['Office', 'Telehealth'],
+          effectiveStartDate: new Date().toISOString(),
+          effectiveEndDate: null,
+          isDefault: true, // Flag to indicate this is a default schedule
+        },
+        message: 'No custom schedule configured. Using default schedule.',
       });
     }
 

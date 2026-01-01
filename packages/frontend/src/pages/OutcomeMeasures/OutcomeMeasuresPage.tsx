@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
 import ProgressChart from '../../components/OutcomeMeasures/ProgressChart';
+import ConfirmModal from '../../components/ConfirmModal';
 
 type MeasureType = 'PHQ9' | 'GAD7' | 'PCL5';
 type ViewMode = 'administer' | 'progress' | 'history';
@@ -70,6 +72,19 @@ export default function OutcomeMeasuresPage() {
   const [history, setHistory] = useState<OutcomeMeasure[]>([]);
   const [clientName, setClientName] = useState('');
   const [startTime] = useState(Date.now());
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  const handleCancelClick = () => {
+    setShowCancelConfirm(true);
+  };
+
+  const confirmCancel = () => {
+    setSelectedMeasure(null);
+    setDefinition(null);
+    setResponses({});
+    setViewMode('history');
+    setShowCancelConfirm(false);
+  };
 
   // Fetch client name
   useEffect(() => {
@@ -109,7 +124,7 @@ export default function OutcomeMeasuresPage() {
       setClinicalNotes('');
     } catch (error) {
       console.error('Error loading questionnaire:', error);
-      alert('Failed to load questionnaire');
+      toast.error('Failed to load questionnaire');
     } finally {
       setLoading(false);
     }
@@ -123,7 +138,7 @@ export default function OutcomeMeasuresPage() {
     // Validate all questions answered
     const allAnswered = definition.questions.every(q => responses[q.id] !== undefined);
     if (!allAnswered) {
-      alert('Please answer all questions before submitting');
+      toast.error('Please answer all questions before submitting');
       return;
     }
 
@@ -139,7 +154,7 @@ export default function OutcomeMeasuresPage() {
         completionTime,
       });
 
-      alert('Outcome measure administered successfully!');
+      toast.success('Outcome measure administered successfully!');
       setSelectedMeasure(null);
       setDefinition(null);
       setResponses({});
@@ -148,7 +163,7 @@ export default function OutcomeMeasuresPage() {
       loadHistory();
     } catch (error: any) {
       console.error('Error submitting outcome measure:', error);
-      alert(error.response?.data?.message || 'Failed to submit outcome measure');
+      toast.error(error.response?.data?.message || 'Failed to submit outcome measure');
     } finally {
       setSubmitting(false);
     }
@@ -270,14 +285,7 @@ export default function OutcomeMeasuresPage() {
               <p className="text-gray-600 mt-1">{definition.description}</p>
             </div>
             <button
-              onClick={() => {
-                if (confirm('Are you sure you want to cancel? All responses will be lost.')) {
-                  setSelectedMeasure(null);
-                  setDefinition(null);
-                  setResponses({});
-                  setViewMode('history');
-                }
-              }}
+              onClick={handleCancelClick}
               className="px-4 py-2 text-gray-600 hover:text-gray-800"
             >
               Cancel
@@ -441,6 +449,17 @@ export default function OutcomeMeasuresPage() {
           )}
         </div>
       )}
+
+      {/* Cancel Assessment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={confirmCancel}
+        title="Cancel Assessment"
+        message="Are you sure you want to cancel? All responses will be lost."
+        confirmText="Yes, Cancel"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -37,7 +38,7 @@ export default function ExpirationAlerts() {
     try {
       await dismissAlert.mutateAsync(id);
     } catch (error) {
-      alert('Failed to dismiss alert');
+      toast.error('Failed to dismiss alert');
     }
   };
 

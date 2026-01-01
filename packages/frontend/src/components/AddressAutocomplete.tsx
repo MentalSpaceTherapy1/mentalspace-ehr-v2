@@ -1,5 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 
+/**
+ * TODO: GOOGLE MAPS API MIGRATION REQUIRED (Deadline: February 2026)
+ *
+ * As of February 2024, google.maps.places.Autocomplete is deprecated.
+ * This component needs to be migrated to use PlaceAutocompleteElement instead.
+ *
+ * Migration guide: https://developers.google.com/maps/documentation/javascript/place-autocomplete-migration
+ *
+ * Key changes required:
+ * 1. Replace `new google.maps.places.Autocomplete()` with `new google.maps.places.PlaceAutocompleteElement()`
+ * 2. The new API uses a Custom Element (Web Component) approach
+ * 3. Event handling changes from 'place_changed' to 'gmp-placeselect'
+ * 4. Options structure and field names have changed
+ *
+ * Current implementation works but should be migrated before February 2026.
+ */
+
 interface AddressComponents {
   street1: string;
   street2?: string;

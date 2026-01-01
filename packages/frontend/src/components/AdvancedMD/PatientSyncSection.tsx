@@ -22,6 +22,7 @@ export default function PatientSyncSection({ clientId, className = '' }: Patient
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   /**
    * Load sync status
@@ -32,6 +33,7 @@ export default function PatientSyncSection({ clientId, className = '' }: Patient
 
   const loadSyncStatus = async () => {
     setIsLoading(true);
+    setHasError(false);
     try {
       const status = await advancedMDService.getPatientSyncStatus(clientId);
       setSyncStatus(status);
@@ -40,7 +42,11 @@ export default function PatientSyncSection({ clientId, className = '' }: Patient
       const logs = await advancedMDService.getPatientSyncLogs(clientId);
       setSyncLogs(logs);
     } catch (error: any) {
-      console.error('Failed to load sync status:', error);
+      // Silently handle errors - AdvancedMD integration may not be configured
+      // This is expected in environments without AdvancedMD setup
+      setHasError(true);
+      setSyncStatus(null);
+      setSyncLogs([]);
     } finally {
       setIsLoading(false);
     }
@@ -107,14 +113,19 @@ export default function PatientSyncSection({ clientId, className = '' }: Patient
     );
   }
 
+  // Don't render the section if AdvancedMD integration is not configured
+  // This is a graceful way to hide the section when the API is unavailable
+  if (hasError || !syncStatus) {
+    return null;
+  }
+
   return (
     <div className={`bg-white rounded-2xl shadow-xl p-6 border-l-4 border-l-blue-500 ${className}`}>
       <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
         <span className="mr-2">🔄</span> AdvancedMD Integration
       </h3>
 
-      {syncStatus && (
-        <div className="space-y-4">
+      <div className="space-y-4">
           {/* Sync Status */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl">
             <div className="flex items-center justify-between mb-2">
@@ -198,8 +209,7 @@ export default function PatientSyncSection({ clientId, className = '' }: Patient
               </p>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

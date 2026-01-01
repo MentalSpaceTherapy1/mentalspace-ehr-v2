@@ -1,4 +1,5 @@
 import html2canvas from 'html2canvas';
+import toast from 'react-hot-toast';
 
 /**
  * Export a chart component as an image file
@@ -63,7 +64,7 @@ export async function exportChartAsImage(
     }
   } catch (error) {
     console.error('Error exporting chart:', error);
-    alert('Failed to export chart. Please try again.');
+    toast.error('Failed to export chart. Please try again.');
   }
 }
 
@@ -105,7 +106,7 @@ export function exportChartDataAsCSV(
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Error exporting CSV:', error);
-    alert('Failed to export CSV. Please try again.');
+    toast.error('Failed to export CSV. Please try again.');
   }
 }
 
@@ -128,16 +129,16 @@ export async function copyChartToClipboard(element: HTMLElement): Promise<void> 
           await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': blob }),
           ]);
-          alert('Chart copied to clipboard!');
+          toast.success('Chart copied to clipboard!');
         } catch (err) {
           console.error('Failed to copy to clipboard:', err);
-          alert('Failed to copy to clipboard. Please try export instead.');
+          toast.error('Failed to copy to clipboard. Please try export instead.');
         }
       }
     });
   } catch (error) {
     console.error('Error copying chart:', error);
-    alert('Failed to copy chart. Please try again.');
+    toast.error('Failed to copy chart. Please try again.');
   }
 }
 
@@ -148,7 +149,7 @@ export async function copyChartToClipboard(element: HTMLElement): Promise<void> 
 export function printChart(element: HTMLElement): void {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    alert('Please allow popups to print the chart.');
+    toast.error('Please allow popups to print the chart.');
     return;
   }
 

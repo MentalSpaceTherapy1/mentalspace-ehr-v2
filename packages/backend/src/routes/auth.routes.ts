@@ -8,7 +8,7 @@ import {
   loginSchema,
   changePasswordSchema,
 } from '../utils/validation';
-import { authRateLimiter, accountCreationRateLimiter, passwordResetRateLimiter } from '../middleware/rateLimiter';
+import { authRateLimiter, accountCreationRateLimiter, passwordResetRateLimiter, refreshRateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -289,7 +289,7 @@ router.post('/logout', authenticate, authController.logout);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/refresh', authRateLimiter, authController.refresh);
+router.post('/refresh', refreshRateLimiter, authController.refresh);
 
 /**
  * @swagger

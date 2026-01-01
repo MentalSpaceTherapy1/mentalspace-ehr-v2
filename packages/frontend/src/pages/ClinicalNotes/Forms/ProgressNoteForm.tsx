@@ -19,6 +19,7 @@ import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppo
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidatedField from '../../../components/ClinicalNotes/ValidatedField';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
+import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
 
 // Constants
 const SESSION_TYPES = ['Individual', 'Couples', 'Family', 'Group'];
@@ -156,6 +157,22 @@ export default function ProgressNoteForm() {
   const { validateNote, summary, isFieldRequired, getFieldHelpText, validateField } = useNoteValidation('Progress Note');
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [showValidation, setShowValidation] = useState(false);
+
+  // Session-safe saving (handles session timeout with local storage backup)
+  const {
+    sessionError,
+    clearSessionError,
+    backupToLocalStorage,
+    clearBackup,
+    handleSaveError,
+    hasRecoveredDraft,
+    applyRecoveredDraft,
+    discardRecoveredDraft,
+  } = useSessionSafeSave({
+    noteType: 'ProgressNote',
+    clientId: clientId || '',
+    noteId,
+  });
 
   // Fetch client data
   const { data: clientData } = useQuery({
@@ -367,31 +384,84 @@ export default function ProgressNoteForm() {
     }
   }, [existingNoteData, isEditMode]);
 
+  // Handle recovering draft data
+  const handleRecoverDraft = () => {
+    const recovered = applyRecoveredDraft();
+    if (recovered) {
+      // Apply recovered data to form fields
+      if (recovered.sessionDate) {
+        const date = new Date(recovered.sessionDate);
+        setSessionDate(date.toISOString().split('T')[0]);
+      }
+      if (recovered.dueDate) {
+        const date = new Date(recovered.dueDate);
+        setDueDate(date.toISOString().split('T')[0]);
+      }
+      if (recovered.sessionDuration) setSessionDuration(recovered.sessionDuration);
+      if (recovered.sessionType) setSessionType(recovered.sessionType);
+      if (recovered.location) setLocation(recovered.location);
+      if (recovered.symptoms) setSymptoms(recovered.symptoms);
+      if (recovered.goals) setGoals(recovered.goals);
+      if (recovered.appearance) setAppearance(recovered.appearance);
+      if (recovered.mood) setMood(recovered.mood);
+      if (recovered.affect) setAffect(recovered.affect);
+      if (recovered.thoughtProcess) setThoughtProcess(recovered.thoughtProcess);
+      if (recovered.suicidalIdeation !== undefined) setSuicidalIdeation(recovered.suicidalIdeation);
+      if (recovered.homicidalIdeation !== undefined) setHomicidalIdeation(recovered.homicidalIdeation);
+      if (recovered.riskLevel) setRiskLevel(recovered.riskLevel);
+      if (recovered.engagementLevel) setEngagementLevel(recovered.engagementLevel);
+      if (recovered.responseToInterventions) setResponseToInterventions(recovered.responseToInterventions);
+      if (recovered.homeworkCompliance) setHomeworkCompliance(recovered.homeworkCompliance);
+      if (recovered.clientResponseNotes) setClientResponseNotes(recovered.clientResponseNotes);
+      if (recovered.subjective) setSubjective(recovered.subjective);
+      if (recovered.objective) setObjective(recovered.objective);
+      if (recovered.assessment) setAssessment(recovered.assessment);
+      if (recovered.plan) setPlan(recovered.plan);
+      if (recovered.cptCode) setCptCode(recovered.cptCode);
+      if (recovered.billable !== undefined) setBillable(recovered.billable);
+      if (recovered.appointmentId) setSelectedAppointmentId(recovered.appointmentId);
+    }
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       if (isEditMode) {
         return api.put(`/clinical-notes/${noteId}`, data);
       }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
+    },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
     },
   });
 
   const saveDraftMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(data);
       if (isEditMode) {
         return api.put(`/clinical-notes/${noteId}`, data);
       }
       return api.post('/clinical-notes', data);
     },
     onSuccess: () => {
+      // Clear backup after successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
       queryClient.invalidateQueries({ queryKey: ['my-notes'] });
       navigate(`/clients/${clientId}/notes`);
+    },
+    onError: (error: any, variables: any) => {
+      handleSaveError(error, variables);
     },
   });
 
@@ -625,6 +695,19 @@ export default function ProgressNoteForm() {
           </h1>
           <p className="text-gray-600 mt-2">Session progress and treatment updates</p>
         </div>
+
+        {/* Session Expired Alert */}
+        {sessionError && (
+          <SessionExpiredAlert message={sessionError} onDismiss={clearSessionError} />
+        )}
+
+        {/* Recovered Draft Alert */}
+        {hasRecoveredDraft && (
+          <RecoveredDraftAlert
+            onRecover={handleRecoverDraft}
+            onDiscard={discardRecoveredDraft}
+          />
+        )}
 
         {/* Client ID Validation */}
         {!clientId && (
