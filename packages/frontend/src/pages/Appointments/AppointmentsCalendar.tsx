@@ -8,6 +8,8 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import { useNavigate } from 'react-router-dom';
 import { AppointmentSyncSection } from '../../components/AdvancedMD';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Appointment {
   id: string;
@@ -59,12 +61,69 @@ export default function AppointmentsCalendar() {
   const calendarRef = useRef<FullCalendar>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelNotes, setCancelNotes] = useState('');
+  const [cancelFeeApplied, setCancelFeeApplied] = useState(false);
   const [filters, setFilters] = useState({
     clinicianId: '',
     status: '',
     appointmentType: '',
   });
   const [viewType, setViewType] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek'>('timeGridWeek');
+  const [rescheduleConfirm, setRescheduleConfirm] = useState<{
+    open: boolean;
+    eventId: string | null;
+    appointmentDate: string;
+    startTime: string;
+    endTime: string;
+    revertFn: (() => void) | null;
+    message: string;
+  }>({
+    open: false,
+    eventId: null,
+    appointmentDate: '',
+    startTime: '',
+    endTime: '',
+    revertFn: null,
+    message: '',
+  });
+
+  // Reschedule confirmation handlers
+  const confirmReschedule = () => {
+    if (rescheduleConfirm.eventId) {
+      quickRescheduleMutation.mutate({
+        id: rescheduleConfirm.eventId,
+        appointmentDate: rescheduleConfirm.appointmentDate,
+        startTime: rescheduleConfirm.startTime,
+        endTime: rescheduleConfirm.endTime,
+      });
+    }
+    setRescheduleConfirm({
+      open: false,
+      eventId: null,
+      appointmentDate: '',
+      startTime: '',
+      endTime: '',
+      revertFn: null,
+      message: '',
+    });
+  };
+
+  const cancelReschedule = () => {
+    if (rescheduleConfirm.revertFn) {
+      rescheduleConfirm.revertFn();
+    }
+    setRescheduleConfirm({
+      open: false,
+      eventId: null,
+      appointmentDate: '',
+      startTime: '',
+      endTime: '',
+      revertFn: null,
+      message: '',
+    });
+  };
 
   // Fetch appointments
   const { data: appointments, isLoading } = useQuery({
@@ -149,6 +208,41 @@ export default function AppointmentsCalendar() {
     },
   });
 
+  // Cancel appointment mutation
+  const cancelMutation = useMutation({
+    mutationFn: async ({
+      id,
+      cancellationReason,
+      cancellationNotes,
+      cancellationFeeApplied,
+    }: {
+      id: string;
+      cancellationReason: string;
+      cancellationNotes?: string;
+      cancellationFeeApplied: boolean;
+    }) => {
+      const response = await api.post(`/appointments/${id}/cancel`, {
+        cancellationReason,
+        cancellationNotes,
+        cancellationFeeApplied,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      setIsCancelModalOpen(false);
+      setIsDetailModalOpen(false);
+      setCancelReason('');
+      setCancelNotes('');
+      setCancelFeeApplied(false);
+      toast.success('Appointment cancelled successfully');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to cancel appointment';
+      toast.error(errorMessage);
+    },
+  });
+
   // Quick reschedule mutation (for drag-and-drop)
   const quickRescheduleMutation = useMutation({
     mutationFn: async ({
@@ -171,11 +265,11 @@ export default function AppointmentsCalendar() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      alert('Appointment rescheduled successfully!');
+      toast.success('Appointment rescheduled successfully!');
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.message || 'Failed to reschedule appointment';
-      alert(`Error: ${errorMessage}`);
+      toast.error(errorMessage);
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
     },
   });
@@ -188,7 +282,7 @@ export default function AppointmentsCalendar() {
 
     if (!newStart || !newEnd) {
       dropInfo.revert();
-      alert('Invalid date/time');
+      toast.error('Invalid date/time');
       return;
     }
 
@@ -197,17 +291,16 @@ export default function AppointmentsCalendar() {
     const startTime = `${newStart.getHours().toString().padStart(2, '0')}:${newStart.getMinutes().toString().padStart(2, '0')}`;
     const endTime = `${newEnd.getHours().toString().padStart(2, '0')}:${newEnd.getMinutes().toString().padStart(2, '0')}`;
 
-    // Confirm the reschedule
-    if (confirm(`Reschedule this appointment to ${appointmentDate} at ${startTime}?`)) {
-      quickRescheduleMutation.mutate({
-        id: event.id,
-        appointmentDate,
-        startTime,
-        endTime,
-      });
-    } else {
-      dropInfo.revert();
-    }
+    // Show confirmation modal for the reschedule
+    setRescheduleConfirm({
+      open: true,
+      eventId: event.id,
+      appointmentDate,
+      startTime,
+      endTime,
+      revertFn: () => dropInfo.revert(),
+      message: `Reschedule this appointment to ${appointmentDate} at ${startTime}?`,
+    });
   };
 
   // Handle event resize (changing duration)
@@ -218,7 +311,7 @@ export default function AppointmentsCalendar() {
 
     if (!newStart || !newEnd) {
       resizeInfo.revert();
-      alert('Invalid date/time');
+      toast.error('Invalid date/time');
       return;
     }
 
@@ -230,17 +323,23 @@ export default function AppointmentsCalendar() {
     // Calculate new duration
     const duration = Math.round((newEnd.getTime() - newStart.getTime()) / (1000 * 60));
 
-    // Confirm the resize
-    if (confirm(`Change appointment duration to ${duration} minutes?`)) {
-      quickRescheduleMutation.mutate({
-        id: event.id,
+    // Store the revert function to use after confirmation
+    const revertFn = resizeInfo.revert;
+
+    // Use setTimeout to ensure the modal state update happens after FullCalendar
+    // completes its internal event processing. This fixes a timing issue where
+    // the resize event handler completes before React can render the modal.
+    setTimeout(() => {
+      setRescheduleConfirm({
+        open: true,
+        eventId: event.id,
         appointmentDate,
         startTime,
         endTime,
+        revertFn: () => revertFn(),
+        message: `Change appointment duration to ${duration} minutes?`,
       });
-    } else {
-      resizeInfo.revert();
-    }
+    }, 0);
   };
 
   // Quick action handlers
@@ -258,6 +357,25 @@ export default function AppointmentsCalendar() {
       const checkedOutTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       checkOutMutation.mutate({ id: selectedAppointment.id, checkedOutTime });
     }
+  };
+
+  const handleCancelAppointment = () => {
+    if (!cancelReason.trim()) {
+      toast.error('Please provide a cancellation reason');
+      return;
+    }
+    if (selectedAppointment) {
+      cancelMutation.mutate({
+        id: selectedAppointment.id,
+        cancellationReason: cancelReason,
+        cancellationNotes: cancelNotes || undefined,
+        cancellationFeeApplied: cancelFeeApplied,
+      });
+    }
+  };
+
+  const openCancelModal = () => {
+    setIsCancelModalOpen(true);
   };
 
   return (
@@ -612,11 +730,7 @@ export default function AppointmentsCalendar() {
                   </button>
 
                   <button
-                    onClick={() => {
-                      if (confirm('Are you sure you want to cancel this appointment?')) {
-                        navigate(`/appointments/${selectedAppointment.id}/cancel`);
-                      }
-                    }}
+                    onClick={openCancelModal}
                     className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold"
                   >
                     Cancel
@@ -626,6 +740,119 @@ export default function AppointmentsCalendar() {
             </div>
           </div>
         )}
+
+        {/* Cancel Appointment Modal */}
+        {isCancelModalOpen && selectedAppointment && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Cancel Appointment</h3>
+                <button
+                  onClick={() => {
+                    setIsCancelModalOpen(false);
+                    setCancelReason('');
+                    setCancelNotes('');
+                    setCancelFeeApplied(false);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-4">
+                <p className="text-red-700 text-sm">
+                  You are about to cancel the appointment for{' '}
+                  <strong>{selectedAppointment.client?.firstName} {selectedAppointment.client?.lastName}</strong>
+                  {' '}on {new Date(selectedAppointment.appointmentDate).toLocaleDateString()}.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Cancellation Reason <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  >
+                    <option value="">Select a reason...</option>
+                    <option value="Client requested cancellation">Client requested cancellation</option>
+                    <option value="Client no-show">Client no-show</option>
+                    <option value="Clinician unavailable">Clinician unavailable</option>
+                    <option value="Emergency">Emergency</option>
+                    <option value="Weather/Safety">Weather/Safety</option>
+                    <option value="Insurance issues">Insurance issues</option>
+                    <option value="Rescheduled">Rescheduled</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Additional Notes
+                  </label>
+                  <textarea
+                    value={cancelNotes}
+                    onChange={(e) => setCancelNotes(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Optional additional details..."
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="cancelFee"
+                    checked={cancelFeeApplied}
+                    onChange={(e) => setCancelFeeApplied(e.target.checked)}
+                    className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                  />
+                  <label htmlFor="cancelFee" className="text-sm text-gray-700">
+                    Apply cancellation fee (late cancellation)
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setIsCancelModalOpen(false);
+                    setCancelReason('');
+                    setCancelNotes('');
+                    setCancelFeeApplied(false);
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
+                >
+                  Keep Appointment
+                </button>
+                <button
+                  onClick={handleCancelAppointment}
+                  disabled={!cancelReason || cancelMutation.isPending}
+                  className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cancelMutation.isPending ? 'Cancelling...' : 'Cancel Appointment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reschedule Confirmation Modal */}
+        <ConfirmModal
+          isOpen={rescheduleConfirm.open}
+          onClose={cancelReschedule}
+          onConfirm={confirmReschedule}
+          title="Confirm Reschedule"
+          message={rescheduleConfirm.message}
+          confirmText="Reschedule"
+          confirmVariant="primary"
+        />
       </div>
     </div>
   );

@@ -53,6 +53,11 @@ export default function Waitlist() {
   const [filterStatus, setFilterStatus] = useState<string>('Active');
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [matchingStats, setMatchingStats] = useState<any>(null);
+  const [removeModal, setRemoveModal] = useState<{ open: boolean; entryId: string | null }>({
+    open: false,
+    entryId: null,
+  });
+  const [removalReason, setRemovalReason] = useState('');
 
   const queryClient = useQueryClient();
 
@@ -227,6 +232,22 @@ export default function Waitlist() {
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
+  };
+
+  const handleRemoveClick = (entryId: string) => {
+    setRemovalReason('');
+    setRemoveModal({ open: true, entryId });
+  };
+
+  const confirmRemove = () => {
+    if (removeModal.entryId && removalReason.trim()) {
+      removeMutation.mutate({ entryId: removeModal.entryId, reason: removalReason.trim() });
+    } else if (!removalReason.trim()) {
+      toast.error('Please provide a reason for removal');
+      return;
+    }
+    setRemoveModal({ open: false, entryId: null });
+    setRemovalReason('');
   };
 
   return (
@@ -468,12 +489,7 @@ export default function Waitlist() {
                             ↻
                           </button>
                           <button
-                            onClick={() => {
-                              const reason = prompt('Reason for removal:');
-                              if (reason) {
-                                removeMutation.mutate({ entryId: entry.id, reason });
-                              }
-                            }}
+                            onClick={() => handleRemoveClick(entry.id)}
                             className="px-2 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-semibold"
                           >
                             ✕
@@ -565,6 +581,51 @@ export default function Waitlist() {
           setSelectedEntry(null);
         }}
       />
+
+      {/* Remove from Waitlist Modal */}
+      {removeModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Remove from Waitlist</h2>
+              <p className="text-gray-600 text-sm mt-1">Please provide a reason for removing this entry.</p>
+            </div>
+
+            <div className="p-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Reason for Removal <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={removalReason}
+                onChange={(e) => setRemovalReason(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter reason for removal..."
+                autoFocus
+              />
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setRemoveModal({ open: false, entryId: null });
+                  setRemovalReason('');
+                }}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRemove}
+                disabled={!removalReason.trim()}
+                className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

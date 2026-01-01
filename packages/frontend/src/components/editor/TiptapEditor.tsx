@@ -18,6 +18,12 @@ import {
   MenuItem,
   FormControl,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
 } from '@mui/material';
 import {
   FormatBold,
@@ -39,25 +45,122 @@ interface TiptapEditorProps {
 }
 
 const MenuBar = ({ editor }: { editor: any }) => {
+  const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
+  const [linkUrl, setLinkUrl] = React.useState('');
+  const [imageDialogOpen, setImageDialogOpen] = React.useState(false);
+  const [imageUrl, setImageUrl] = React.useState('');
+
   if (!editor) {
     return null;
   }
 
-  const addLink = () => {
-    const url = window.prompt('Enter URL:');
-    if (url) {
-      editor.chain().focus().setLink({ href: url }).run();
-    }
+  const handleAddLink = () => {
+    setLinkUrl('');
+    setLinkDialogOpen(true);
   };
 
-  const addImage = () => {
-    const url = window.prompt('Enter image URL:');
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
+  const confirmAddLink = () => {
+    if (linkUrl.trim()) {
+      editor.chain().focus().setLink({ href: linkUrl.trim() }).run();
     }
+    setLinkDialogOpen(false);
+    setLinkUrl('');
+  };
+
+  const handleAddImage = () => {
+    setImageUrl('');
+    setImageDialogOpen(true);
+  };
+
+  const confirmAddImage = () => {
+    if (imageUrl.trim()) {
+      editor.chain().focus().setImage({ src: imageUrl.trim() }).run();
+    }
+    setImageDialogOpen(false);
+    setImageUrl('');
   };
 
   return (
+    <>
+    {/* Link Dialog */}
+    <Dialog
+      open={linkDialogOpen}
+      onClose={() => {
+        setLinkDialogOpen(false);
+        setLinkUrl('');
+      }}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>Add Link</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          fullWidth
+          label="URL"
+          value={linkUrl}
+          onChange={(e) => setLinkUrl(e.target.value)}
+          placeholder="https://example.com"
+          sx={{ mt: 1 }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              confirmAddLink();
+            }
+          }}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => {
+          setLinkDialogOpen(false);
+          setLinkUrl('');
+        }}>
+          Cancel
+        </Button>
+        <Button variant="contained" onClick={confirmAddLink} disabled={!linkUrl.trim()}>
+          Add Link
+        </Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Image Dialog */}
+    <Dialog
+      open={imageDialogOpen}
+      onClose={() => {
+        setImageDialogOpen(false);
+        setImageUrl('');
+      }}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>Add Image</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          fullWidth
+          label="Image URL"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="https://example.com/image.jpg"
+          sx={{ mt: 1 }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              confirmAddImage();
+            }
+          }}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => {
+          setImageDialogOpen(false);
+          setImageUrl('');
+        }}>
+          Cancel
+        </Button>
+        <Button variant="contained" onClick={confirmAddImage} disabled={!imageUrl.trim()}>
+          Add Image
+        </Button>
+      </DialogActions>
+    </Dialog>
     <Box
       sx={{
         p: 1,
@@ -167,14 +270,14 @@ const MenuBar = ({ editor }: { editor: any }) => {
         <Tooltip title="Add Link">
           <IconButton
             size="small"
-            onClick={addLink}
+            onClick={handleAddLink}
             color={editor.isActive('link') ? 'primary' : 'default'}
           >
             <LinkIcon fontSize="small" />
           </IconButton>
         </Tooltip>
         <Tooltip title="Add Image">
-          <IconButton size="small" onClick={addImage}>
+          <IconButton size="small" onClick={handleAddImage}>
             <ImageIcon fontSize="small" />
           </IconButton>
         </Tooltip>
@@ -191,6 +294,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
         </IconButton>
       </Tooltip>
     </Box>
+    </>
   );
 };
 

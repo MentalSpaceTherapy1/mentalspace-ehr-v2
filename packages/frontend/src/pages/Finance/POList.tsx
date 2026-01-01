@@ -23,6 +23,10 @@ import {
   Menu,
   TextField,
   InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -56,6 +60,9 @@ const POList: React.FC = () => {
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedPO, setSelectedPO] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelPOId, setCancelPOId] = useState<string | null>(null);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, poId: string) => {
     setAnchorEl(event.currentTarget);
@@ -93,14 +100,22 @@ const POList: React.FC = () => {
     }
   };
 
-  const handleCancel = async (poId: string) => {
+  const handleCancelClick = (poId: string) => {
+    setCancelPOId(poId);
+    setCancelReason('');
+    setCancelDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelPOId || !cancelReason.trim()) return;
+
     try {
-      const reason = window.prompt('Please provide a reason for cancellation:');
-      if (reason) {
-        await cancelPurchaseOrder(poId, reason);
-        refetch();
-        handleMenuClose();
-      }
+      await cancelPurchaseOrder(cancelPOId, cancelReason.trim());
+      refetch();
+      setCancelDialogOpen(false);
+      setCancelPOId(null);
+      setCancelReason('');
     } catch (error) {
       console.error('Failed to cancel purchase order:', error);
     }
@@ -425,13 +440,62 @@ const POList: React.FC = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            if (selectedPO) handleCancel(selectedPO);
+            if (selectedPO) handleCancelClick(selectedPO);
           }}
         >
           <CancelIcon sx={{ mr: 1 }} fontSize="small" color="error" />
           Cancel Order
         </MenuItem>
       </Menu>
+
+      {/* Cancel PO Dialog */}
+      <Dialog
+        open={cancelDialogOpen}
+        onClose={() => {
+          setCancelDialogOpen(false);
+          setCancelPOId(null);
+          setCancelReason('');
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Cancel Purchase Order</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Please provide a reason for cancelling this purchase order.
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            multiline
+            rows={3}
+            label="Reason for Cancellation"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            placeholder="Enter reason for cancellation..."
+            required
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => {
+              setCancelDialogOpen(false);
+              setCancelPOId(null);
+              setCancelReason('');
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={confirmCancel}
+            disabled={!cancelReason.trim()}
+          >
+            Cancel Order
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
