@@ -272,7 +272,7 @@ export default function PortalSelfScheduling() {
   const fetchClinicians = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get('/self-schedule/clinicians');
+      const response = await api.get('/portal/self-schedule/clinicians');
 
       if (response.data.success) {
         setClinicians(response.data.data || []);
@@ -287,7 +287,7 @@ export default function PortalSelfScheduling() {
 
   const fetchAppointmentTypes = async () => {
     try {
-      const response = await api.get('/self-schedule/appointment-types');
+      const response = await api.get('/portal/self-schedule/appointment-types');
 
       if (response.data.success) {
         // Filter only online bookable types (default to true if not specified)
@@ -311,7 +311,7 @@ export default function PortalSelfScheduling() {
       const endDate = dayjs(dateRangeStart).add(14, 'day').format('YYYY-MM-DD');
 
       const response = await api.get(
-        `/self-schedule/available-slots/${wizardState.selectedClinician.id}`,
+        `/portal/self-schedule/slots/${wizardState.selectedClinician.id}`,
         {
           params: { startDate, endDate },
         }
@@ -330,7 +330,7 @@ export default function PortalSelfScheduling() {
 
   const fetchMyAppointments = async () => {
     try {
-      const response = await api.get('/self-schedule/my-appointments');
+      const response = await api.get('/portal/self-schedule/my-appointments');
 
       if (response.data.success) {
         setMyAppointments(response.data.data || []);
@@ -361,13 +361,13 @@ export default function PortalSelfScheduling() {
       let response;
       if (wizardState.rescheduleAppointmentId) {
         // Rescheduling existing appointment
-        response = await api.put(`/self-schedule/reschedule/${wizardState.rescheduleAppointmentId}`, {
+        response = await api.put(`/portal/self-schedule/reschedule/${wizardState.rescheduleAppointmentId}`, {
           newAppointmentDate: appointmentDateTime.toISOString(),
           reason: wizardState.notes,
         });
       } else {
         // Creating new appointment
-        response = await api.post('/self-schedule/book', {
+        response = await api.post('/portal/self-schedule/book', {
           clinicianId: wizardState.selectedClinician.id,
           appointmentType: wizardState.selectedAppointmentType.typeName,
           appointmentDate: appointmentDateTime.toISOString(),
@@ -407,7 +407,7 @@ export default function PortalSelfScheduling() {
     }
 
     try {
-      const response = await api.delete(`/self-schedule/cancel/${appointmentToCancel}`, {
+      const response = await api.delete(`/portal/self-schedule/cancel/${appointmentToCancel}`, {
         data: { reason: cancelReason },
       });
 
@@ -449,7 +449,7 @@ export default function PortalSelfScheduling() {
 
   const fetchWaitlistEntries = async () => {
     try {
-      const response = await api.get('/waitlist/my-entries');
+      const response = await api.get('/portal/waitlist/my-entries');
       if (response.data.success) {
         setWaitlistEntries(response.data.data || []);
       }
@@ -460,7 +460,7 @@ export default function PortalSelfScheduling() {
 
   const fetchWaitlistOffers = async () => {
     try {
-      const response = await api.get('/waitlist/my-offers');
+      const response = await api.get('/portal/waitlist/my-offers');
       if (response.data.success) {
         setWaitlistOffers(response.data.data || []);
       }
@@ -487,7 +487,7 @@ export default function PortalSelfScheduling() {
 
     try {
       setIsLoadingWaitlist(true);
-      const response = await api.post('/waitlist', waitlistForm);
+      const response = await api.post('/portal/waitlist', waitlistForm);
 
       if (response.data.success) {
         toast.success('Successfully joined the waitlist!');
@@ -539,7 +539,7 @@ export default function PortalSelfScheduling() {
   const handleRemoveWaitlistEntry = async (entryId: string) => {
     try {
       setIsLoadingWaitlist(true);
-      const response = await api.delete(`/waitlist/${entryId}`);
+      const response = await api.delete(`/portal/waitlist/${entryId}`);
 
       if (response.data.success) {
         toast.success('Removed from waitlist');

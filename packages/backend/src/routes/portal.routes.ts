@@ -15,6 +15,7 @@ import * as sleepTrackingController from '../controllers/portal/sleepTracking.co
 import * as exerciseTrackingController from '../controllers/portal/exerciseTracking.controller';
 import * as telehealthController from '../controllers/portal/telehealth.controller';
 import * as selfSchedulingController from '../controllers/portal/selfScheduling.controller';
+import * as waitlistController from '../controllers/portal/waitlist.controller';
 import { authenticatePortal } from '../middleware/portalAuth';
 
 const router = Router();
@@ -133,6 +134,14 @@ router.post('/self-schedule/book', authenticatePortal, selfSchedulingController.
 router.put('/self-schedule/reschedule/:appointmentId', authenticatePortal, selfSchedulingController.rescheduleAppointment);
 router.delete('/self-schedule/cancel/:appointmentId', authenticatePortal, selfSchedulingController.cancelAppointment);
 router.get('/self-schedule/my-appointments', authenticatePortal, selfSchedulingController.getMyAppointments);
+
+// ========== WAITLIST ==========
+
+// Client waitlist management
+router.post('/waitlist', authenticatePortal, waitlistController.joinWaitlist);
+router.get('/waitlist/my-entries', authenticatePortal, waitlistController.getMyWaitlistEntries);
+router.get('/waitlist/my-offers', authenticatePortal, waitlistController.getMyWaitlistOffers);
+router.delete('/waitlist/:entryId', authenticatePortal, waitlistController.leaveWaitlist);
 
 // ========== DOCUMENTS & FORMS ==========
 
