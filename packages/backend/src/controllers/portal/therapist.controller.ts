@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
+import { PortalRequest } from '../../types/express.d';
 
 /**
  * Get therapist profile for client's assigned therapist
  * GET /api/v1/portal/therapist/profile
  */
-export const getTherapistProfile = async (req: Request, res: Response) => {
+export const getTherapistProfile = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -102,9 +103,9 @@ export const getTherapistProfile = async (req: Request, res: Response) => {
  * Get therapist availability (upcoming available slots)
  * GET /api/v1/portal/therapist/availability
  */
-export const getTherapistAvailability = async (req: Request, res: Response) => {
+export const getTherapistAvailability = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { startDate, endDate } = req.query;
 
     if (!clientId) {

@@ -86,6 +86,7 @@ import advancedMDBillingRoutes from './advancedmd-billing.routes';
 import advancedMDEligibilityRoutes from './advancedmd-eligibility.routes';
 import advancedMDClaimsRoutes from './advancedmd-claims.routes';
 import advancedMDERARoutes from './advancedmd-era.routes';
+import webhookRoutes from './webhook.routes';
 
 const router = Router();
 
@@ -93,6 +94,9 @@ console.log('[ROUTES] Progress tracking routes imported:', !!progressTrackingRou
 
 // Health check routes (no authentication required)
 router.use('/health', healthRoutes);
+
+// Webhook routes (no authentication - uses signature verification)
+router.use('/webhooks', webhookRoutes);
 
 // Version endpoint (no authentication required)
 router.use('/', versionRoutes);

@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UserList from './pages/Users/UserList';
@@ -76,6 +78,9 @@ import PortalDashboard from './pages/Portal/PortalDashboard';
 import PortalAppointments from './pages/Portal/PortalAppointments';
 import PortalMessages from './pages/Portal/PortalMessages';
 import PortalMoodTracking from './pages/Portal/PortalMoodTracking';
+import PortalSymptomDiary from './pages/Portal/PortalSymptomDiary';
+import PortalSleepDiary from './pages/Portal/PortalSleepDiary';
+import PortalExerciseLog from './pages/Portal/PortalExerciseLog';
 import PortalBilling from './pages/Portal/PortalBilling';
 import PortalProfile from './pages/Portal/PortalProfile';
 import PortalDocuments from './pages/Portal/PortalDocuments';
@@ -98,9 +103,10 @@ import AISchedulingAssistant from './pages/AISchedulingAssistant';
 import OutcomeMeasuresPage from './pages/OutcomeMeasures/OutcomeMeasuresPage';
 import SessionRatings from './pages/Admin/SessionRatings';
 import CrisisDetections from './pages/Admin/CrisisDetections';
-import SymptomDiary from './pages/Client/SymptomDiary';
-import SleepDiary from './pages/Client/SleepDiary';
-import ExerciseLog from './pages/Client/ExerciseLog';
+// Old Client diary components - no longer used, redirected to Portal versions
+// import SymptomDiary from './pages/Client/SymptomDiary';
+// import SleepDiary from './pages/Client/SleepDiary';
+// import ExerciseLog from './pages/Client/ExerciseLog';
 import PortalSelfScheduling from './pages/Portal/PortalSelfScheduling';
 import GuardianPortal from './pages/Guardian/GuardianPortal';
 import RequestAccess from './pages/Guardian/RequestAccess';
@@ -235,12 +241,17 @@ function PortalRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/portal/login" />;
   }
 
-  return <PortalLayout>{children}</PortalLayout>;
+  return (
+    <ErrorBoundary>
+      <PortalLayout>{children}</PortalLayout>
+    </ErrorBoundary>
+  );
 }
 
 function App() {
   return (
     <AdvancedMDProvider>
+      <Toaster position="top-right" />
       <div className="min-h-screen bg-gray-50">
         <Routes>
         {/* Public Landing Page */}
@@ -281,6 +292,30 @@ function App() {
           element={
             <PortalRoute>
               <PortalMoodTracking />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/symptoms"
+          element={
+            <PortalRoute>
+              <PortalSymptomDiary />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/sleep"
+          element={
+            <PortalRoute>
+              <PortalSleepDiary />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/exercise"
+          element={
+            <PortalRoute>
+              <PortalExerciseLog />
             </PortalRoute>
           }
         />
@@ -1144,30 +1179,10 @@ function App() {
             </PrivateRoute>
           }
         />
-        <Route
-          path="/client/symptoms"
-          element={
-            <PortalRoute>
-              <SymptomDiary />
-            </PortalRoute>
-          }
-        />
-        <Route
-          path="/client/sleep"
-          element={
-            <PortalRoute>
-              <SleepDiary />
-            </PortalRoute>
-          }
-        />
-        <Route
-          path="/client/exercise"
-          element={
-            <PortalRoute>
-              <ExerciseLog />
-            </PortalRoute>
-          }
-        />
+        {/* Redirect old /client/* routes to new /portal/* routes */}
+        <Route path="/client/symptoms" element={<Navigate to="/portal/symptoms" replace />} />
+        <Route path="/client/sleep" element={<Navigate to="/portal/sleep" replace />} />
+        <Route path="/client/exercise" element={<Navigate to="/portal/exercise" replace />} />
         <Route
           path="/portal/schedule"
           element={

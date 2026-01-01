@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
+import { PortalRequest } from '../../types/express.d';
 
 /**
  * Get client's assigned therapist profile
  * GET /api/v1/portal/therapist/profile
  */
-export const getMyTherapistProfile = async (req: Request, res: Response) => {
+export const getMyTherapistProfile = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -80,9 +81,9 @@ export const getMyTherapistProfile = async (req: Request, res: Response) => {
  * Get a specific therapist's public profile (for browsing/selection)
  * GET /api/v1/portal/therapist/profile/:therapistId
  */
-export const getTherapistProfile = async (req: Request, res: Response) => {
+export const getTherapistProfile = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { therapistId } = req.params;
 
     if (!clientId) {
@@ -144,9 +145,9 @@ export const getTherapistProfile = async (req: Request, res: Response) => {
  * Get list of available therapists (for therapist change requests)
  * GET /api/v1/portal/therapist/available
  */
-export const getAvailableTherapists = async (req: Request, res: Response) => {
+export const getAvailableTherapists = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -210,9 +211,9 @@ export const getAvailableTherapists = async (req: Request, res: Response) => {
  * Search therapists by specialty, language, or approach
  * GET /api/v1/portal/therapist/search
  */
-export const searchTherapists = async (req: Request, res: Response) => {
+export const searchTherapists = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { specialty, language, approach } = req.query;
 
     if (!clientId) {

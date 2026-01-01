@@ -21,6 +21,7 @@ import {
 } from './services/monitoring';
 import { initializeSecrets, secretsManager } from './services/secrets';
 import { runSchemaCheck } from './services/schemaCheck.service';
+import { seedIntakeFormsOnStartup } from './services/seedIntakeForms.service';
 
 const PORT = config.port;
 
@@ -81,6 +82,13 @@ prisma.$connect()
       await runSchemaCheck();
     } catch (error) {
       logger.error('Schema check failed, but continuing startup', { error });
+    }
+
+    // Seed intake forms if none exist (required for Portal Tab functionality)
+    try {
+      await seedIntakeFormsOnStartup();
+    } catch (error) {
+      logger.error('Intake form seeding failed, but continuing startup', { error });
     }
 
     // Start productivity module scheduled jobs

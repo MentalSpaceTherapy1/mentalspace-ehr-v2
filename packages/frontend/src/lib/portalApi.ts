@@ -108,23 +108,22 @@ export const viewFormSubmission = async (
 export interface SharedDocument {
   id: string;
   clientId: string;
-  documentTitle: string;
+  documentName: string;
   documentType: string;
-  fileUrl?: string;
+  documentS3Key: string;
   sharedBy: string;
   sharedAt: string;
   expiresAt?: string;
-  sharedNotes?: string;
   viewCount: number;
   lastViewedAt?: string;
+  isActive: boolean;
 }
 
 export interface ShareDocumentRequest {
-  documentTitle: string;
+  documentName: string;
   documentType: string;
-  fileUrl?: string;
+  documentS3Key: string;
   expiresAt?: string;
-  sharedNotes?: string;
 }
 
 export interface DocumentAnalytics {
@@ -191,4 +190,73 @@ export const uploadDocumentFile = async (file: File): Promise<{ fileUrl: string 
   });
 
   return response.data.data;
+};
+
+// =============== PORTAL ACCESS MANAGEMENT ===============
+
+export interface PortalStatus {
+  hasPortalAccount: boolean;
+  portalAccount: {
+    id: string;
+    email: string;
+    accountStatus: 'ACTIVE' | 'INACTIVE' | 'PENDING_VERIFICATION' | 'LOCKED';
+    portalAccessGranted: boolean;
+    lastLoginDate: string | null;
+    createdAt: string;
+  } | null;
+}
+
+/**
+ * Get portal account status for a client
+ */
+export const getPortalStatus = async (clientId: string): Promise<PortalStatus> => {
+  const response = await api.get(`/client-portal/clients/${clientId}/portal-status`);
+  return response.data.data;
+};
+
+/**
+ * Send portal invitation to a client (creates portal account)
+ */
+export const sendPortalInvitation = async (clientId: string): Promise<{
+  success: boolean;
+  portalAccountId: string;
+  email: string;
+  invitationSent: boolean;
+}> => {
+  const response = await api.post(`/client-portal/clients/${clientId}/invite`);
+  return response.data.data;
+};
+
+/**
+ * Resend portal invitation email
+ */
+export const resendPortalInvitation = async (clientId: string): Promise<{
+  success: boolean;
+  message: string;
+  emailSent: boolean;
+}> => {
+  const response = await api.post(`/client-portal/clients/${clientId}/resend-invitation`);
+  return response.data.data;
+};
+
+/**
+ * Deactivate a portal account (admin only)
+ */
+export const deactivatePortalAccount = async (portalAccountId: string): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await api.post(`/admin/portal/accounts/${portalAccountId}/deactivate`);
+  return response.data;
+};
+
+/**
+ * Activate a portal account (admin only)
+ */
+export const activatePortalAccount = async (portalAccountId: string): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await api.post(`/admin/portal/accounts/${portalAccountId}/activate`);
+  return response.data;
 };

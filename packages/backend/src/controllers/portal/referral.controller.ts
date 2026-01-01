@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
+import { PortalRequest } from '../../types/express.d';
 
 /**
  * Submit a new client referral
  * POST /api/v1/portal/referrals
  */
-export const submitReferral = async (req: Request, res: Response) => {
+export const submitReferral = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const {
       referredPersonName,
       referredPersonEmail,
@@ -86,9 +87,9 @@ export const submitReferral = async (req: Request, res: Response) => {
  * Get client's referral history
  * GET /api/v1/portal/referrals
  */
-export const getReferrals = async (req: Request, res: Response) => {
+export const getReferrals = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -137,9 +138,9 @@ export const getReferrals = async (req: Request, res: Response) => {
  * Get referral statistics for the client
  * GET /api/v1/portal/referrals/stats
  */
-export const getReferralStats = async (req: Request, res: Response) => {
+export const getReferralStats = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -214,9 +215,9 @@ export const getReferralStats = async (req: Request, res: Response) => {
  * Get referral details
  * GET /api/v1/portal/referrals/:referralId
  */
-export const getReferralDetails = async (req: Request, res: Response) => {
+export const getReferralDetails = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { referralId } = req.params;
 
     if (!clientId) {

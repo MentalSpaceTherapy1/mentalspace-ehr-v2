@@ -14,6 +14,48 @@ export interface AuthenticatedRequest extends Request {
 }
 
 /**
+ * Portal account data attached to authenticated portal requests
+ */
+export interface PortalAccount {
+  id: string;
+  clientId: string;
+  email: string;
+  emailVerified: boolean;
+  accountStatus: 'ACTIVE' | 'PENDING_VERIFICATION' | 'SUSPENDED' | 'INACTIVE';
+  portalAccessGranted: boolean;
+}
+
+/**
+ * Type for requests that have passed through portal authentication middleware
+ * Use this type in portal controller functions
+ */
+export interface PortalRequest extends Request {
+  portalAccount: PortalAccount;
+}
+
+/**
+ * Type guard to assert request has portal account
+ * Use in portal controllers after authentication middleware
+ */
+export function assertPortalAuthenticated(req: Request): asserts req is PortalRequest {
+  if (!(req as PortalRequest).portalAccount) {
+    throw new Error('Portal account not authenticated');
+  }
+}
+
+/**
+ * Helper to get portal account from request with non-null assertion
+ * Only use in routes that have portal authentication middleware
+ */
+export function getPortalAccount(req: Request): PortalAccount {
+  const portalReq = req as PortalRequest;
+  if (!portalReq.portalAccount) {
+    throw new Error('Portal account not authenticated');
+  }
+  return portalReq.portalAccount;
+}
+
+/**
  * Type guard to assert request has authenticated user
  * Use in controllers after authentication middleware
  */

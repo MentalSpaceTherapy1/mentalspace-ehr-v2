@@ -71,15 +71,6 @@ export default function PortalDocuments() {
 
   const handleFormStart = (assignmentId: string, formId: string) => {
     const targetPath = `/portal/forms/${formId}?assignmentId=${assignmentId}`;
-    console.log('NAVIGATION DEBUG:', {
-      assignmentId,
-      formId,
-      targetPath,
-      portalToken: localStorage.getItem('portalToken') ? 'exists' : 'missing'
-    });
-    console.log('Before navigate - current URL:', window.location.href);
-
-    // Use React Router navigation (NOT window.location which cancels AJAX requests!)
     navigate(targetPath);
   };
 
@@ -106,9 +97,26 @@ export default function PortalDocuments() {
     }
   };
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File size must be less than 10MB');
+      event.target.value = ''; // Reset input
+      return;
+    }
+
+    // Validate file type
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast.error('Only PDF, JPG, PNG, DOC, and DOCX files are allowed');
+      event.target.value = ''; // Reset input
+      return;
+    }
 
     try {
       setUploadingFile(true);
@@ -124,6 +132,7 @@ export default function PortalDocuments() {
       });
 
       toast.success('Document uploaded successfully');
+      event.target.value = ''; // Reset input after successful upload
       fetchData();
     } catch (error) {
       toast.error('Failed to upload document');

@@ -5,6 +5,16 @@ import { AppError } from '../../utils/errors';
 import logger, { logControllerError } from '../../utils/logger';
 import config from '../../config';
 import prisma from '../database';
+import { sendEmail, EmailTemplates } from '../resend.service';
+import {
+  TOKEN_CONFIG,
+  TOKEN_EXPIRY,
+  JWT_CONFIG,
+  SECURITY_CONFIG,
+} from './constants';
+
+// Portal URL for email links
+const PORTAL_URL = process.env.PORTAL_URL || 'http://localhost:5175/portal';
 
 // ============================================================================
 // PORTAL ACCOUNT REGISTRATION
@@ -16,14 +26,8 @@ export async function register(data: {
   clientId: string;
 }) {
   try {
-    logger.info('=== AUTH SERVICE: Starting registration ===');
-    logger.info('Client ID received:', data.clientId);
-    logger.info('Email:', data.email);
-
     // Check if clientId is UUID or MRN
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.clientId);
-    logger.info('Is UUID?', isUUID);
-    logger.info('Searching by:', isUUID ? 'ID' : 'MRN');
 
     // Verify client exists and doesn't already have a portal account
     const client = await prisma.client.findFirst({
@@ -31,15 +35,12 @@ export async function register(data: {
       include: { portalAccount: true },
     });
 
-    logger.info('Client found:', client ? `Yes (ID: ${client.id})` : 'No');
-
     if (!client) {
       throw new AppError(isUUID ? 'Client not found' : 'Client with this MRN not found. Please check with your therapist.', 404);
     }
 
     // Use the client's actual UUID for the rest of the function
     const clientUUID = client.id;
-    logger.info('Using client UUID:', clientUUID);
 
     if (client.portalAccount) {
       throw new AppError('Portal account already exists for this client', 400);
@@ -55,13 +56,13 @@ export async function register(data: {
     }
 
     // Hash password
-    const password = await bcrypt.hash(data.password, 10);
+    const password = await bcrypt.hash(data.password, TOKEN_CONFIG.BCRYPT_SALT_ROUNDS);
 
     // Generate email verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const verificationToken = crypto.randomBytes(TOKEN_CONFIG.TOKEN_BYTES).toString('hex');
+    const verificationExpiry = new Date(Date.now() + TOKEN_EXPIRY.EMAIL_VERIFICATION_MS);
 
-    // Create portal account
+    // Create portal account with PENDING_VERIFICATION status
     const portalAccount = await prisma.portalAccount.create({
       data: {
         clientId: clientUUID,
@@ -70,19 +71,32 @@ export async function register(data: {
         verificationToken: verificationToken,
         emailVerified: false,
         accountStatus: 'PENDING_VERIFICATION',
+        portalAccessGranted: false,
       },
     });
 
     logger.info(`Portal account created for client ${clientUUID}`);
 
-    // TODO: Send verification email
-    // await sendVerificationEmail(data.email, verificationToken);
+    // Send verification email
+    const verificationLink = `${PORTAL_URL}/verify-email?token=${verificationToken}`;
+    const emailTemplate = EmailTemplates.clientVerification(client.firstName, verificationLink);
+
+    const emailSent = await sendEmail({
+      to: data.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+
+    if (!emailSent) {
+      logger.warn(`Failed to send verification email to ${data.email}, but account was created`);
+    }
 
     return {
       id: portalAccount.id,
       email: portalAccount.email,
       clientId: portalAccount.clientId,
-      verificationTokenSent: true,
+      verificationTokenSent: emailSent,
+      message: 'Please check your email to verify your account before logging in.',
     };
   } catch (error) {
     logger.error('Error creating portal account:', error);
@@ -100,27 +114,50 @@ export async function verifyEmail(token: string) {
       where: {
         verificationToken: token,
       },
+      include: {
+        client: {
+          select: {
+            firstName: true,
+          },
+        },
+      },
     });
 
     if (!portalAccount) {
       throw new AppError('Invalid or expired verification token', 400);
     }
 
-    // Mark email as verified
+    // Mark email as verified and activate account
     const updated = await prisma.portalAccount.update({
       where: { id: portalAccount.id },
       data: {
         emailVerified: true,
         verificationToken: null,
         accountStatus: 'ACTIVE',
+        portalAccessGranted: true,
+        grantedDate: new Date(),
       },
     });
 
     logger.info(`Email verified for portal account ${portalAccount.id}`);
 
+    // Send account activated email
+    const portalUrl = `${PORTAL_URL}/login`;
+    const emailTemplate = EmailTemplates.clientAccountActivated(
+      portalAccount.client.firstName,
+      portalUrl
+    );
+
+    await sendEmail({
+      to: updated.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+
     return {
       success: true,
       email: updated.email,
+      message: 'Your email has been verified. You can now log in to your portal account.',
     };
   } catch (error) {
     logger.error('Error verifying email:', error);
@@ -136,6 +173,13 @@ export async function resendVerificationEmail(email: string) {
   try {
     const portalAccount = await prisma.portalAccount.findUnique({
       where: { email },
+      include: {
+        client: {
+          select: {
+            firstName: true,
+          },
+        },
+      },
     });
 
     if (!portalAccount) {
@@ -147,7 +191,7 @@ export async function resendVerificationEmail(email: string) {
     }
 
     // Generate new verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationToken = crypto.randomBytes(TOKEN_CONFIG.TOKEN_BYTES).toString('hex');
 
     await prisma.portalAccount.update({
       where: { id: portalAccount.id },
@@ -156,14 +200,28 @@ export async function resendVerificationEmail(email: string) {
       },
     });
 
-    // TODO: Send verification email
-    // await sendVerificationEmail(email, verificationToken);
+    // Send verification email
+    const verificationLink = `${PORTAL_URL}/verify-email?token=${verificationToken}`;
+    const emailTemplate = EmailTemplates.clientVerification(
+      portalAccount.client.firstName,
+      verificationLink
+    );
+
+    const emailSent = await sendEmail({
+      to: email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+
+    if (!emailSent) {
+      throw new AppError('Failed to send verification email. Please try again later.', 500);
+    }
 
     logger.info(`Verification email resent to ${email}`);
 
     return {
       success: true,
-      message: 'Verification email sent',
+      message: 'Verification email sent. Please check your inbox.',
     };
   } catch (error) {
     logger.error('Error resending verification email:', error);
@@ -197,14 +255,34 @@ export async function login(data: { email: string; password: string }) {
       throw new AppError('Invalid email or password', 401);
     }
 
+    // Check if email is verified
+    if (!portalAccount.emailVerified) {
+      throw new AppError(
+        'Please verify your email before logging in. Check your inbox for the verification link.',
+        403
+      );
+    }
+
     // Check if account is active
     if (portalAccount.accountStatus !== 'ACTIVE') {
-      throw new AppError('Account is not active. Please contact support.', 403);
+      if (portalAccount.accountStatus === 'PENDING_VERIFICATION') {
+        throw new AppError(
+          'Please verify your email before logging in. Check your inbox for the verification link.',
+          403
+        );
+      } else if (portalAccount.accountStatus === 'SUSPENDED') {
+        throw new AppError('Your account has been suspended. Please contact support.', 403);
+      } else {
+        throw new AppError('Account is not active. Please contact support.', 403);
+      }
     }
 
     // Check if portal access is granted
     if (!portalAccount.portalAccessGranted) {
-      throw new AppError('Portal access has not been granted. Please contact support.', 403);
+      throw new AppError(
+        'Portal access has not been granted for your account. Please contact your therapist.',
+        403
+      );
     }
 
     // Check if client is active
@@ -227,13 +305,13 @@ export async function login(data: { email: string; password: string }) {
     if (!passwordValid) {
       // Update failed login attempts and lock if too many
       const newFailedAttempts = portalAccount.failedLoginAttempts + 1;
-      const lockAccount = newFailedAttempts >= 5;
+      const lockAccount = newFailedAttempts >= SECURITY_CONFIG.MAX_FAILED_LOGIN_ATTEMPTS;
 
       await prisma.portalAccount.update({
         where: { id: portalAccount.id },
         data: {
           failedLoginAttempts: newFailedAttempts,
-          accountLockedUntil: lockAccount ? new Date(Date.now() + 15 * 60 * 1000) : null,
+          accountLockedUntil: lockAccount ? new Date(Date.now() + TOKEN_EXPIRY.ACCOUNT_LOCKOUT_MS) : null,
         },
       });
 
@@ -252,9 +330,9 @@ export async function login(data: { email: string; password: string }) {
       },
       config.jwtSecret,
       {
-        expiresIn: '1h',
-        audience: 'mentalspace-portal',
-        issuer: 'mentalspace-ehr',
+        expiresIn: JWT_CONFIG.ACCESS_TOKEN_EXPIRY,
+        audience: JWT_CONFIG.AUDIENCE,
+        issuer: JWT_CONFIG.ISSUER,
       }
     );
 
@@ -269,9 +347,9 @@ export async function login(data: { email: string; password: string }) {
       },
       config.jwtSecret,
       {
-        expiresIn: '7d',
-        audience: 'mentalspace-portal',
-        issuer: 'mentalspace-ehr',
+        expiresIn: JWT_CONFIG.REFRESH_TOKEN_EXPIRY,
+        audience: JWT_CONFIG.AUDIENCE,
+        issuer: JWT_CONFIG.ISSUER,
       }
     );
 
@@ -317,10 +395,18 @@ export async function requestPasswordReset(email: string) {
   try {
     const portalAccount = await prisma.portalAccount.findUnique({
       where: { email },
+      include: {
+        client: {
+          select: {
+            firstName: true,
+          },
+        },
+      },
     });
 
     if (!portalAccount) {
       // Don't reveal if account exists (security)
+      logger.info(`Password reset requested for non-existent account: ${email}`);
       return {
         success: true,
         message: 'If an account exists with this email, a password reset link has been sent.',
@@ -328,8 +414,8 @@ export async function requestPasswordReset(email: string) {
     }
 
     // Generate password reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const resetToken = crypto.randomBytes(TOKEN_CONFIG.TOKEN_BYTES).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + TOKEN_EXPIRY.PASSWORD_RESET_MS);
 
     // Store reset token
     await prisma.portalAccount.update({
@@ -340,10 +426,24 @@ export async function requestPasswordReset(email: string) {
       },
     });
 
-    // TODO: Send password reset email
-    // await sendPasswordResetEmail(email, resetToken);
+    // Send password reset email
+    const resetLink = `${PORTAL_URL}/reset-password?token=${resetToken}`;
+    const emailTemplate = EmailTemplates.clientPasswordReset(
+      portalAccount.client.firstName,
+      resetLink
+    );
 
-    logger.info(`Password reset requested for ${email}`);
+    const emailSent = await sendEmail({
+      to: email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+
+    if (!emailSent) {
+      logger.warn(`Failed to send password reset email to ${email}`);
+    }
+
+    logger.info(`Password reset email sent to ${email}`);
 
     return {
       success: true,
@@ -377,7 +477,7 @@ export async function resetPassword(data: { token: string; newPassword: string }
     }
 
     // Hash new password
-    const password = await bcrypt.hash(data.newPassword, 10);
+    const password = await bcrypt.hash(data.newPassword, TOKEN_CONFIG.BCRYPT_SALT_ROUNDS);
 
     // Update password and clear reset token
     await prisma.portalAccount.update({
@@ -429,7 +529,7 @@ export async function changePassword(data: {
     }
 
     // Hash new password
-    const password = await bcrypt.hash(data.newPassword, 10);
+    const password = await bcrypt.hash(data.newPassword, TOKEN_CONFIG.BCRYPT_SALT_ROUNDS);
 
     // Update password
     await prisma.portalAccount.update({
@@ -501,6 +601,13 @@ export async function updateAccountSettings(data: {
   try {
     const portalAccount = await prisma.portalAccount.findUnique({
       where: { clientId: data.clientId },
+      include: {
+        client: {
+          select: {
+            firstName: true,
+          },
+        },
+      },
     });
 
     if (!portalAccount) {
@@ -509,6 +616,7 @@ export async function updateAccountSettings(data: {
 
     // If email is being changed, require verification
     let updateData: any = {};
+    let emailChanged = false;
 
     if (data.email && data.email !== portalAccount.email) {
       // Check if new email is already in use
@@ -521,16 +629,33 @@ export async function updateAccountSettings(data: {
       }
 
       const verificationToken = crypto.randomBytes(32).toString('hex');
-      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       updateData = {
         email: data.email,
         emailVerified: false,
         verificationToken: verificationToken,
+        accountStatus: 'PENDING_VERIFICATION',
       };
 
-      // TODO: Send verification email to new address
-      // await sendVerificationEmail(data.email, verificationToken);
+      emailChanged = true;
+
+      // Send verification email to new address
+      const verificationLink = `${PORTAL_URL}/verify-email?token=${verificationToken}`;
+      const emailTemplate = EmailTemplates.clientEmailChangeVerification(
+        portalAccount.client.firstName,
+        verificationLink,
+        data.email
+      );
+
+      const emailSent = await sendEmail({
+        to: data.email,
+        subject: emailTemplate.subject,
+        html: emailTemplate.html,
+      });
+
+      if (!emailSent) {
+        throw new AppError('Failed to send verification email. Please try again later.', 500);
+      }
     }
 
     // Note: notificationPreferences handled via individual boolean fields in schema
@@ -551,12 +676,16 @@ export async function updateAccountSettings(data: {
       data: updateData,
     });
 
-    logger.info(`Portal account settings updated for client ${data.clientId}`);
+    logger.info(`Portal account settings updated for client ${data.clientId}${emailChanged ? ' (email change pending verification)' : ''}`);
 
     return {
       id: updated.id,
       email: updated.email,
       emailVerified: updated.emailVerified,
+      emailChanged,
+      message: emailChanged
+        ? 'A verification email has been sent to your new email address. Please verify to continue using the portal.'
+        : 'Settings updated successfully.',
       notificationPreferences: {
         emailNotifications: updated.emailNotifications,
         smsNotifications: updated.smsNotifications,

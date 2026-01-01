@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
+import { PortalRequest } from '../../types/express.d';
 
 /**
  * Create a new mood entry
  * POST /api/v1/portal/mood-entries
  */
-export const createMoodEntry = async (req: Request, res: Response) => {
+export const createMoodEntry = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const {
       moodScore,
       timeOfDay,
@@ -82,9 +83,9 @@ export const createMoodEntry = async (req: Request, res: Response) => {
  * Get mood entries for client with optional date filtering
  * GET /api/v1/portal/mood-entries?days=7
  */
-export const getMoodEntries = async (req: Request, res: Response) => {
+export const getMoodEntries = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { days } = req.query;
 
     if (!clientId) {
@@ -141,9 +142,9 @@ export const getMoodEntries = async (req: Request, res: Response) => {
  * Get mood trends analysis
  * GET /api/v1/portal/mood-entries/trends
  */
-export const getMoodTrends = async (req: Request, res: Response) => {
+export const getMoodTrends = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({

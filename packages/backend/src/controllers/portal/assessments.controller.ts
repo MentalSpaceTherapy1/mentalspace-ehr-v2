@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
+import { PortalRequest } from '../../types/express.d';
 
 /**
  * Get pending assessments for client
  * GET /api/v1/portal/assessments/pending
  */
-export const getPendingAssessments = async (req: Request, res: Response) => {
+export const getPendingAssessments = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -50,9 +51,9 @@ export const getPendingAssessments = async (req: Request, res: Response) => {
  * Get completed assessments for client
  * GET /api/v1/portal/assessments/completed
  */
-export const getCompletedAssessments = async (req: Request, res: Response) => {
+export const getCompletedAssessments = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -88,10 +89,10 @@ export const getCompletedAssessments = async (req: Request, res: Response) => {
  * Get assessment details for taking
  * GET /api/v1/portal/assessments/:assessmentId
  */
-export const getAssessmentDetails = async (req: Request, res: Response) => {
+export const getAssessmentDetails = async (req: PortalRequest, res: Response) => {
   try {
     const { assessmentId } = req.params;
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -139,10 +140,10 @@ export const getAssessmentDetails = async (req: Request, res: Response) => {
  * Start an assessment (mark as IN_PROGRESS)
  * POST /api/v1/portal/assessments/:assessmentId/start
  */
-export const startAssessment = async (req: Request, res: Response) => {
+export const startAssessment = async (req: PortalRequest, res: Response) => {
   try {
     const { assessmentId } = req.params;
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -191,11 +192,11 @@ export const startAssessment = async (req: Request, res: Response) => {
  * Submit completed assessment
  * POST /api/v1/portal/assessments/:assessmentId/submit
  */
-export const submitAssessment = async (req: Request, res: Response) => {
+export const submitAssessment = async (req: PortalRequest, res: Response) => {
   try {
     const { assessmentId } = req.params;
     const { responses } = req.body;
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -263,10 +264,10 @@ export const submitAssessment = async (req: Request, res: Response) => {
  * Get assessment results
  * GET /api/v1/portal/assessments/:assessmentId/results
  */
-export const getAssessmentResults = async (req: Request, res: Response) => {
+export const getAssessmentResults = async (req: PortalRequest, res: Response) => {
   try {
     const { assessmentId } = req.params;
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -309,9 +310,9 @@ export const getAssessmentResults = async (req: Request, res: Response) => {
  * Get assessment history/trends
  * GET /api/v1/portal/assessments/history
  */
-export const getAssessmentHistory = async (req: Request, res: Response) => {
+export const getAssessmentHistory = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { assessmentType } = req.query;
 
     if (!clientId) {

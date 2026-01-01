@@ -20,7 +20,7 @@ interface Appointment {
   };
   telehealthSession?: {
     id: string;
-    meetingUrl: string;
+    clientJoinUrl: string;
     status: string;
   };
 }
@@ -278,7 +278,7 @@ export default function PortalAppointments() {
                         {appointment.telehealthSession && appointment.status === 'SCHEDULED' && (
                           <div className="mt-4">
                             <a
-                              href={appointment.telehealthSession.meetingUrl}
+                              href={appointment.telehealthSession.clientJoinUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
@@ -386,7 +386,7 @@ export default function PortalAppointments() {
                     <h4 className="text-sm font-medium text-gray-900">Video Session</h4>
                   </div>
                   <a
-                    href={selectedAppointment.telehealthSession.meetingUrl}
+                    href={selectedAppointment.telehealthSession.clientJoinUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"

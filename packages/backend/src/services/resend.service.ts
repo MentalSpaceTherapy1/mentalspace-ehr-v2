@@ -537,6 +537,83 @@ export const EmailTemplates = {
       </html>
     `,
   }),
+
+  /**
+   * Client portal password reset email
+   */
+  clientPasswordReset: (firstName: string, resetLink: string) => ({
+    subject: 'Reset Your MentalSpace Portal Password',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #667eea; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Password Reset Request</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">You requested to reset your password for your MentalSpace Client Portal account. Click the button below to create a new password:</p>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${resetLink}" style="display: inline-block; background-color: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Reset Password</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">Or copy and paste this link:</p>
+              <p style="color: #6b7280; font-size: 12px; word-break: break-all; background-color: #f9fafb; padding: 12px; border-radius: 4px;">${resetLink}</p>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 16px;">This link will expire in <strong>1 hour</strong> for security reasons.</p>
+              <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; border-left: 4px solid #dc2626; margin: 24px 0;">
+                <p style="margin: 0; color: #991b1b; font-size: 14px;">If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
+              </div>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 11px; margin: 0;">This is a secure, HIPAA-compliant message from MentalSpace EHR.</p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
+   * Client email change verification
+   */
+  clientEmailChangeVerification: (firstName: string, verificationLink: string, newEmail: string) => ({
+    subject: 'Verify Your New Email Address - MentalSpace Portal',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #3b82f6; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Verify Your New Email</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">You requested to change your email address to <strong>${newEmail}</strong>. Please verify this new email address:</p>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${verificationLink}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Verify New Email</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">This link will expire in <strong>24 hours</strong>.</p>
+              <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+                <p style="margin: 0; color: #92400e; font-size: 14px;">If you didn't request this change, please contact your therapist immediately.</p>
+              </div>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
 };
 
 /**

@@ -29,11 +29,9 @@ async function fetchCsrfToken(): Promise<string> {
   csrfTokenPromise = axios.get(`${API_URL}/csrf-token`, { withCredentials: true })
     .then(response => {
       csrfToken = response.data.csrfToken;
-      console.log('[API] CSRF token fetched successfully');
       return csrfToken!;
     })
     .catch(error => {
-      console.warn('[API] Failed to fetch CSRF token:', error.message);
       csrfTokenPromise = null;
       throw error;
     });
@@ -57,7 +55,6 @@ export async function ensureCsrfToken(): Promise<void> {
     await fetchCsrfToken();
   } catch (error) {
     // Token fetch failed - will retry on next request
-    console.warn('[API] Could not pre-fetch CSRF token');
   }
 }
 
@@ -110,20 +107,21 @@ api.interceptors.request.use(
                           config.url?.match(/\/waitlist\/[^/]+\/accept/) ||
                           config.url?.match(/\/waitlist\/[^/]+\/decline/);
 
-    // DEBUG: Log route classification
-    console.log('[API DEBUG]', {
-      url: config.url,
-      isTrackingRoute,
-      isClinicianTrackingRoute,
-      isPortalRoute,
-      method: config.method,
-    });
+    // DEBUG: Log route classification (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API DEBUG]', {
+        url: config.url,
+        isTrackingRoute,
+        isClinicianTrackingRoute,
+        isPortalRoute,
+        method: config.method,
+      });
+    }
 
     // Only add Authorization header for portal routes
     // EHR routes use httpOnly cookies (sent automatically with withCredentials: true)
     if (isPortalRoute) {
       const portalToken = localStorage.getItem('portalToken');
-      console.log('[API DEBUG] Portal route - using portalToken:', !!portalToken);
       if (portalToken) {
         config.headers.Authorization = `Bearer ${portalToken}`;
       }
@@ -150,7 +148,8 @@ api.interceptors.request.use(
             config.headers['x-csrf-token'] = token;
           }
         } catch (error) {
-          console.warn('[API] Could not get CSRF token for request');
+          // CSRF token fetch failed - request will proceed without it
+          // Backend will return 403 if CSRF is required, triggering retry logic
         }
       }
     }
@@ -184,7 +183,6 @@ api.interceptors.response.use(
       originalRequest._csrfRetry = true;
 
       // Clear the cached CSRF token and fetch a new one
-      console.log('[API] CSRF token invalid, refreshing...');
       clearCsrfToken();
 
       try {
@@ -194,7 +192,10 @@ api.interceptors.response.use(
         originalRequest.withCredentials = true;
         return api(originalRequest);
       } catch (csrfError) {
-        console.error('[API] Failed to refresh CSRF token:', csrfError);
+        // CSRF refresh failed - this shouldn't normally happen
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[API] Failed to refresh CSRF token:', csrfError);
+        }
         return Promise.reject(error);
       }
     }
@@ -202,8 +203,6 @@ api.interceptors.response.use(
     // If 401 and not already retried, try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-
-      console.log('[API DEBUG] 401 received for:', originalRequest.url);
 
       // Also clear CSRF token on auth refresh (new session = new CSRF token)
       clearCsrfToken();
@@ -231,8 +230,6 @@ api.interceptors.response.use(
                             originalRequest.url?.match(/\/waitlist\/[^/]+\/accept/) ||
                             originalRequest.url?.match(/\/waitlist\/[^/]+\/decline/);
 
-      console.log('[API DEBUG] 401 route classification:', { isTrackingRoute, isClinicianTrackingRoute, isPortalRoute });
-
       try {
         if (isPortalRoute) {
           // Portal routes: redirect to portal login (no refresh token mechanism yet)
@@ -244,14 +241,12 @@ api.interceptors.response.use(
         } else {
           // EHR routes: try to refresh token using httpOnly cookies
           // The refresh token is in an httpOnly cookie, sent automatically
-          console.log('[API DEBUG] Attempting EHR token refresh...');
           const response = await axios.post(
             `${API_URL}/auth/refresh`,
             {}, // Empty body - refresh token is in httpOnly cookie
             { withCredentials: true } // Ensure cookies are sent
           );
 
-          console.log('[API DEBUG] Token refresh succeeded, retrying original request');
           // If refresh succeeded, new tokens are set as httpOnly cookies by backend
           // Simply retry the original request - browser will send new cookies
           // CRITICAL: Ensure withCredentials is set on the retry request
@@ -261,7 +256,6 @@ api.interceptors.response.use(
       } catch (refreshError: any) {
         // Refresh failed, clear user data and redirect to login
         // Note: httpOnly cookies are cleared server-side on logout
-        console.log('[API DEBUG] Token refresh FAILED:', refreshError?.response?.status, refreshError?.message);
         localStorage.removeItem('user');
         window.location.href = '/login';
         return Promise.reject(refreshError);

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import * as portalAuthService from '../../services/portal/auth.service';
 import logger from '../../utils/logger';
+import { PortalRequest } from '../../types/express.d';
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -207,9 +208,9 @@ export const resetPassword = async (req: Request, res: Response) => {
 // CHANGE PASSWORD (Authenticated)
 // ============================================================================
 
-export const changePassword = async (req: Request, res: Response) => {
+export const changePassword = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const data = changePasswordSchema.parse(req.body);
 
     const result = await portalAuthService.changePassword({
@@ -234,9 +235,9 @@ export const changePassword = async (req: Request, res: Response) => {
 // ACCOUNT MANAGEMENT
 // ============================================================================
 
-export const getAccount = async (req: Request, res: Response) => {
+export const getAccount = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     const account = await portalAuthService.getAccount(clientId);
 
@@ -252,9 +253,9 @@ export const getAccount = async (req: Request, res: Response) => {
   }
 };
 
-export const updateAccountSettings = async (req: Request, res: Response) => {
+export const updateAccountSettings = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const data = updateAccountSettingsSchema.parse(req.body);
 
     const result = await portalAuthService.updateAccountSettings({
@@ -276,9 +277,9 @@ export const updateAccountSettings = async (req: Request, res: Response) => {
   }
 };
 
-export const deactivateAccount = async (req: Request, res: Response) => {
+export const deactivateAccount = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     const result = await portalAuthService.deactivateAccount(clientId);
 

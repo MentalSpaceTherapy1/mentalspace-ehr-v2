@@ -1,16 +1,17 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 import logger from '../../utils/logger';
 import bcrypt from 'bcryptjs';
 import prisma from '../../services/database';
+import { PortalRequest } from '../../types/express.d';
 
 /**
  * Get client profile
  * GET /api/v1/portal/profile
  */
-export const getProfile = async (req: Request, res: Response) => {
+export const getProfile = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -69,9 +70,9 @@ export const getProfile = async (req: Request, res: Response) => {
  * Update client profile
  * PUT /api/v1/portal/profile
  */
-export const updateProfile = async (req: Request, res: Response) => {
+export const updateProfile = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const {
       firstName,
       lastName,
@@ -165,10 +166,10 @@ export const updateProfile = async (req: Request, res: Response) => {
  * Get account settings (notification preferences)
  * GET /api/v1/portal/account/settings
  */
-export const getAccountSettings = async (req: Request, res: Response) => {
+export const getAccountSettings = async (req: PortalRequest, res: Response) => {
   try {
-    const portalAccountId = (req as any).portalAccount?.id;
-    const clientId = (req as any).portalAccount?.clientId;
+    const portalAccountId = req.portalAccount?.id;
+    const clientId = req.portalAccount?.clientId;
 
     if (!portalAccountId || !clientId) {
       return res.status(401).json({
@@ -207,9 +208,9 @@ export const getAccountSettings = async (req: Request, res: Response) => {
  * Update notification preferences
  * PUT /api/v1/portal/account/notifications
  */
-export const updateNotificationPreferences = async (req: Request, res: Response) => {
+export const updateNotificationPreferences = async (req: PortalRequest, res: Response) => {
   try {
-    const portalAccountId = (req as any).portalAccount?.id;
+    const portalAccountId = req.portalAccount?.id;
     const {
       emailNotifications,
       smsNotifications,
@@ -256,9 +257,9 @@ export const updateNotificationPreferences = async (req: Request, res: Response)
  * Change password
  * POST /api/v1/portal/account/change-password
  */
-export const changePassword = async (req: Request, res: Response) => {
+export const changePassword = async (req: PortalRequest, res: Response) => {
   try {
-    const portalAccountId = (req as any).portalAccount?.id;
+    const portalAccountId = req.portalAccount?.id;
     const { currentPassword, newPassword } = req.body;
 
     if (!portalAccountId) {

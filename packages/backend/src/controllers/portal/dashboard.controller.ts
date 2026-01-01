@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { z } from 'zod';
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
@@ -7,14 +7,23 @@ import {
   billingService,
   moodTrackingService,
 } from '../../services/portal';
+import { PortalRequest } from '../../types/express.d';
+import { PAGINATION } from '../../services/portal/constants';
 
 // ============================================================================
 // DASHBOARD OVERVIEW
 // ============================================================================
 
-export const getDashboard = async (req: Request, res: Response) => {
+export const getDashboard = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
+
+    if (!clientId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized',
+      });
+    }
 
     // Get upcoming appointments
     const upcomingAppointments = await prisma.appointment.findMany({
@@ -24,7 +33,7 @@ export const getDashboard = async (req: Request, res: Response) => {
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
       },
       orderBy: { appointmentDate: 'asc' },
-      take: 3,
+      take: PAGINATION.DASHBOARD_APPOINTMENTS,
       include: {
         clinician: {
           select: {
@@ -36,32 +45,69 @@ export const getDashboard = async (req: Request, res: Response) => {
       },
     });
 
-    // TODO: Implement messaging system
-    const unreadMessages = 0;
+    // Get unread messages count (messages sent by clinician that are unread)
+    const unreadMessages = await prisma.portalMessage.count({
+      where: {
+        clientId,
+        isRead: false,
+        sentByClient: false,
+      },
+    });
 
-    // Get current balance (TODO: implement billing service)
+    // Get current balance
     let balance = 0;
     try {
       const billingResult = await billingService.getCurrentBalance(clientId);
       balance = billingResult.currentBalance;
     } catch (error) {
-      // Billing service not implemented yet
       logger.warn('Billing service not available');
     }
 
-    // TODO: Implement mood tracking
-    const recentMoods: any[] = [];
+    // Get recent mood entries (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // TODO: Implement engagement tracking
+    const recentMoods = await prisma.moodEntry.findMany({
+      where: {
+        clientId,
+        entryDate: { gte: sevenDaysAgo },
+      },
+      orderBy: { entryDate: 'desc' },
+      take: PAGINATION.MOOD_HISTORY,
+      select: {
+        id: true,
+        moodScore: true,
+        entryDate: true,
+        timeOfDay: true,
+      },
+    });
+
+    // Get engagement streak
+    const streakData = await prisma.engagementStreak.findUnique({
+      where: { clientId },
+    });
+
     const engagementStreak = {
-      currentStreak: 0,
-      longestStreak: 0,
-      totalCheckIns: 0,
+      currentStreak: streakData?.currentStreak || 0,
+      longestStreak: streakData?.longestStreak || 0,
+      totalCheckIns: streakData?.totalCheckIns || 0,
     };
 
-    // TODO: Implement homework and goals
-    const pendingHomework = 0;
-    const activeGoals = 0;
+    // Get pending homework assignments count
+    const pendingHomework = await prisma.homework.count({
+      where: {
+        clientId,
+        status: { in: ['ASSIGNED', 'IN_PROGRESS'] },
+      },
+    });
+
+    // Get active goals count
+    const activeGoals = await prisma.clientGoal.count({
+      where: {
+        clientId,
+        status: { in: ['ACTIVE', 'IN_PROGRESS'] },
+      },
+    });
 
     res.status(200).json({
       success: true,
@@ -90,10 +136,10 @@ export const getDashboard = async (req: Request, res: Response) => {
 // APPOINTMENTS
 // ============================================================================
 
-export const getUpcomingAppointments = async (req: Request, res: Response) => {
+export const getUpcomingAppointments = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const clientId = req.portalAccount?.clientId;
+    const limit = parseInt(req.query.limit as string) || PAGINATION.APPOINTMENTS_DEFAULT;
 
     const appointments = await prisma.appointment.findMany({
       where: {
@@ -128,10 +174,10 @@ export const getUpcomingAppointments = async (req: Request, res: Response) => {
   }
 };
 
-export const getPastAppointments = async (req: Request, res: Response) => {
+export const getPastAppointments = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const clientId = req.portalAccount?.clientId;
+    const limit = parseInt(req.query.limit as string) || PAGINATION.PAST_APPOINTMENTS_DEFAULT;
 
     const appointments = await prisma.appointment.findMany({
       where: {
@@ -165,9 +211,9 @@ export const getPastAppointments = async (req: Request, res: Response) => {
   }
 };
 
-export const getAppointmentDetails = async (req: Request, res: Response) => {
+export const getAppointmentDetails = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { appointmentId } = req.params;
 
     const appointment = await prisma.appointment.findFirst({
@@ -215,9 +261,9 @@ const cancelAppointmentSchema = z.object({
   reason: z.string().optional(),
 });
 
-export const cancelAppointment = async (req: Request, res: Response) => {
+export const cancelAppointment = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { appointmentId } = req.params;
     const data = cancelAppointmentSchema.parse(req.body);
 
@@ -284,117 +330,5 @@ export const cancelAppointment = async (req: Request, res: Response) => {
   }
 };
 
-// ============================================================================
-// SECURE MESSAGING
-// ============================================================================
-
-export const getMessages = async (req: Request, res: Response) => {
-  try {
-    const clientId = (req as any).portalAccount?.clientId;
-
-    // TODO: Implement secure messaging system
-    const messages: any[] = [];
-
-    res.status(200).json({
-      success: true,
-      data: messages,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching messages:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch messages',
-    });
-  }
-};
-
-export const getUnreadCount = async (req: Request, res: Response) => {
-  try {
-    const clientId = (req as any).portalAccount?.clientId;
-
-    // TODO: Implement secure messaging system
-    const count = 0;
-
-    res.status(200).json({
-      success: true,
-      data: { unreadCount: count },
-    });
-  } catch (error: any) {
-    logger.error('Error fetching unread count:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch unread count',
-    });
-  }
-};
-
-export const getMessageThread = async (req: Request, res: Response) => {
-  try {
-    const clientId = (req as any).portalAccount?.clientId;
-    const { threadId } = req.params;
-
-    // TODO: Implement secure messaging system
-    const messages: any[] = [];
-
-    res.status(200).json({
-      success: true,
-      data: messages,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching message thread:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch message thread',
-    });
-  }
-};
-
-const sendMessageSchema = z.object({
-  recipientId: z.string().uuid(),
-  subject: z.string().min(1).max(200),
-  messageBody: z.string().min(1).max(5000),
-  threadId: z.string().uuid().optional(),
-});
-
-export const sendMessage = async (req: Request, res: Response) => {
-  try {
-    const clientId = (req as any).portalAccount?.clientId;
-    const data = sendMessageSchema.parse(req.body);
-
-    // TODO: Implement secure messaging system
-    logger.info(`Message send request from client ${clientId} (not implemented yet)`);
-
-    res.status(201).json({
-      success: true,
-      message: 'Messaging feature coming soon',
-      data: null,
-    });
-  } catch (error: any) {
-    logger.error('Error sending message:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to send message',
-    });
-  }
-};
-
-export const markMessageAsRead = async (req: Request, res: Response) => {
-  try {
-    const clientId = (req as any).portalAccount?.clientId;
-    const { messageId } = req.params;
-
-    // TODO: Implement secure messaging system
-    logger.info(`Mark message as read request from client ${clientId} (not implemented yet)`);
-
-    res.status(200).json({
-      success: true,
-      data: null,
-    });
-  } catch (error: any) {
-    logger.error('Error marking message as read:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to mark message as read',
-    });
-  }
-};
+// Note: Secure messaging is implemented in messages.controller.ts
+// Routes use that controller instead of these (now removed) stub functions

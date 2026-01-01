@@ -67,7 +67,7 @@ export default function PortalRegister() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="clientId" className="block text-sm font-medium text-gray-700 mb-2">
-                Client ID <span className="text-red-500">*</span>
+                MRN (Medical Record Number) <span className="text-red-500">*</span>
               </label>
               <input
                 id="clientId"
@@ -76,10 +76,10 @@ export default function PortalRegister() {
                 onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                placeholder="Provided by your therapist"
+                placeholder="Enter your MRN"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Your therapist will provide you with this ID
+                Your therapist will provide you with your MRN
               </p>
             </div>
 

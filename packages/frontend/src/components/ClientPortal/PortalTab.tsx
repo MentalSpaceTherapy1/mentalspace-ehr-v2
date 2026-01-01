@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as portalApi from '../../lib/portalApi';
@@ -32,6 +32,9 @@ export default function PortalTab({ clientId }: PortalTabProps) {
     documentId: '',
   });
 
+  // Deactivate portal confirmation state
+  const [deactivateConfirm, setDeactivateConfirm] = useState(false);
+
   const handleRevokeClick = (documentId: string) => {
     setRevokeConfirm({ isOpen: true, documentId });
   };
@@ -58,6 +61,177 @@ export default function PortalTab({ clientId }: PortalTabProps) {
     queryKey: ['sharedDocuments', clientId],
     queryFn: () => portalApi.getSharedDocumentsForClient(clientId),
   });
+
+  // Fetch portal status
+  const { data: portalStatus, isLoading: loadingPortalStatus } = useQuery({
+    queryKey: ['portalStatus', clientId],
+    queryFn: () => portalApi.getPortalStatus(clientId),
+  });
+
+  // Send portal invitation mutation
+  const sendInvitationMutation = useMutation({
+    mutationFn: () => portalApi.sendPortalInvitation(clientId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portalStatus', clientId] });
+      toast.success('Portal invitation sent successfully!', {
+        duration: 4000,
+        position: 'top-center',
+        icon: '📧',
+      });
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Failed to send portal invitation';
+      toast.error(message, {
+        duration: 4000,
+        position: 'top-center',
+      });
+    },
+  });
+
+  // Resend portal invitation mutation
+  const resendInvitationMutation = useMutation({
+    mutationFn: () => portalApi.resendPortalInvitation(clientId),
+    onSuccess: () => {
+      toast.success('Portal invitation resent successfully!', {
+        duration: 4000,
+        position: 'top-center',
+        icon: '📧',
+      });
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Failed to resend invitation';
+      toast.error(message, {
+        duration: 4000,
+        position: 'top-center',
+      });
+    },
+  });
+
+  // Deactivate portal account mutation
+  const deactivatePortalMutation = useMutation({
+    mutationFn: () => {
+      if (!portalStatus?.portalAccount?.id) {
+        throw new Error('No portal account found');
+      }
+      return portalApi.deactivatePortalAccount(portalStatus.portalAccount.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portalStatus', clientId] });
+      toast.success('Portal access deactivated successfully!', {
+        duration: 4000,
+        position: 'top-center',
+        icon: '🔒',
+      });
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Failed to deactivate portal access';
+      toast.error(message, {
+        duration: 4000,
+        position: 'top-center',
+      });
+    },
+  });
+
+  // Activate portal account mutation
+  const activatePortalMutation = useMutation({
+    mutationFn: () => {
+      if (!portalStatus?.portalAccount?.id) {
+        throw new Error('No portal account found');
+      }
+      return portalApi.activatePortalAccount(portalStatus.portalAccount.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portalStatus', clientId] });
+      toast.success('Portal access activated successfully!', {
+        duration: 4000,
+        position: 'top-center',
+        icon: '✅',
+      });
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Failed to activate portal access';
+      toast.error(message, {
+        duration: 4000,
+        position: 'top-center',
+      });
+    },
+  });
+
+  // Handle send portal email
+  const handleSendPortalEmail = () => {
+    if (portalStatus?.hasPortalAccount) {
+      // Resend invitation if account exists but not active
+      resendInvitationMutation.mutate();
+    } else {
+      // Send new invitation
+      sendInvitationMutation.mutate();
+    }
+  };
+
+  // Handle deactivate portal
+  const handleDeactivatePortal = () => {
+    setDeactivateConfirm(true);
+  };
+
+  const confirmDeactivate = () => {
+    deactivatePortalMutation.mutate();
+    setDeactivateConfirm(false);
+  };
+
+  // Get portal status display info
+  const getPortalStatusInfo = () => {
+    if (!portalStatus?.hasPortalAccount) {
+      return {
+        status: 'NO ACCOUNT',
+        statusColor: 'bg-gray-400',
+        bgColor: 'from-gray-50 to-gray-100',
+        description: 'Client does not have a portal account yet',
+      };
+    }
+
+    const accountStatus = portalStatus.portalAccount?.accountStatus;
+    switch (accountStatus) {
+      case 'ACTIVE':
+        return {
+          status: 'ACTIVE',
+          statusColor: 'bg-green-500',
+          bgColor: 'from-green-50 to-emerald-50',
+          description: portalStatus.portalAccount?.lastLoginDate
+            ? `Last login: ${new Date(portalStatus.portalAccount.lastLoginDate).toLocaleDateString()}`
+            : 'Portal access is active',
+        };
+      case 'INACTIVE':
+        return {
+          status: 'INACTIVE',
+          statusColor: 'bg-red-500',
+          bgColor: 'from-red-50 to-rose-50',
+          description: 'Portal access has been deactivated',
+        };
+      case 'PENDING_VERIFICATION':
+        return {
+          status: 'PENDING',
+          statusColor: 'bg-amber-500',
+          bgColor: 'from-amber-50 to-yellow-50',
+          description: 'Awaiting email verification from client',
+        };
+      case 'LOCKED':
+        return {
+          status: 'LOCKED',
+          statusColor: 'bg-red-600',
+          bgColor: 'from-red-50 to-rose-50',
+          description: 'Account locked due to failed login attempts',
+        };
+      default:
+        return {
+          status: 'UNKNOWN',
+          statusColor: 'bg-gray-500',
+          bgColor: 'from-gray-50 to-gray-100',
+          description: 'Unknown status',
+        };
+    }
+  };
+
+  const portalStatusInfo = getPortalStatusInfo();
 
   // Assign form mutation
   const assignFormMutation = useMutation({
@@ -134,26 +308,34 @@ export default function PortalTab({ clientId }: PortalTabProps) {
 
   // Share document mutation
   const shareDocumentMutation = useMutation({
-    mutationFn: async (data: portalApi.ShareDocumentRequest) => {
-      let fileUrl = data.fileUrl;
-
-      // Upload file if selected
-      if (uploadedFile) {
-        try {
-          const uploadResult = await portalApi.uploadDocumentFile(uploadedFile);
-          fileUrl = uploadResult.fileUrl;
-        } catch (error) {
-          throw new Error('File upload failed');
-        }
+    mutationFn: async () => {
+      // Upload file first
+      if (!uploadedFile) {
+        throw new Error('Please select a file to upload');
       }
 
-      return portalApi.shareDocumentWithClient(clientId, { ...data, fileUrl });
+      let documentS3Key: string;
+      try {
+        const uploadResult = await portalApi.uploadDocumentFile(uploadedFile);
+        documentS3Key = uploadResult.fileUrl;
+      } catch (error) {
+        throw new Error('File upload failed');
+      }
+
+      return portalApi.shareDocumentWithClient(clientId, {
+        documentName: documentTitle,
+        documentType,
+        documentS3Key,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sharedDocuments', clientId] });
       setDocumentTitle('');
       setDocumentType('');
       setUploadedFile(null);
+      // Clear file input
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
       toast.success('Document shared successfully!', {
         duration: 3000,
         position: 'top-center',
@@ -161,7 +343,8 @@ export default function PortalTab({ clientId }: PortalTabProps) {
       });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to share document', {
+      const message = error.message || error.response?.data?.message || 'Failed to share document';
+      toast.error(message, {
         duration: 4000,
         position: 'top-center',
       });
@@ -215,17 +398,22 @@ export default function PortalTab({ clientId }: PortalTabProps) {
 
   const handleShareDocument = () => {
     if (!documentTitle || !documentType) {
-      toast.error('Please fill in all required fields', {
+      toast.error('Please fill in document title and type', {
         duration: 3000,
         position: 'top-center',
       });
       return;
     }
 
-    shareDocumentMutation.mutate({
-      documentTitle,
-      documentType,
-    });
+    if (!uploadedFile) {
+      toast.error('Please select a file to upload', {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return;
+    }
+
+    shareDocumentMutation.mutate();
   };
 
   const getStatusBadgeColor = (status: string) => {
@@ -536,7 +724,7 @@ export default function PortalTab({ clientId }: PortalTabProps) {
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h4 className="font-bold text-gray-800 mb-1">
-                          {document.documentTitle}
+                          {document.documentName}
                         </h4>
                         <p className="text-sm text-gray-600">Type: {document.documentType}</p>
                         <p className="text-sm text-gray-600">
@@ -557,8 +745,8 @@ export default function PortalTab({ clientId }: PortalTabProps) {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => {
-                          if (document.fileUrl) {
-                            window.open(document.fileUrl, '_blank');
+                          if (document.documentS3Key) {
+                            window.open(document.documentS3Key, '_blank');
                           } else {
                             toast.error('No file URL available', {
                               duration: 3000,
@@ -591,23 +779,60 @@ export default function PortalTab({ clientId }: PortalTabProps) {
             </h3>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl">
-                <div>
-                  <p className="font-bold text-gray-800">Portal Account</p>
-                  <p className="text-sm text-gray-600">Status information coming soon</p>
+              {loadingPortalStatus ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
                 </div>
-                <span className="px-4 py-2 bg-green-500 text-white font-bold rounded-xl">
-                  ACTIVE
-                </span>
-              </div>
+              ) : (
+                <>
+                  <div className={`flex items-center justify-between bg-gradient-to-br ${portalStatusInfo.bgColor} p-4 rounded-xl`}>
+                    <div>
+                      <p className="font-bold text-gray-800">Portal Account</p>
+                      <p className="text-sm text-gray-600">{portalStatusInfo.description}</p>
+                      {portalStatus?.portalAccount?.email && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Email: {portalStatus.portalAccount.email}
+                        </p>
+                      )}
+                    </div>
+                    <span className={`px-4 py-2 ${portalStatusInfo.statusColor} text-white font-bold rounded-xl`}>
+                      {portalStatusInfo.status}
+                    </span>
+                  </div>
 
-              <button className="w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200">
-                Send Portal Access Email
-              </button>
+                  <button
+                    onClick={handleSendPortalEmail}
+                    disabled={sendInvitationMutation.isPending || resendInvitationMutation.isPending}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:transform-none"
+                  >
+                    {sendInvitationMutation.isPending || resendInvitationMutation.isPending
+                      ? 'Sending...'
+                      : portalStatus?.hasPortalAccount
+                      ? 'Resend Portal Access Email'
+                      : 'Send Portal Access Email'}
+                  </button>
 
-              <button className="w-full px-4 py-3 bg-red-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200">
-                Deactivate Portal Access
-              </button>
+                  {portalStatus?.hasPortalAccount && portalStatus.portalAccount?.accountStatus === 'ACTIVE' && (
+                    <button
+                      onClick={handleDeactivatePortal}
+                      disabled={deactivatePortalMutation.isPending}
+                      className="w-full px-4 py-3 bg-red-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:transform-none"
+                    >
+                      {deactivatePortalMutation.isPending ? 'Deactivating...' : 'Deactivate Portal Access'}
+                    </button>
+                  )}
+
+                  {portalStatus?.hasPortalAccount && portalStatus.portalAccount?.accountStatus === 'INACTIVE' && (
+                    <button
+                      onClick={() => activatePortalMutation.mutate()}
+                      disabled={activatePortalMutation.isPending}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:transform-none"
+                    >
+                      {activatePortalMutation.isPending ? 'Activating...' : 'Reactivate Portal Access'}
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -631,6 +856,19 @@ export default function PortalTab({ clientId }: PortalTabProps) {
         message="Are you sure you want to revoke access to this document?"
         confirmText="Revoke Access"
         confirmVariant="danger"
+      />
+
+      {/* Deactivate Portal Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deactivateConfirm}
+        onClose={() => setDeactivateConfirm(false)}
+        onConfirm={confirmDeactivate}
+        title="Deactivate Portal Access"
+        message="Are you sure you want to deactivate this client's portal access? They will no longer be able to log in to the client portal."
+        confirmText="Deactivate Access"
+        confirmVariant="danger"
+        icon="danger"
+        isLoading={deactivatePortalMutation.isPending}
       />
     </div>
   );

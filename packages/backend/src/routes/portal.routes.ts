@@ -10,6 +10,11 @@ import * as billingController from '../controllers/portal/billing.controller';
 import * as profileController from '../controllers/portal/profile.controller';
 import * as messagesController from '../controllers/portal/messages.controller';
 import * as moodTrackingController from '../controllers/portal/moodTracking.controller';
+import * as symptomTrackingController from '../controllers/portal/symptomTracking.controller';
+import * as sleepTrackingController from '../controllers/portal/sleepTracking.controller';
+import * as exerciseTrackingController from '../controllers/portal/exerciseTracking.controller';
+import * as telehealthController from '../controllers/portal/telehealth.controller';
+import * as selfSchedulingController from '../controllers/portal/selfScheduling.controller';
 import { authenticatePortal } from '../middleware/portalAuth';
 
 const router = Router();
@@ -82,6 +87,52 @@ router.delete('/therapist-change-requests/:requestId', authenticatePortal, phase
 router.post('/mood-entries', authenticatePortal, moodTrackingController.createMoodEntry);
 router.get('/mood-entries', authenticatePortal, moodTrackingController.getMoodEntries);
 router.get('/mood-entries/trends', authenticatePortal, moodTrackingController.getMoodTrends);
+
+// Symptom Diary - Specific routes MUST come before :logId wildcard
+router.post('/symptom-diary', authenticatePortal, symptomTrackingController.createSymptomLog);
+router.get('/symptom-diary', authenticatePortal, symptomTrackingController.getSymptomLogs);
+router.get('/symptom-diary/trends', authenticatePortal, symptomTrackingController.getSymptomTrends);
+router.get('/symptom-diary/:logId', authenticatePortal, symptomTrackingController.getSymptomLogById);
+router.put('/symptom-diary/:logId', authenticatePortal, symptomTrackingController.updateSymptomLog);
+router.delete('/symptom-diary/:logId', authenticatePortal, symptomTrackingController.deleteSymptomLog);
+
+// Sleep Diary - Specific routes MUST come before :logId wildcard
+router.post('/sleep-diary', authenticatePortal, sleepTrackingController.createSleepLog);
+router.get('/sleep-diary', authenticatePortal, sleepTrackingController.getSleepLogs);
+router.get('/sleep-diary/trends', authenticatePortal, sleepTrackingController.getSleepTrends);
+router.get('/sleep-diary/:logId', authenticatePortal, sleepTrackingController.getSleepLogById);
+router.put('/sleep-diary/:logId', authenticatePortal, sleepTrackingController.updateSleepLog);
+router.delete('/sleep-diary/:logId', authenticatePortal, sleepTrackingController.deleteSleepLog);
+
+// Exercise Log - Specific routes MUST come before :logId wildcard
+router.post('/exercise-log', authenticatePortal, exerciseTrackingController.createExerciseLog);
+router.get('/exercise-log', authenticatePortal, exerciseTrackingController.getExerciseLogs);
+router.get('/exercise-log/stats', authenticatePortal, exerciseTrackingController.getExerciseStats);
+router.get('/exercise-log/:logId', authenticatePortal, exerciseTrackingController.getExerciseLogById);
+router.put('/exercise-log/:logId', authenticatePortal, exerciseTrackingController.updateExerciseLog);
+router.delete('/exercise-log/:logId', authenticatePortal, exerciseTrackingController.deleteExerciseLog);
+
+// ========== TELEHEALTH ==========
+
+// Telehealth consent and session access
+router.get('/telehealth/consent-status', authenticatePortal, telehealthController.getConsentStatus);
+router.get('/telehealth/session/:appointmentId', authenticatePortal, telehealthController.getSession);
+router.post('/telehealth/session/:appointmentId/join', authenticatePortal, telehealthController.joinSession);
+router.post('/telehealth/session/:appointmentId/leave', authenticatePortal, telehealthController.leaveSession);
+router.post('/telehealth/session/:sessionId/rate', authenticatePortal, telehealthController.rateSession);
+
+// ========== SELF-SCHEDULING ==========
+
+// Get available clinicians and slots
+router.get('/self-schedule/clinicians', authenticatePortal, selfSchedulingController.getAvailableClinicians);
+router.get('/self-schedule/slots/:clinicianId', authenticatePortal, selfSchedulingController.getAvailableSlots);
+router.get('/self-schedule/appointment-types', authenticatePortal, selfSchedulingController.getAppointmentTypes);
+
+// Appointment management
+router.post('/self-schedule/book', authenticatePortal, selfSchedulingController.bookAppointment);
+router.put('/self-schedule/reschedule/:appointmentId', authenticatePortal, selfSchedulingController.rescheduleAppointment);
+router.delete('/self-schedule/cancel/:appointmentId', authenticatePortal, selfSchedulingController.cancelAppointment);
+router.get('/self-schedule/my-appointments', authenticatePortal, selfSchedulingController.getMyAppointments);
 
 // ========== DOCUMENTS & FORMS ==========
 

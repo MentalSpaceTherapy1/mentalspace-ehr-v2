@@ -1,14 +1,16 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
+import { PortalRequest } from '../../types/express.d';
+import * as billingService from '../../services/portal/billing.service';
 
 /**
  * Get balance information for client
  * GET /api/v1/portal/billing/balance
  */
-export const getBalance = async (req: Request, res: Response) => {
+export const getBalance = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -62,9 +64,9 @@ export const getBalance = async (req: Request, res: Response) => {
  * Get charges for client
  * GET /api/v1/portal/billing/charges
  */
-export const getCharges = async (req: Request, res: Response) => {
+export const getCharges = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -106,9 +108,9 @@ export const getCharges = async (req: Request, res: Response) => {
  * Get payment history for client
  * GET /api/v1/portal/billing/payments
  */
-export const getPayments = async (req: Request, res: Response) => {
+export const getPayments = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -146,13 +148,13 @@ export const getPayments = async (req: Request, res: Response) => {
 };
 
 /**
- * Process a payment
+ * Process a payment via Stripe
  * POST /api/v1/portal/billing/payments
  */
-export const makePayment = async (req: Request, res: Response) => {
+export const makePayment = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
-    const { amount, paymentMethod } = req.body;
+    const clientId = req.portalAccount?.clientId;
+    const { amount, paymentMethodId, description } = req.body;
 
     if (!clientId) {
       return res.status(401).json({
@@ -169,61 +171,47 @@ export const makePayment = async (req: Request, res: Response) => {
       });
     }
 
-    // Calculate current balance
-    const charges = await prisma.chargeEntry.findMany({
-      where: { clientId },
-    });
-    const payments = await prisma.paymentRecord.findMany({
-      where: { clientId },
-    });
-
-    const totalCharges = charges.reduce((sum, charge) => sum + charge.chargeAmount.toNumber(), 0);
-    const totalPayments = payments.reduce((sum, payment) => sum + payment.paymentAmount.toNumber(), 0);
-    const currentBalance = totalCharges - totalPayments;
+    // Calculate current balance to validate payment
+    const balanceInfo = await billingService.getCurrentBalance(clientId);
 
     // Validate payment doesn't exceed balance
-    if (amount > currentBalance) {
+    if (amount > balanceInfo.currentBalance) {
       return res.status(400).json({
         success: false,
         message: 'Payment amount cannot exceed current balance',
       });
     }
 
-    // TODO: In production, integrate with payment processor (Stripe, Square, etc.)
-    // For now, we'll create a simulated successful payment
-
-    const transactionId = `PAY-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
-
-    const payment = await prisma.paymentRecord.create({
-      data: {
-        clientId,
-        paymentAmount: amount,
-        paymentDate: new Date(),
-        paymentMethod: paymentMethod || 'Credit Card',
-        paymentSource: 'Client Portal',
-        transactionId,
-        appliedPaymentsJson: [],
-        postedBy: clientId, // Portal payments posted by the client themselves
-      },
+    // Process payment via Stripe using billing service
+    const result = await billingService.makePayment({
+      clientId,
+      amount,
+      paymentMethodId,
+      description: description || 'Client Portal Payment',
     });
 
-    logger.info(`Payment processed for client ${clientId}: $${amount} (${transactionId})`);
+    logger.info(`Payment processed for client ${clientId}: $${amount} (${result.stripePaymentIntent})`);
 
     return res.status(200).json({
       success: true,
       message: 'Payment processed successfully',
       data: {
-        id: payment.id,
-        amount: payment.paymentAmount.toNumber(),
-        transactionId: payment.transactionId,
-        paymentDate: payment.paymentDate,
+        id: result.paymentRecord.id,
+        amount: result.paymentRecord.paymentAmount,
+        transactionId: result.stripePaymentIntent,
+        paymentDate: result.paymentRecord.paymentDate,
       },
     });
   } catch (error: any) {
     logger.error('Error processing payment:', error);
-    return res.status(500).json({
+
+    // Handle specific error messages from Stripe
+    const message = error.message || 'Failed to process payment';
+    const statusCode = error.statusCode || 500;
+
+    return res.status(statusCode).json({
       success: false,
-      message: 'Failed to process payment',
+      message,
     });
   }
 };

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { z } from 'zod';
 import {
   billingService,
@@ -7,6 +7,7 @@ import {
   therapistChangeService,
   moodTrackingService,
 } from '../../services/portal';
+import { PortalRequest } from '../../types/express.d';
 
 // ============================================================================
 // BILLING & PAYMENTS
@@ -16,9 +17,9 @@ const addPaymentMethodSchema = z.object({
   stripeToken: z.string().min(1),
 });
 
-export const addPaymentMethod = async (req: Request, res: Response) => {
+export const addPaymentMethod = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const data = addPaymentMethodSchema.parse(req.body);
 
     const paymentMethod = await billingService.addPaymentMethod({
@@ -39,9 +40,9 @@ export const addPaymentMethod = async (req: Request, res: Response) => {
   }
 };
 
-export const getPaymentMethods = async (req: Request, res: Response) => {
+export const getPaymentMethods = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     const paymentMethods = await billingService.getPaymentMethods(clientId);
 
@@ -61,9 +62,9 @@ const setDefaultPaymentMethodSchema = z.object({
   paymentMethodId: z.string().uuid(),
 });
 
-export const setDefaultPaymentMethod = async (req: Request, res: Response) => {
+export const setDefaultPaymentMethod = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const data = setDefaultPaymentMethodSchema.parse(req.body);
 
     const updated = await billingService.setDefaultPaymentMethod({
@@ -84,9 +85,9 @@ export const setDefaultPaymentMethod = async (req: Request, res: Response) => {
   }
 };
 
-export const removePaymentMethod = async (req: Request, res: Response) => {
+export const removePaymentMethod = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { paymentMethodId } = req.params;
 
     await billingService.removePaymentMethod({
@@ -106,9 +107,9 @@ export const removePaymentMethod = async (req: Request, res: Response) => {
   }
 };
 
-export const getCurrentBalance = async (req: Request, res: Response) => {
+export const getCurrentBalance = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     const balance = await billingService.getCurrentBalance(clientId);
 
@@ -130,9 +131,9 @@ const makePaymentSchema = z.object({
   description: z.string().optional(),
 });
 
-export const makePayment = async (req: Request, res: Response) => {
+export const makePayment = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const data = makePaymentSchema.parse(req.body);
 
     const result = await billingService.makePayment({
@@ -155,9 +156,9 @@ export const makePayment = async (req: Request, res: Response) => {
   }
 };
 
-export const getPaymentHistory = async (req: Request, res: Response) => {
+export const getPaymentHistory = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const limit = parseInt(req.query.limit as string) || 20;
 
     const payments = await billingService.getPaymentHistory(clientId, limit);
@@ -178,9 +179,9 @@ export const getPaymentHistory = async (req: Request, res: Response) => {
 // INSURANCE CARDS
 // ============================================================================
 
-export const uploadInsuranceCard = async (req: Request, res: Response) => {
+export const uploadInsuranceCard = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     // In a real implementation, use multer or similar for file uploads
     // For now, expecting base64 encoded images in request body
@@ -222,9 +223,9 @@ export const uploadInsuranceCard = async (req: Request, res: Response) => {
   }
 };
 
-export const getInsuranceCards = async (req: Request, res: Response) => {
+export const getInsuranceCards = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     const cards = await insuranceService.getActiveInsuranceCards(clientId);
 
@@ -261,9 +262,9 @@ const createSessionReviewSchema = z.object({
   isAnonymous: z.boolean().optional(),
 });
 
-export const createSessionReview = async (req: Request, res: Response) => {
+export const createSessionReview = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const data = createSessionReviewSchema.parse(req.body);
 
     const review = await sessionReviewsService.createSessionReview({
@@ -289,9 +290,9 @@ export const createSessionReview = async (req: Request, res: Response) => {
   }
 };
 
-export const getClientReviews = async (req: Request, res: Response) => {
+export const getClientReviews = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     const reviews = await sessionReviewsService.getClientReviews(clientId);
 
@@ -311,9 +312,9 @@ const updateReviewSharingSchema = z.object({
   isSharedWithClinician: z.boolean(),
 });
 
-export const updateReviewSharing = async (req: Request, res: Response) => {
+export const updateReviewSharing = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { reviewId } = req.params;
     const data = updateReviewSharingSchema.parse(req.body);
 
@@ -346,9 +347,9 @@ const createChangeRequestSchema = z.object({
   isSensitive: z.boolean().optional(),
 });
 
-export const createChangeRequest = async (req: Request, res: Response) => {
+export const createChangeRequest = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const data = createChangeRequestSchema.parse(req.body);
 
     const request = await therapistChangeService.createChangeRequest({
@@ -371,9 +372,9 @@ export const createChangeRequest = async (req: Request, res: Response) => {
   }
 };
 
-export const getClientChangeRequests = async (req: Request, res: Response) => {
+export const getClientChangeRequests = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     const requests = await therapistChangeService.getClientChangeRequests(clientId);
 
@@ -389,9 +390,9 @@ export const getClientChangeRequests = async (req: Request, res: Response) => {
   }
 };
 
-export const cancelChangeRequest = async (req: Request, res: Response) => {
+export const cancelChangeRequest = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { requestId } = req.params;
 
     await therapistChangeService.cancelChangeRequest({
@@ -424,9 +425,9 @@ const createMoodEntrySchema = z.object({
   sharedWithClinician: z.boolean().optional(),
 });
 
-export const createMoodEntry = async (req: Request, res: Response) => {
+export const createMoodEntry = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const data = createMoodEntrySchema.parse(req.body);
 
     const entry = await moodTrackingService.createMoodEntry({
@@ -452,9 +453,9 @@ export const createMoodEntry = async (req: Request, res: Response) => {
   }
 };
 
-export const getMoodEntries = async (req: Request, res: Response) => {
+export const getMoodEntries = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
@@ -478,9 +479,9 @@ export const getMoodEntries = async (req: Request, res: Response) => {
   }
 };
 
-export const getMoodTrends = async (req: Request, res: Response) => {
+export const getMoodTrends = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const days = req.query.days ? parseInt(req.query.days as string) : 30;
 
     const trends = await moodTrackingService.getMoodTrends({

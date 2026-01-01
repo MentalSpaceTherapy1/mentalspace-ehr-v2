@@ -32,6 +32,9 @@ app.use(
   })
 );
 
+// Stripe webhook needs raw body for signature verification - MUST come before JSON parser
+app.use('/api/v1/webhooks/stripe', express.raw({ type: 'application/json' }));
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -97,6 +100,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   // and the frontend clears CSRF token on 401, creating a chicken-and-egg problem
   // IMPORTANT: Check with both startsWith and includes to handle different URL patterns
   const isExemptAuthRoute =
+    // Staff/EHR auth routes
     reqPath.startsWith('/v1/auth/login') ||
     reqPath.startsWith('/v1/auth/register') ||
     reqPath.startsWith('/v1/auth/refresh') ||
@@ -105,6 +109,13 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     reqPath.startsWith('/v1/auth/verify-email') ||
     reqPath.startsWith('/v1/auth/resend-verification') ||
     reqPath.startsWith('/v1/auth/mfa/complete') ||
+    // Client Portal auth routes (use Bearer tokens, not cookies)
+    reqPath.startsWith('/v1/portal-auth/login') ||
+    reqPath.startsWith('/v1/portal-auth/register') ||
+    reqPath.startsWith('/v1/portal-auth/forgot-password') ||
+    reqPath.startsWith('/v1/portal-auth/reset-password') ||
+    reqPath.startsWith('/v1/portal-auth/verify-email') ||
+    reqPath.startsWith('/v1/portal-auth/resend-verification') ||
     // Also check without /v1 prefix in case of different routing
     reqPath === '/auth/refresh' ||
     reqPath.startsWith('/auth/refresh');

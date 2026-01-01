@@ -1,16 +1,17 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 import logger from '../../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '../../services/database';
+import { PortalRequest } from '../../types/express.d';
 
 /**
  * Get all messages for client (grouped by thread)
  * GET /api/v1/portal/messages
  */
-export const getMessages = async (req: Request, res: Response) => {
+export const getMessages = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -56,9 +57,9 @@ export const getMessages = async (req: Request, res: Response) => {
  * Get messages in a specific thread
  * GET /api/v1/portal/messages/thread/:threadId
  */
-export const getMessageThread = async (req: Request, res: Response) => {
+export const getMessageThread = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { threadId } = req.params;
 
     if (!clientId) {
@@ -108,9 +109,9 @@ export const getMessageThread = async (req: Request, res: Response) => {
  * Send a new message (start new thread)
  * POST /api/v1/portal/messages
  */
-export const sendMessage = async (req: Request, res: Response) => {
+export const sendMessage = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { subject, message, priority } = req.body;
 
     if (!clientId) {
@@ -174,9 +175,9 @@ export const sendMessage = async (req: Request, res: Response) => {
  * Reply to a message in an existing thread
  * POST /api/v1/portal/messages/:messageId/reply
  */
-export const replyToMessage = async (req: Request, res: Response) => {
+export const replyToMessage = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { messageId } = req.params;
     const { message } = req.body;
 
@@ -257,9 +258,9 @@ export const replyToMessage = async (req: Request, res: Response) => {
  * Mark a message as read
  * POST /api/v1/portal/messages/:messageId/read
  */
-export const markMessageAsRead = async (req: Request, res: Response) => {
+export const markMessageAsRead = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { messageId } = req.params;
 
     if (!clientId) {
@@ -314,9 +315,9 @@ export const markMessageAsRead = async (req: Request, res: Response) => {
  * Get unread message count
  * GET /api/v1/portal/messages/unread-count
  */
-export const getUnreadCount = async (req: Request, res: Response) => {
+export const getUnreadCount = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({

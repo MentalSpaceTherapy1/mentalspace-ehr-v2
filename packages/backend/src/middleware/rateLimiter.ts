@@ -116,7 +116,7 @@ export const refreshRateLimiter = rateLimit({
  */
 export const accountCreationRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Maximum 3 account creations per hour per IP
+  max: 20, // Maximum 20 account creations per hour per IP (temporarily increased for testing)
   message: {
     success: false,
     message: 'Too many accounts created from this IP, please try again later',

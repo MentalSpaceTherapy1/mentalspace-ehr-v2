@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 import logger, { logControllerError } from '../../utils/logger';
 import prisma from '../../services/database';
+import { PortalRequest } from '../../types/express.d';
 
 /**
  * Get client's assigned forms
  * GET /api/v1/portal/forms/assignments
  */
-export const getFormAssignments = async (req: Request, res: Response) => {
+export const getFormAssignments = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -58,7 +59,7 @@ export const getFormAssignments = async (req: Request, res: Response) => {
  * Get form details for completion
  * GET /api/v1/portal/forms/:formId
  */
-export const getFormDetails = async (req: Request, res: Response) => {
+export const getFormDetails = async (req: PortalRequest, res: Response) => {
   logger.info('🔵🔵🔵 getFormDetails CALLED 🔵🔵🔵', {
     formId: req.params.formId,
     assignmentId: req.query.assignmentId,
@@ -78,7 +79,7 @@ export const getFormDetails = async (req: Request, res: Response) => {
   try {
     const { formId } = req.params;
     const { assignmentId } = req.query;
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -144,7 +145,7 @@ export const getFormDetails = async (req: Request, res: Response) => {
  * Submit completed form
  * POST /api/v1/portal/forms/:formId/submit
  */
-export const submitForm = async (req: Request, res: Response) => {
+export const submitForm = async (req: PortalRequest, res: Response) => {
   try {
     const { formId } = req.params;
     const {
@@ -154,7 +155,7 @@ export const submitForm = async (req: Request, res: Response) => {
       signedByName,
       consentAgreed
     } = req.body;
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -265,9 +266,9 @@ export const submitForm = async (req: Request, res: Response) => {
  * Get shared documents
  * GET /api/v1/portal/documents/shared
  */
-export const getSharedDocuments = async (req: Request, res: Response) => {
+export const getSharedDocuments = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -306,10 +307,10 @@ export const getSharedDocuments = async (req: Request, res: Response) => {
  * Download a shared document
  * GET /api/v1/portal/documents/:documentId/download
  */
-export const downloadDocument = async (req: Request, res: Response) => {
+export const downloadDocument = async (req: PortalRequest, res: Response) => {
   try {
     const { documentId } = req.params;
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -371,9 +372,9 @@ export const downloadDocument = async (req: Request, res: Response) => {
  * Upload a document from client
  * POST /api/v1/portal/documents/upload
  */
-export const uploadDocument = async (req: Request, res: Response) => {
+export const uploadDocument = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
@@ -417,9 +418,9 @@ export const uploadDocument = async (req: Request, res: Response) => {
  * Get client's uploaded documents
  * GET /api/v1/portal/documents/uploads
  */
-export const getUploadedDocuments = async (req: Request, res: Response) => {
+export const getUploadedDocuments = async (req: PortalRequest, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
       return res.status(401).json({
