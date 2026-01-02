@@ -47,7 +47,6 @@ import { useMessaging } from '../../hooks/useMessaging';
 import { usePortalMessaging, PortalMessage } from '../../hooks/usePortalMessaging';
 import MessageThread from './MessageThread';
 import MessageComposer from './MessageComposer';
-import ChannelList from './ChannelList';
 
 // Interface for grouped conversation threads
 interface ConversationThread {
@@ -275,41 +274,41 @@ const MessagingHub: React.FC = () => {
       {/* Main Content */}
       <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
         <Grid container sx={{ height: '100%' }}>
-          {/* Left Sidebar - Channels/Folders */}
-          <Grid size={{xs: 12, md: 3}} sx={{ height: '100%', borderRight: '1px solid #e2e8f0' }}>
+          {/* Left Sidebar - Conversation List */}
+          <Grid size={{xs: 12, md: 4}} sx={{ height: '100%', borderRight: '1px solid #e2e8f0', minWidth: 320 }}>
             <Paper elevation={0} sx={{ height: '100%', borderRadius: 0, overflow: 'auto' }}>
               <Box sx={{ p: 2 }}>
-                {/* Tabs - Compact horizontal layout */}
+                {/* Tabs - Clients and Staff only (Channels available via sidebar) */}
                 <Tabs
                   value={tabValue}
                   onChange={handleTabChange}
                   variant="fullWidth"
                   sx={{
                     mb: 2,
-                    minHeight: 36,
+                    minHeight: 44,
                     '& .MuiTab-root': {
-                      minHeight: 36,
-                      fontSize: '0.75rem',
+                      minHeight: 44,
+                      fontSize: '0.875rem',
                       fontWeight: 500,
                       textTransform: 'none',
-                      py: 0.5,
-                      px: 1,
+                      py: 1,
+                      px: 2,
                       flexDirection: 'row',
-                      gap: 0.5,
+                      gap: 1,
                     },
                     '& .Mui-selected': {
                       color: '#10b981 !important',
                     },
                     '& .MuiTabs-indicator': {
                       backgroundColor: '#10b981',
-                      height: 2,
+                      height: 3,
                     },
                   }}
                 >
                   <Tab
                     icon={
-                      <Badge badgeContent={portalUnreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontSize: 9, minWidth: 14, height: 14 } }}>
-                        <PersonIcon sx={{ fontSize: 18 }} />
+                      <Badge badgeContent={portalUnreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontSize: 10, minWidth: 16, height: 16 } }}>
+                        <PersonIcon sx={{ fontSize: 20 }} />
                       </Badge>
                     }
                     label="Clients"
@@ -317,13 +316,8 @@ const MessagingHub: React.FC = () => {
                     sx={{ color: tabValue === 0 ? '#10b981' : 'inherit' }}
                   />
                   <Tab
-                    icon={<InboxIcon sx={{ fontSize: 18 }} />}
+                    icon={<InboxIcon sx={{ fontSize: 20 }} />}
                     label="Staff"
-                    iconPosition="start"
-                  />
-                  <Tab
-                    icon={<GroupIcon sx={{ fontSize: 18 }} />}
-                    label="Channels"
                     iconPosition="start"
                   />
                 </Tabs>
@@ -504,7 +498,7 @@ const MessagingHub: React.FC = () => {
                       )}
                     </List>
                   </Box>
-                ) : tabValue === 1 ? (
+                ) : (
                   /* Tab 1 = Staff Messages */
                   <List sx={{ p: 0 }}>
                     <AnimatePresence>
@@ -578,20 +572,13 @@ const MessagingHub: React.FC = () => {
                       ))}
                     </AnimatePresence>
                   </List>
-                ) : (
-                  /* Tab 2 = Channels */
-                  <ChannelList
-                    channels={channels}
-                    selectedChannel={selectedChannel}
-                    onSelectChannel={setSelectedChannel}
-                  />
                 )}
               </Box>
             </Paper>
           </Grid>
 
           {/* Middle - Message Thread or Content (expanded to fill space after removing Quick Actions) */}
-          <Grid size={{xs: 12, md: 9}} sx={{ height: '100%', overflow: 'auto' }}>
+          <Grid size={{xs: 12, md: 8}} sx={{ height: '100%', overflow: 'auto' }}>
             {showComposer ? (
               <MessageComposer onClose={() => setShowComposer(false)} />
             ) : selectedThread ? (
