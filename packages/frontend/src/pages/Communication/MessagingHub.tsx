@@ -276,22 +276,26 @@ const MessagingHub: React.FC = () => {
       <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
         <Grid container sx={{ height: '100%' }}>
           {/* Left Sidebar - Channels/Folders */}
-          <Grid size={{xs: 12, md: 4}} sx={{ height: '100%', borderRight: '1px solid #e2e8f0' }}>
+          <Grid size={{xs: 12, md: 3}} sx={{ height: '100%', borderRight: '1px solid #e2e8f0' }}>
             <Paper elevation={0} sx={{ height: '100%', borderRadius: 0, overflow: 'auto' }}>
               <Box sx={{ p: 2 }}>
-                {/* Tabs - Client Portal first (most important), then Staff, then Channels */}
+                {/* Tabs - Compact horizontal layout */}
                 <Tabs
                   value={tabValue}
                   onChange={handleTabChange}
                   variant="fullWidth"
                   sx={{
                     mb: 2,
+                    minHeight: 36,
                     '& .MuiTab-root': {
-                      minHeight: 40,
-                      fontSize: '0.8rem',
+                      minHeight: 36,
+                      fontSize: '0.75rem',
                       fontWeight: 500,
                       textTransform: 'none',
                       py: 0.5,
+                      px: 1,
+                      flexDirection: 'row',
+                      gap: 0.5,
                     },
                     '& .Mui-selected': {
                       color: '#10b981 !important',
@@ -304,20 +308,23 @@ const MessagingHub: React.FC = () => {
                 >
                   <Tab
                     icon={
-                      <Badge badgeContent={portalUnreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontSize: 10, minWidth: 16, height: 16 } }}>
-                        <PersonIcon />
+                      <Badge badgeContent={portalUnreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontSize: 9, minWidth: 14, height: 14 } }}>
+                        <PersonIcon sx={{ fontSize: 18 }} />
                       </Badge>
                     }
                     label="Clients"
+                    iconPosition="start"
                     sx={{ color: tabValue === 0 ? '#10b981' : 'inherit' }}
                   />
                   <Tab
-                    icon={<InboxIcon />}
+                    icon={<InboxIcon sx={{ fontSize: 18 }} />}
                     label="Staff"
+                    iconPosition="start"
                   />
                   <Tab
-                    icon={<GroupIcon />}
+                    icon={<GroupIcon sx={{ fontSize: 18 }} />}
                     label="Channels"
+                    iconPosition="start"
                   />
                 </Tabs>
 
@@ -584,7 +591,7 @@ const MessagingHub: React.FC = () => {
           </Grid>
 
           {/* Middle - Message Thread or Content (expanded to fill space after removing Quick Actions) */}
-          <Grid size={{xs: 12, md: 8}} sx={{ height: '100%', overflow: 'auto' }}>
+          <Grid size={{xs: 12, md: 9}} sx={{ height: '100%', overflow: 'auto' }}>
             {showComposer ? (
               <MessageComposer onClose={() => setShowComposer(false)} />
             ) : selectedThread ? (
