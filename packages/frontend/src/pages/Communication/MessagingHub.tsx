@@ -287,17 +287,18 @@ const MessagingHub: React.FC = () => {
                   sx={{
                     mb: 2,
                     '& .MuiTab-root': {
-                      minHeight: 56,
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
+                      minHeight: 40,
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
                       textTransform: 'none',
+                      py: 0.5,
                     },
                     '& .Mui-selected': {
                       color: '#10b981 !important',
                     },
                     '& .MuiTabs-indicator': {
                       backgroundColor: '#10b981',
-                      height: 3,
+                      height: 2,
                     },
                   }}
                 >
@@ -631,9 +632,6 @@ const MessagingHub: React.FC = () => {
                     <Box
                       key={msg.id}
                       sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: msg.sentByClient ? 'flex-start' : 'flex-end',
                         mb: 2,
                       }}
                     >
@@ -641,7 +639,7 @@ const MessagingHub: React.FC = () => {
                         elevation={0}
                         sx={{
                           p: 2,
-                          maxWidth: '90%',
+                          width: '100%',
                           bgcolor: msg.sentByClient
                             ? alpha('#10b981', 0.05)
                             : alpha('#667eea', 0.05),
