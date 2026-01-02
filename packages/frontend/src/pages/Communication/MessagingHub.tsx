@@ -641,7 +641,7 @@ const MessagingHub: React.FC = () => {
                         elevation={0}
                         sx={{
                           p: 2,
-                          maxWidth: '70%',
+                          maxWidth: '90%',
                           bgcolor: msg.sentByClient
                             ? alpha('#10b981', 0.05)
                             : alpha('#667eea', 0.05),
