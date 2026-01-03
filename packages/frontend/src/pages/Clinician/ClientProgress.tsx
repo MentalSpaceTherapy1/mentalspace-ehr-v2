@@ -721,7 +721,11 @@ export default function ClientProgress() {
                   {healthScore?.trend === 'UP' && <TrendingUp color="success" />}
                   {healthScore?.trend === 'DOWN' && <TrendingDown color="error" />}
                   <Typography variant="caption" color="text.secondary">
-                    {healthScore?.trend === 'STABLE' ? 'Stable' : `${healthScore?.trendChange}%`}
+                    {healthScore?.trend === 'STABLE'
+                      ? 'Stable'
+                      : healthScore?.trendChange !== undefined
+                        ? `${healthScore.trendChange}%`
+                        : ''}
                   </Typography>
                 </Box>
               </Box>
@@ -865,7 +869,7 @@ export default function ClientProgress() {
               <Typography variant="subtitle2" gutterBottom>
                 Most Common Symptoms
               </Typography>
-              {symptomSummary?.mostCommonSymptoms.slice(0, 3).map((symptom, idx) => (
+              {(symptomSummary?.mostCommonSymptoms || []).slice(0, 3).map((symptom, idx) => (
                 <Box key={idx} sx={{ mb: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2">{symptom.symptom}</Typography>
@@ -887,7 +891,7 @@ export default function ClientProgress() {
                 Average Severity
               </Typography>
               <Typography variant="h4" gutterBottom>
-                {symptomSummary?.averageSeverity.toFixed(1)} / 10
+                {(symptomSummary?.averageSeverity ?? 0).toFixed(1)} / 10
               </Typography>
 
               <Divider sx={{ my: 2 }} />
@@ -895,7 +899,7 @@ export default function ClientProgress() {
               <Typography variant="subtitle2" gutterBottom>
                 Most Common Triggers
               </Typography>
-              {symptomSummary?.commonTriggers.slice(0, 3).map((trigger, idx) => (
+              {(symptomSummary?.commonTriggers || []).slice(0, 3).map((trigger, idx) => (
                 <Chip key={idx} label={`${trigger.trigger} (${trigger.count})`} sx={{ mr: 1, mb: 1 }} />
               ))}
 
@@ -965,20 +969,20 @@ export default function ClientProgress() {
                       >
                         <TableCell>{formatDate(log.logDate)}</TableCell>
                         <TableCell>
-                          {log.symptoms.map((s, idx) => (
+                          {(log.symptoms || []).map((s, idx) => (
                             <Chip key={idx} label={s} size="small" sx={{ mr: 0.5 }} />
                           ))}
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={log.averageSeverity.toFixed(1)}
+                            label={(log.averageSeverity ?? 0).toFixed(1)}
                             size="small"
-                            color={log.averageSeverity > 7 ? 'error' : log.averageSeverity > 4 ? 'warning' : 'success'}
+                            color={(log.averageSeverity ?? 0) > 7 ? 'error' : (log.averageSeverity ?? 0) > 4 ? 'warning' : 'success'}
                           />
                         </TableCell>
                         <TableCell>{getMoodIcon(log.mood)}</TableCell>
                         <TableCell>
-                          {log.triggers.slice(0, 2).map((t, idx) => (
+                          {(log.triggers || []).slice(0, 2).map((t, idx) => (
                             <Chip key={idx} label={t} size="small" variant="outlined" sx={{ mr: 0.5 }} />
                           ))}
                         </TableCell>
@@ -1029,10 +1033,10 @@ export default function ClientProgress() {
                 Average Hours
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                7-day: {sleepMetrics?.averageHours7Day.toFixed(1)} hrs
+                7-day: {sleepMetrics?.averageHours7Day != null ? `${sleepMetrics.averageHours7Day.toFixed(1)} hrs` : 'N/A'}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                30-day: {sleepMetrics?.averageHours30Day.toFixed(1)} hrs
+                30-day: {sleepMetrics?.averageHours30Day != null ? `${sleepMetrics.averageHours30Day.toFixed(1)} hrs` : 'N/A'}
               </Typography>
 
               <Typography variant="subtitle2" gutterBottom>
@@ -1087,7 +1091,7 @@ export default function ClientProgress() {
               <Typography variant="subtitle2" gutterBottom>
                 Common Disturbances
               </Typography>
-              {sleepMetrics?.commonDisturbances.slice(0, 3).map((disturbance, idx) => (
+              {(sleepMetrics?.commonDisturbances || []).slice(0, 3).map((disturbance, idx) => (
                 <Box key={idx} sx={{ mb: 1 }}>
                   <Typography variant="body2">
                     {disturbance.disturbance} ({disturbance.percentage}%)
@@ -1145,7 +1149,7 @@ export default function ClientProgress() {
                         <TableCell>{formatDate(log.logDate)}</TableCell>
                         <TableCell>{formatTime(log.bedtime)}</TableCell>
                         <TableCell>{formatTime(log.wakeTime)}</TableCell>
-                        <TableCell>{log.hoursSlept.toFixed(1)} hrs</TableCell>
+                        <TableCell>{(log.hoursSlept ?? 0).toFixed(1)} hrs</TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 0.5 }}>
                             {[1, 2, 3, 4, 5].map((star) => (
@@ -1162,7 +1166,7 @@ export default function ClientProgress() {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          {log.disturbances.map((d, idx) => (
+                          {(log.disturbances || []).map((d, idx) => (
                             <Chip key={idx} label={d} size="small" sx={{ mr: 0.5 }} />
                           ))}
                         </TableCell>
@@ -1250,7 +1254,7 @@ export default function ClientProgress() {
                 Sessions: {exerciseStats?.totalSessions || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Avg/session: {exerciseStats?.averageMinutesPerSession.toFixed(1) || 0} min
+                Avg/session: {(exerciseStats?.averageMinutesPerSession ?? 0).toFixed(1)} min
               </Typography>
 
               <Divider sx={{ my: 2 }} />
@@ -1303,7 +1307,7 @@ export default function ClientProgress() {
               <Typography variant="subtitle2" gutterBottom>
                 Favorite Activities
               </Typography>
-              {exerciseStats?.favoriteActivities.slice(0, 3).map((activity, idx) => (
+              {(exerciseStats?.favoriteActivities || []).slice(0, 3).map((activity, idx) => (
                 <Box key={idx} sx={{ mb: 1 }}>
                   <Typography variant="body2">
                     {activity.activity}: {activity.totalMinutes} min ({activity.count} sessions)

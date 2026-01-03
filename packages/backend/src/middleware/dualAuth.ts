@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import config from '../config';
 import logger from '../utils/logger';
 import prisma from '../services/database';
+import sessionService from '../services/session.service';
 
 interface PortalTokenPayload {
   userId: string; // This is the clientId in portal tokens
@@ -170,10 +171,7 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
 
       // Try staff authentication (session-based token validation)
       try {
-        // Import session service dynamically to avoid circular dependency
-        logger.info('[DUAL AUTH] Loading session service...');
-        const sessionService = (await import('../services/session.service.js')).default;
-        logger.info('[DUAL AUTH] Session service loaded, validating session...');
+        logger.info('[DUAL AUTH] Validating session with session service...');
 
         // Validate session token
         const sessionData = await sessionService.validateSession(token);

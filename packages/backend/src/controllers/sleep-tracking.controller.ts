@@ -158,16 +158,29 @@ export const deleteSleepLog = async (req: Request, res: Response) => {
 export const getSleepMetrics = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, days } = req.query;
 
-    if (!startDate || !endDate) {
-      throw new ValidationError('Start date and end date are required');
+    let dateRange: { startDate: Date; endDate: Date };
+
+    if (days) {
+      // Calculate date range from days parameter
+      const daysNum = parseInt(days as string) || 30;
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - daysNum);
+      dateRange = { startDate: start, endDate: end };
+    } else if (startDate && endDate) {
+      dateRange = {
+        startDate: new Date(startDate as string),
+        endDate: new Date(endDate as string),
+      };
+    } else {
+      // Default to last 30 days
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      dateRange = { startDate: start, endDate: end };
     }
-
-    const dateRange = {
-      startDate: new Date(startDate as string),
-      endDate: new Date(endDate as string),
-    };
 
     const metrics = await sleepTrackingService.calculateSleepMetrics(clientId, dateRange);
 
