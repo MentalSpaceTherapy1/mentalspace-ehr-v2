@@ -5,13 +5,17 @@ on:
     branches: [develop]
   workflow_dispatch:
 
+# Required GitHub Configuration:
+# 1. Create "staging" environment in Settings → Environments
+# 2. Add these secrets in Settings → Secrets:
+#    - STAGING_DATABASE_URL: PostgreSQL connection string for staging
+#    - STAGING_CLOUDFRONT_DISTRIBUTION_ID: CloudFront distribution ID
+#    - SLACK_WEBHOOK: Slack webhook URL for notifications (optional)
+
 jobs:
   deploy:
     name: Deploy to Staging Environment
     runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: https://staging.mentalspaceehr.com
 
     steps:
       - name: Checkout code
@@ -90,11 +94,13 @@ jobs:
           curl -f https://staging.mentalspaceehr.com/ || exit 1
 
       - name: Notify deployment
-        if: always()
+        if: always() && env.SLACK_WEBHOOK_URL != ''
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
           text: 'Staging deployment ${{ job.status }}'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Deployment complete
+        run: echo "✅ Staging deployment completed with status ${{ job.status }}"

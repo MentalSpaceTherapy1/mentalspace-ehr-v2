@@ -305,6 +305,16 @@ model User {
   ptoRequestsAsApprover        PTORequest[]        @relation("PTOApprover")
   ptoBalance                   PTOBalance?         @relation("PTOBalance")
 
+  // Phase 2: AI Generated Notes Relations
+  aiNotesAsClinician   AIGeneratedNote[]      @relation("ClinicianAINotes")
+  aiNotesAsReviewer    AIGeneratedNote[]      @relation("ReviewerAINotes")
+  aiAuditLogs          AIGenerationAuditLog[] @relation("AIAuditLogs")
+  aiTemplatesCreated   AIPromptTemplate[]     @relation("AITemplateCreator")
+  aiTemplatesUpdated   AIPromptTemplate[]     @relation("AITemplateUpdater")
+
+  // AI Personal Assistant
+  aiConversations      AIConversation[]
+
   @@map("users")
 }
 
@@ -742,6 +752,12 @@ model Client {
   eligibilityChecks EligibilityCheck[] @relation("ClientEligibilityCheck")
   claims            Claim[]            @relation("ClientClaim")
 
+  // Phase 2: AI Generated Notes Relations
+  aiGeneratedNotes AIGeneratedNote[] @relation("ClientAINotes")
+
+  // AI Personal Assistant Relations
+  aiConversations AIConversation[]
+
   @@map("clients")
 }
 
@@ -1076,6 +1092,9 @@ model Appointment {
   amdSyncStatus        String?   // 'pending', 'synced', 'error'
   amdSyncError         String?
 
+  // Phase 2: AI Generated Notes Relations
+  aiGeneratedNotes AIGeneratedNote[]
+
   @@map("appointments")
 }
 
@@ -1145,6 +1164,7 @@ model TelehealthSession {
 
   // Relations
   transcripts SessionTranscript[] @relation("SessionTranscripts")
+  recordings  SessionRecording[]  @relation("SessionRecordings")
   rating      SessionRating?      @relation("SessionRating")
 
   // Compliance & Security
@@ -1186,7 +1206,7 @@ model SessionTranscript {
   @@map("session_transcripts")
 }
 
-// Client Session Ratings (Admin-Only View)
+// Client Session Ratings
 model SessionRating {
   id        String            @id @default(uuid())
   sessionId String            @unique
@@ -1199,6 +1219,10 @@ model SessionRating {
   rating   Int     @db.SmallInt // 1-5 stars
   comments String? @db.Text // Optional feedback text
 
+  // Sharing Preferences (client controls visibility)
+  shareWithTherapist Boolean @default(false) // Share with assigned therapist
+  shareWithAdmin     Boolean @default(false) // Share with admin/organization
+
   // Metadata
   submittedAt DateTime @default(now())
   ipAddress   String? // For audit purposes
@@ -1206,7 +1230,213 @@ model SessionRating {
   @@index([sessionId])
   @@index([clientId])
   @@index([rating])
+  @@index([shareWithTherapist])
+  @@index([shareWithAdmin])
   @@map("session_ratings")
+}
+
+// Phase 2: Session Recording Model
+model SessionRecording {
+  id        String            @id @default(uuid())
+  sessionId String
+  session   TelehealthSession @relation("SessionRecordings", fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Twilio Recording Info
+  twilioRecordingSid   String  @unique
+  twilioCompositionSid String? @unique
+  twilioRoomSid        String
+  recordingDuration    Int     @default(0)
+  recordingSize        BigInt  @default(0)
+  recordingFormat      String  @default("mp4")
+  twilioRecordingUrl   String?
+  twilioMediaUrl       String?
+
+  // Storage Info
+  storageProvider String @default("S3")
+  storageBucket   String
+  storageKey      String
+  storageRegion   String @default("us-east-1")
+  encryptionType  String @default("AES256")
+
+  // Status & Metadata
+  status             String    @default("RECORDING") // RECORDING, PROCESSING, COMPLETED, FAILED, DELETED
+  recordingStartedAt DateTime
+  recordingEndedAt   DateTime?
+  uploadedAt         DateTime?
+  lastAccessedAt     DateTime?
+  processingError    String?
+
+  // Consent & Compliance
+  clientConsentGiven  Boolean   @default(false)
+  consentTimestamp    DateTime
+  consentIpAddress    String?
+  retentionPolicy     String    @default("7_YEARS")
+  scheduledDeletionAt DateTime?
+  deletedAt           DateTime?
+  deletedBy           String?
+  deletionReason      String?
+
+  // Access Control & Audit
+  viewCount     Int   @default(0)
+  downloadCount Int   @default(0)
+  accessLog     Json?
+
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String
+  lastModifiedBy String
+
+  @@index([sessionId])
+  @@index([status])
+  @@index([scheduledDeletionAt])
+  @@index([twilioRecordingSid])
+  @@map("session_recordings")
+}
+
+// Phase 2: AI Generated Notes Enums
+enum AIGeneratedNoteStatus {
+  GENERATING
+  GENERATED
+  REVIEWED
+  APPROVED
+  REJECTED
+  REGENERATING
+  FAILED
+}
+
+enum AIRiskLevel {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum AIGeneratedNoteType {
+  PROGRESS_NOTE
+  INTAKE_NOTE
+  CRISIS_NOTE
+  TERMINATION_NOTE
+}
+
+// Phase 2: AI Generated Note Model
+model AIGeneratedNote {
+  id            String @id @default(uuid())
+  sessionId     String @unique
+  appointmentId String
+  clientId      String
+  clinicianId   String
+
+  // Note Configuration
+  noteType AIGeneratedNoteType     @default(PROGRESS_NOTE)
+  status   AIGeneratedNoteStatus   @default(GENERATING)
+
+  // Source Data
+  transcriptText  String  @db.Text
+  transcriptId    String?
+  sessionMetadata Json    @default("{}")
+
+  // Generated SOAP Note
+  soapNote Json @default("{}")
+
+  // Risk Assessment
+  riskAssessment Json @default("{}")
+
+  // Treatment Plan Updates
+  treatmentPlanUpdates Json? @default("{}")
+
+  // AI Metadata
+  generationConfidence Float?
+  modelUsed            String  @default("claude-3-5-sonnet-20241022")
+  promptVersion        String  @default("1.0")
+  generationTimeMs     Int?
+  tokenCount           Int?
+
+  // Quality Indicators
+  transcriptQuality  String?
+  missingInformation String[]
+  warnings           String[]
+
+  // Clinician Review
+  clinicianReviewed Boolean   @default(false)
+  reviewedAt        DateTime?
+  reviewedBy        String?
+  clinicianEdits    Json?     @default("{}")
+
+  // Regeneration Tracking
+  regenerationCount    Int      @default(0)
+  regenerationFeedback String[]
+  previousVersions     Json?    @default("[]")
+
+  // Error Handling
+  errorMessage String?
+  errorDetails Json?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  generatedAt DateTime?
+  approvedAt  DateTime?
+
+  // Relations
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  client      Client      @relation("ClientAINotes", fields: [clientId], references: [id], onDelete: Cascade)
+  clinician   User        @relation("ClinicianAINotes", fields: [clinicianId], references: [id], onDelete: Cascade)
+  reviewer    User?       @relation("ReviewerAINotes", fields: [reviewedBy], references: [id])
+  auditLogs   AIGenerationAuditLog[]
+
+  @@index([sessionId])
+  @@index([appointmentId])
+  @@index([clientId])
+  @@index([clinicianId])
+  @@index([status])
+  @@index([reviewedBy])
+  @@index([createdAt])
+  @@map("ai_generated_notes")
+}
+
+// Phase 2: AI Generation Audit Log
+model AIGenerationAuditLog {
+  id        String @id @default(uuid())
+  aiNoteId  String
+  aiNote    AIGeneratedNote @relation(fields: [aiNoteId], references: [id], onDelete: Cascade)
+
+  eventType String // GENERATION_STARTED, GENERATION_COMPLETED, etc.
+  eventData Json   @default("{}")
+  userId    String?
+  user      User?  @relation("AIAuditLogs", fields: [userId], references: [id])
+  ipAddress String?
+  userAgent String?
+  timestamp DateTime @default(now())
+
+  @@index([aiNoteId])
+  @@index([eventType])
+  @@index([timestamp])
+  @@map("ai_generation_audit_log")
+}
+
+// Phase 2: AI Prompt Templates
+model AIPromptTemplate {
+  id           String @id @default(uuid())
+  templateName String
+  templateType String // SOAP_GENERATION, RISK_ASSESSMENT, TREATMENT_PLAN_UPDATE
+  version      String
+  promptText   String @db.Text
+  systemPrompt String @db.Text
+  modelConfig  Json   @default("{}")
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  createdBy String
+  creator   User     @relation("AITemplateCreator", fields: [createdBy], references: [id])
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+  updater   User?    @relation("AITemplateUpdater", fields: [updatedBy], references: [id])
+
+  @@unique([templateName, version])
+  @@index([templateType])
+  @@index([isActive])
+  @@map("ai_prompt_templates")
 }
 
 // Telehealth Consent Management (Georgia Compliance)
@@ -4752,6 +4982,7 @@ model TrainingRecord {
   @@index([expirationDate])
   @@index([trainingType])
   @@index([category])
+  @@index([expirationDate, status])
   @@map("training_records")
 }
 
@@ -5353,6 +5584,8 @@ model PerformanceReview {
   @@index([reviewerId])
   @@index([reviewDate])
   @@index([status])
+  @@index([nextReviewDate])
+  @@index([status, reviewerId])
   @@map("performance_reviews")
 }
 
@@ -5410,6 +5643,7 @@ model TimeAttendance {
   @@index([userId])
   @@index([date])
   @@index([approvedById])
+  @@index([approvedById, date])
   @@map("time_attendance")
 }
 
@@ -5453,6 +5687,8 @@ model PTORequest {
   @@index([status])
   @@index([startDate])
   @@index([approvedById])
+  @@index([userId, status])
+  @@index([startDate, endDate])
   @@map("pto_requests")
 }
 
@@ -5463,14 +5699,14 @@ model PTOBalance {
   user   User   @relation("PTOBalance", fields: [userId], references: [id], onDelete: Cascade)
 
   // Balances (in days)
-  ptoBalance      Decimal @default(0) @db.Decimal(6, 2)
-  sickBalance     Decimal @default(0) @db.Decimal(6, 2)
-  vacationBalance Decimal @default(0) @db.Decimal(6, 2)
+  ptoBalance      Decimal @default("0") @db.Decimal(6, 2)
+  sickBalance     Decimal @default("0") @db.Decimal(6, 2)
+  vacationBalance Decimal @default("0") @db.Decimal(6, 2)
 
   // Annual Allocation
-  ptoAnnual      Decimal @default(0) @db.Decimal(6, 2)
-  sickAnnual     Decimal @default(0) @db.Decimal(6, 2)
-  vacationAnnual Decimal @default(0) @db.Decimal(6, 2)
+  ptoAnnual      Decimal @default("0") @db.Decimal(6, 2)
+  sickAnnual     Decimal @default("0") @db.Decimal(6, 2)
+  vacationAnnual Decimal @default("0") @db.Decimal(6, 2)
 
   // Accrual
   accrualRate     Decimal?  @db.Decimal(6, 4) // Days per pay period
@@ -6156,4 +6392,107 @@ model ClinicalNoteReminderConfig {
   @@index([configurationType])
   @@index([userId])
   @@map("clinical_note_reminder_configs")
+}
+
+// ============================================================================
+// AI PERSONAL ASSISTANT
+// ============================================================================
+
+enum AIConversationTopic {
+  CLINICAL    // Client-related queries, diagnoses, treatment
+  OPERATIONAL // Revenue, scheduling, staff management
+  REPORTING   // Reports, analytics, dashboards
+  GENERAL     // Help, navigation, general questions
+}
+
+// AI Assistant conversation thread
+model AIConversation {
+  id          String               @id @default(uuid())
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id])
+
+  title       String?              // Auto-generated or user-defined title
+  topic       AIConversationTopic  @default(GENERAL)
+
+  // Context for the conversation
+  clientId    String?              // If conversation is about a specific client
+  client      Client?              @relation(fields: [clientId], references: [id])
+
+  // Metadata
+  isArchived  Boolean              @default(false)
+  isPinned    Boolean              @default(false)
+
+  // Token usage tracking
+  totalTokensUsed Int              @default(0)
+
+  // Messages in this conversation
+  messages    AIConversationMessage[]
+
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([clientId])
+  @@index([isArchived])
+  @@index([createdAt])
+  @@map("ai_conversations")
+}
+
+enum AIMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+// Individual messages in an AI conversation
+model AIConversationMessage {
+  id              String             @id @default(uuid())
+  conversationId  String
+  conversation    AIConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role            AIMessageRole
+  content         String             // The message content
+
+  // AI-specific metadata (for assistant messages)
+  tokensUsed      Int?               // Tokens used for this response
+  modelUsed       String?            // e.g., "claude-3-opus-20240229"
+  confidence      Float?             // AI's confidence in the response
+
+  // Data access tracking (for audit)
+  dataSourcesAccessed Json?          // What data the AI accessed to answer
+
+  // Error handling
+  isError         Boolean            @default(false)
+  errorMessage    String?
+
+  createdAt       DateTime           @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("ai_conversation_messages")
+}
+
+// Audit log for AI data access (HIPAA compliance)
+model AIDataAccessLog {
+  id              String             @id @default(uuid())
+  conversationId  String
+  messageId       String?
+  userId          String
+
+  // What was accessed
+  dataType        String             // "client", "appointment", "billing", etc.
+  recordIds       String[]           // IDs of records accessed
+  queryDescription String            // Human-readable description of what was queried
+
+  // Result
+  recordCount     Int                // How many records were returned
+  containsPHI     Boolean            @default(false)
+
+  createdAt       DateTime           @default(now())
+
+  @@index([userId])
+  @@index([conversationId])
+  @@index([dataType])
+  @@index([createdAt])
+  @@map("ai_data_access_logs")
 }

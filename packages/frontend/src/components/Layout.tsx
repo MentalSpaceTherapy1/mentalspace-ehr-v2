@@ -14,6 +14,8 @@ import { useMenuState } from '../hooks/useMenuState';
 import api from '../lib/api';
 import SessionTimeoutWarning from './SessionTimeoutWarning';
 import NotificationDropdown from './NotificationDropdown';
+import AIAssistantChat from './AI/AIAssistantChat';
+import { Sparkles } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,6 +29,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navItems = getNavItems(user.role);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   /**
    * Handle user logout
@@ -234,6 +237,26 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Session Timeout Warning - HIPAA Compliance */}
       <SessionTimeoutWarning />
+
+      {/* AI Personal Assistant - Floating Button */}
+      <button
+        onClick={() => setShowAIAssistant(true)}
+        className={`fixed right-6 bottom-6 z-40 p-4 rounded-full shadow-2xl transition-all transform hover:scale-110 ${
+          showAIAssistant
+            ? 'bg-gradient-to-r from-purple-600 to-blue-600'
+            : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
+        }`}
+        title="Open AI Assistant"
+        aria-label="Open AI Assistant"
+      >
+        <Sparkles className="w-6 h-6 text-white" />
+      </button>
+
+      {/* AI Personal Assistant - Chat Panel */}
+      <AIAssistantChat
+        isOpen={showAIAssistant}
+        onClose={() => setShowAIAssistant(false)}
+      />
     </div>
   );
 }

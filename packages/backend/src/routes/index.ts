@@ -32,6 +32,7 @@ import supervisionRoutes from './supervision.routes';
 import unlockRequestRoutes from './unlockRequest.routes';
 import practiceSettingsRoutes from './practiceSettings.routes';
 import aiRoutes from './ai.routes';
+import aiAssistantRoutes from './aiAssistant.routes';
 import signatureRoutes from './signature.routes';
 import amendmentRoutes from './amendment.routes';
 import payerRoutes from './payer.routes';
@@ -174,7 +175,7 @@ router.use('/predictions', predictionRoutes);
 // ============================================================================
 
 // EHR-side portal routes (therapists view client portal activity)
-router.use('/', clientPortalRoutes);
+router.use('/client-portal', clientPortalRoutes);
 
 // Admin portal routes
 router.use('/', portalAdminRoutes);
@@ -230,6 +231,9 @@ router.use('/practice-settings', practiceSettingsRoutes);
 
 // AI routes (AI-powered clinical features)
 router.use('/ai', aiRoutes);
+
+// AI Personal Assistant routes (AI Chat Assistant)
+router.use('/ai/assistant', aiAssistantRoutes);
 
 // Signature routes (Phase 1.4: Electronic Signatures)
 router.use('/signatures', signatureRoutes);
@@ -310,6 +314,7 @@ router.use('/purchase-orders', purchaseOrderRoutes);
 router.use('/performance-reviews', performanceReviewRoutes);
 router.use('/performance', performanceReviewRoutes); // Alias for frontend compatibility
 router.use('/time-attendance', timeAttendanceRoutes);
+router.use('/attendance', timeAttendanceRoutes); // Alias for frontend compatibility
 router.use('/pto', ptoRoutes);
 
 export default router;
