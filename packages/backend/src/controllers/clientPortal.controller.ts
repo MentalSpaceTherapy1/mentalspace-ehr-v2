@@ -7,6 +7,7 @@ import {
   therapistChangeService,
   moodTrackingService,
 } from '../services/portal';
+import * as portalAuthService from '../services/portal/auth.service';
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
 
@@ -852,6 +853,151 @@ export const getAssignedClientsForMessaging = async (req: Request, res: Response
     res.status(500).json({
       success: false,
       message: 'Failed to fetch clients',
+    });
+  }
+};
+
+// ============================================================================
+// ADMIN PASSWORD MANAGEMENT
+// These endpoints allow staff to manage client portal passwords
+// ============================================================================
+
+/**
+ * Send a password reset email to a client
+ * POST /api/v1/client-portal/clients/:clientId/portal/send-reset-email
+ */
+export const adminSendPasswordResetEmail = async (req: Request, res: Response) => {
+  try {
+    const adminUserId = (req as any).user?.userId;
+    const { clientId } = req.params;
+
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Client ID is required',
+      });
+    }
+
+    const result = await portalAuthService.adminSendPasswordReset(clientId, adminUserId);
+
+    logger.info(`Admin ${adminUserId} triggered password reset email for client ${clientId}`);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        email: result.email,
+        clientName: result.clientName,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error sending admin password reset email:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to send password reset email',
+    });
+  }
+};
+
+/**
+ * Create a temporary password for a client
+ * POST /api/v1/client-portal/clients/:clientId/portal/create-temp-password
+ */
+export const adminCreateTempPassword = async (req: Request, res: Response) => {
+  try {
+    const adminUserId = (req as any).user?.userId;
+    const { clientId } = req.params;
+
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Client ID is required',
+      });
+    }
+
+    const result = await portalAuthService.adminCreateTempPassword(clientId, adminUserId);
+
+    logger.info(`Admin ${adminUserId} created temp password for client ${clientId}`);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        email: result.email,
+        clientName: result.clientName,
+        tempPassword: result.tempPassword,
+        expiresAt: result.expiresAt,
+        note: result.note,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error creating admin temp password:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to create temporary password',
+    });
+  }
+};
+
+/**
+ * Get portal account status for a client
+ * GET /api/v1/client-portal/clients/:clientId/portal/status
+ */
+export const getClientPortalStatus = async (req: Request, res: Response) => {
+  try {
+    const { clientId } = req.params;
+
+    const portalAccount = await prisma.portalAccount.findUnique({
+      where: { clientId },
+      select: {
+        id: true,
+        email: true,
+        emailVerified: true,
+        accountStatus: true,
+        portalAccessGranted: true,
+        lastLoginDate: true,
+        failedLoginAttempts: true,
+        accountLockedUntil: true,
+        mustChangePassword: true,
+        tempPasswordExpiry: true,
+        passwordExpiresAt: true,
+        createdAt: true,
+      },
+    });
+
+    if (!portalAccount) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          hasPortalAccount: false,
+          message: 'Client does not have a portal account',
+        },
+      });
+    }
+
+    const isLocked = portalAccount.accountLockedUntil && portalAccount.accountLockedUntil > new Date();
+    const hasTempPassword = portalAccount.mustChangePassword && portalAccount.tempPasswordExpiry;
+    const tempPasswordExpired = hasTempPassword && portalAccount.tempPasswordExpiry && portalAccount.tempPasswordExpiry < new Date();
+    const passwordExpired = portalAccount.passwordExpiresAt && portalAccount.passwordExpiresAt < new Date();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        hasPortalAccount: true,
+        portalAccount: {
+          ...portalAccount,
+          isLocked,
+          hasTempPassword,
+          tempPasswordExpired,
+          passwordExpired,
+        },
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error fetching client portal status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch portal status',
     });
   }
 };

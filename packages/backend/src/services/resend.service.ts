@@ -5,9 +5,20 @@ import config from '../config';
 // Initialize Resend client
 const resendApiKey = process.env.RESEND_API_KEY || config.resendApiKey;
 let resendClient: Resend | null = null;
+const resendFromEmail = process.env.RESEND_FROM_EMAIL || 'MentalSpace EHR <noreply@mentalspace.com>';
 
 if (resendApiKey && resendApiKey !== 'your-resend-api-key') {
   resendClient = new Resend(resendApiKey);
+  logger.info('Resend service initialized', {
+    configured: true,
+    fromEmail: resendFromEmail,
+    apiKeyPrefix: resendApiKey.substring(0, 10) + '...',
+  });
+} else {
+  logger.warn('Resend service NOT configured - emails will be logged but not sent', {
+    hasApiKey: !!resendApiKey,
+    isPlaceholder: resendApiKey === 'your-resend-api-key',
+  });
 }
 
 interface ResendEmailOptions {
@@ -24,19 +35,34 @@ interface ResendEmailOptions {
  * Send email using Resend
  */
 export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
+  const toAddresses = Array.isArray(options.to) ? options.to.join(', ') : options.to;
+
+  logger.info('Attempting to send email', {
+    to: toAddresses,
+    subject: options.subject,
+    hasResendClient: !!resendClient,
+    nodeEnv: process.env.NODE_ENV,
+  });
+
   try {
     // In development or if Resend not configured, log emails instead of sending
     if (process.env.NODE_ENV === 'development' || !resendClient) {
-      logger.info('📧 [EMAIL] (Development Mode - Not Actually Sent via Resend)');
-      logger.info('To:', options.to);
-      logger.info('Subject:', options.subject);
-      logger.info('---');
-      logger.info(options.html.replace(/<[^>]*>/g, '')); // Strip HTML tags for console
-      logger.info('---');
+      logger.warn('Email NOT actually sent - development mode or Resend not configured', {
+        isDevelopment: process.env.NODE_ENV === 'development',
+        hasResendClient: !!resendClient,
+        to: toAddresses,
+        subject: options.subject,
+      });
       return true;
     }
 
     const fromEmail = options.from || process.env.RESEND_FROM_EMAIL || 'MentalSpace EHR <noreply@mentalspace.com>';
+
+    logger.info('Sending email via Resend API', {
+      from: fromEmail,
+      to: toAddresses,
+      subject: options.subject,
+    });
 
     const result = await resendClient.emails.send({
       from: fromEmail,
@@ -48,13 +74,19 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
       reply_to: options.replyTo,
     });
 
-    logger.info('✅ Email sent via Resend:', result.data?.id);
+    logger.info('Email sent successfully via Resend', {
+      emailId: result.data?.id,
+      to: toAddresses,
+      subject: options.subject,
+    });
     return true;
 
   } catch (error) {
-    logger.error('❌ Error sending email via Resend:', {
+    logger.error('Failed to send email via Resend', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      to: toAddresses,
+      subject: options.subject,
     });
     return false;
   }
@@ -579,6 +611,54 @@ export const EmailTemplates = {
   }),
 
   /**
+   * Client temporary password email (admin-created)
+   * Sent when an admin creates a temporary password for a client
+   */
+  clientTempPassword: (firstName: string, tempPassword: string, portalLoginUrl: string) => ({
+    subject: 'Your Temporary Password - MentalSpace Portal',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #f59e0b; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Temporary Password</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Your provider has reset your MentalSpace Client Portal password. Below is your temporary password:</p>
+              <div style="background-color: #fef3c7; padding: 24px; border-radius: 8px; margin: 24px 0; border: 2px solid #f59e0b; text-align: center;">
+                <p style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Your Temporary Password</p>
+                <p style="margin: 0; color: #92400e; font-size: 24px; font-weight: bold; font-family: monospace; letter-spacing: 2px;">${tempPassword}</p>
+              </div>
+              <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; border-left: 4px solid #dc2626; margin: 24px 0;">
+                <p style="margin: 0 0 8px 0; color: #991b1b; font-size: 14px;"><strong>Important Security Notice:</strong></p>
+                <ul style="margin: 0; color: #991b1b; font-size: 14px; padding-left: 20px;">
+                  <li>You <strong>must</strong> change this password when you log in</li>
+                  <li>This temporary password expires in <strong>72 hours</strong></li>
+                  <li>Never share your password with anyone</li>
+                </ul>
+              </div>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${portalLoginUrl}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Log In Now</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">If you didn't request this password reset, please contact your therapist immediately.</p>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 11px; margin: 0;">This is a secure, HIPAA-compliant message from MentalSpace EHR.</p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
    * Client email change verification
    */
   clientEmailChangeVerification: (firstName: string, verificationLink: string, newEmail: string) => ({
@@ -608,6 +688,72 @@ export const EmailTemplates = {
             </div>
             <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
+   * Client welcome email with MRN and portal signup instructions
+   * Sent when a new client record is created
+   */
+  clientWelcome: (firstName: string, mrn: string, clinicianName: string, portalUrl: string) => ({
+    subject: 'Welcome to MentalSpace - Your Client Portal Information',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to MentalSpace!</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Welcome! Your therapist, <strong>${clinicianName}</strong>, has created your account in our secure system. Below is your unique Medical Record Number (MRN) that you'll need to set up your client portal.</p>
+
+              <div style="background-color: #f0fdf4; padding: 24px; border-radius: 8px; margin: 24px 0; border: 2px solid #10b981; text-align: center;">
+                <p style="margin: 0 0 8px 0; color: #065f46; font-size: 14px; font-weight: 600;">Your Medical Record Number (MRN)</p>
+                <p style="margin: 0; color: #047857; font-size: 28px; font-weight: bold; font-family: monospace; letter-spacing: 2px;">${mrn}</p>
+              </div>
+
+              <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+                <p style="margin: 0; color: #92400e; font-size: 14px;">⚠️ <strong>Important:</strong> Keep your MRN safe. You'll need it to register for the client portal.</p>
+              </div>
+
+              <h2 style="color: #374151; font-size: 18px; margin-top: 32px;">How to Access Your Client Portal</h2>
+              <ol style="color: #374151; line-height: 1.8; font-size: 15px; padding-left: 20px;">
+                <li>Click the button below or visit the portal registration page</li>
+                <li>Enter your MRN number shown above</li>
+                <li>Create your account with your email and a secure password</li>
+                <li>Verify your email address</li>
+                <li>Start accessing your portal!</li>
+              </ol>
+
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${portalUrl}/register" style="display: inline-block; background-color: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Set Up Portal Account</a>
+              </div>
+
+              <h2 style="color: #374151; font-size: 18px; margin-top: 32px;">What You Can Do in the Portal</h2>
+              <ul style="color: #374151; line-height: 1.8; font-size: 15px;">
+                <li>📅 View and manage your appointments</li>
+                <li>📝 Complete intake forms and assessments</li>
+                <li>💬 Communicate securely with your provider</li>
+                <li>📊 Track your therapeutic progress</li>
+                <li>📄 Access documents and resources</li>
+                <li>🆘 Access crisis support resources 24/7</li>
+              </ul>
+
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 24px;">If you have any questions or need assistance, please contact your therapist directly.</p>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 11px; margin: 0;">This email contains confidential health information protected by HIPAA. If you received this in error, please delete it immediately and notify the sender.</p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
             </div>
           </div>
         </body>

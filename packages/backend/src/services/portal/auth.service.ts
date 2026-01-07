@@ -13,6 +13,10 @@ import {
   SECURITY_CONFIG,
 } from './constants';
 
+// Password expiration constants
+const TEMP_PASSWORD_EXPIRY_HOURS = 72; // 72 hours for temporary passwords
+const PERMANENT_PASSWORD_EXPIRY_MONTHS = 6; // 6 months for permanent passwords
+
 // Portal URL for email links
 const PORTAL_URL = process.env.PORTAL_URL || 'http://localhost:5175/portal';
 
@@ -29,11 +33,41 @@ export async function register(data: {
     // Check if clientId is UUID or MRN
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.clientId);
 
-    // Verify client exists and doesn't already have a portal account
-    const client = await prisma.client.findFirst({
-      where: isUUID ? { id: data.clientId } : { medicalRecordNumber: data.clientId },
-      include: { portalAccount: true },
-    });
+    let client: any = null;
+
+    if (isUUID) {
+      // Direct lookup by ID
+      client = await prisma.client.findFirst({
+        where: { id: data.clientId },
+        include: { portalAccount: true },
+      });
+    } else {
+      // For MRN lookup, the medicalRecordNumber is encrypted in the database
+      // The Prisma middleware decrypts data after read, so we fetch and compare
+      logger.info('Portal registration: Looking up client by MRN', {
+        mrnProvided: data.clientId.substring(0, 4) + '...'
+      });
+
+      const clients = await prisma.client.findMany({
+        where: { status: 'ACTIVE' },
+        include: { portalAccount: true },
+        take: 1000, // Reasonable limit
+      });
+
+      // The Prisma PHI middleware decrypts medicalRecordNumber after read
+      client = clients.find(c => c.medicalRecordNumber === data.clientId);
+
+      if (!client) {
+        logger.warn('Portal registration: Client not found by MRN', {
+          mrnProvided: data.clientId.substring(0, 4) + '...',
+          totalClientsChecked: clients.length
+        });
+      } else {
+        logger.info('Portal registration: Client found by MRN', {
+          clientId: client.id
+        });
+      }
+    }
 
     if (!client) {
       throw new AppError(isUUID ? 'Client not found' : 'Client with this MRN not found. Please check with your therapist.', 404);
@@ -318,6 +352,67 @@ export async function login(data: { email: string; password: string }) {
       throw new AppError('Invalid email or password', 401);
     }
 
+    // Check if temporary password has expired (72-hour window)
+    if (portalAccount.mustChangePassword && portalAccount.tempPasswordExpiry) {
+      if (new Date() > portalAccount.tempPasswordExpiry) {
+        logger.warn(`Login with expired temporary password for portal account ${portalAccount.id}`);
+        throw new AppError('Your temporary password has expired. Please contact your provider for a new one.', 401);
+      }
+    }
+
+    // Check permanent password expiration (6-month validity)
+    if (!portalAccount.mustChangePassword && portalAccount.passwordExpiresAt) {
+      if (new Date() > portalAccount.passwordExpiresAt) {
+        logger.warn(`Login with expired password for portal account ${portalAccount.id}`);
+        throw new AppError('Your password has expired. Please reset your password.', 401);
+      }
+    }
+
+    // Check if password change is required (first login with temp password)
+    if (portalAccount.mustChangePassword) {
+      // Reset failed login attempts but indicate password change required
+      await prisma.portalAccount.update({
+        where: { id: portalAccount.id },
+        data: {
+          failedLoginAttempts: 0,
+          lastLoginDate: new Date(),
+          accountLockedUntil: null,
+        },
+      });
+
+      logger.info(`Password change required for portal account ${portalAccount.id}`);
+
+      // Generate a temporary token for password change
+      const tempToken = jwt.sign(
+        {
+          userId: portalAccount.clientId,
+          portalAccountId: portalAccount.id,
+          clientId: portalAccount.clientId,
+          email: portalAccount.email,
+          role: 'client',
+          type: 'password_change_required',
+        },
+        config.jwtSecret,
+        {
+          expiresIn: '15m', // Short-lived token for password change
+          audience: JWT_CONFIG.AUDIENCE,
+          issuer: JWT_CONFIG.ISSUER,
+        }
+      );
+
+      return {
+        requiresPasswordChange: true,
+        tempToken,
+        message: 'You must change your password before continuing.',
+        client: {
+          id: portalAccount.client.id,
+          firstName: portalAccount.client.firstName,
+          lastName: portalAccount.client.lastName,
+          email: portalAccount.email,
+        },
+      };
+    }
+
     // Generate JWT access token for portal with correct audience
     const accessToken = jwt.sign(
       {
@@ -479,6 +574,10 @@ export async function resetPassword(data: { token: string; newPassword: string }
     // Hash new password
     const password = await bcrypt.hash(data.newPassword, TOKEN_CONFIG.BCRYPT_SALT_ROUNDS);
 
+    // Calculate 6-month expiration for permanent password
+    const passwordExpiresAt = new Date();
+    passwordExpiresAt.setMonth(passwordExpiresAt.getMonth() + PERMANENT_PASSWORD_EXPIRY_MONTHS);
+
     // Update password and clear reset token
     await prisma.portalAccount.update({
       where: { id: portalAccount.id },
@@ -488,14 +587,19 @@ export async function resetPassword(data: { token: string; newPassword: string }
         passwordResetTokenExpiry: null,
         failedLoginAttempts: 0, // Reset failed login attempts
         accountLockedUntil: null, // Unlock account if it was locked
+        mustChangePassword: false,
+        tempPasswordExpiry: null,
+        passwordExpiresAt,
+        passwordChangedAt: new Date(),
       },
     });
 
-    logger.info(`Password reset successful for portal account ${portalAccount.id}`);
+    logger.info(`Password reset successful for portal account ${portalAccount.id}`, { passwordExpiresAt });
 
     return {
       success: true,
-      message: 'Password reset successfully',
+      message: 'Password reset successfully. Your new password is valid for 6 months.',
+      passwordExpiresAt,
     };
   } catch (error) {
     logger.error('Error resetting password:', error);
@@ -528,23 +632,38 @@ export async function changePassword(data: {
       throw new AppError('Current password is incorrect', 401);
     }
 
+    // Don't allow reusing the same password
+    const isSamePassword = await bcrypt.compare(data.newPassword, portalAccount.password);
+    if (isSamePassword) {
+      throw new AppError('New password must be different from current password', 400);
+    }
+
     // Hash new password
     const password = await bcrypt.hash(data.newPassword, TOKEN_CONFIG.BCRYPT_SALT_ROUNDS);
+
+    // Calculate 6-month expiration for permanent password
+    const passwordExpiresAt = new Date();
+    passwordExpiresAt.setMonth(passwordExpiresAt.getMonth() + PERMANENT_PASSWORD_EXPIRY_MONTHS);
 
     // Update password
     await prisma.portalAccount.update({
       where: { id: portalAccount.id },
       data: {
         password,
-        // Note: Schema doesn't have passwordChangedAt field
+        mustChangePassword: false,
+        tempPasswordExpiry: null,
+        passwordExpiresAt,
+        passwordChangedAt: new Date(),
+        accountStatus: 'ACTIVE',
       },
     });
 
-    logger.info(`Password changed for portal account ${portalAccount.id}`);
+    logger.info(`Password changed for portal account ${portalAccount.id}`, { passwordExpiresAt });
 
     return {
       success: true,
-      message: 'Password changed successfully',
+      message: 'Password changed successfully. Your new password is valid for 6 months.',
+      passwordExpiresAt,
     };
   } catch (error) {
     logger.error('Error changing password:', error);
@@ -725,4 +844,196 @@ export async function deactivateAccount(clientId: string) {
     logger.error('Error deactivating portal account:', error);
     throw error;
   }
+}
+
+// ============================================================================
+// ADMIN PASSWORD MANAGEMENT (For EHR staff to manage client portal passwords)
+// ============================================================================
+
+/**
+ * Admin function to send a password reset email to a client
+ * This allows staff to trigger a password reset on behalf of a client
+ */
+export async function adminSendPasswordReset(clientId: string, adminUserId: string) {
+  try {
+    const portalAccount = await prisma.portalAccount.findUnique({
+      where: { clientId },
+      include: {
+        client: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!portalAccount) {
+      throw new AppError('Client does not have a portal account', 404);
+    }
+
+    // Generate password reset token
+    const resetToken = crypto.randomBytes(TOKEN_CONFIG.TOKEN_BYTES).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + TOKEN_EXPIRY.PASSWORD_RESET_MS);
+
+    // Store reset token
+    await prisma.portalAccount.update({
+      where: { id: portalAccount.id },
+      data: {
+        passwordResetToken: resetToken,
+        passwordResetTokenExpiry: resetTokenExpiry,
+      },
+    });
+
+    // Send password reset email
+    const resetLink = `${PORTAL_URL}/reset-password?token=${resetToken}`;
+    const emailTemplate = EmailTemplates.clientPasswordReset(
+      portalAccount.client.firstName,
+      resetLink
+    );
+
+    const emailSent = await sendEmail({
+      to: portalAccount.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+
+    if (!emailSent) {
+      logger.warn(`Failed to send password reset email to ${portalAccount.email}`);
+      throw new AppError('Failed to send password reset email', 500);
+    }
+
+    logger.info(`Admin ${adminUserId} sent password reset email to client ${clientId}`, {
+      email: portalAccount.email,
+      clientName: `${portalAccount.client.firstName} ${portalAccount.client.lastName}`,
+    });
+
+    return {
+      success: true,
+      message: `Password reset email sent to ${portalAccount.email}`,
+      email: portalAccount.email,
+      clientName: `${portalAccount.client.firstName} ${portalAccount.client.lastName}`,
+    };
+  } catch (error) {
+    logger.error('Error sending admin password reset:', error);
+    throw error;
+  }
+}
+
+/**
+ * Admin function to create a temporary password for a client
+ * This allows staff to reset a client's password directly
+ */
+export async function adminCreateTempPassword(clientId: string, adminUserId: string) {
+  try {
+    const portalAccount = await prisma.portalAccount.findUnique({
+      where: { clientId },
+      include: {
+        client: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!portalAccount) {
+      throw new AppError('Client does not have a portal account', 404);
+    }
+
+    // Generate a secure temporary password
+    const tempPassword = generateSecureTempPassword();
+
+    // Hash the temporary password
+    const hashedPassword = await bcrypt.hash(tempPassword, TOKEN_CONFIG.BCRYPT_SALT_ROUNDS);
+
+    // Calculate temp password expiry (72 hours)
+    const tempPasswordExpiry = new Date();
+    tempPasswordExpiry.setHours(tempPasswordExpiry.getHours() + TEMP_PASSWORD_EXPIRY_HOURS);
+
+    // Update the portal account
+    await prisma.portalAccount.update({
+      where: { id: portalAccount.id },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: true,
+        tempPasswordExpiry,
+        passwordResetToken: null,
+        passwordResetTokenExpiry: null,
+        failedLoginAttempts: 0,
+        accountLockedUntil: null,
+      },
+    });
+
+    // Send email with temporary password
+    const emailTemplate = EmailTemplates.clientTempPassword(
+      portalAccount.client.firstName,
+      tempPassword,
+      `${PORTAL_URL}/login`
+    );
+
+    const emailSent = await sendEmail({
+      to: portalAccount.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+
+    if (!emailSent) {
+      logger.warn(`Failed to send temp password email to ${portalAccount.email}`);
+    }
+
+    logger.info(`Admin ${adminUserId} created temp password for client ${clientId}`, {
+      email: portalAccount.email,
+      clientName: `${portalAccount.client.firstName} ${portalAccount.client.lastName}`,
+      expiresAt: tempPasswordExpiry,
+    });
+
+    return {
+      success: true,
+      message: `Temporary password created and emailed to ${portalAccount.email}`,
+      email: portalAccount.email,
+      clientName: `${portalAccount.client.firstName} ${portalAccount.client.lastName}`,
+      tempPassword, // Return so admin can share verbally if needed
+      expiresAt: tempPasswordExpiry,
+      note: 'The client must change this password upon first login. It expires in 72 hours.',
+    };
+  } catch (error) {
+    logger.error('Error creating admin temp password:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate a secure temporary password
+ * Uses cryptographically random characters with at least one of each type
+ */
+function generateSecureTempPassword(): string {
+  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lowercase = 'abcdefghjkmnpqrstuvwxyz';
+  const numbers = '23456789';
+  const symbols = '!@#$%^&*-+=';
+
+  const allChars = uppercase + lowercase + numbers + symbols;
+
+  // Ensure at least one of each character type
+  let password = '';
+  password += uppercase[crypto.randomInt(uppercase.length)];
+  password += lowercase[crypto.randomInt(lowercase.length)];
+  password += numbers[crypto.randomInt(numbers.length)];
+  password += symbols[crypto.randomInt(symbols.length)];
+
+  // Fill to 12 characters
+  for (let i = password.length; i < 12; i++) {
+    password += allChars[crypto.randomInt(allChars.length)];
+  }
+
+  // Shuffle the password
+  const arr = password.split('');
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+
+  return arr.join('');
 }

@@ -42,11 +42,82 @@ router.post(
 
 router.put('/reviews/:reviewId/viewed', authenticate, clientPortalController.markReviewAsViewed);
 
-// Client Messages
+// Client Messages (for specific client)
 router.get(
   '/clients/:clientId/portal/messages',
   authenticate,
   clientPortalController.getClientMessages
+);
+
+// ============================================================================
+// THERAPIST PORTAL INBOX
+// These endpoints allow therapists to view and respond to ALL client portal messages
+// ============================================================================
+
+/**
+ * @route   GET /api/v1/client-portal/portal-messages/inbox
+ * @desc    Get all portal messages from assigned clients (therapist inbox)
+ * @access  Staff (therapist/clinician)
+ */
+router.get(
+  '/portal-messages/inbox',
+  authenticate,
+  clientPortalController.getTherapistPortalInbox
+);
+
+/**
+ * @route   GET /api/v1/client-portal/portal-messages/unread-count
+ * @desc    Get unread portal message count for therapist
+ * @access  Staff (therapist/clinician)
+ */
+router.get(
+  '/portal-messages/unread-count',
+  authenticate,
+  clientPortalController.getTherapistPortalUnreadCount
+);
+
+/**
+ * @route   POST /api/v1/client-portal/portal-messages/:messageId/reply
+ * @desc    Reply to a client portal message
+ * @access  Staff (therapist/clinician)
+ */
+router.post(
+  '/portal-messages/:messageId/reply',
+  authenticate,
+  clientPortalController.replyToClientPortalMessage
+);
+
+/**
+ * @route   PUT /api/v1/client-portal/portal-messages/:messageId/read
+ * @desc    Mark a portal message as read
+ * @access  Staff (therapist/clinician)
+ */
+router.put(
+  '/portal-messages/:messageId/read',
+  authenticate,
+  clientPortalController.markPortalMessageAsRead
+);
+
+/**
+ * @route   POST /api/v1/client-portal/portal-messages/send
+ * @desc    Send a new message to a client (therapist initiates conversation)
+ * @access  Staff (therapist/clinician)
+ */
+router.post(
+  '/portal-messages/send',
+  authenticate,
+  clientPortalController.sendMessageToClient
+);
+
+/**
+ * @route   GET /api/v1/client-portal/messaging/clients
+ * @desc    Get assigned clients with portal access for messaging
+ * @access  Staff (therapist/clinician)
+ */
+router.get(
+  '/messaging/clients',
+  authenticate,
+  clientPortalController.getAssignedClientsForMessaging
 );
 
 // ============================================================================
@@ -114,6 +185,44 @@ router.get(
       data: status,
     });
   })
+);
+
+// ============================================================================
+// CLIENT PORTAL PASSWORD MANAGEMENT (For EHR staff)
+// These endpoints allow therapists/admins to manage client portal passwords
+// ============================================================================
+
+/**
+ * @route   GET /api/v1/client-portal/clients/:clientId/portal/status
+ * @desc    Get detailed portal account status for a client
+ * @access  Staff (therapist/admin)
+ */
+router.get(
+  '/clients/:clientId/portal/status',
+  authenticate,
+  clientPortalController.getClientPortalStatus
+);
+
+/**
+ * @route   POST /api/v1/client-portal/clients/:clientId/portal/send-reset-email
+ * @desc    Send password reset email to client
+ * @access  Staff (therapist/admin)
+ */
+router.post(
+  '/clients/:clientId/portal/send-reset-email',
+  authenticate,
+  clientPortalController.adminSendPasswordResetEmail
+);
+
+/**
+ * @route   POST /api/v1/client-portal/clients/:clientId/portal/create-temp-password
+ * @desc    Create temporary password for client (must change on login)
+ * @access  Staff (therapist/admin)
+ */
+router.post(
+  '/clients/:clientId/portal/create-temp-password',
+  authenticate,
+  clientPortalController.adminCreateTempPassword
 );
 
 export default router;

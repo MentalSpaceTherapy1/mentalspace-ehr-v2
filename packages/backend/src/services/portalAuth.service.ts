@@ -5,7 +5,11 @@ import config from '../config';
 import logger from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail, EmailTemplates } from './email.service';
-import { generateResetToken, generateVerificationToken, getVerificationExpiry } from '../utils/passwordGenerator';
+import { generateResetToken, generateVerificationToken, getVerificationExpiry, generateTemporaryPassword } from '../utils/passwordGenerator';
+
+// Password expiration constants
+const TEMP_PASSWORD_EXPIRY_HOURS = 72; // 72 hours for temporary passwords
+const PERMANENT_PASSWORD_EXPIRY_MONTHS = 6; // 6 months for permanent passwords
 
 interface RegisterPortalAccountData {
   clientId: string;
@@ -170,6 +174,76 @@ export async function portalLogin(data: PortalLoginData) {
       throw new Error('Portal access has not been granted. Please contact your provider.');
     }
 
+    // Check if temporary password has expired (72-hour window)
+    if (portalAccount.mustChangePassword && portalAccount.tempPasswordExpiry) {
+      if (new Date() > portalAccount.tempPasswordExpiry) {
+        logger.warn('Login with expired temporary password', {
+          portalAccountId: portalAccount.id,
+          clientId: portalAccount.clientId,
+        });
+        throw new Error('Your temporary password has expired. Please contact your provider for a new one.');
+      }
+    }
+
+    // Check permanent password expiration (6-month validity)
+    if (!portalAccount.mustChangePassword && portalAccount.passwordExpiresAt) {
+      if (new Date() > portalAccount.passwordExpiresAt) {
+        logger.warn('Login with expired password', {
+          portalAccountId: portalAccount.id,
+          clientId: portalAccount.clientId,
+        });
+        throw new Error('Your password has expired. Please reset your password.');
+      }
+    }
+
+    // Check if password change is required (first login with temp password)
+    if (portalAccount.mustChangePassword) {
+      // Reset failed login attempts but indicate password change required
+      await prisma.portalAccount.update({
+        where: { id: portalAccount.id },
+        data: {
+          failedLoginAttempts: 0,
+          lastLoginDate: new Date(),
+          accountLockedUntil: null,
+        },
+      });
+
+      logger.info('Password change required for portal account', {
+        portalAccountId: portalAccount.id,
+        clientId: portalAccount.clientId,
+      });
+
+      // Generate a temporary token for password change
+      const tempToken = jwt.sign(
+        {
+          userId: portalAccount.clientId,
+          portalAccountId: portalAccount.id,
+          clientId: portalAccount.clientId,
+          email: portalAccount.email,
+          role: 'client',
+          type: 'password_change_required',
+        },
+        config.jwtSecret,
+        {
+          expiresIn: '15m', // Short-lived token for password change
+          audience: 'mentalspace-portal',
+          issuer: 'mentalspace-ehr',
+        }
+      );
+
+      return {
+        requiresPasswordChange: true,
+        tempToken,
+        message: 'You must change your password before continuing.',
+        client: {
+          id: portalAccount.client.id,
+          firstName: portalAccount.client.firstName,
+          lastName: portalAccount.client.lastName,
+          email: portalAccount.email,
+        },
+      };
+    }
+
     // Reset failed login attempts
     await prisma.portalAccount.update({
       where: { id: portalAccount.id },
@@ -330,6 +404,7 @@ export async function requestPasswordReset(email: string) {
 
 /**
  * Reset password with token
+ * Sets 6-month password expiration
  */
 export async function resetPassword(token: string, newPassword: string) {
   try {
@@ -343,17 +418,26 @@ export async function resetPassword(token: string, newPassword: string) {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+    // Calculate 6-month expiration for permanent password
+    const passwordExpiresAt = new Date();
+    passwordExpiresAt.setMonth(passwordExpiresAt.getMonth() + PERMANENT_PASSWORD_EXPIRY_MONTHS);
+
     await prisma.portalAccount.update({
       where: { id: portalAccount.id },
       data: {
         password: hashedPassword,
         verificationToken: null,
         failedLoginAttempts: 0,
+        mustChangePassword: false,
+        tempPasswordExpiry: null,
+        passwordExpiresAt,
+        passwordChangedAt: new Date(),
       },
     });
 
     logger.info('Password reset successful', {
       portalAccountId: portalAccount.id,
+      passwordExpiresAt,
     });
 
     return { success: true };
@@ -366,7 +450,71 @@ export async function resetPassword(token: string, newPassword: string) {
 }
 
 /**
+ * Change password for portal account (for first login temp password change)
+ * Sets 6-month password expiration
+ */
+export async function changePortalPassword(portalAccountId: string, currentPassword: string, newPassword: string) {
+  try {
+    const portalAccount = await prisma.portalAccount.findUnique({
+      where: { id: portalAccountId },
+    });
+
+    if (!portalAccount) {
+      throw new Error('Portal account not found');
+    }
+
+    // Verify current password
+    const isValidPassword = await bcrypt.compare(currentPassword, portalAccount.password);
+    if (!isValidPassword) {
+      throw new Error('Current password is incorrect');
+    }
+
+    // Don't allow reusing the same password
+    const isSamePassword = await bcrypt.compare(newPassword, portalAccount.password);
+    if (isSamePassword) {
+      throw new Error('New password must be different from current password');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Calculate 6-month expiration for permanent password
+    const passwordExpiresAt = new Date();
+    passwordExpiresAt.setMonth(passwordExpiresAt.getMonth() + PERMANENT_PASSWORD_EXPIRY_MONTHS);
+
+    await prisma.portalAccount.update({
+      where: { id: portalAccountId },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: false,
+        tempPasswordExpiry: null,
+        passwordExpiresAt,
+        passwordChangedAt: new Date(),
+        accountStatus: 'ACTIVE',
+      },
+    });
+
+    logger.info('Portal password changed successfully', {
+      portalAccountId,
+      passwordExpiresAt,
+    });
+
+    return {
+      success: true,
+      message: 'Password changed successfully. Your new password is valid for 6 months.',
+      passwordExpiresAt,
+    };
+  } catch (error: any) {
+    logger.error('Portal password change failed', {
+      error: error.message,
+      portalAccountId,
+    });
+    throw error;
+  }
+}
+
+/**
  * Invite client to portal (staff-initiated)
+ * Generates a temporary password valid for 72 hours
  */
 export async function inviteClientToPortal(clientId: string, invitedBy: string) {
   try {
@@ -403,15 +551,24 @@ export async function inviteClientToPortal(clientId: string, invitedBy: string) 
     // Generate verification token
     const verificationToken = generateVerificationToken();
 
-    // Create portal account (no password yet - will be set when they complete registration)
+    // Generate temporary password (72-hour expiration)
+    const tempPassword = generateTemporaryPassword();
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    const tempPasswordExpiry = new Date(Date.now() + TEMP_PASSWORD_EXPIRY_HOURS * 60 * 60 * 1000);
+
+    // Create portal account with temporary password
     const portalAccount = await prisma.portalAccount.create({
       data: {
         clientId,
         email: client.email.toLowerCase(),
-        password: await bcrypt.hash(generateResetToken(), 10), // Temporary password, must be changed
+        password: hashedPassword,
         verificationToken,
         accountStatus: 'PENDING_VERIFICATION',
         portalAccessGranted: true,
+        mustChangePassword: true, // User must change password on first login
+        tempPasswordExpiry, // Temporary password expires in 72 hours
+        grantedBy: invitedBy,
+        grantedDate: new Date(),
       },
     });
 
@@ -420,7 +577,7 @@ export async function inviteClientToPortal(clientId: string, invitedBy: string) 
       ? `${client.primaryTherapist.firstName} ${client.primaryTherapist.lastName}`
       : 'your provider';
 
-    // Send invitation email
+    // Send invitation email with temporary password
     const invitationLink = `${process.env.PORTAL_URL || process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/portal/register?token=${verificationToken}&email=${encodeURIComponent(client.email)}`;
     const emailSent = await sendEmail({
       to: client.email,
@@ -432,6 +589,7 @@ export async function inviteClientToPortal(clientId: string, invitedBy: string) 
       portalAccountId: portalAccount.id,
       invitedBy,
       emailSent,
+      tempPasswordExpiry,
     });
 
     return {
@@ -439,6 +597,8 @@ export async function inviteClientToPortal(clientId: string, invitedBy: string) 
       portalAccountId: portalAccount.id,
       email: client.email,
       invitationSent: emailSent,
+      tempPassword, // Return temporary password to staff for communication to client
+      tempPasswordExpiry,
       verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined,
     };
   } catch (error: any) {
