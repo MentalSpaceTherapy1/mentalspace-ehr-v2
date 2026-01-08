@@ -6,6 +6,7 @@ import logger from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail, EmailTemplates } from './email.service';
 import { generateResetToken, generateVerificationToken, getVerificationExpiry, generateTemporaryPassword } from '../utils/passwordGenerator';
+import { decryptValue } from '../utils/encryption';
 
 // Password expiration constants
 const TEMP_PASSWORD_EXPIRY_HOURS = 72; // 72 hours for temporary passwords
@@ -578,10 +579,22 @@ export async function inviteClientToPortal(clientId: string, invitedBy: string) 
       : 'your provider';
 
     // Send invitation email with temporary password
-    const invitationLink = `${process.env.PORTAL_URL || process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/portal/register?token=${verificationToken}&email=${encodeURIComponent(client.email)}`;
+    const invitationLink = `${process.env.PORTAL_URL || 'https://mentalspaceehr.com/portal'}/register?token=${verificationToken}&email=${encodeURIComponent(client.email)}`;
+
+    // Explicitly decrypt MRN for email display
+    // The PHI middleware should decrypt this, but we ensure it's readable here
+    let displayMRN = client.medicalRecordNumber || '';
+    if (displayMRN.includes(':') && displayMRN.split(':').length === 3) {
+      try {
+        displayMRN = decryptValue(displayMRN);
+      } catch (e) {
+        logger.warn('Failed to decrypt MRN for invitation email', { clientId });
+      }
+    }
+
     const emailSent = await sendEmail({
       to: client.email,
-      ...EmailTemplates.clientInvitation(client.firstName, invitationLink, clinicianName),
+      ...EmailTemplates.clientInvitation(client.firstName, invitationLink, clinicianName, displayMRN),
     });
 
     logger.info('Client portal invitation sent', {
@@ -622,6 +635,7 @@ export async function resendPortalInvitation(clientId: string) {
           select: {
             firstName: true,
             email: true,
+            medicalRecordNumber: true,
             primaryTherapist: {
               select: {
                 firstName: true,
@@ -655,10 +669,21 @@ export async function resendPortalInvitation(clientId: string) {
       : 'your provider';
 
     // Resend verification email
-    const invitationLink = `${process.env.PORTAL_URL || process.env.FRONTEND_URL || 'https://mentalspaceehr.com'}/portal/register?token=${verificationToken}&email=${encodeURIComponent(portalAccount.email)}`;
+    const invitationLink = `${process.env.PORTAL_URL || 'https://mentalspaceehr.com/portal'}/register?token=${verificationToken}&email=${encodeURIComponent(portalAccount.email)}`;
+
+    // Explicitly decrypt MRN for email display
+    let displayMRN = portalAccount.client.medicalRecordNumber || '';
+    if (displayMRN.includes(':') && displayMRN.split(':').length === 3) {
+      try {
+        displayMRN = decryptValue(displayMRN);
+      } catch (e) {
+        logger.warn('Failed to decrypt MRN for invitation email', { clientId });
+      }
+    }
+
     const emailSent = await sendEmail({
       to: portalAccount.email,
-      ...EmailTemplates.clientInvitation(portalAccount.client.firstName, invitationLink, clinicianName),
+      ...EmailTemplates.clientInvitation(portalAccount.client.firstName, invitationLink, clinicianName, displayMRN),
     });
 
     logger.info('Portal invitation resent', {

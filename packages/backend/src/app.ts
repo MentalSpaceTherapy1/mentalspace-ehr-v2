@@ -2,16 +2,17 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import config from './config';
 import logger from './utils/logger';
 import { requestLogger } from './middleware/requestLogger';
+import { startHRJobs } from './jobs/hr-automation.job';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { csrfCookieParser, csrfProtection, generateCsrfToken, csrfErrorHandler } from './middleware/csrf';
 import { sanitizationMiddleware } from './middleware/sanitization';
 import { monitoringMiddleware } from './services/monitoring';
 import { swaggerSpec } from './config/swagger';
+import { apiRateLimiter } from './middleware/rateLimiter';
 import routes from './routes';
 
 // Create Express app
@@ -93,6 +94,11 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   if (reqPath === '/v1/health' || reqPath.startsWith('/v1/health/')) {
     return next();
   }
+  // Skip CSRF for portal routes - they use Bearer token authentication, not cookies
+  // Portal routes are protected by JWT validation, not CSRF cookies
+  if (reqPath.startsWith('/v1/portal/')) {
+    return next();
+  }
 
   // Skip CSRF for auth endpoints (login, register, etc.) - they don't have cookies yet
   // These endpoints use rate limiting and account lockout for protection
@@ -112,6 +118,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     // Client Portal auth routes (use Bearer tokens, not cookies)
     reqPath.startsWith('/v1/portal-auth/login') ||
     reqPath.startsWith('/v1/portal-auth/register') ||
+    reqPath.startsWith('/v1/portal-auth/activate') ||
     reqPath.startsWith('/v1/portal-auth/forgot-password') ||
     reqPath.startsWith('/v1/portal-auth/reset-password') ||
     reqPath.startsWith('/v1/portal-auth/verify-email') ||
@@ -187,16 +194,9 @@ app.use(requestLogger);
 // HIPAA Audit: Tracks all API requests, latency, and errors
 app.use(monitoringMiddleware());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: config.rateLimitWindowMs,
-  max: config.rateLimitMaxRequests,
-  message: 'Too many requests from this IP, please try again later',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use('/api', limiter);
+// Rate limiting - Uses Redis when REDIS_URL is set, otherwise in-memory
+// Supports RATE_LIMIT_WHITELIST env var for admin IP bypass
+app.use('/api', apiRateLimiter);
 
 // Swagger API Documentation
 // Note: In production, this should be protected or disabled
@@ -224,6 +224,8 @@ if (config.nodeEnv !== 'production' || process.env.ENABLE_SWAGGER_UI === 'true')
 
 // API routes
 app.use('/api/v1', routes);
+// Backward compatibility: also mount at /api for older frontend builds
+app.use('/api', routes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -234,6 +236,13 @@ app.get('/', (req, res) => {
     documentation: '/api/v1/health',
   });
 });
+
+// Initialize HR automation cron jobs
+// Runs scheduled tasks for performance reviews, PTO accruals, attendance compliance
+if (config.nodeEnv !== 'test') {
+  startHRJobs();
+  logger.info('📅 HR automation cron jobs initialized');
+}
 
 // 404 handler
 app.use(notFoundHandler);
