@@ -42,6 +42,13 @@ export const getDashboard = async (req: PortalRequest, res: Response) => {
             lastName: true,
           },
         },
+        telehealthSession: {
+          select: {
+            id: true,
+            clientJoinUrl: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -168,6 +175,13 @@ export const getUpcomingAppointments = async (req: PortalRequest, res: Response)
             credentials: true,
           },
         },
+        telehealthSession: {
+          select: {
+            id: true,
+            clientJoinUrl: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -203,6 +217,13 @@ export const getPastAppointments = async (req: PortalRequest, res: Response) => 
             firstName: true,
             lastName: true,
             credentials: true,
+          },
+        },
+        telehealthSession: {
+          select: {
+            id: true,
+            clientJoinUrl: true,
+            status: true,
           },
         },
       },

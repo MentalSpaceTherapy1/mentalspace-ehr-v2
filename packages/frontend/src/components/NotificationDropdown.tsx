@@ -1,7 +1,26 @@
+/**
+ * NotificationDropdown Component
+ *
+ * Displays a dropdown panel with user notifications from the backend.
+ * Shows unread count badge and allows marking notifications as read.
+ *
+ * Features:
+ * - Real-time notification fetching from /api/v1/notifications
+ * - Unread notification badge
+ * - Mark individual or all notifications as read
+ * - Navigation to notification link when clicked
+ * - Proper error handling without fake data
+ *
+ * @component
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 
+/**
+ * Notification data structure from the API
+ */
 interface Notification {
   id: string;
   type: string;
@@ -12,11 +31,16 @@ interface Notification {
   link?: string;
 }
 
+/**
+ * NotificationDropdown - Displays user notifications in a dropdown panel
+ * @returns {JSX.Element} The notification dropdown component
+ */
 export default function NotificationDropdown() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -38,57 +62,35 @@ export default function NotificationDropdown() {
     }
   }, [isOpen]);
 
+  /**
+   * Fetch notifications from the backend API
+   * Sets error state if the fetch fails - never shows fake/demo data
+   */
   const fetchNotifications = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Try to fetch from notifications endpoint if it exists
       const response = await api.get('/notifications');
       if (response.data.success) {
-        setNotifications(response.data.data);
+        setNotifications(response.data.data || []);
+      } else {
+        // API returned success: false
+        setError(response.data.message || 'Failed to load notifications');
+        setNotifications([]);
       }
-    } catch (error: any) {
-      // If endpoint doesn't exist, show demo notifications
-      if (error.response?.status === 404) {
-        // Generate contextual notifications based on common EHR scenarios
-        const demoNotifications: Notification[] = [
-          {
-            id: '1',
-            type: 'appointment',
-            title: 'Upcoming Appointment',
-            message: 'You have 3 appointments scheduled for today',
-            read: false,
-            createdAt: new Date().toISOString(),
-            link: '/appointments',
-          },
-          {
-            id: '2',
-            type: 'note',
-            title: 'Notes Pending Signature',
-            message: '2 clinical notes are awaiting your signature',
-            read: false,
-            createdAt: new Date(Date.now() - 3600000).toISOString(),
-            link: '/notes/cosign-queue',
-          },
-          {
-            id: '3',
-            type: 'message',
-            title: 'New Message',
-            message: 'You have 1 unread secure message',
-            read: true,
-            createdAt: new Date(Date.now() - 7200000).toISOString(),
-            link: '/messages',
-          },
-          {
-            id: '4',
-            type: 'insurance',
-            title: 'Insurance Verification',
-            message: 'Insurance verification expiring for 2 clients',
-            read: true,
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            link: '/clients',
-          },
-        ];
-        setNotifications(demoNotifications);
+    } catch (err: any) {
+      // Handle different error scenarios appropriately
+      if (err.response?.status === 401) {
+        // User not authenticated - don't show error, just show empty
+        setNotifications([]);
+      } else if (err.response?.status === 404) {
+        // Endpoint not available - show empty state, not fake data
+        setNotifications([]);
+        console.warn('Notifications endpoint not available');
+      } else {
+        // Other errors - show error message
+        setError(err.response?.data?.message || 'Unable to load notifications');
+        setNotifications([]);
       }
     } finally {
       setLoading(false);
@@ -97,11 +99,23 @@ export default function NotificationDropdown() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const handleNotificationClick = (notification: Notification) => {
-    // Mark as read (would call API in production)
+  /**
+   * Handle notification click - marks as read and navigates to link
+   * @param {Notification} notification - The clicked notification
+   */
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read in local state immediately for responsive UI
     setNotifications(prev =>
       prev.map(n => (n.id === notification.id ? { ...n, read: true } : n))
     );
+
+    // Call API to mark as read (fire and forget - don't block navigation)
+    try {
+      await api.patch(`/notifications/${notification.id}/read`);
+    } catch (err) {
+      // Silently fail - UI already updated, will sync on next fetch
+      console.warn('Failed to mark notification as read:', err);
+    }
 
     // Navigate if link provided
     if (notification.link) {
@@ -110,8 +124,21 @@ export default function NotificationDropdown() {
     }
   };
 
-  const markAllRead = () => {
+  /**
+   * Mark all notifications as read
+   * Updates UI immediately and syncs with backend
+   */
+  const markAllRead = async () => {
+    // Update UI immediately for responsiveness
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+    // Call API to mark all as read
+    try {
+      await api.patch('/notifications/mark-all-read');
+    } catch (err) {
+      // Silently fail - UI already updated, will sync on next fetch
+      console.warn('Failed to mark all notifications as read:', err);
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -177,6 +204,17 @@ export default function NotificationDropdown() {
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8 text-gray-500">
+                <span className="text-4xl">⚠️</span>
+                <p className="mt-2 text-sm text-red-500">{error}</p>
+                <button
+                  onClick={fetchNotifications}
+                  className="mt-2 text-xs text-indigo-600 hover:text-indigo-700"
+                >
+                  Try again
+                </button>
               </div>
             ) : notifications.length === 0 ? (
               <div className="text-center py-8 text-gray-500">

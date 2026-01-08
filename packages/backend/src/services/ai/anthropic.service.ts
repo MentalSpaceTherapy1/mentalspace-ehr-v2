@@ -7,7 +7,8 @@ import Anthropic from '@anthropic-ai/sdk';
  */
 class AnthropicService {
   private client: Anthropic | null = null;
-  private model: string = 'claude-3-opus-20240229';
+  // Claude Sonnet 4 - latest model as of 2025
+  private model: string = 'claude-sonnet-4-20250514';
 
   private initializeClient() {
     if (this.client) {
@@ -65,7 +66,13 @@ class AnthropicService {
 
       return textContent.text;
     } catch (error: any) {
-      logger.error('Anthropic API Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
+      logger.error('Anthropic API Error:', {
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        message: error.message,
+        status: error.status,
+        code: error.code,
+        model: this.model
+      });
       throw new Error(`AI Service Error: ${error.message}`);
     }
   }

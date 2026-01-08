@@ -1,6 +1,11 @@
 /**
  * Field Mappings for AI-Generated Clinical Notes
  * Maps AI-generated content to specific form fields with proper types
+ *
+ * IMPORTANT: These options MUST match the exact values in frontend form components:
+ * - packages/frontend/src/pages/ClinicalNotes/Forms/*.tsx
+ *
+ * Last synchronized: 2026-01-06
  */
 
 export interface FieldMapping {
@@ -18,33 +23,43 @@ export const FIELD_MAPPINGS: FieldMapping = {
     // Session Information
     sessionDate: { type: 'date', description: 'Session date' },
     sessionDuration: { type: 'select', options: ['30 minutes', '45 minutes', '60 minutes', '90 minutes'], description: 'Session duration' },
-    sessionType: { type: 'select', options: ['Individual Therapy', 'Family Therapy', 'Group Therapy', 'Couples Therapy'], description: 'Session type' },
-    location: { type: 'select', options: ['In-Person', 'Telehealth', 'Phone', 'Home Visit'], description: 'Session location' },
+    // SYNCED with ProgressNoteForm.tsx SESSION_TYPES
+    sessionType: { type: 'select', options: ['Individual', 'Couples', 'Family', 'Group'], description: 'Session type' },
+    // SYNCED with ProgressNoteForm.tsx LOCATIONS
+    location: { type: 'select', options: ['Office', 'Telehealth', 'Home', 'School', 'Other'], description: 'Session location' },
 
-    // Current Symptoms
-    symptoms: { type: 'multiselect', options: ['Depression', 'Anxiety', 'Panic', 'Insomnia', 'Irritability', 'Mood Swings', 'Social Withdrawal', 'Concentration Difficulties', 'Trauma Symptoms', 'Suicidal Ideation', 'Other'], description: 'Current symptoms reported' },
+    // Current Symptoms - SYNCED with ProgressNoteForm.tsx SYMPTOMS
+    symptoms: { type: 'multiselect', options: ['Depression', 'Anxiety', 'Irritability', 'Sleep problems', 'Appetite changes', 'Suicidal ideation', 'Homicidal ideation', 'Substance use', 'Panic', 'Obsessions/compulsions', 'Trauma symptoms'], description: 'Current symptoms reported' },
 
-    // Progress Tracking
-    goals: { type: 'textarea', description: 'Progress toward treatment goals' },
+    // Progress Tracking - SYNCED with ProgressNoteForm.tsx PROGRESS_LEVELS
+    progressLevel: { type: 'select', options: ['No Progress', 'Minimal Progress', 'Moderate Progress', 'Significant Progress', 'Goal Achieved'], description: 'Progress toward treatment goals' },
+    goals: { type: 'textarea', description: 'Progress toward treatment goals narrative' },
 
-    // Mental Status
-    appearance: { type: 'select', options: ['Well-groomed', 'Disheveled', 'Appropriate for age', 'Notable hygiene concerns'], description: 'Client appearance' },
+    // Mental Status - SYNCED with ProgressNoteForm.tsx
+    // APPEARANCES
+    appearance: { type: 'select', options: ['Well-groomed', 'Disheveled', 'Appropriate'], description: 'Client appearance' },
     mood: { type: 'text', description: 'Client-reported mood' },
-    affect: { type: 'select', options: ['Appropriate', 'Flat', 'Blunted', 'Restricted', 'Labile', 'Expansive', 'Congruent', 'Incongruent'], description: 'Observed affect' },
-    thoughtProcess: { type: 'select', options: ['Logical', 'Goal-directed', 'Tangential', 'Circumstantial', 'Racing', 'Disorganized'], description: 'Thought process' },
+    // AFFECTS
+    affect: { type: 'select', options: ['Appropriate', 'Flat', 'Restricted', 'Labile'], description: 'Observed affect' },
+    // THOUGHT_PROCESSES
+    thoughtProcess: { type: 'select', options: ['Logical', 'Tangential', 'Disorganized'], description: 'Thought process' },
 
-    // Risk Assessment
+    // Risk Assessment - SYNCED with ProgressNoteForm.tsx RISK_LEVELS
     suicidalIdeation: { type: 'select', options: ['None', 'Passive', 'Active without plan', 'Active with plan'], description: 'Suicidal ideation' },
     homicidalIdeation: { type: 'select', options: ['None', 'Present'], description: 'Homicidal ideation' },
-    riskLevel: { type: 'select', options: ['Low', 'Medium', 'High'], description: 'Overall risk level' },
+    riskLevel: { type: 'select', options: ['None', 'Low', 'Moderate', 'High'], description: 'Overall risk level' },
 
-    // Interventions
-    interventionsUsed: { type: 'multiselect', options: ['Cognitive Restructuring', 'Behavioral Activation', 'Exposure Therapy', 'Mindfulness', 'DBT Skills', 'Psychoeducation', 'Problem-Solving', 'Relaxation Techniques', 'EMDR', 'Motivational Interviewing', 'Solution-Focused', 'Other'], description: 'Interventions used in session' },
+    // Interventions - SYNCED with ProgressNoteForm.tsx INTERVENTIONS
+    interventionsUsed: { type: 'multiselect', options: ['CBT techniques', 'DBT skills', 'Psychoeducation', 'Supportive therapy', 'Mindfulness', 'Relaxation training', 'Problem-solving', 'Exposure therapy', 'Behavioral activation'], description: 'Interventions used in session' },
     otherIntervention: { type: 'text', description: 'Other intervention used (specify)' },
 
-    // Client Response
-    engagementLevel: { type: 'select', options: ['Excellent', 'Good', 'Fair', 'Poor'], description: 'Client engagement level' },
-    responseToInterventions: { type: 'textarea', description: 'Client response to interventions' },
+    // Client Response - SYNCED with ProgressNoteForm.tsx
+    // ENGAGEMENT_LEVELS
+    engagementLevel: { type: 'select', options: ['Highly engaged', 'Moderately engaged', 'Minimally engaged', 'Resistant'], description: 'Client engagement level' },
+    // RESPONSE_LEVELS
+    responseToInterventions: { type: 'select', options: ['Very responsive', 'Moderately responsive', 'Minimal response', 'No response'], description: 'Client response to interventions' },
+    responseNotes: { type: 'textarea', description: 'Detailed response notes' },
+    // HOMEWORK_COMPLIANCE
     homeworkCompliance: { type: 'select', options: ['Completed', 'Partially completed', 'Not completed', 'N/A'], description: 'Homework compliance' },
     clientResponseNotes: { type: 'textarea', description: 'Additional notes on client response' },
 
@@ -62,6 +77,7 @@ export const FIELD_MAPPINGS: FieldMapping = {
     // Presenting Problem
     chiefComplaint: { type: 'textarea', description: 'Chief complaint in client\'s exact words - what they say is the main reason for seeking therapy' },
     presentingProblem: { type: 'textarea', description: 'Detailed narrative describing the presenting problem, including onset, duration, frequency, intensity, triggers, and impact on functioning' },
+    // SYNCED with IntakeAssessmentForm.tsx SYMPTOMS array (complex with 32 definitions)
     selectedSymptoms: { type: 'multiselect', options: ['Depression', 'Anxiety', 'Panic Attacks', 'Insomnia', 'Nightmares', 'Flashbacks', 'Mood Swings', 'Irritability', 'Social Withdrawal', 'Concentration Problems', 'Memory Problems', 'Eating Problems', 'Substance Use', 'Suicidal Thoughts', 'Self-Harm', 'Other'], description: 'List of current symptoms client is experiencing (select all that apply)' },
 
     // Clinical History - MUST BE POPULATED
@@ -70,27 +86,44 @@ export const FIELD_MAPPINGS: FieldMapping = {
     medications: { type: 'textarea', description: 'REQUIRED: All current medications with dosages, frequency, and what they\'re for. If none, write "No current medications"' },
     familyHistory: { type: 'textarea', description: 'REQUIRED: Family history of mental illness, substance abuse, suicide, medical conditions. Include which family members. If unknown, write "Family history unknown"' },
     socialHistory: { type: 'textarea', description: 'REQUIRED: Education level, employment status, relationship status, living situation, children, support system, significant life events. This is critical contextual information' },
+    // SYNCED with IntakeAssessmentForm.tsx SUBSTANCE_FREQUENCY
     substanceUse: { type: 'textarea', description: 'REQUIRED: Detailed history of alcohol, tobacco, marijuana, other drugs - type, amount, frequency, duration, last use, impact on life. If none, write "Denies substance use"' },
 
-    // Mental Status Exam
-    appearance: { type: 'select', options: ['Well-groomed', 'Disheveled', 'Appropriate', 'Hygiene concerns'], description: 'Appearance' },
-    behavior: { type: 'select', options: ['Cooperative', 'Guarded', 'Agitated', 'Withdrawn'], description: 'Behavior' },
-    speech: { type: 'select', options: ['Normal', 'Pressured', 'Slow', 'Slurred', 'Soft'], description: 'Speech' },
+    // Mental Status Exam - SYNCED with IntakeAssessmentForm.tsx
+    // GROOMING_OPTIONS
+    appearance: { type: 'select', options: ['Well-groomed', 'Disheveled', 'Unkempt', 'Appropriate'], description: 'Appearance' },
+    // COOPERATION_OPTIONS
+    behavior: { type: 'select', options: ['Cooperative', 'Guarded', 'Uncooperative', 'Resistant'], description: 'Behavior' },
+    // SPEECH_RATE_OPTIONS combined
+    speech: { type: 'select', options: ['Normal', 'Slow', 'Rapid', 'Pressured'], description: 'Speech' },
     mood: { type: 'text', description: 'Mood (subjective)' },
-    affect: { type: 'select', options: ['Appropriate', 'Flat', 'Blunted', 'Labile', 'Congruent', 'Incongruent'], description: 'Affect (objective)' },
-    thoughtProcess: { type: 'select', options: ['Logical', 'Tangential', 'Circumstantial', 'Racing', 'Disorganized'], description: 'Thought process' },
+    // AFFECT_RANGE_OPTIONS + AFFECT_QUALITY_OPTIONS
+    affectRange: { type: 'select', options: ['Full', 'Restricted', 'Blunted', 'Flat'], description: 'Affect range' },
+    affectQuality: { type: 'select', options: ['Euthymic', 'Depressed', 'Anxious', 'Irritable', 'Euphoric', 'Angry'], description: 'Affect quality' },
+    affectAppropriateness: { type: 'select', options: ['Appropriate', 'Inappropriate'], description: 'Affect appropriateness' },
+    // THOUGHT_ORGANIZATION_OPTIONS
+    thoughtProcess: { type: 'select', options: ['Logical', 'Circumstantial', 'Tangential', 'Loose', 'Disorganized', 'Flight of Ideas'], description: 'Thought process' },
     thoughtContent: { type: 'textarea', description: 'Thought content (delusions, obsessions, preoccupations)' },
-    perceptualDisturbances: { type: 'select', options: ['None', 'Auditory hallucinations', 'Visual hallucinations', 'Other'], description: 'Perceptual disturbances' },
-    cognition: { type: 'text', description: 'Cognition (orientation, memory, concentration)' },
-    insight: { type: 'select', options: ['Good', 'Fair', 'Poor'], description: 'Insight' },
-    judgment: { type: 'select', options: ['Good', 'Fair', 'Poor'], description: 'Judgment' },
+    // Perceptual - HALLUCINATION_TYPES
+    perceptualDisturbances: { type: 'multiselect', options: ['None', 'Auditory', 'Visual', 'Tactile', 'Olfactory', 'Gustatory'], description: 'Perceptual disturbances' },
+    // Cognitive - ATTENTION_OPTIONS, MEMORY_OPTIONS, etc.
+    attention: { type: 'select', options: ['Intact', 'Impaired', 'Distractible'], description: 'Attention' },
+    concentration: { type: 'select', options: ['Intact', 'Impaired'], description: 'Concentration' },
+    memory: { type: 'select', options: ['Intact', 'Impaired'], description: 'Memory' },
+    cognition: { type: 'text', description: 'Cognition summary' },
+    // INSIGHT_OPTIONS
+    insight: { type: 'select', options: ['Good', 'Fair', 'Poor', 'None'], description: 'Insight' },
+    // JUDGMENT_OPTIONS
+    judgment: { type: 'select', options: ['Good', 'Fair', 'Poor', 'Impaired'], description: 'Judgment' },
+    // IMPULSE_CONTROL_OPTIONS
+    impulseControl: { type: 'select', options: ['Good', 'Fair', 'Poor', 'Impaired'], description: 'Impulse control' },
 
-    // Risk Assessment
+    // Risk Assessment - SYNCED with IntakeAssessmentForm.tsx RISK_LEVELS
     suicidalIdeation: { type: 'select', options: ['None', 'Passive', 'Active without plan', 'Active with plan'], description: 'Suicidal ideation' },
     suicidalHistory: { type: 'textarea', description: 'History of suicidal behavior' },
     homicidalIdeation: { type: 'select', options: ['None', 'Present'], description: 'Homicidal ideation' },
     selfHarm: { type: 'select', options: ['None', 'Current', 'Past'], description: 'Self-harm behaviors' },
-    riskLevel: { type: 'select', options: ['Low', 'Medium', 'High', 'Imminent'], description: 'Overall risk level' },
+    riskLevel: { type: 'select', options: ['None', 'Low', 'Moderate', 'High', 'Imminent'], description: 'Overall risk level' },
     safetyPlan: { type: 'textarea', description: 'Safety plan (if needed)' },
 
     // Clinical Assessment (NOT diagnosis codes - this is clinical impressions/analysis)
@@ -117,19 +150,47 @@ export const FIELD_MAPPINGS: FieldMapping = {
     // Problems
     presentingProblems: { type: 'textarea', description: 'List of presenting problems (prioritized)' },
 
-    // Goals (SMART format)
+    // Goals (SMART format) - SYNCED with TreatmentPlanForm.tsx GOAL_PROGRESS_OPTIONS
     goals: { type: 'textarea', description: 'Treatment goals (Specific, Measurable, Achievable, Relevant, Time-bound)' },
     objectives: { type: 'textarea', description: 'Objectives (specific steps toward goals)' },
+    goalProgress: { type: 'select', options: ['Not Started', 'Minimal Progress', 'Some Progress', 'Moderate Progress', 'Significant Progress', 'Goal Achieved'], description: 'Goal progress status' },
 
-    // Treatment Approach
-    treatmentModality: { type: 'multiselect', options: ['CBT', 'DBT', 'ACT', 'EMDR', 'Psychodynamic', 'Humanistic', 'Solution-Focused', 'Motivational Interviewing', 'Family Systems', 'Other'], description: 'Treatment modalities to be used' },
+    // Treatment Approach - SYNCED with TreatmentPlanForm.tsx Treatment Modalities (18 options)
+    treatmentModality: {
+      type: 'multiselect',
+      options: [
+        'Cognitive Behavioral Therapy (CBT)',
+        'Dialectical Behavior Therapy (DBT)',
+        'Acceptance and Commitment Therapy (ACT)',
+        'EMDR',
+        'Psychodynamic Therapy',
+        'Solution-Focused Brief Therapy',
+        'Motivational Interviewing',
+        'Mindfulness-Based Therapy',
+        'Trauma-Focused CBT',
+        'Interpersonal Therapy (IPT)',
+        'Family Systems Therapy',
+        'Narrative Therapy',
+        'Exposure Therapy',
+        'Play Therapy',
+        'Art Therapy',
+        'Group Therapy',
+        'Psychoeducation',
+        'Supportive Counseling'
+      ],
+      description: 'Treatment modalities to be used'
+    },
     interventions: { type: 'textarea', description: 'Specific interventions and techniques' },
 
-    // Frequency and Duration
-    sessionFrequency: { type: 'select', options: ['Weekly', 'Bi-weekly', 'Monthly', 'As needed'], description: 'Session frequency' },
-    sessionDuration: { type: 'select', options: ['30 minutes', '45 minutes', '60 minutes', '90 minutes'], description: 'Session duration' },
-    treatmentSetting: { type: 'select', options: ['Outpatient', 'Intensive Outpatient', 'Partial Hospitalization', 'Inpatient'], description: 'Treatment setting' },
-    estimatedDuration: { type: 'text', description: 'Estimated treatment duration' },
+    // Frequency and Duration - SYNCED with TreatmentPlanForm.tsx
+    // SESSION_DURATION_OPTIONS
+    sessionDuration: { type: 'select', options: ['30 minutes', '45 minutes', '50 minutes', '60 minutes (1 hour)', '75 minutes', '90 minutes (1.5 hours)', '120 minutes (2 hours)'], description: 'Session duration' },
+    // FREQUENCY_OPTIONS
+    sessionFrequency: { type: 'select', options: ['Once per week', 'Twice per week', 'Three times per week', 'Every other week (bi-weekly)', 'Once per month', 'As needed'], description: 'Session frequency' },
+    // TREATMENT_SETTING_OPTIONS
+    treatmentSetting: { type: 'select', options: ['Office', 'Telehealth', 'Home', 'School', 'Hospital', 'Hybrid (Office + Telehealth)'], description: 'Treatment setting' },
+    // ESTIMATED_DURATION_OPTIONS
+    estimatedDuration: { type: 'select', options: ['6-8 weeks (Short-term)', '3 months', '6 months', '9 months', '12 months (1 year)', '18 months', '2 years or more (Long-term)', 'Ongoing/Indefinite'], description: 'Estimated treatment duration' },
 
     // Discharge Criteria
     dischargeCriteria: { type: 'textarea', description: 'Criteria for successful discharge' },
@@ -142,11 +203,13 @@ export const FIELD_MAPPINGS: FieldMapping = {
   'Cancellation Note': {
     cancellationDate: { type: 'date', description: 'Original appointment date' },
     cancellationTime: { type: 'text', description: 'Original appointment time' },
-    cancelledBy: { type: 'select', options: ['Client', 'Therapist', 'Mutual'], description: 'Cancelled by' },
+    // SYNCED with CancellationNoteForm.tsx CANCELLED_BY_OPTIONS
+    cancelledBy: { type: 'select', options: ['Client', 'Therapist', 'Other'], description: 'Cancelled by' },
     notificationDate: { type: 'date', description: 'When cancellation was received' },
     notificationTime: { type: 'text', description: 'Time cancellation was received' },
     reason: { type: 'text', description: 'Reason for cancellation' },
-    notificationMethod: { type: 'select', options: ['Phone', 'Email', 'Text', 'Portal', 'In-person'], description: 'How client notified' },
+    // SYNCED with CancellationNoteForm.tsx NOTIFICATION_METHOD_OPTIONS
+    notificationMethod: { type: 'select', options: ['Phone', 'Email', 'Text', 'In-person', 'Other'], description: 'How client notified' },
     noticeGiven: { type: 'select', options: ['More than 24 hours', 'Less than 24 hours', 'No-show'], description: 'Notice given' },
     rescheduled: { type: 'checkbox', description: 'Was appointment rescheduled?' },
     newAppointmentDate: { type: 'date', description: 'New appointment date (if rescheduled)' },
@@ -177,7 +240,8 @@ export const FIELD_MAPPINGS: FieldMapping = {
   'Contact Note': {
     contactDate: { type: 'date', description: 'Contact date' },
     contactTime: { type: 'text', description: 'Contact time' },
-    contactType: { type: 'select', options: ['Phone call', 'Email', 'Text message', 'Portal message', 'Voicemail', 'Brief in-person'], description: 'Type of contact' },
+    // SYNCED with ContactNoteForm.tsx CONTACT_TYPE_OPTIONS
+    contactType: { type: 'select', options: ['Phone', 'Email', 'Text', 'Video', 'Other'], description: 'Type of contact' },
     initiatedBy: { type: 'select', options: ['Client', 'Therapist', 'Family', 'Other provider'], description: 'Who initiated contact' },
     duration: { type: 'number', description: 'Duration in minutes' },
     purpose: { type: 'text', description: 'Purpose of contact' },
@@ -192,7 +256,8 @@ export const FIELD_MAPPINGS: FieldMapping = {
 
   'Termination Note': {
     terminationDate: { type: 'date', description: 'Termination date' },
-    terminationReason: { type: 'select', options: ['Goals achieved', 'Client-initiated', 'Mutual decision', 'Non-compliance', 'Inappropriate for services', 'Relocation', 'Financial reasons', 'Transfer to another provider'], description: 'Reason for termination' },
+    // SYNCED with TerminationNoteForm.tsx TERMINATION_REASON_OPTIONS
+    terminationReason: { type: 'select', options: ['Treatment completed', 'Client request', 'Mutual agreement', 'No-show', 'Moved away', 'Financial reasons', 'Referral to another provider', 'Other'], description: 'Reason for termination' },
     treatmentStartDate: { type: 'date', description: 'When treatment began' },
     totalSessions: { type: 'number', description: 'Total number of sessions completed' },
     treatmentSummary: { type: 'textarea', description: 'Summary of treatment provided' },
@@ -212,12 +277,77 @@ export const FIELD_MAPPINGS: FieldMapping = {
   'Miscellaneous Note': {
     noteDate: { type: 'date', description: 'Date of note' },
     subject: { type: 'text', description: 'Subject/Title of note' },
-    purposeCategory: { type: 'select', options: ['Administrative', 'Clinical observation', 'Treatment coordination', 'Supervision', 'Consultation', 'Documentation update', 'Other'], description: 'Purpose category' },
+    // SYNCED with MiscellaneousNoteForm.tsx PURPOSE_CATEGORY_OPTIONS
+    purposeCategory: { type: 'select', options: ['Administrative', 'Coordination of care', 'Documentation review', 'Clinical observation', 'Collateral contact', 'Other'], description: 'Purpose category' },
     content: { type: 'textarea', description: 'Note content' },
     relatedToTreatment: { type: 'checkbox', description: 'Related to active treatment' },
     actionRequired: { type: 'checkbox', description: 'Does this require follow-up action?' },
     actionDescription: { type: 'textarea', description: 'Describe actions needed' },
     billable: { type: 'checkbox', description: 'Is this billable?' },
+  },
+
+  'Crisis Note': {
+    // Session Information
+    crisisDate: { type: 'date', description: 'Date of crisis' },
+    crisisTime: { type: 'text', description: 'Time of crisis' },
+    contactMethod: { type: 'select', options: ['In-person', 'Phone', 'Video', 'Text', 'Email'], description: 'How client contacted' },
+
+    // Crisis Assessment
+    crisisType: { type: 'select', options: ['Suicidal ideation', 'Self-harm', 'Homicidal ideation', 'Psychotic symptoms', 'Severe anxiety/panic', 'Substance overdose', 'Domestic violence', 'Other'], description: 'Type of crisis' },
+    precipitatingEvent: { type: 'textarea', description: 'What precipitated the crisis' },
+    currentSymptoms: { type: 'textarea', description: 'Current symptoms and presentation' },
+
+    // Risk Assessment
+    suicidalIdeation: { type: 'select', options: ['None', 'Passive', 'Active without plan', 'Active with plan', 'Active with plan and intent'], description: 'Suicidal ideation' },
+    suicidalPlan: { type: 'textarea', description: 'Details of suicidal plan (if present)' },
+    accessToMeans: { type: 'select', options: ['No access', 'Limited access', 'Has access'], description: 'Access to lethal means' },
+    homicidalIdeation: { type: 'select', options: ['None', 'Present without plan', 'Present with plan'], description: 'Homicidal ideation' },
+    riskLevel: { type: 'select', options: ['Low', 'Moderate', 'High', 'Imminent'], description: 'Overall risk level' },
+
+    // Interventions
+    interventionsProvided: { type: 'multiselect', options: ['Safety planning', 'Crisis de-escalation', 'Means restriction counseling', 'Emergency contact notification', 'Mobile crisis team', 'Hospitalization', 'Medication adjustment', 'Increased session frequency', 'Other'], description: 'Interventions provided' },
+    safetyPlanCreated: { type: 'checkbox', description: 'Was a safety plan created?' },
+    safetyPlanDetails: { type: 'textarea', description: 'Safety plan details' },
+
+    // Disposition
+    disposition: { type: 'select', options: ['Discharged home with safety plan', 'Voluntary hospitalization', 'Involuntary hospitalization', 'Transferred to emergency room', 'Referred to mobile crisis', 'Follow-up scheduled'], description: 'Disposition' },
+    hospitalizationNeeded: { type: 'checkbox', description: 'Was hospitalization needed?' },
+    emergencyContactNotified: { type: 'checkbox', description: 'Was emergency contact notified?' },
+
+    // Follow-up
+    followUpPlan: { type: 'textarea', description: 'Follow-up plan' },
+    nextAppointment: { type: 'date', description: 'Next appointment date' },
+  },
+
+  'Group Therapy Note': {
+    // Session Information
+    sessionDate: { type: 'date', description: 'Session date' },
+    groupName: { type: 'text', description: 'Name of group' },
+    sessionNumber: { type: 'number', description: 'Session number in series' },
+    sessionDuration: { type: 'select', options: ['60 minutes', '75 minutes', '90 minutes', '120 minutes'], description: 'Session duration' },
+
+    // Attendance
+    attendeeCount: { type: 'number', description: 'Number of attendees' },
+    absentCount: { type: 'number', description: 'Number absent' },
+
+    // Session Content
+    sessionTopic: { type: 'text', description: 'Session topic/theme' },
+    sessionObjectives: { type: 'textarea', description: 'Session objectives' },
+    activitiesConducted: { type: 'textarea', description: 'Activities and exercises conducted' },
+
+    // Group Dynamics
+    groupCohesion: { type: 'select', options: ['Excellent', 'Good', 'Fair', 'Poor'], description: 'Group cohesion level' },
+    memberParticipation: { type: 'select', options: ['All members active', 'Most members active', 'Some members active', 'Low participation'], description: 'Member participation' },
+    groupDynamicsNotes: { type: 'textarea', description: 'Notes on group dynamics' },
+
+    // Individual Member Notes (general - specific notes go in individual sections)
+    memberHighlights: { type: 'textarea', description: 'Notable member interactions or disclosures' },
+    concernsNoted: { type: 'textarea', description: 'Any concerns about specific members' },
+
+    // Session Summary
+    sessionSummary: { type: 'textarea', description: 'Summary of session' },
+    homework: { type: 'textarea', description: 'Homework assigned' },
+    nextSessionPlan: { type: 'textarea', description: 'Plan for next session' },
   },
 };
 
@@ -237,32 +367,68 @@ export function getValidFieldNames(noteType: string): string[] {
 }
 
 /**
- * Validate that generated content matches expected field types
+ * Get all supported note types
+ */
+export function getSupportedNoteTypes(): string[] {
+  return Object.keys(FIELD_MAPPINGS);
+}
+
+/**
+ * Validate that generated content matches expected field types and values
  */
 export function validateGeneratedContent(
   noteType: string,
   content: Record<string, any>
-): { valid: boolean; errors: string[] } {
+): { valid: boolean; errors: string[]; warnings: string[] } {
   const mapping = FIELD_MAPPINGS[noteType];
   const errors: string[] = [];
+  const warnings: string[] = [];
 
   if (!mapping) {
-    return { valid: false, errors: [`Unknown note type: ${noteType}`] };
+    return { valid: false, errors: [`Unknown note type: ${noteType}`], warnings: [] };
   }
 
   // Check for unexpected fields
   for (const fieldName in content) {
     if (!mapping[fieldName]) {
-      errors.push(`Unexpected field: ${fieldName}`);
+      warnings.push(`Unexpected field: ${fieldName} - will be ignored`);
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  // Validate field values against allowed options
+  for (const fieldName in content) {
+    const fieldConfig = mapping[fieldName];
+    if (!fieldConfig) continue;
+
+    const value = content[fieldName];
+
+    // Skip validation for null/undefined values
+    if (value === null || value === undefined || value === '') continue;
+
+    // Validate select/radio fields
+    if ((fieldConfig.type === 'select' || fieldConfig.type === 'radio') && fieldConfig.options) {
+      if (!fieldConfig.options.includes(value)) {
+        errors.push(`Invalid value for ${fieldName}: "${value}". Expected one of: ${fieldConfig.options.join(', ')}`);
+      }
+    }
+
+    // Validate multiselect fields
+    if (fieldConfig.type === 'multiselect' && fieldConfig.options && Array.isArray(value)) {
+      for (const v of value) {
+        if (!fieldConfig.options.includes(v)) {
+          errors.push(`Invalid value in ${fieldName}: "${v}". Expected one of: ${fieldConfig.options.join(', ')}`);
+        }
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors, warnings };
 }
 
 export default {
   FIELD_MAPPINGS,
   getFieldMapping,
   getValidFieldNames,
+  getSupportedNoteTypes,
   validateGeneratedContent,
 };

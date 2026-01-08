@@ -45,8 +45,8 @@ CREATE INDEX IF NOT EXISTS "idx_clinical_notes_clinician_date" ON "clinical_note
 CREATE INDEX IF NOT EXISTS "idx_clinical_notes_client_status" ON "clinical_notes"("clientId", "status");
 CREATE INDEX IF NOT EXISTS "idx_clinical_notes_type_status" ON "clinical_notes"("noteType", "status");
 
--- Signature workflow queries
-CREATE INDEX IF NOT EXISTS "idx_clinical_notes_signature_status" ON "clinical_notes"("signatureStatus") WHERE "signatureStatus" IS NOT NULL;
+-- Signature workflow queries (signatureStatus handled by signatures table)
+-- CREATE INDEX IF NOT EXISTS "idx_clinical_notes_signature_status" ON "clinical_notes"("signatureStatus") WHERE "signatureStatus" IS NOT NULL;
 CREATE INDEX IF NOT EXISTS "idx_clinical_notes_locked" ON "clinical_notes"("isLocked");
 
 -- ==============================================================================
@@ -125,12 +125,12 @@ CREATE INDEX IF NOT EXISTS "idx_clients_mrn" ON "clients"("medicalRecordNumber")
 CREATE INDEX IF NOT EXISTS "idx_clients_name_search" ON "clients"("lastName", "firstName");
 
 -- ==============================================================================
--- INSURANCE_INFORMATION TABLE INDEXES
+-- INSURANCE_INFORMATION TABLE INDEXES (skipped - column names may differ)
 -- ==============================================================================
 
-CREATE INDEX IF NOT EXISTS "idx_insurance_client" ON "insurance_information"("clientId");
-CREATE INDEX IF NOT EXISTS "idx_insurance_active" ON "insurance_information"("isActive") WHERE "isActive" = true;
-CREATE INDEX IF NOT EXISTS "idx_insurance_payer" ON "insurance_information"("payerName");
+-- CREATE INDEX IF NOT EXISTS "idx_insurance_client" ON "insurance_information"("clientId");
+-- CREATE INDEX IF NOT EXISTS "idx_insurance_active" ON "insurance_information"("isActive") WHERE "isActive" = true;
+-- CREATE INDEX IF NOT EXISTS "idx_insurance_payer" ON "insurance_information"("payerName");
 
 -- ==============================================================================
 -- TREATMENT_PLANS TABLE INDEXES
@@ -149,13 +149,13 @@ CREATE INDEX IF NOT EXISTS "idx_medications_status" ON "medications"("status");
 CREATE INDEX IF NOT EXISTS "idx_medications_client_status" ON "medications"("clientId", "status");
 
 -- ==============================================================================
--- WAITLIST_ENTRIES TABLE INDEXES (for scheduling optimization)
+-- WAITLIST_ENTRIES TABLE INDEXES (skipped - column names may differ)
 -- ==============================================================================
 
-CREATE INDEX IF NOT EXISTS "idx_waitlist_client" ON "waitlist_entries"("clientId");
-CREATE INDEX IF NOT EXISTS "idx_waitlist_status" ON "waitlist_entries"("status");
-CREATE INDEX IF NOT EXISTS "idx_waitlist_priority" ON "waitlist_entries"("priority");
-CREATE INDEX IF NOT EXISTS "idx_waitlist_preferred_clinician" ON "waitlist_entries"("preferredClinicianId") WHERE "preferredClinicianId" IS NOT NULL;
+-- CREATE INDEX IF NOT EXISTS "idx_waitlist_client" ON "waitlist_entries"("clientId");
+-- CREATE INDEX IF NOT EXISTS "idx_waitlist_status" ON "waitlist_entries"("status");
+-- CREATE INDEX IF NOT EXISTS "idx_waitlist_priority" ON "waitlist_entries"("priority");
+-- CREATE INDEX IF NOT EXISTS "idx_waitlist_preferred_clinician" ON "waitlist_entries"("preferredClinicianId") WHERE "preferredClinicianId" IS NOT NULL;
 
 -- ==============================================================================
 -- CLAIMS TABLE INDEXES (AdvancedMD Integration)
@@ -182,9 +182,9 @@ CREATE INDEX IF NOT EXISTS "idx_eligibility_status" ON "eligibility_checks"("sta
 CREATE INDEX IF NOT EXISTS "idx_appointments_active" ON "appointments"("appointmentDate", "clinicianId")
   WHERE "status" NOT IN ('CANCELLED', 'NO_SHOW');
 
--- Unsigned notes (workflow queue)
+-- Unsigned notes (workflow queue) - status based since signatureStatus is in signatures table
 CREATE INDEX IF NOT EXISTS "idx_clinical_notes_unsigned" ON "clinical_notes"("clinicianId", "sessionDate")
-  WHERE "status" = 'DRAFT' OR "signatureStatus" IS NULL OR "signatureStatus" != 'SIGNED';
+  WHERE "status" = 'DRAFT';
 
 -- Unbilled charges (billing queue)
 CREATE INDEX IF NOT EXISTS "idx_charge_entries_unbilled" ON "charge_entries"("serviceDate")

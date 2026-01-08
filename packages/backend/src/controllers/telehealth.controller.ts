@@ -8,7 +8,7 @@ const createSessionSchema = z.object({
 });
 
 const joinSessionSchema = z.object({
-  appointmentId: z.string().uuid('Invalid appointment ID'),
+  appointmentId: z.string().uuid('Invalid appointment ID').optional(), // Optional in body if provided in URL params
   userRole: z.enum(['clinician', 'client']),
 });
 
@@ -59,8 +59,18 @@ export const joinTelehealthSession = async (req: Request, res: Response) => {
       ? `${user.firstName} ${user.lastName}`
       : user?.email || 'User';
 
+    // Accept appointmentId from URL params (RESTful) or body (legacy)
+    const appointmentId = req.params.appointmentId || validatedData.appointmentId;
+
+    if (!appointmentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Appointment ID is required (either in URL path or request body)',
+      });
+    }
+
     const result = await telehealthService.joinTelehealthSession({
-      sessionId: validatedData.appointmentId,
+      sessionId: appointmentId,
       userId,
       userRole: validatedData.userRole,
       userName,
@@ -113,11 +123,69 @@ export const endTelehealthSession = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Get telehealth session details by appointment ID
+ * GET /api/v1/telehealth/sessions/:appointmentId
+ *
+ * Retrieves session details for an existing telehealth session. If no session exists
+ * but the appointment is valid for telehealth, auto-creates a new session.
+ *
+ * @requires Authentication - Valid user ID required for session creation
+ * @param {string} req.params.appointmentId - UUID of the appointment
+ * @returns {Object} Telehealth session details including video room credentials
+ */
 export const getTelehealthSession = async (req: Request, res: Response) => {
   try {
     const { appointmentId } = req.params;
+    const userId = (req as any).user?.userId;
 
-    const session = await telehealthService.getTelehealthSession(appointmentId);
+    let session = await telehealthService.getTelehealthSession(appointmentId);
+
+    // If no session exists, try to auto-create one for telehealth appointments
+    if (!session) {
+      // Require valid userId for session creation - prevents orphaned sessions
+      if (!userId) {
+        logger.warn('Cannot auto-create telehealth session without authenticated user', {
+          appointmentId,
+          ip: req.ip,
+        });
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required to access telehealth sessions.',
+        });
+      }
+
+      logger.info('Telehealth session not found, attempting auto-creation', { appointmentId, userId });
+
+      // Try to create the session on-demand
+      // Bypass consent check for clinician-initiated sessions (clinician can verify consent externally)
+      try {
+        session = await telehealthService.createTelehealthSession({
+          appointmentId,
+          createdBy: userId,
+          bypassConsentCheck: true, // Clinician can verify consent was obtained verbally/on paper
+        });
+
+        logger.info('Telehealth session auto-created on-demand', {
+          appointmentId,
+          sessionId: session.id,
+        });
+
+        // Fetch the full session with relations
+        session = await telehealthService.getTelehealthSession(appointmentId);
+      } catch (createError: any) {
+        // If creation fails (e.g., not a telehealth appointment, consent issues), return 404
+        logger.warn('Failed to auto-create telehealth session', {
+          appointmentId,
+          error: createError.message,
+        });
+
+        return res.status(404).json({
+          success: false,
+          message: createError.message || 'Telehealth session not found and could not be created',
+        });
+      }
+    }
 
     if (!session) {
       return res.status(404).json({
@@ -323,7 +391,8 @@ export const createSessionRating = async (req: Request, res: Response) => {
   }
 };
 
-// Admin-only: Get all session ratings
+// Get all session ratings with permission-based filtering
+// Admins see ratings shared with admin, clinicians see ratings shared with therapist (for their sessions only)
 export const getAllSessionRatings = async (req: Request, res: Response) => {
   try {
     const {
@@ -338,6 +407,19 @@ export const getAllSessionRatings = async (req: Request, res: Response) => {
       search,
     } = req.query;
 
+    // Get the authenticated user's info
+    const user = (req as any).user;
+    const userId = user?.userId;
+    const userRoles: string[] = user?.roles || [];
+
+    // Determine viewer role for permission filtering
+    let viewerRole: 'admin' | 'clinician' | undefined;
+    if (userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN') || userRoles.includes('PRACTICE_ADMIN')) {
+      viewerRole = 'admin';
+    } else if (userRoles.includes('CLINICIAN')) {
+      viewerRole = 'clinician';
+    }
+
     const ratings = await telehealthService.getAllSessionRatings({
       page: Number(page),
       limit: Number(limit),
@@ -348,6 +430,8 @@ export const getAllSessionRatings = async (req: Request, res: Response) => {
       startDate: startDate as string | undefined,
       endDate: endDate as string | undefined,
       search: search as string | undefined,
+      viewerRole,
+      viewerId: userId,
     });
 
     res.status(200).json({
@@ -383,6 +467,54 @@ export const getSessionRatingStats = async (req: Request, res: Response) => {
     res.status(400).json({
       success: false,
       message: error.message || 'Failed to get session rating statistics',
+    });
+  }
+};
+
+// Get rating for a specific session (with permission filtering)
+export const getSessionRating = async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+
+    // Get the authenticated user's info
+    const user = (req as any).user;
+    const userId = user?.userId;
+    const userRoles: string[] = user?.roles || [];
+
+    // Determine viewer role for permission filtering
+    let viewerRole: 'admin' | 'clinician';
+    if (userRoles.includes('ADMIN') || userRoles.includes('SUPER_ADMIN') || userRoles.includes('PRACTICE_ADMIN')) {
+      viewerRole = 'admin';
+    } else if (userRoles.includes('CLINICIAN')) {
+      viewerRole = 'clinician';
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view session ratings',
+      });
+    }
+
+    const rating = await telehealthService.getSessionRating(sessionId, viewerRole, userId);
+
+    if (!rating) {
+      return res.status(404).json({
+        success: false,
+        message: 'No rating found for this session or you do not have permission to view it',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: rating,
+    });
+  } catch (error: any) {
+    logger.error('Error getting session rating', {
+      errorMessage: error.message,
+      errorName: error.name,
+    });
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to get session rating',
     });
   }
 };

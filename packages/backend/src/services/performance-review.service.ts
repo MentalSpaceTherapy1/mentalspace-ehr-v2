@@ -2,6 +2,15 @@ import { PrismaClient, ReviewStatus, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Valid Performance Review status transitions
+const VALID_REVIEW_TRANSITIONS: Record<ReviewStatus, ReviewStatus[]> = {
+  [ReviewStatus.DRAFT]: [ReviewStatus.PENDING_SELF_EVALUATION],
+  [ReviewStatus.PENDING_SELF_EVALUATION]: [ReviewStatus.PENDING_MANAGER_REVIEW],
+  [ReviewStatus.PENDING_MANAGER_REVIEW]: [ReviewStatus.PENDING_EMPLOYEE_SIGNATURE],
+  [ReviewStatus.PENDING_EMPLOYEE_SIGNATURE]: [ReviewStatus.COMPLETED],
+  [ReviewStatus.COMPLETED]: [],
+};
+
 export interface CreatePerformanceReviewDto {
   userId: string;
   reviewerId: string;
@@ -71,6 +80,16 @@ export interface EmployeeSignatureDto {
 }
 
 class PerformanceReviewService {
+  /**
+   * Validate status transition
+   */
+  private validateStatusTransition(currentStatus: ReviewStatus, newStatus: ReviewStatus): void {
+    const validNextStatuses = VALID_REVIEW_TRANSITIONS[currentStatus] || [];
+    if (!validNextStatuses.includes(newStatus)) {
+      throw new Error(`Cannot transition from ${currentStatus} to ${newStatus}. Review must follow the proper workflow.`);
+    }
+  }
+
   /**
    * Create a new performance review
    */
@@ -229,7 +248,7 @@ class PerformanceReviewService {
             firstName: true,
             lastName: true,
             email: true,
-            title: true,
+            jobTitle: true,
           },
         },
         reviewer: {
@@ -238,7 +257,7 @@ class PerformanceReviewService {
             firstName: true,
             lastName: true,
             email: true,
-            title: true,
+            jobTitle: true,
           },
         },
       },
@@ -322,6 +341,19 @@ class PerformanceReviewService {
    * Submit self-evaluation (employee)
    */
   async submitSelfEvaluation(id: string, data: EmployeeSelfEvaluationDto) {
+    // Fetch current review to validate status
+    const currentReview = await prisma.performanceReview.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!currentReview) {
+      throw new Error('Performance review not found');
+    }
+
+    // Validate status transition
+    this.validateStatusTransition(currentReview.status, ReviewStatus.PENDING_MANAGER_REVIEW);
+
     const review = await prisma.performanceReview.update({
       where: { id },
       data: {
@@ -342,6 +374,19 @@ class PerformanceReviewService {
    * Submit manager review
    */
   async submitManagerReview(id: string, data: ManagerReviewDto) {
+    // Fetch current review to validate status
+    const currentReview = await prisma.performanceReview.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!currentReview) {
+      throw new Error('Performance review not found');
+    }
+
+    // Validate status transition
+    this.validateStatusTransition(currentReview.status, ReviewStatus.PENDING_EMPLOYEE_SIGNATURE);
+
     const review = await prisma.performanceReview.update({
       where: { id },
       data: {
@@ -363,6 +408,19 @@ class PerformanceReviewService {
    * Employee signature (final step)
    */
   async employeeSignature(id: string, data: EmployeeSignatureDto) {
+    // Fetch current review to validate status
+    const currentReview = await prisma.performanceReview.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!currentReview) {
+      throw new Error('Performance review not found');
+    }
+
+    // Validate status transition
+    this.validateStatusTransition(currentReview.status, ReviewStatus.COMPLETED);
+
     const review = await prisma.performanceReview.update({
       where: { id },
       data: {

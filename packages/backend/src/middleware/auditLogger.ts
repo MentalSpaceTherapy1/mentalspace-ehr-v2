@@ -18,8 +18,22 @@ import prisma from '../services/database';
  */
 
 // Define audit types locally since they're not in Prisma schema
-export type AuditAction = 'VIEW' | 'CREATE' | 'UPDATE' | 'DELETE';
-export type AuditEntityType = 'Client' | 'Appointment' | 'ClinicalNote' | 'User' | 'Insurance' | 'Other';
+export type AuditAction = 'VIEW' | 'CREATE' | 'UPDATE' | 'DELETE' | 'APPROVE' | 'DENY' | 'SUBMIT' | 'SIGN';
+export type AuditEntityType =
+  | 'Client'
+  | 'Appointment'
+  | 'ClinicalNote'
+  | 'User'
+  | 'Insurance'
+  | 'Other'
+  // HR-specific entity types
+  | 'Staff'
+  | 'PTORequest'
+  | 'PerformanceReview'
+  | 'TimeAttendance'
+  | 'Training'
+  | 'Credential'
+  | 'Onboarding';
 
 export interface AuditLogOptions {
   entityType: AuditEntityType;
@@ -41,10 +55,11 @@ export const auditLog = (options: AuditLogOptions) => {
       const success = res.statusCode >= 200 && res.statusCode < 400;
 
       // Log the audit record asynchronously (don't block the response)
+      // Use 'unknown' as fallback if entityId cannot be extracted (e.g., list endpoints)
       createAuditLog({
         userId: req.user?.userId || null,
         entityType: options.entityType,
-        entityId: extractEntityId(req),
+        entityId: extractEntityId(req) || 'unknown',
         action: options.action,
         ipAddress: getClientIp(req),
         userAgent: req.get('user-agent') || null,

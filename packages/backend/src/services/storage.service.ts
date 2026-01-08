@@ -426,3 +426,151 @@ export async function validateBucketAccess(bucket: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Upload document to S3 with encryption
+ * For general document uploads (not just recordings)
+ */
+export interface UploadDocumentParams {
+  bucket: string;
+  key: string;
+  body: Buffer;
+  contentType: string;
+  metadata?: Record<string, string>;
+  tags?: Record<string, string>;
+}
+
+export interface UploadDocumentResult {
+  key: string;
+  bucket: string;
+  etag: string;
+  size: number;
+  url: string;
+}
+
+export async function uploadDocument(params: UploadDocumentParams): Promise<UploadDocumentResult> {
+  try {
+    const { bucket, key, body, contentType, metadata = {}, tags = {} } = params;
+
+    logger.info('Starting document upload to S3', {
+      bucket,
+      key,
+      contentType,
+      size: body.length,
+    });
+
+    // Build tag string
+    const tagString = Object.entries(tags)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+      .join('&');
+
+    const uploadCommand = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      ServerSideEncryption: 'AES256',
+      Metadata: {
+        ...metadata,
+        'uploaded-at': new Date().toISOString(),
+      },
+      ...(tagString ? { Tagging: tagString } : {}),
+    });
+
+    const uploadResult = await s3Client.send(uploadCommand);
+
+    logger.info('Document uploaded to S3 successfully', {
+      bucket,
+      key,
+      size: body.length,
+      etag: uploadResult.ETag,
+    });
+
+    return {
+      key,
+      bucket,
+      etag: uploadResult.ETag || '',
+      size: body.length,
+      url: `s3://${bucket}/${key}`,
+    };
+  } catch (error: any) {
+    logger.error('Failed to upload document to S3', {
+      error: error.message,
+      bucket: params.bucket,
+      key: params.key,
+    });
+    throw new Error(`S3 document upload failed: ${error.message}`);
+  }
+}
+
+/**
+ * Generate presigned URL for document upload (PUT)
+ * Allows client-side direct upload to S3
+ */
+export async function generateUploadPresignedUrl(params: {
+  bucket: string;
+  key: string;
+  contentType: string;
+  expiresIn?: number;
+}): Promise<{ url: string; key: string }> {
+  try {
+    const { bucket, key, contentType, expiresIn = 3600 } = params;
+
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: contentType,
+      ServerSideEncryption: 'AES256',
+    });
+
+    const url = await getSignedUrl(s3Client, command, {
+      expiresIn,
+    });
+
+    logger.info('Generated presigned upload URL', {
+      bucket,
+      key,
+      contentType,
+      expiresIn,
+    });
+
+    return { url, key };
+  } catch (error: any) {
+    logger.error('Failed to generate upload presigned URL', {
+      error: error.message,
+      bucket: params.bucket,
+      key: params.key,
+    });
+    throw new Error(`Failed to generate upload URL: ${error.message}`);
+  }
+}
+
+/**
+ * Get the documents bucket name from config
+ */
+export function getDocumentsBucket(): string {
+  return config.s3DocumentsBucket || config.s3RecordingBucket || process.env.S3_DOCUMENTS_BUCKET || 'mentalspace-documents';
+}
+
+/**
+ * Delete document from S3
+ */
+export async function deleteDocument(bucket: string, key: string): Promise<void> {
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+
+    await s3Client.send(command);
+
+    logger.info('Document deleted from S3', { bucket, key });
+  } catch (error: any) {
+    logger.error('Failed to delete document from S3', {
+      error: error.message,
+      bucket,
+      key,
+    });
+    throw new Error(`Failed to delete document: ${error.message}`);
+  }
+}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as portalApi from '../../lib/portalApi';
+import api from '../../lib/api';
 import FormSubmissionViewer from './FormSubmissionViewer';
 import ConfirmModal from '../ConfirmModal';
 
@@ -34,6 +35,14 @@ export default function PortalTab({ clientId }: PortalTabProps) {
 
   // Deactivate portal confirmation state
   const [deactivateConfirm, setDeactivateConfirm] = useState(false);
+
+  // Password reset state
+  const [tempPasswordResult, setTempPasswordResult] = useState<{
+    tempPassword: string;
+    expiresAt: string;
+    clientName: string;
+  } | null>(null);
+  const [showPasswordResetOptions, setShowPasswordResetOptions] = useState(false);
 
   const handleRevokeClick = (documentId: string) => {
     setRevokeConfirm({ isOpen: true, documentId });
@@ -150,6 +159,54 @@ export default function PortalTab({ clientId }: PortalTabProps) {
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Failed to activate portal access';
+      toast.error(message, {
+        duration: 4000,
+        position: 'top-center',
+      });
+    },
+  });
+
+  // Send password reset email mutation
+  const sendPasswordResetMutation = useMutation({
+    mutationFn: () => api.post(`/client-portal/clients/${clientId}/portal/send-reset-email`),
+    onSuccess: (response: any) => {
+      setShowPasswordResetOptions(false);
+      toast.success(response.data?.message || 'Password reset email sent successfully!', {
+        duration: 5000,
+        position: 'top-center',
+        icon: '📧',
+      });
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Failed to send password reset email';
+      toast.error(message, {
+        duration: 4000,
+        position: 'top-center',
+      });
+    },
+  });
+
+  // Create temporary password mutation
+  const createTempPasswordMutation = useMutation({
+    mutationFn: () => api.post(`/client-portal/clients/${clientId}/portal/create-temp-password`),
+    onSuccess: (response: any) => {
+      setShowPasswordResetOptions(false);
+      const data = response.data?.data;
+      if (data?.tempPassword) {
+        setTempPasswordResult({
+          tempPassword: data.tempPassword,
+          expiresAt: data.expiresAt,
+          clientName: data.clientName,
+        });
+      }
+      toast.success('Temporary password created successfully!', {
+        duration: 5000,
+        position: 'top-center',
+        icon: '🔑',
+      });
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Failed to create temporary password';
       toast.error(message, {
         duration: 4000,
         position: 'top-center',
@@ -831,6 +888,63 @@ export default function PortalTab({ clientId }: PortalTabProps) {
                       {activatePortalMutation.isPending ? 'Activating...' : 'Reactivate Portal Access'}
                     </button>
                   )}
+
+                  {/* Password Reset Options - Only show when account exists */}
+                  {portalStatus?.hasPortalAccount && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <p className="text-sm font-bold text-gray-700 mb-3">Password Management</p>
+
+                      {!showPasswordResetOptions ? (
+                        <button
+                          onClick={() => setShowPasswordResetOptions(true)}
+                          className="w-full px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                        >
+                          🔐 Reset Client Password
+                        </button>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-600 mb-3">Choose how to reset the client's password:</p>
+
+                          <button
+                            onClick={() => sendPasswordResetMutation.mutate()}
+                            disabled={sendPasswordResetMutation.isPending}
+                            className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center justify-center"
+                          >
+                            {sendPasswordResetMutation.isPending ? (
+                              <span>Sending...</span>
+                            ) : (
+                              <>
+                                <span className="mr-2">📧</span>
+                                Send Password Reset Email
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => createTempPasswordMutation.mutate()}
+                            disabled={createTempPasswordMutation.isPending}
+                            className="w-full px-4 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center justify-center"
+                          >
+                            {createTempPasswordMutation.isPending ? (
+                              <span>Creating...</span>
+                            ) : (
+                              <>
+                                <span className="mr-2">🔑</span>
+                                Create Temporary Password
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => setShowPasswordResetOptions(false)}
+                            className="w-full px-4 py-2 text-gray-600 font-semibold rounded-xl hover:bg-gray-100 transition-all duration-200"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -870,6 +984,66 @@ export default function PortalTab({ clientId }: PortalTabProps) {
         icon="danger"
         isLoading={deactivatePortalMutation.isPending}
       />
+
+      {/* Temporary Password Result Modal */}
+      {tempPasswordResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🔑</span>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800">Temporary Password Created</h3>
+              <p className="text-gray-600 mt-2">
+                A temporary password has been created for {tempPasswordResult.clientName}
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4 mb-4">
+              <p className="text-sm font-bold text-gray-700 mb-2">Temporary Password:</p>
+              <div className="bg-white rounded-lg p-3 border border-amber-300">
+                <code className="text-xl font-mono font-bold text-amber-700 select-all">
+                  {tempPasswordResult.tempPassword}
+                </code>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(tempPasswordResult.tempPassword);
+                  toast.success('Password copied to clipboard!', {
+                    duration: 2000,
+                    position: 'top-center',
+                    icon: '📋',
+                  });
+                }}
+                className="w-full mt-3 px-4 py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600 transition-colors"
+              >
+                Copy to Clipboard
+              </button>
+            </div>
+
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+              <div className="flex items-start">
+                <span className="text-red-500 mr-2">⚠️</span>
+                <div>
+                  <p className="text-sm font-bold text-red-700">Important:</p>
+                  <ul className="text-sm text-red-600 mt-1 list-disc list-inside space-y-1">
+                    <li>This password expires in 72 hours</li>
+                    <li>Client must change password on first login</li>
+                    <li>An email with this password has been sent to the client</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setTempPasswordResult(null)}
+              className="w-full px-4 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-bold rounded-xl hover:from-gray-700 hover:to-gray-800 transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

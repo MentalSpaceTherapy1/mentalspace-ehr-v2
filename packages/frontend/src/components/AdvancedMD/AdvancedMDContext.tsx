@@ -173,7 +173,8 @@ export function AdvancedMDProvider({ children }: AdvancedMDProviderProps) {
   const testConnection = useCallback(async (): Promise<boolean> => {
     try {
       const result = await advancedMDService.testConnection();
-      return result.connected;
+      // Add null check for result before accessing 'connected' property
+      return result?.connected ?? false;
     } catch (error: any) {
       console.error('Connection test failed:', error);
       return false;

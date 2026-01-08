@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Save,
   X,
@@ -15,8 +16,31 @@ import {
   Phone,
   MapPin,
   UserCircle,
+  AlertCircle,
 } from 'lucide-react';
+
 import { useStaff } from '../../hooks/useStaff';
+
+// Reusable error message component
+const FieldError: React.FC<{ error?: string }> = ({ error }) => {
+  if (!error) return null;
+  return (
+    <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
+      <AlertCircle className="w-4 h-4" />
+      <span>{error}</span>
+    </div>
+  );
+};
+
+// Validation error type
+interface FormErrors {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  department?: string;
+  title?: string;
+  hireDate?: string;
+}
 
 const EmploymentForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +50,8 @@ const EmploymentForm: React.FC = () => {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [activeSection, setActiveSection] = useState<'personal' | 'employment' | 'emergency'>('personal');
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const [formData, setFormData] = useState({
     // Personal
@@ -77,9 +103,69 @@ const EmploymentForm: React.FC = () => {
     fetchStaff();
   }, [id]);
 
+  // Validate a single field
+  const validateField = (name: string, value: string): string | undefined => {
+    switch (name) {
+      case 'firstName':
+        if (!value.trim()) return 'First name is required';
+        if (value.trim().length < 2) return 'First name must be at least 2 characters';
+        break;
+      case 'lastName':
+        if (!value.trim()) return 'Last name is required';
+        if (value.trim().length < 2) return 'Last name must be at least 2 characters';
+        break;
+      case 'email':
+        if (!value.trim()) return 'Email is required';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Please enter a valid email address';
+        break;
+      case 'department':
+        if (!value) return 'Department is required';
+        break;
+      case 'title':
+        if (!value.trim()) return 'Job title is required';
+        break;
+      case 'hireDate':
+        if (!value) return 'Hire date is required';
+        break;
+    }
+    return undefined;
+  };
+
+  // Validate all fields
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    const fieldsToValidate = ['firstName', 'lastName', 'email', 'department', 'title', 'hireDate'];
+    fieldsToValidate.forEach((field) => {
+      const error = validateField(field, formData[field as keyof typeof formData] as string);
+      if (error) {
+        newErrors[field as keyof FormErrors] = error;
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Clear error when user starts typing
+    if (errors[name as keyof FormErrors]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  // Handle field blur for immediate validation feedback
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+
+    const error = validateField(name, value);
+    if (error) {
+      setErrors((prev) => ({ ...prev, [name]: error }));
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,6 +182,29 @@ const EmploymentForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate form before submission
+    const newErrors: FormErrors = {};
+    const fieldsToValidate = ['firstName', 'lastName', 'email', 'department', 'title', 'hireDate'];
+    fieldsToValidate.forEach((field) => {
+      const error = validateField(field, formData[field as keyof typeof formData] as string);
+      if (error) {
+        newErrors[field as keyof FormErrors] = error;
+      }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      // Navigate to section with errors
+      if (newErrors.firstName || newErrors.lastName || newErrors.email) {
+        setActiveSection('personal');
+      } else if (newErrors.department || newErrors.title || newErrors.hireDate) {
+        setActiveSection('employment');
+      }
+      toast.error('Please fix the validation errors before submitting');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -105,7 +214,7 @@ const EmploymentForm: React.FC = () => {
         email: formData.email,
         phone: formData.phone || undefined,
         department: formData.department,
-        title: formData.title,
+        jobTitle: formData.title,
         employmentType: formData.employmentType,
         employmentStatus: formData.employmentStatus,
         hireDate: formData.hireDate,
@@ -133,9 +242,11 @@ const EmploymentForm: React.FC = () => {
         await uploadPhoto(staffId, photoFile);
       }
 
+      toast.success(id ? 'Staff member updated successfully' : 'Staff member created successfully');
       navigate(`/staff/${staffId}`);
     } catch (error) {
       console.error('Error saving staff:', error);
+      toast.error('Failed to save staff member. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -241,11 +352,14 @@ const EmploymentForm: React.FC = () => {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onBlur={handleBlur}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.firstName ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="John"
                     />
                   </div>
+                  <FieldError error={errors.firstName} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -258,11 +372,14 @@ const EmploymentForm: React.FC = () => {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onBlur={handleBlur}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.lastName ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="Doe"
                     />
                   </div>
+                  <FieldError error={errors.lastName} />
                 </div>
               </div>
 
@@ -279,11 +396,14 @@ const EmploymentForm: React.FC = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onBlur={handleBlur}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="john.doe@example.com"
                     />
                   </div>
+                  <FieldError error={errors.email} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
@@ -324,8 +444,10 @@ const EmploymentForm: React.FC = () => {
                       name="department"
                       value={formData.department}
                       onChange={handleInputChange}
-                      required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                      onBlur={handleBlur}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white ${
+                        errors.department ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                     >
                       <option value="">Select Department</option>
                       {departments.map((dept) => (
@@ -335,6 +457,7 @@ const EmploymentForm: React.FC = () => {
                       ))}
                     </select>
                   </div>
+                  <FieldError error={errors.department} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -347,11 +470,14 @@ const EmploymentForm: React.FC = () => {
                       name="title"
                       value={formData.title}
                       onChange={handleInputChange}
-                      required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onBlur={handleBlur}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.title ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="e.g., Clinical Psychologist"
                     />
                   </div>
+                  <FieldError error={errors.title} />
                 </div>
               </div>
 
@@ -362,16 +488,16 @@ const EmploymentForm: React.FC = () => {
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
-                    { value: 'FULL_TIME', label: 'Full Time', color: 'purple' },
-                    { value: 'PART_TIME', label: 'Part Time', color: 'indigo' },
-                    { value: 'CONTRACT', label: 'Contract', color: 'orange' },
-                    { value: 'INTERN', label: 'Intern', color: 'pink' },
+                    { value: 'FULL_TIME', label: 'Full Time', selectedBorder: 'border-purple-500', selectedBg: 'bg-purple-50', selectedText: 'text-purple-700' },
+                    { value: 'PART_TIME', label: 'Part Time', selectedBorder: 'border-indigo-500', selectedBg: 'bg-indigo-50', selectedText: 'text-indigo-700' },
+                    { value: 'CONTRACT', label: 'Contract', selectedBorder: 'border-orange-500', selectedBg: 'bg-orange-50', selectedText: 'text-orange-700' },
+                    { value: 'INTERN', label: 'Intern', selectedBorder: 'border-pink-500', selectedBg: 'bg-pink-50', selectedText: 'text-pink-700' },
                   ].map((type) => (
                     <label
                       key={type.value}
                       className={`relative flex items-center justify-center p-4 border-2 rounded-xl cursor-pointer transition-all ${
                         formData.employmentType === type.value
-                          ? `border-${type.color}-500 bg-${type.color}-50`
+                          ? `${type.selectedBorder} ${type.selectedBg}`
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -386,7 +512,7 @@ const EmploymentForm: React.FC = () => {
                       <span
                         className={`font-medium ${
                           formData.employmentType === type.value
-                            ? `text-${type.color}-700`
+                            ? type.selectedText
                             : 'text-gray-700'
                         }`}
                       >
@@ -426,10 +552,13 @@ const EmploymentForm: React.FC = () => {
                       name="hireDate"
                       value={formData.hireDate}
                       onChange={handleInputChange}
-                      required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onBlur={handleBlur}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.hireDate ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                     />
                   </div>
+                  <FieldError error={errors.hireDate} />
                 </div>
               </div>
 

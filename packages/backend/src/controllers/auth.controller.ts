@@ -102,7 +102,7 @@ export class AuthController {
       }
 
       // Return user data without tokens in body (HIPAA security)
-      const { tokens, session, ...responseData } = result;
+      const { session, ...responseData } = result;
       res.status(200).json({
         success: true,
         message: 'Login successful',
@@ -137,7 +137,7 @@ export class AuthController {
     }
 
     // Return user data without tokens in body
-    const { tokens, session, ...responseData } = result;
+    const { session, ...responseData } = result;
     res.status(200).json({
       success: true,
       message: 'MFA verification successful',

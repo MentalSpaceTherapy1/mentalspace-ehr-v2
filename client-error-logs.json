@@ -1,0 +1,13 @@
+{
+    "events": [
+        {
+            "logStreamName": "ecs/mentalspace-backend/4a881c8d2afa4d3f93f910dab50ded7f",
+            "timestamp": 1766843711302,
+            "message": "[CLIENT CREATE ERROR] {",
+            "ingestionTime": 1766843711883,
+            "eventId": "39401931411372102990625677883160017387948571622847414298"
+        }
+    ],
+    "searchedLogStreams": [],
+    "nextToken": "Bxkq6kVGFtq2y_MoigeqscPOdhXVbhiVtLoAmXb5jCoq_fzwn0-K1xFfrTOLOd9TosbIwk6FEyRXahdvLIr5g0lmb0zEjfH5y-QEY1E_-PvLFTJkHEIbY9_gCL9JjX2tG3lvbq5ZYMpjzFW1Skbq7iRXkefZo_NUYyfbfc4w96pHr5sdPScqBNb0vEevFcKOUHQfxNoUwXVWX8UD70TLNJ6w72ltXDoC73KR0ZErcsa75ypJ93ghxJPTSfyR-mt2k0KWAjCcNnc6grKk2DMuxL7VPPUM9AXv4B3lshohq3s6W3YpbnjncjLVHPdzCa8Btc7zBzLg6KDr3zjR4ooNDQ"
+}

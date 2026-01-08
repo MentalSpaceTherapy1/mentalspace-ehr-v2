@@ -93,10 +93,18 @@ export class PasswordPolicyService {
   }
 
   /**
-   * Check if user's password has expired (older than 90 days)
+   * Check if user's password has expired
+   * Uses passwordExpiresAt if set, otherwise falls back to 90 days from passwordChangedAt
    */
-  checkPasswordExpiration(passwordChangedAt: Date): boolean {
+  checkPasswordExpiration(passwordChangedAt: Date, passwordExpiresAt?: Date | null): boolean {
     const now = new Date();
+
+    // If explicit expiration date is set, use that
+    if (passwordExpiresAt) {
+      return now > passwordExpiresAt;
+    }
+
+    // Fallback to 90 days from last change
     const expirationDate = new Date(passwordChangedAt);
     expirationDate.setDate(expirationDate.getDate() + this.PASSWORD_EXPIRATION_DAYS);
 
@@ -104,12 +112,29 @@ export class PasswordPolicyService {
   }
 
   /**
-   * Get days until password expires
+   * Check if temporary password has expired (72-hour expiration)
    */
-  getDaysUntilPasswordExpiration(passwordChangedAt: Date): number {
+  checkTempPasswordExpiration(tempPasswordExpiry: Date | null | undefined): boolean {
+    if (!tempPasswordExpiry) {
+      return false; // No temp password expiry set
+    }
+    return new Date() > tempPasswordExpiry;
+  }
+
+  /**
+   * Get days until password expires
+   * Uses passwordExpiresAt if set, otherwise calculates from passwordChangedAt
+   */
+  getDaysUntilPasswordExpiration(passwordChangedAt: Date, passwordExpiresAt?: Date | null): number {
     const now = new Date();
-    const expirationDate = new Date(passwordChangedAt);
-    expirationDate.setDate(expirationDate.getDate() + this.PASSWORD_EXPIRATION_DAYS);
+    let expirationDate: Date;
+
+    if (passwordExpiresAt) {
+      expirationDate = new Date(passwordExpiresAt);
+    } else {
+      expirationDate = new Date(passwordChangedAt);
+      expirationDate.setDate(expirationDate.getDate() + this.PASSWORD_EXPIRATION_DAYS);
+    }
 
     const daysRemaining = Math.floor(
       (expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
@@ -184,17 +209,21 @@ export class PasswordPolicyService {
 
   /**
    * Check if user needs to change password
+   * Checks: mustChangePassword flag, temp password expiry, permanent password expiry
    */
   async checkPasswordChangeRequired(userId: string): Promise<{
     required: boolean;
     reason?: string;
     daysUntilExpiration?: number;
+    tempPasswordExpired?: boolean;
   }> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         mustChangePassword: true,
         passwordChangedAt: true,
+        passwordExpiresAt: true,
+        tempPasswordExpiry: true,
       },
     });
 
@@ -202,30 +231,41 @@ export class PasswordPolicyService {
       throw new ValidationError('User not found');
     }
 
-    // Check if user has mustChangePassword flag set
+    // Check if user has mustChangePassword flag set (first login with temp password)
     if (user.mustChangePassword) {
+      // Check if temp password has expired
+      if (this.checkTempPasswordExpiration(user.tempPasswordExpiry)) {
+        return {
+          required: true,
+          reason: 'Temporary password has expired. Please contact your administrator.',
+          tempPasswordExpired: true,
+        };
+      }
       return {
         required: true,
-        reason: 'Password change required by administrator',
+        reason: 'Please set your new password',
       };
     }
 
-    // Check if password has expired
-    const isExpired = this.checkPasswordExpiration(user.passwordChangedAt);
+    // Check if permanent password has expired
+    const isExpired = this.checkPasswordExpiration(user.passwordChangedAt, user.passwordExpiresAt);
     if (isExpired) {
       return {
         required: true,
-        reason: 'Password has expired (older than 90 days)',
+        reason: 'Your password has expired. Please set a new password.',
         daysUntilExpiration: 0,
       };
     }
 
     // Check if password is expiring soon (within 7 days)
-    const daysUntilExpiration = this.getDaysUntilPasswordExpiration(user.passwordChangedAt);
+    const daysUntilExpiration = this.getDaysUntilPasswordExpiration(
+      user.passwordChangedAt,
+      user.passwordExpiresAt
+    );
     if (daysUntilExpiration <= 7) {
       return {
         required: false,
-        reason: 'Password will expire soon',
+        reason: 'Your password will expire soon',
         daysUntilExpiration,
       };
     }

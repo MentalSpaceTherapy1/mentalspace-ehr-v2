@@ -13,7 +13,7 @@ import logger from '../utils/logger';
 
 export interface CreateUserDto {
   email: string;
-  password: string;
+  password?: string; // Optional - if not provided, a temporary password will be generated
   firstName: string;
   lastName: string;
   title?: string;
@@ -155,6 +155,8 @@ class UserService {
 
   /**
    * Create a new user
+   * If password is not provided, generates a temporary password that expires in 72 hours
+   * User must change password on first login, and new password will expire in 6 months
    */
   async createUser(data: CreateUserDto, createdBy: string) {
     // Check if email already exists
@@ -166,8 +168,17 @@ class UserService {
       throw new BadRequestError('Email already in use');
     }
 
+    // Generate temporary password if not provided
+    const isTemporaryPassword = !data.password;
+    const actualPassword = data.password || generateTemporaryPassword();
+
     // Hash password
-    const hashedPassword = await bcrypt.hash(data.password, 12);
+    const hashedPassword = await bcrypt.hash(actualPassword, 12);
+
+    // Calculate temp password expiry (72 hours from now)
+    const tempPasswordExpiry = isTemporaryPassword
+      ? new Date(Date.now() + 72 * 60 * 60 * 1000) // 72 hours
+      : undefined;
 
     // Create user
     const user = await prisma.user.create({
@@ -184,7 +195,11 @@ class UserService {
         licenseExpiration: data.licenseExpiration ? new Date(data.licenseExpiration) : undefined,
         phoneNumber: data.phoneNumber,
         isActive: data.isActive ?? true,
-        credentials: [],
+        // Password management for temporary passwords
+        mustChangePassword: isTemporaryPassword,
+        tempPasswordExpiry: tempPasswordExpiry,
+        // Note: credentials is now a relation (Credential[]), not a String[]
+        // String arrays for basic fields
         specialties: [],
         languagesSpoken: [],
         supervisionLicenses: [],
@@ -205,7 +220,20 @@ class UserService {
       },
     });
 
-    return user;
+    // Log user creation
+    logger.info('User created', {
+      userId: user.id,
+      email: user.email,
+      createdBy,
+      isTemporaryPassword,
+      tempPasswordExpiry: tempPasswordExpiry?.toISOString(),
+    });
+
+    // Return with temporary password only if it was generated
+    return {
+      ...user,
+      tempPassword: isTemporaryPassword ? actualPassword : undefined,
+    };
   }
 
   /**
@@ -564,6 +592,7 @@ class UserService {
 
   /**
    * Change password (authenticated user changing their own password)
+   * Sets new password expiration to 6 months from now
    */
   async changePassword(userId: string, oldPassword: string, newPassword: string) {
     const user = await prisma.user.findUnique({
@@ -583,18 +612,25 @@ class UserService {
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    // Update password and clear mustChangePassword flag
+    // Calculate permanent password expiry (6 months from now)
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+
+    // Update password and set 6-month expiration
     await prisma.user.update({
       where: { id: userId },
       data: {
         password: hashedPassword,
         mustChangePassword: false,
+        passwordExpiresAt: sixMonthsFromNow,
+        passwordChangedAt: new Date(),
       },
     });
 
     logger.info('Password changed', {
       userId: user.id,
       email: user.email,
+      passwordExpiresAt: sixMonthsFromNow.toISOString(),
     });
 
     return { message: 'Password changed successfully' };
@@ -602,6 +638,7 @@ class UserService {
 
   /**
    * Force password change (for first login)
+   * Sets permanent password with 6-month expiration
    */
   async forcePasswordChange(userId: string, newPassword: string) {
     const user = await prisma.user.findUnique({
@@ -616,21 +653,34 @@ class UserService {
       throw new BadRequestError('Password change not required');
     }
 
+    // Check if temporary password has expired
+    if (user.tempPasswordExpiry && new Date() > user.tempPasswordExpiry) {
+      throw new BadRequestError('Temporary password has expired. Please contact your administrator for a new one.');
+    }
+
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    // Update password and clear mustChangePassword flag
+    // Calculate permanent password expiry (6 months from now)
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+
+    // Update password and clear mustChangePassword flag, set 6-month expiration
     await prisma.user.update({
       where: { id: userId },
       data: {
         password: hashedPassword,
         mustChangePassword: false,
+        tempPasswordExpiry: null, // Clear temporary password expiry
+        passwordExpiresAt: sixMonthsFromNow, // Set 6-month expiration
+        passwordChangedAt: new Date(),
       },
     });
 
     logger.info('Forced password change completed', {
       userId: user.id,
       email: user.email,
+      passwordExpiresAt: sixMonthsFromNow.toISOString(),
     });
 
     return { message: 'Password set successfully' };

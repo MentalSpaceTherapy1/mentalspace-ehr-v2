@@ -11,6 +11,23 @@ router.use(authenticate);
 router.post('/clock-in', timeAttendanceController.clockIn.bind(timeAttendanceController));
 router.post('/clock-out', timeAttendanceController.clockOut.bind(timeAttendanceController));
 
+// Break endpoints (frontend compatibility)
+router.post('/break-start', timeAttendanceController.startBreak.bind(timeAttendanceController));
+router.post('/break-end', timeAttendanceController.endBreak.bind(timeAttendanceController));
+
+// Current status endpoint (frontend compatibility)
+router.get('/current/:userId', timeAttendanceController.getCurrentStatus.bind(timeAttendanceController));
+
+// Entries and records endpoints (frontend compatibility)
+router.get('/entries', timeAttendanceController.getAllRecords.bind(timeAttendanceController));
+router.get('/records', timeAttendanceController.getAllRecords.bind(timeAttendanceController));
+
+// Stats endpoint (frontend compatibility) - alias for summary
+router.get('/stats/:userId', timeAttendanceController.getUserAttendanceSummary.bind(timeAttendanceController));
+
+// Export endpoint (frontend compatibility)
+router.get('/export', timeAttendanceController.exportAttendance.bind(timeAttendanceController));
+
 // Bulk operations and special endpoints (must come before :id routes)
 router.get('/statistics', timeAttendanceController.getStatistics.bind(timeAttendanceController));
 router.get('/pending-approvals', timeAttendanceController.getPendingApprovals.bind(timeAttendanceController));

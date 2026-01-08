@@ -86,6 +86,8 @@ import PortalProfile from './pages/Portal/PortalProfile';
 import PortalDocuments from './pages/Portal/PortalDocuments';
 import PortalFormViewer from './pages/Portal/PortalFormViewer';
 import PortalAssessments from './pages/Portal/PortalAssessments';
+import PortalAssessmentTake from './pages/Portal/PortalAssessmentTake';
+import PortalAssessmentResults from './pages/Portal/PortalAssessmentResults';
 import PortalAppointmentRequest from './pages/Portal/PortalAppointmentRequest';
 import PortalReferrals from './pages/Portal/PortalReferrals';
 import PortalTherapistChange from './pages/Portal/PortalTherapistChange';
@@ -360,6 +362,22 @@ function App() {
           }
         />
         <Route
+          path="/portal/assessments/:assessmentId/take"
+          element={
+            <PortalRoute>
+              <PortalAssessmentTake />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/assessments/:assessmentId/results"
+          element={
+            <PortalRoute>
+              <PortalAssessmentResults />
+            </PortalRoute>
+          }
+        />
+        <Route
           path="/portal/appointments/request"
           element={
             <PortalRoute>
@@ -388,6 +406,14 @@ function App() {
           element={
             <PortalRoute>
               <PortalTherapistProfile />
+            </PortalRoute>
+          }
+        />
+        <Route
+          path="/portal/telehealth/:appointmentId"
+          element={
+            <PortalRoute>
+              <VideoSession />
             </PortalRoute>
           }
         />
@@ -1255,6 +1281,11 @@ function App() {
             </PrivateRoute>
           }
         />
+        {/* Redirect /clinician/waitlist to /clinician/my-waitlist */}
+        <Route
+          path="/clinician/waitlist"
+          element={<Navigate to="/clinician/my-waitlist" replace />}
+        />
 
         {/* MODULE 9: CREDENTIALING & LICENSING */}
         <Route
@@ -1621,24 +1652,9 @@ function App() {
             </PrivateRoute>
           }
         />
-        <Route
-          path="/staff/:id"
-          element={
-            <PrivateRoute>
-              <StaffProfile />
-            </PrivateRoute>
-          }
-        />
+        {/* Static routes must come before dynamic :id routes */}
         <Route
           path="/staff/new"
-          element={
-            <PrivateRoute>
-              <EmploymentForm />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/staff/:id/edit"
           element={
             <PrivateRoute>
               <EmploymentForm />
@@ -1650,6 +1666,22 @@ function App() {
           element={
             <PrivateRoute>
               <OrganizationalChart />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staff/:id"
+          element={
+            <PrivateRoute>
+              <StaffProfile />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/staff/:id/edit"
+          element={
+            <PrivateRoute>
+              <EmploymentForm />
             </PrivateRoute>
           }
         />

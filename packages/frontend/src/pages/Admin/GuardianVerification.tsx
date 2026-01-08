@@ -52,9 +52,7 @@ import {
   Info,
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+import api from '../../lib/api';
 
 interface GuardianRelationship {
   id: string;
@@ -155,9 +153,7 @@ const GuardianVerification: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/guardian/stats`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      const response = await api.get('/admin/guardian/stats');
 
       if (response.data.success) {
         setStats(response.data.data);
@@ -191,10 +187,7 @@ const GuardianVerification: React.FC = () => {
         params.accessLevel = accessLevelFilter;
       }
 
-      const response = await axios.get(`${API_BASE_URL}/admin/guardian/relationships`, {
-        params,
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      const response = await api.get('/admin/guardian/relationships', { params });
 
       if (response.data.success) {
         setRelationships(response.data.data);
@@ -212,10 +205,9 @@ const GuardianVerification: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await axios.put(
-        `${API_BASE_URL}/admin/guardian/${selectedRelationship.id}/verify`,
-        { notes: verificationNotes },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      const response = await api.put(
+        `/admin/guardian/${selectedRelationship.id}/verify`,
+        { notes: verificationNotes }
       );
 
       if (response.data.success) {
@@ -238,12 +230,9 @@ const GuardianVerification: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await axios.put(
-        `${API_BASE_URL}/admin/guardian/${selectedRelationship.id}/reject`,
-        {
-          reason: `[${rejectionCategory}] ${rejectionReason}`,
-        },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      const response = await api.put(
+        `/admin/guardian/${selectedRelationship.id}/reject`,
+        { reason: `[${rejectionCategory}] ${rejectionReason}` }
       );
 
       if (response.data.success) {
@@ -267,10 +256,9 @@ const GuardianVerification: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await axios.put(
-        `${API_BASE_URL}/admin/guardian/${selectedRelationship.id}/revoke`,
-        { reason: revocationReason },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      const response = await api.put(
+        `/admin/guardian/${selectedRelationship.id}/revoke`,
+        { reason: revocationReason }
       );
 
       if (response.data.success) {
@@ -290,10 +278,9 @@ const GuardianVerification: React.FC = () => {
 
   const handleViewDocument = async (documentUrl: string) => {
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/admin/guardian/document-url`,
-        { storageLocation: documentUrl },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      const response = await api.post(
+        '/admin/guardian/document-url',
+        { storageLocation: documentUrl }
       );
 
       if (response.data.success) {

@@ -1,0 +1,19 @@
+b/39401911078043247364771170039787826999508017861740527619/s	f/39401936514184017828005804161061605394336014535848624128/s
+EVENTS	1766842801804	{"environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"warn","message":"Twilio credentials not found in database. SMS/Voice reminders will not work.","pid":1,"service":"mentalspace-backend","timestamp":"2025-12-27 13:39:59.524","version":"1.0.0"}	1766842799524
+EVENTS	1766842801804	{"environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"warn","message":"Secret not found in AWS Secrets Manager","pid":1,"secretName":"mentalspace-ehr/production/security/jwt-secret","service":"mentalspace-backend","timestamp":"2025-12-27 13:39:59.547","version":"1.0.0"}	1766842799547
+EVENTS	1766842801804	{"action":"ENV_FALLBACK","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"info","message":"Secret access","pid":1,"secretName":"security/jwt-secret","service":"mentalspace-backend","success":true,"timestamp":"2025-12-27T13:39:59.600Z","version":"1.0.0"}	1766842799600
+EVENTS	1766842801804	{"environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"warn","message":"Secret not found in AWS Secrets Manager","pid":1,"secretName":"mentalspace-ehr/production/security/phi-encryption-key","service":"mentalspace-backend","timestamp":"2025-12-27 13:39:59.602","version":"1.0.0"}	1766842799602
+EVENTS	1766842801804	{"action":"NOT_FOUND","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"info","message":"Secret access","pid":1,"secretName":"security/phi-encryption-key","service":"mentalspace-backend","success":false,"timestamp":"2025-12-27T13:39:59.602Z","version":"1.0.0"}	1766842799603
+EVENTS	1766842801804	{"environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"warn","message":"Secret not found in AWS Secrets Manager","pid":1,"secretName":"mentalspace-ehr/production/security/session-secret","service":"mentalspace-backend","timestamp":"2025-12-27 13:39:59.605","version":"1.0.0"}	1766842799605
+EVENTS	1766842801804	{"action":"NOT_FOUND","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"info","message":"Secret access","pid":1,"secretName":"security/session-secret","service":"mentalspace-backend","success":false,"timestamp":"2025-12-27T13:39:59.606Z","version":"1.0.0"}	1766842799606
+EVENTS	1766842801804	{"environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"warn","message":"Secret not found in AWS Secrets Manager","pid":1,"secretName":"mentalspace-ehr/production/database/credentials","service":"mentalspace-backend","timestamp":"2025-12-27 13:39:59.609","version":"1.0.0"}	1766842799609
+EVENTS	1766842801804	{"action":"ENV_FALLBACK","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"info","message":"Secret access","pid":1,"secretName":"database/credentials","service":"mentalspace-backend","success":true,"timestamp":"2025-12-27T13:39:59.610Z","version":"1.0.0"}	1766842799610
+EVENTS	1766842801804	{"environment":"production","hostname":"ip-172-31-1-222.ec2.internal","level":"info","message":"Secrets cache warmed up","pid":1,"service":"mentalspace-backend","timestamp":"2025-12-27 13:39:59.610","version":"1.0.0"}	1766842799610
+aws : 
+At C:\Users\Jarvis 2.0\mentalspace-ehr-v2\get-newest-logs.ps1:2 char:11
++ $result = aws logs get-log-events --log-group-name '/ecs/mentalspace- ...
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+'charmap' codec can't encode character '\U0001f510' in position 117: character maps to <undefined>

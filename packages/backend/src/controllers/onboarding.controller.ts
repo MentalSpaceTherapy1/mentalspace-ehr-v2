@@ -127,14 +127,34 @@ class OnboardingController {
   /**
    * Update a specific checklist item
    * PUT /api/onboarding/:id/items/:itemId
+   *
+   * @requires Authentication - Valid user ID must be present for audit trail
+   * @param {string} req.params.id - Onboarding checklist ID
+   * @param {string} req.params.itemId - Checklist item ID to update
+   * @param {boolean} req.body.completed - Whether the item is completed
+   * @param {string} req.body.notes - Optional notes for the item
+   * @param {string} req.body.documentUrl - Optional document URL for the item
+   * @returns {Object} Updated checklist with all items
    */
   async updateChecklistItem(req: Request, res: Response, next: NextFunction) {
     try {
       const { id, itemId } = req.params;
       const { completed, notes, documentUrl } = req.body;
 
-      // Get updatedBy from authenticated user
-      const updatedBy = (req as any).user?.id || 'system';
+      // Get updatedBy from authenticated user - require valid ID for audit compliance
+      const updatedBy = (req as any).user?.id;
+
+      if (!updatedBy) {
+        logger.warn('Attempted to update checklist item without authentication', {
+          checklistId: id,
+          itemId,
+          ip: req.ip,
+        });
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required. Please log in to update checklist items.',
+        });
+      }
 
       const updatedChecklist = await onboardingService.updateChecklistItem(
         id,

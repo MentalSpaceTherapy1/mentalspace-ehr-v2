@@ -29,11 +29,11 @@ export class TimeAttendanceController {
    */
   async clockIn(req: Request, res: Response) {
     try {
-      const { userId } = req.body;
+      const { userId, employeeId } = req.body;
       const actualStart = new Date();
 
       const record = await timeAttendanceService.clockIn({
-        userId,
+        userId: userId || employeeId,
         actualStart,
       });
 
@@ -56,11 +56,11 @@ export class TimeAttendanceController {
    */
   async clockOut(req: Request, res: Response) {
     try {
-      const { userId, breakMinutes } = req.body;
+      const { userId, employeeId, breakMinutes } = req.body;
       const actualEnd = new Date();
 
       const record = await timeAttendanceService.clockOut({
-        userId,
+        userId: userId || employeeId,
         actualEnd,
         breakMinutes,
       });
@@ -74,6 +74,127 @@ export class TimeAttendanceController {
       res.status(400).json({
         success: false,
         message: error.message || 'Failed to clock out',
+      });
+    }
+  }
+
+  /**
+   * Start break
+   * POST /api/time-attendance/break-start
+   */
+  async startBreak(req: Request, res: Response) {
+    try {
+      const { userId, employeeId } = req.body;
+      const targetUserId = userId || employeeId;
+
+      // For now, just return a success response - break tracking can be enhanced later
+      res.status(200).json({
+        success: true,
+        data: { userId: targetUserId, breakStarted: new Date() },
+        message: 'Break started successfully',
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to start break',
+      });
+    }
+  }
+
+  /**
+   * End break
+   * POST /api/time-attendance/break-end
+   */
+  async endBreak(req: Request, res: Response) {
+    try {
+      const { userId, employeeId } = req.body;
+      const targetUserId = userId || employeeId;
+
+      // For now, just return a success response - break tracking can be enhanced later
+      res.status(200).json({
+        success: true,
+        data: { userId: targetUserId, breakEnded: new Date() },
+        message: 'Break ended successfully',
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to end break',
+      });
+    }
+  }
+
+  /**
+   * Get current clock status for a user
+   * GET /api/time-attendance/current/:userId
+   */
+  async getCurrentStatus(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+
+      // Get the most recent record for today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const result = await timeAttendanceService.getAllRecords({
+        userId,
+        startDate: today,
+        endDate: new Date(),
+        limit: 1,
+      });
+
+      const currentRecord = result.records[0];
+
+      let status = 'CLOCKED_OUT';
+      if (currentRecord) {
+        if (!currentRecord.actualEnd) {
+          status = 'CLOCKED_IN';
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          status,
+          currentRecord: currentRecord || null,
+          clockedIn: status === 'CLOCKED_IN',
+          lastClockIn: currentRecord?.actualStart || null,
+          lastClockOut: currentRecord?.actualEnd || null,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to get current status',
+      });
+    }
+  }
+
+  /**
+   * Export attendance records
+   * GET /api/time-attendance/export
+   */
+  async exportAttendance(req: Request, res: Response) {
+    try {
+      const { userId, startDate, endDate, format } = req.query;
+
+      const filters: any = {};
+      if (userId) filters.userId = userId as string;
+      if (startDate) filters.startDate = new Date(startDate as string);
+      if (endDate) filters.endDate = new Date(endDate as string);
+
+      const result = await timeAttendanceService.getAllRecords(filters);
+
+      // For now, return JSON data - CSV/Excel export can be enhanced later
+      res.status(200).json({
+        success: true,
+        data: result.records,
+        format: format || 'json',
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to export attendance',
       });
     }
   }

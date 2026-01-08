@@ -58,14 +58,48 @@ export const getSession = async (req: PortalRequest, res: Response) => {
       throw new AppError('Appointment not found', 404);
     }
 
-    if (!appointment.telehealthSession) {
-      throw new AppError('No telehealth session found for this appointment', 404);
+    // Auto-create telehealth session if it doesn't exist (for backward compatibility)
+    let telehealthSession = appointment.telehealthSession;
+    if (!telehealthSession) {
+      logger.info('Telehealth session not found for portal client, attempting auto-creation', {
+        clientId,
+        appointmentId,
+      });
+
+      try {
+        const newSession = await telehealthService.createTelehealthSession({
+          appointmentId,
+          createdBy: 'portal-auto-create',
+        });
+
+        telehealthSession = {
+          id: newSession.id,
+          clientJoinUrl: newSession.clientJoinUrl,
+          status: newSession.status,
+          sessionStartedAt: newSession.sessionStartedAt,
+          clientInWaitingRoom: newSession.clientInWaitingRoom,
+          waitingRoomEnteredAt: newSession.waitingRoomEnteredAt,
+        };
+
+        logger.info('Telehealth session auto-created for portal client', {
+          clientId,
+          appointmentId,
+          sessionId: newSession.id,
+        });
+      } catch (createError: any) {
+        logger.warn('Failed to auto-create telehealth session for portal', {
+          clientId,
+          appointmentId,
+          error: createError.message,
+        });
+        throw new AppError(createError.message || 'No telehealth session found for this appointment', 404);
+      }
     }
 
     logger.info('Client accessed telehealth session details', {
       clientId,
       appointmentId,
-      sessionId: appointment.telehealthSession.id,
+      sessionId: telehealthSession.id,
     });
 
     res.status(200).json({
@@ -81,7 +115,7 @@ export const getSession = async (req: PortalRequest, res: Response) => {
           appointmentType: appointment.appointmentType,
         },
         clinician: appointment.clinician,
-        session: appointment.telehealthSession,
+        session: telehealthSession,
       },
     });
   } catch (error: any) {
@@ -292,7 +326,7 @@ export const rateSession = async (req: PortalRequest, res: Response) => {
   try {
     const clientId = req.portalAccount?.clientId;
     const { sessionId } = req.params;
-    const { rating, comments } = req.body;
+    const { rating, comments, shareWithTherapist, shareWithAdmin } = req.body;
 
     if (!clientId) {
       return res.status(401).json({
@@ -320,19 +354,23 @@ export const rateSession = async (req: PortalRequest, res: Response) => {
       throw new AppError('Session not found', 404);
     }
 
-    // Create rating
+    // Create rating with sharing preferences
     const sessionRating = await telehealthService.createSessionRating({
       sessionId,
       userId: clientId,
       rating,
       comments,
       ipAddress: req.ip || 'unknown',
+      shareWithTherapist: shareWithTherapist === true,
+      shareWithAdmin: shareWithAdmin === true,
     });
 
     logger.info('Client submitted session rating', {
       clientId,
       sessionId,
       rating,
+      shareWithTherapist,
+      shareWithAdmin,
     });
 
     res.status(201).json({
@@ -341,6 +379,8 @@ export const rateSession = async (req: PortalRequest, res: Response) => {
       data: {
         id: sessionRating.id,
         rating: sessionRating.rating,
+        shareWithTherapist: sessionRating.shareWithTherapist,
+        shareWithAdmin: sessionRating.shareWithAdmin,
         submittedAt: sessionRating.submittedAt,
       },
     });

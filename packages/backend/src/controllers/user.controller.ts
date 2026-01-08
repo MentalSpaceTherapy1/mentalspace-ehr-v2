@@ -47,15 +47,21 @@ export class UserController {
   /**
    * Create new user
    * POST /api/v1/users
+   * If no password provided, generates temporary password (72-hour expiration)
    */
   createUser = asyncHandler(async (req: Request, res: Response) => {
     const createdBy = req.user!.userId;
-    const user = await userService.createUser(req.body, createdBy);
+    const result = await userService.createUser(req.body, createdBy);
+
+    // Customize message based on whether temp password was generated
+    const message = result.tempPassword
+      ? 'User created with temporary password. Password expires in 72 hours.'
+      : 'User created successfully';
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
-      data: user,
+      message,
+      data: result,
     });
   });
 

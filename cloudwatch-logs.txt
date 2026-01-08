@@ -1,0 +1,19 @@
+﻿b/39401916443111925736871424474332504944945898591463211008/s	f/39401935177455049882881722361728351469658024273896931328/s
+EVENTS	1766843041823	[Report Scheduler] Found 0 due schedules	1766843040102
+EVENTS	1766843056818	{"duration":"2ms","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","ip":"::ffff:127.0.0.1","level":"info","message":"API request","method":"GET","pid":1,"service":"mentalspace-backend","statusCode":200,"timestamp":"2025-12-27 13:44:12.198","url":"/live","userAgent":"curl/7.88.1","version":"1.0.0"}	1766843052198
+EVENTS	1766843056818	{"duration":"1ms","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","ip":"::ffff:172.31.86.43","level":"info","message":"API request","method":"GET","pid":1,"service":"mentalspace-backend","statusCode":200,"timestamp":"2025-12-27 13:44:15.430","url":"/live","userAgent":"ELB-HealthChecker/2.0","version":"1.0.0"}	1766843055431
+EVENTS	1766843056818	{"duration":"1ms","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","ip":"::ffff:172.31.44.210","level":"info","message":"API request","method":"GET","pid":1,"service":"mentalspace-backend","statusCode":200,"timestamp":"2025-12-27 13:44:15.461","url":"/live","userAgent":"ELB-HealthChecker/2.0","version":"1.0.0"}	1766843055461
+EVENTS	1766843056818	{"duration":"1ms","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","ip":"::ffff:172.31.13.26","level":"info","message":"API request","method":"GET","pid":1,"service":"mentalspace-backend","statusCode":200,"timestamp":"2025-12-27 13:44:15.566","url":"/live","userAgent":"ELB-HealthChecker/2.0","version":"1.0.0"}	1766843055566
+EVENTS	1766843086819	{"duration":"1ms","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","ip":"::ffff:127.0.0.1","level":"info","message":"API request","method":"GET","pid":1,"service":"mentalspace-backend","statusCode":200,"timestamp":"2025-12-27 13:44:42.198","url":"/live","userAgent":"curl/7.88.1","version":"1.0.0"}	1766843082198
+EVENTS	1766843086819	{"duration":"1ms","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","ip":"::ffff:172.31.86.43","level":"info","message":"API request","method":"GET","pid":1,"service":"mentalspace-backend","statusCode":200,"timestamp":"2025-12-27 13:44:45.448","url":"/live","userAgent":"ELB-HealthChecker/2.0","version":"1.0.0"}	1766843085448
+EVENTS	1766843086819	{"duration":"1ms","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","ip":"::ffff:172.31.44.210","level":"info","message":"API request","method":"GET","pid":1,"service":"mentalspace-backend","statusCode":200,"timestamp":"2025-12-27 13:44:45.482","url":"/live","userAgent":"ELB-HealthChecker/2.0","version":"1.0.0"}	1766843085482
+EVENTS	1766843086819	{"duration":"0ms","environment":"production","hostname":"ip-172-31-1-222.ec2.internal","ip":"::ffff:172.31.13.26","level":"info","message":"API request","method":"GET","pid":1,"service":"mentalspace-backend","statusCode":200,"timestamp":"2025-12-27 13:44:45.576","url":"/live","userAgent":"ELB-HealthChecker/2.0","version":"1.0.0"}	1766843085577
+EVENTS	1766843101828	[Delivery Tracker] Found 0 failed deliveries to retry	1766843099803
+aws : 
+At C:\Users\Jarvis 2.0\mentalspace-ehr-v2\get-logs-file.ps1:1 char:1
++ aws logs get-log-events --log-group-name '/ecs/mentalspace-backend-pr ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+'charmap' codec can't encode character '\U0001f514' in position 117: character maps to <undefined>

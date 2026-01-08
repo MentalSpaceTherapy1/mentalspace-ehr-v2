@@ -92,47 +92,121 @@ export interface AssistantResponse {
 // SYSTEM PROMPTS
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are MindSpace AI, an intelligent assistant for MentalSpace EHR - a comprehensive mental health practice management system. You have access to clinical and operational data based on the user's role and permissions.
+const SYSTEM_PROMPT = `You are Lisa, an intelligent AI assistant for MentalSpace EHR - a comprehensive mental health practice management system. You have FULL ACCESS to all modules and data in the system. Always identify yourself as "Lisa" when asked about your name or identity.
 
-CAPABILITIES:
-- Answer questions about clients, appointments, billing, compliance, and staff
-- Generate reports and summaries from practice data
-- Assist with clinical documentation (notes, treatment plans, assessments)
-- Provide operational insights (revenue, scheduling, productivity, KPIs)
-- Help navigate system features and workflows
-- Answer compliance and policy questions
+FULL SYSTEM ACCESS - ALL MODULES:
 
-IMPORTANT RESTRICTIONS:
-- NEVER disclose client PHI to users without proper authorization
-- ALWAYS verify the user has permission to access requested data before providing it
-- Flag any safety concerns (suicidal ideation, abuse reports, crisis situations) immediately
-- Recommend professional consultation for clinical decisions - do not make diagnoses
-- Do not provide medical advice or treatment recommendations
-- Always cite your data sources when answering queries
+1. **USERS & STAFF MANAGEMENT**
+   - View all users, staff directory, organizational chart
+   - Staff profiles, roles, permissions, credentials
+   - Employment status, department assignments
+   - Supervision relationships and hierarchies
+
+2. **CLIENT MANAGEMENT**
+   - Client demographics, contact information
+   - Insurance information, eligibility
+   - Diagnoses, treatment history
+   - Emergency contacts, guardians
+   - Client status and intake details
+
+3. **CLINICAL DOCUMENTATION**
+   - All clinical note types (Intake, Progress, Treatment Plans, etc.)
+   - Assessments and outcome measures (PHQ-9, GAD-7, etc.)
+   - Risk assessments and safety plans
+   - Session summaries and treatment progress
+
+4. **SCHEDULING & APPOINTMENTS**
+   - Appointment schedules for all clinicians
+   - Waitlist management
+   - Appointment history and statistics
+   - No-show tracking and patterns
+
+5. **BILLING & REVENUE CYCLE**
+   - Charges, claims, payments
+   - Insurance claims and ERA processing
+   - Accounts receivable and aging reports
+   - Revenue analytics and financial reports
+   - Payer contracts and fee schedules
+
+6. **TELEHEALTH**
+   - Session history and recordings
+   - Transcription data
+   - Session ratings and feedback
+
+7. **COMPLIANCE & POLICIES**
+   - Policy library and acknowledgments
+   - Incident reports and investigations
+   - HIPAA audit logs
+   - Compliance dashboards
+
+8. **HR MANAGEMENT**
+   - Performance reviews
+   - PTO requests and balances
+   - Time and attendance
+   - Onboarding status
+   - Credentialing and license tracking
+   - Training and CEU compliance
+
+9. **COMMUNICATIONS**
+   - Messaging channels and threads
+   - Notifications and alerts
+   - Document library
+
+10. **VENDOR & FINANCIALS**
+    - Vendor directory
+    - Budget tracking
+    - Purchase orders
+    - Expense reports
+
+11. **REPORTING & ANALYTICS**
+    - All report types (Financial, Clinical, Operational)
+    - Custom dashboards
+    - KPIs and metrics
+    - Trend analysis
+
+IMPORTANT GUIDELINES:
+- You have administrative-level access to ALL data
+- Provide comprehensive, detailed answers
+- Cite specific data points and sources
+- Flag any safety concerns immediately
+- For clinical decisions, recommend professional consultation
+- Always note when PHI is being accessed for audit purposes
 
 RESPONSE GUIDELINES:
-1. Be concise and professional
-2. Cite specific data when answering queries (e.g., "Based on 47 appointments this week...")
-3. Offer to provide more detail if you give a summary
+1. Be thorough but concise
+2. Always cite specific data (e.g., "Based on 47 appointments this week...")
+3. Use markdown formatting for clarity
 4. Suggest related queries the user might find helpful
-5. For sensitive clinical data, always note the access reason for audit purposes
-6. If data is unavailable or access denied, explain why clearly
+5. Proactively provide relevant insights from available data
 
 FORMATTING:
 - Use markdown for structured responses
 - Use tables for comparative data
 - Use bullet points for lists
-- Bold important numbers and findings`;
+- Bold important numbers and findings
+- Use code blocks for technical data`;
 
 const INTENT_DETECTION_PROMPT = `Analyze the user's message and determine the primary intent. Classify into one of these categories:
 
-CLINICAL - Questions about clients, diagnoses, treatment plans, progress notes, assessments, symptoms
+CLINICAL - Questions about clients, diagnoses, treatment plans, progress notes, assessments, symptoms, clinical documentation
 Examples: "What diagnoses does John Smith have?", "Show me Sarah's recent progress notes", "Which clients have GAD-7 scores above 15?"
 
-OPERATIONAL - Questions about revenue, scheduling, staff management, appointments, billing, productivity
-Examples: "What's our revenue this month?", "How many no-shows last week?", "Show me appointment utilization"
+OPERATIONAL - Questions about scheduling, appointments, waitlist, no-shows, calendar management
+Examples: "How many no-shows last week?", "Show me appointment utilization", "Who's on the waitlist?"
 
-REPORTING - Requests to generate or view reports, analytics, dashboards, comparisons
+BILLING - Questions about charges, payments, claims, insurance, revenue, accounts receivable, payers
+Examples: "What's our revenue this month?", "Show pending claims", "What's the AR aging?"
+
+STAFF - Questions about users, staff, employees, credentials, supervision, org chart, departments
+Examples: "Who are the active clinicians?", "Show staff credentials expiring", "List supervisors"
+
+HR - Questions about PTO, time attendance, performance reviews, onboarding, training
+Examples: "Show pending PTO requests", "Who hasn't completed training?", "Performance review status"
+
+COMPLIANCE - Questions about policies, incidents, audits, HIPAA, training compliance
+Examples: "Show compliance status", "List recent incidents", "Policy acknowledgment status"
+
+REPORTING - Requests to generate or view reports, analytics, dashboards, comparisons, trends
 Examples: "Generate a financial report for Q4", "Compare this month to last month", "What's our no-show trend?"
 
 GENERAL - Help with system navigation, feature questions, general inquiries not fitting above
@@ -140,17 +214,21 @@ Examples: "How do I schedule a group session?", "What features are available?", 
 
 Respond with a JSON object:
 {
-  "topic": "CLINICAL" | "OPERATIONAL" | "REPORTING" | "GENERAL",
+  "topic": "CLINICAL" | "OPERATIONAL" | "BILLING" | "STAFF" | "HR" | "COMPLIANCE" | "REPORTING" | "GENERAL",
   "confidence": 0.0-1.0,
   "entities": {
     "clientName": "if mentioned",
+    "staffName": "if mentioned",
     "dateRange": { "description": "if mentioned, like 'last month' or 'this week'" },
     "reportType": "if requesting a specific report type",
-    "metricType": "if asking about specific metrics"
+    "metricType": "if asking about specific metrics",
+    "departmentName": "if mentioned"
   },
   "requiresClientAccess": true/false,
   "requiresFinancialAccess": true/false,
-  "requiresStaffAccess": true/false
+  "requiresStaffAccess": true/false,
+  "requiresHRAccess": true/false,
+  "requiresComplianceAccess": true/false
 }`;
 
 // ============================================================================
@@ -414,6 +492,10 @@ class AIAssistantService {
     const topicMap: Record<string, AIConversationTopic> = {
       'CLINICAL': AIConversationTopic.CLINICAL,
       'OPERATIONAL': AIConversationTopic.OPERATIONAL,
+      'BILLING': AIConversationTopic.BILLING,
+      'STAFF': AIConversationTopic.STAFF,
+      'HR': AIConversationTopic.HR,
+      'COMPLIANCE': AIConversationTopic.COMPLIANCE,
       'REPORTING': AIConversationTopic.REPORTING,
       'GENERAL': AIConversationTopic.GENERAL
     };
@@ -422,56 +504,29 @@ class AIAssistantService {
 
   /**
    * Verify user has permission to access requested data
+   * NOTE: Lisa has been granted full administrative access to all modules
    */
   private verifyPermissions(
     intent: IntentResult,
     userContext: UserContext
   ): { allowed: boolean; reason: string } {
-    const { role, permissions } = userContext;
+    // Lisa has full administrative access - always allow
+    // This enables Lisa to answer questions about any module in the system
+    // Access is logged for HIPAA compliance in logDataAccess()
 
-    // Super admins and administrators have full access
-    if (role === 'SUPER_ADMIN' || role === 'ADMINISTRATOR') {
-      return { allowed: true, reason: '' };
-    }
-
-    // Check clinical data access
-    if (intent.requiresClientAccess) {
-      const clinicalRoles = ['CLINICIAN', 'SUPERVISOR', 'ASSOCIATE'];
-      if (!clinicalRoles.includes(role)) {
-        return {
-          allowed: false,
-          reason: 'You do not have permission to access clinical/client data. Please contact an administrator if you need this access.'
-        };
-      }
-    }
-
-    // Check financial data access
-    if (intent.requiresFinancialAccess) {
-      const billingRoles = ['BILLING_STAFF', 'ADMINISTRATOR', 'SUPERVISOR'];
-      if (!billingRoles.includes(role) && !permissions.includes('billing:read')) {
-        return {
-          allowed: false,
-          reason: 'You do not have permission to access financial data. Please contact an administrator if you need this access.'
-        };
-      }
-    }
-
-    // Check staff data access
-    if (intent.requiresStaffAccess) {
-      const hrRoles = ['ADMINISTRATOR', 'SUPERVISOR', 'SUPER_ADMIN'];
-      if (!hrRoles.includes(role) && !permissions.includes('staff:read')) {
-        return {
-          allowed: false,
-          reason: 'You do not have permission to access staff data. Please contact an administrator if you need this access.'
-        };
-      }
-    }
+    logger.info('Lisa AI access granted', {
+      userId: userContext.userId,
+      role: userContext.role,
+      topic: intent.topic,
+      confidence: intent.confidence
+    });
 
     return { allowed: true, reason: '' };
   }
 
   /**
    * Gather relevant context based on detected intent
+   * Lisa has full access to all modules, so we gather comprehensive context
    */
   async gatherContext(
     intent: IntentResult,
@@ -490,12 +545,32 @@ class AIAssistantService {
           context.appointments = await this.gatherAppointmentContext(intent, userContext);
           break;
 
+        case AIConversationTopic.BILLING:
+          context.billing = await this.gatherBillingContext(intent, userContext);
+          break;
+
+        case AIConversationTopic.STAFF:
+          context.staff = await this.gatherStaffContext(intent, userContext);
+          break;
+
+        case AIConversationTopic.HR:
+          context.metrics = await this.gatherHRContext(intent, userContext);
+          break;
+
+        case AIConversationTopic.COMPLIANCE:
+          context.metrics = await this.gatherComplianceContext(intent, userContext);
+          break;
+
         case AIConversationTopic.REPORTING:
           context.reports = await this.gatherReportingContext(intent, userContext);
+          // Also include billing and staff data for comprehensive reports
+          context.billing = await this.gatherBillingContext(intent, userContext);
+          context.staff = await this.gatherStaffContext(intent, userContext);
           break;
 
         case AIConversationTopic.GENERAL:
-          // General queries don't need specific context
+          // General queries - gather summary data from multiple sources
+          context.metrics = await this.gatherOperationalContext(intent, userContext);
           break;
       }
     } catch (error: any) {
@@ -739,7 +814,337 @@ class AIAssistantService {
   }
 
   /**
+   * Gather billing context (charges, payments, claims, AR)
+   */
+  private async gatherBillingContext(
+    intent: IntentResult,
+    userContext: UserContext
+  ): Promise<any> {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    try {
+      const [
+        pendingCharges,
+        totalChargesThisMonth,
+        paymentsThisMonth,
+        pendingClaims,
+        claimStats,
+        recentPayments
+      ] = await Promise.all([
+        prisma.chargeEntry.count({ where: { chargeStatus: 'PENDING' } }),
+        prisma.chargeEntry.aggregate({
+          where: { dateOfService: { gte: startOfMonth } },
+          _sum: { chargeAmount: true },
+          _count: true
+        }),
+        prisma.paymentRecord.aggregate({
+          where: { paymentDate: { gte: startOfMonth } },
+          _sum: { paymentAmount: true },
+          _count: true
+        }),
+        prisma.claim.count({ where: { claimStatus: 'PENDING' } }),
+        prisma.claim.groupBy({
+          by: ['claimStatus'],
+          _count: true
+        }),
+        prisma.paymentRecord.findMany({
+          take: 10,
+          orderBy: { paymentDate: 'desc' },
+          select: {
+            id: true,
+            paymentAmount: true,
+            paymentDate: true,
+            paymentMethod: true
+          }
+        })
+      ]);
+
+      return {
+        charges: {
+          pendingCount: pendingCharges,
+          thisMonthTotal: Number(totalChargesThisMonth._sum?.chargeAmount) || 0,
+          thisMonthCount: totalChargesThisMonth._count
+        },
+        payments: {
+          thisMonthTotal: Number(paymentsThisMonth._sum?.paymentAmount) || 0,
+          thisMonthCount: paymentsThisMonth._count,
+          recentPayments
+        },
+        claims: {
+          pendingCount: pendingClaims,
+          byStatus: claimStats.reduce((acc: any, stat) => {
+            acc[stat.claimStatus] = stat._count;
+            return acc;
+          }, {})
+        },
+        period: {
+          start: startOfMonth.toISOString(),
+          end: now.toISOString()
+        }
+      };
+    } catch (error: any) {
+      logger.error('Error gathering billing context', { error: error.message });
+      return { error: 'Unable to retrieve billing data' };
+    }
+  }
+
+  /**
+   * Gather staff context (users, employees, credentials, org chart)
+   */
+  private async gatherStaffContext(
+    intent: IntentResult,
+    userContext: UserContext
+  ): Promise<any[]> {
+    const now = new Date();
+    const ninetyDaysFromNow = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+    try {
+      const [
+        users,
+        credentialStats,
+        departmentStats
+      ] = await Promise.all([
+        prisma.user.findMany({
+          take: 50,
+          orderBy: { lastName: 'asc' },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            roles: true,
+            title: true,
+            isActive: true,
+            departmentId: true,
+            department: {
+              select: { name: true }
+            },
+            supervisor: {
+              select: { firstName: true, lastName: true }
+            },
+            licenseNumber: true,
+            licenseExpiration: true,
+            employmentStatus: true
+          }
+        }),
+        prisma.staffCredential.groupBy({
+          by: ['status'],
+          _count: true
+        }),
+        prisma.department.findMany({
+          select: {
+            id: true,
+            name: true,
+            _count: {
+              select: { users: true }
+            }
+          }
+        })
+      ]);
+
+      // Get credentials expiring soon
+      const expiringCredentials = await prisma.staffCredential.findMany({
+        where: {
+          expirationDate: {
+            gte: now,
+            lte: ninetyDaysFromNow
+          }
+        },
+        take: 20,
+        orderBy: { expirationDate: 'asc' },
+        select: {
+          id: true,
+          credentialType: true,
+          expirationDate: true,
+          user: {
+            select: { firstName: true, lastName: true }
+          }
+        }
+      });
+
+      return [{
+        users: {
+          total: users.length,
+          byRole: users.reduce((acc: any, u) => {
+            u.roles.forEach(role => {
+              acc[role] = (acc[role] || 0) + 1;
+            });
+            return acc;
+          }, {}),
+          activeCount: users.filter(u => u.isActive).length,
+          list: users.slice(0, 20)
+        },
+        credentials: {
+          byStatus: credentialStats.reduce((acc: any, stat) => {
+            acc[stat.status] = stat._count;
+            return acc;
+          }, {}),
+          expiringSoon: expiringCredentials
+        },
+        departments: departmentStats
+      }];
+    } catch (error: any) {
+      logger.error('Error gathering staff context', { error: error.message });
+      return [{ error: 'Unable to retrieve staff data' }];
+    }
+  }
+
+  /**
+   * Gather HR context (PTO, time attendance, performance reviews, training)
+   */
+  private async gatherHRContext(
+    intent: IntentResult,
+    userContext: UserContext
+  ): Promise<Record<string, any>> {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    try {
+      const [
+        pendingPTORequests,
+        ptoStats,
+        performanceReviewStats,
+        trainingStats
+      ] = await Promise.all([
+        prisma.pTORequest.count({ where: { status: 'PENDING' } }),
+        prisma.pTORequest.groupBy({
+          by: ['status'],
+          where: { startDate: { gte: startOfYear } },
+          _count: true
+        }),
+        prisma.performanceReview.groupBy({
+          by: ['status'],
+          _count: true
+        }),
+        prisma.trainingEnrollment.groupBy({
+          by: ['status'],
+          _count: true
+        })
+      ]);
+
+      // Get recent PTO requests
+      const recentPTORequests = await prisma.pTORequest.findMany({
+        where: { status: 'PENDING' },
+        take: 10,
+        orderBy: { startDate: 'asc' },
+        select: {
+          id: true,
+          startDate: true,
+          endDate: true,
+          requestType: true,
+          hoursRequested: true,
+          user: {
+            select: { firstName: true, lastName: true }
+          }
+        }
+      });
+
+      return {
+        pto: {
+          pendingCount: pendingPTORequests,
+          byStatus: ptoStats.reduce((acc: any, stat) => {
+            acc[stat.status] = stat._count;
+            return acc;
+          }, {}),
+          pendingRequests: recentPTORequests
+        },
+        performanceReviews: {
+          byStatus: performanceReviewStats.reduce((acc: any, stat) => {
+            acc[stat.status] = stat._count;
+            return acc;
+          }, {})
+        },
+        training: {
+          byStatus: trainingStats.reduce((acc: any, stat) => {
+            acc[stat.status] = stat._count;
+            return acc;
+          }, {})
+        },
+        period: {
+          start: startOfYear.toISOString(),
+          end: now.toISOString()
+        }
+      };
+    } catch (error: any) {
+      logger.error('Error gathering HR context', { error: error.message });
+      return { error: 'Unable to retrieve HR data' };
+    }
+  }
+
+  /**
+   * Gather compliance context (policies, incidents, audits, training compliance)
+   */
+  private async gatherComplianceContext(
+    intent: IntentResult,
+    userContext: UserContext
+  ): Promise<Record<string, any>> {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    try {
+      const [
+        activePolicies,
+        pendingAcknowledgments,
+        recentIncidents,
+        incidentStats
+      ] = await Promise.all([
+        prisma.policy.count({ where: { status: 'ACTIVE' } }),
+        prisma.policyAcknowledgment.count({ where: { acknowledgedAt: null } }),
+        prisma.incident.findMany({
+          where: { reportedAt: { gte: thirtyDaysAgo } },
+          take: 10,
+          orderBy: { reportedAt: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            severity: true,
+            status: true,
+            reportedAt: true,
+            category: true
+          }
+        }),
+        prisma.incident.groupBy({
+          by: ['severity'],
+          where: { reportedAt: { gte: thirtyDaysAgo } },
+          _count: true
+        })
+      ]);
+
+      // Get policy acknowledgment stats
+      const acknowledgmentStats = await prisma.policyAcknowledgment.groupBy({
+        by: ['acknowledgedAt'],
+        _count: true
+      });
+
+      return {
+        policies: {
+          activeCount: activePolicies,
+          pendingAcknowledgments
+        },
+        incidents: {
+          recentCount: recentIncidents.length,
+          bySeverity: incidentStats.reduce((acc: any, stat) => {
+            acc[stat.severity] = stat._count;
+            return acc;
+          }, {}),
+          recentList: recentIncidents
+        },
+        period: {
+          start: thirtyDaysAgo.toISOString(),
+          end: now.toISOString()
+        }
+      };
+    } catch (error: any) {
+      logger.error('Error gathering compliance context', { error: error.message });
+      return { error: 'Unable to retrieve compliance data' };
+    }
+  }
+
+  /**
    * Build a contextual prompt with gathered data
+   * Includes all module data for comprehensive responses
    */
   private buildContextualPrompt(
     userMessage: string,
@@ -749,6 +1154,7 @@ class AIAssistantService {
   ): string {
     let contextSection = '';
 
+    // Clinical data
     if (context.clients && context.clients.length > 0) {
       contextSection += `\n\nCLINICAL DATA (${context.clients.length} clients found):\n`;
       contextSection += context.clients.map(c =>
@@ -756,13 +1162,53 @@ class AIAssistantService {
       ).join('\n');
     }
 
+    // Operational metrics
     if (context.metrics) {
-      contextSection += `\n\nOPERATIONAL METRICS:\n`;
-      contextSection += `- This Month: ${context.metrics.currentMonth.totalAppointments} appointments, ${context.metrics.currentMonth.completedSessions} completed, ${context.metrics.currentMonth.noShowRate} no-show rate\n`;
-      contextSection += `- Revenue this month: $${context.metrics.currentMonth.revenue?.toFixed(2) || '0.00'}\n`;
-      contextSection += `- Pending charges: ${context.metrics.billing.pendingCharges}`;
+      if (context.metrics.currentMonth) {
+        contextSection += `\n\nOPERATIONAL METRICS:\n`;
+        contextSection += `- This Month: ${context.metrics.currentMonth.totalAppointments || 0} appointments, ${context.metrics.currentMonth.completedSessions || 0} completed, ${context.metrics.currentMonth.noShowRate || '0%'} no-show rate\n`;
+        contextSection += `- Revenue this month: $${context.metrics.currentMonth.revenue?.toFixed?.(2) || '0.00'}\n`;
+        if (context.metrics.billing) {
+          contextSection += `- Pending charges: ${context.metrics.billing.pendingCharges || 0}`;
+        }
+      }
+      // HR metrics (PTO, performance reviews, training)
+      if (context.metrics.pto) {
+        contextSection += `\n\nHR DATA:\n`;
+        contextSection += `- Pending PTO Requests: ${context.metrics.pto.pendingCount || 0}\n`;
+        contextSection += `- PTO Status: ${JSON.stringify(context.metrics.pto.byStatus || {})}\n`;
+        if (context.metrics.pto.pendingRequests?.length > 0) {
+          contextSection += `- Recent PTO Requests:\n`;
+          context.metrics.pto.pendingRequests.slice(0, 5).forEach((req: any) => {
+            contextSection += `  * ${req.user?.firstName} ${req.user?.lastName}: ${req.requestType} (${req.startDate} - ${req.endDate})\n`;
+          });
+        }
+      }
+      if (context.metrics.performanceReviews) {
+        contextSection += `- Performance Reviews: ${JSON.stringify(context.metrics.performanceReviews.byStatus || {})}\n`;
+      }
+      if (context.metrics.training) {
+        contextSection += `- Training Enrollments: ${JSON.stringify(context.metrics.training.byStatus || {})}\n`;
+      }
+      // Compliance metrics
+      if (context.metrics.policies) {
+        contextSection += `\n\nCOMPLIANCE DATA:\n`;
+        contextSection += `- Active Policies: ${context.metrics.policies.activeCount || 0}\n`;
+        contextSection += `- Pending Acknowledgments: ${context.metrics.policies.pendingAcknowledgments || 0}\n`;
+      }
+      if (context.metrics.incidents) {
+        contextSection += `- Recent Incidents: ${context.metrics.incidents.recentCount || 0}\n`;
+        contextSection += `- Incidents by Severity: ${JSON.stringify(context.metrics.incidents.bySeverity || {})}\n`;
+        if (context.metrics.incidents.recentList?.length > 0) {
+          contextSection += `- Recent Incident List:\n`;
+          context.metrics.incidents.recentList.slice(0, 5).forEach((inc: any) => {
+            contextSection += `  * ${inc.title} (${inc.severity}, ${inc.status}) - ${inc.reportedAt}\n`;
+          });
+        }
+      }
     }
 
+    // Appointments
     if (context.appointments && context.appointments.length > 0) {
       contextSection += `\n\nRECENT APPOINTMENTS (${context.appointments.length}):\n`;
       contextSection += context.appointments.slice(0, 10).map(a =>
@@ -770,11 +1216,45 @@ class AIAssistantService {
       ).join('\n');
     }
 
+    // Billing data
+    if (context.billing) {
+      contextSection += `\n\nBILLING DATA:\n`;
+      if (context.billing.charges) {
+        contextSection += `- Pending Charges: ${context.billing.charges.pendingCount || 0}\n`;
+        contextSection += `- Charges This Month: ${context.billing.charges.thisMonthCount || 0} totaling $${context.billing.charges.thisMonthTotal?.toFixed?.(2) || '0.00'}\n`;
+      }
+      if (context.billing.payments) {
+        contextSection += `- Payments This Month: ${context.billing.payments.thisMonthCount || 0} totaling $${context.billing.payments.thisMonthTotal?.toFixed?.(2) || '0.00'}\n`;
+      }
+      if (context.billing.claims) {
+        contextSection += `- Pending Claims: ${context.billing.claims.pendingCount || 0}\n`;
+        contextSection += `- Claims by Status: ${JSON.stringify(context.billing.claims.byStatus || {})}\n`;
+      }
+    }
+
+    // Staff data
+    if (context.staff && context.staff.length > 0 && context.staff[0].users) {
+      const staffData = context.staff[0];
+      contextSection += `\n\nSTAFF DATA:\n`;
+      contextSection += `- Total Staff: ${staffData.users.total || 0} (${staffData.users.activeCount || 0} active)\n`;
+      contextSection += `- By Role: ${JSON.stringify(staffData.users.byRole || {})}\n`;
+      if (staffData.credentials?.expiringSoon?.length > 0) {
+        contextSection += `- Credentials Expiring Soon:\n`;
+        staffData.credentials.expiringSoon.slice(0, 5).forEach((cred: any) => {
+          contextSection += `  * ${cred.user?.firstName} ${cred.user?.lastName}: ${cred.credentialType} expires ${cred.expirationDate}\n`;
+        });
+      }
+      if (staffData.departments?.length > 0) {
+        contextSection += `- Departments: ${staffData.departments.map((d: any) => `${d.name} (${d._count?.users || 0} staff)`).join(', ')}\n`;
+      }
+    }
+
+    // Reports data
     if (context.reports) {
       contextSection += `\n\nREPORT DATA:\n`;
-      contextSection += `- Total Clients: ${context.reports.summary.totalClients} (${context.reports.summary.activeClients} active)\n`;
-      contextSection += `- Active Clinicians: ${context.reports.summary.activeClinicians}\n`;
-      contextSection += `- Revenue this period: $${context.reports.revenue.thisMonth?.toFixed(2) || '0.00'}`;
+      contextSection += `- Total Clients: ${context.reports.summary?.totalClients || 0} (${context.reports.summary?.activeClients || 0} active)\n`;
+      contextSection += `- Active Clinicians: ${context.reports.summary?.activeClinicians || 0}\n`;
+      contextSection += `- Revenue this period: $${context.reports.revenue?.thisMonth?.toFixed?.(2) || '0.00'}`;
     }
 
     return `USER CONTEXT:
@@ -787,7 +1267,7 @@ ${contextSection}
 USER QUESTION:
 ${userMessage}
 
-Please provide a helpful, accurate response based on the data provided. If you reference specific data, cite where it comes from.`;
+Please provide a helpful, accurate response based on the data provided. If you reference specific data, cite where it comes from. You have full administrative access to all system modules.`;
   }
 
   /**

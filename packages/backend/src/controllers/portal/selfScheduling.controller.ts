@@ -47,22 +47,22 @@ export const getAvailableClinicians = async (req: PortalRequest, res: Response) 
       });
     }
 
-    // Get client's primary clinician
+    // Get client's primary therapist
     const client = await prisma.client.findUnique({
       where: { id: clientId },
       select: {
-        primaryClinicianId: true,
+        primaryTherapistId: true,
       },
     });
 
     // Get clinicians who are available for self-scheduling
     const clinicians = await availableSlotsService.getAvailableClinicians();
 
-    // Sort to put client's primary clinician first
-    if (client?.primaryClinicianId) {
+    // Sort to put client's primary therapist first
+    if (client?.primaryTherapistId) {
       clinicians.sort((a, b) => {
-        if (a.id === client.primaryClinicianId) return -1;
-        if (b.id === client.primaryClinicianId) return 1;
+        if (a.id === client.primaryTherapistId) return -1;
+        if (b.id === client.primaryTherapistId) return 1;
         return 0;
       });
     }
@@ -207,7 +207,7 @@ export const bookAppointment = async (req: PortalRequest, res: Response) => {
         firstName: true,
         lastName: true,
         email: true,
-        primaryClinicianId: true,
+        primaryTherapistId: true,
       },
     });
 

@@ -1,0 +1,41 @@
+{
+    "events": [
+        {
+            "timestamp": 1767313111430,
+            "message": "{\"action\":\"ENV_FALLBACK\",\"environment\":\"production\",\"hostname\":\"ip-172-31-43-127.ec2.internal\",\"level\":\"info\",\"message\":\"Secret access\",\"pid\":1,\"secretName\":\"security/jwt-secret\",\"service\":\"mentalspace-backend\",\"success\":true,\"timestamp\":\"2026-01-02T00:18:31.430Z\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767313111564
+        },
+        {
+            "timestamp": 1767313111432,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-43-127.ec2.internal\",\"level\":\"warn\",\"message\":\"Secret not found in AWS Secrets Manager\",\"pid\":1,\"secretName\":\"mentalspace-ehr/production/security/phi-encryption-key\",\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-02 00:18:31.432\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767313111564
+        },
+        {
+            "timestamp": 1767313111432,
+            "message": "{\"action\":\"ENV_FALLBACK\",\"environment\":\"production\",\"hostname\":\"ip-172-31-43-127.ec2.internal\",\"level\":\"info\",\"message\":\"Secret access\",\"pid\":1,\"secretName\":\"security/phi-encryption-key\",\"service\":\"mentalspace-backend\",\"success\":true,\"timestamp\":\"2026-01-02T00:18:31.432Z\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767313111564
+        },
+        {
+            "timestamp": 1767313111513,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-43-127.ec2.internal\",\"level\":\"info\",\"message\":\"CloudWatch monitoring initialized\",\"namespace\":\"MentalSpaceEHR\",\"pid\":1,\"region\":\"us-east-1\",\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-02 00:18:31.513\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767313111564
+        },
+        {
+            "timestamp": 1767313111515,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-43-127.ec2.internal\",\"level\":\"warn\",\"message\":\"Secret not found in AWS Secrets Manager\",\"pid\":1,\"secretName\":\"mentalspace-ehr/production/security/session-secret\",\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-02 00:18:31.515\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767313111564
+        },
+        {
+            "timestamp": 1767313111515,
+            "message": "{\"action\":\"NOT_FOUND\",\"environment\":\"production\",\"hostname\":\"ip-172-31-43-127.ec2.internal\",\"level\":\"info\",\"message\":\"Secret access\",\"pid\":1,\"secretName\":\"security/session-secret\",\"service\":\"mentalspace-backend\",\"success\":false,\"timestamp\":\"2026-01-02T00:18:31.515Z\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767313111564
+        },
+        {
+            "timestamp": 1767313111515,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-43-127.ec2.internal\",\"level\":\"info\",\"message\":\"Secrets cache warmed up\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-02 00:18:31.515\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767313111564
+        },
+        {
+            "timestamp": 1767313111516,
+            "message": 
+'charmap' codec can't encode character '\U0001f510' in position 113: character maps to <undefined>

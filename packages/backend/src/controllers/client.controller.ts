@@ -7,6 +7,7 @@ import { applyClientScope, assertCanAccessClient } from '../services/accessContr
 import logger, { logControllerError } from '../utils/logger';
 import { sanitizeSearchInput, sanitizePagination } from '../utils/sanitize';
 import { AppError } from '../utils/errors';
+import { sendEmail, emailTemplates } from '../services/resend.service';
 
 // Generate Medical Record Number
 function generateMRN(): string {
@@ -306,6 +307,47 @@ export const createClient = async (req: Request, res: Response) => {
         },
       },
     });
+
+    // Send welcome email with MRN and portal signup instructions
+    if (client.email) {
+      try {
+        const clinicianName = client.primaryTherapist
+          ? `${client.primaryTherapist.firstName} ${client.primaryTherapist.lastName}`
+          : 'your therapist';
+
+        const portalUrl = process.env.PORTAL_URL || 'https://portal.mentalspace.io';
+
+        const emailTemplate = emailTemplates.clientWelcome(
+          client.firstName,
+          medicalRecordNumber,
+          clinicianName,
+          portalUrl
+        );
+
+        await sendEmail({
+          to: client.email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+        });
+
+        logger.info('Client welcome email sent', {
+          clientId: client.id,
+          mrn: medicalRecordNumber,
+          email: client.email.substring(0, 3) + '***',
+        });
+      } catch (emailError) {
+        // Log but don't fail the request - client was created successfully
+        logger.error('Failed to send client welcome email', {
+          clientId: client.id,
+          error: emailError instanceof Error ? emailError.message : 'Unknown error',
+        });
+      }
+    } else {
+      logger.warn('Client created without email - welcome email not sent', {
+        clientId: client.id,
+        mrn: medicalRecordNumber,
+      });
+    }
 
     res.status(201).json({
       success: true,

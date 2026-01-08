@@ -113,6 +113,20 @@ export class AuthService {
     // Verify password
     const isPasswordValid = await bcrypt.compare(data.password, user.password);
 
+    // Debug logging for password comparison (temporary)
+    auditLogger.info('Password verification attempt', {
+      userId: user.id,
+      email: user.email,
+      passwordProvided: !!data.password,
+      passwordLength: data.password?.length || 0,
+      hasStoredPassword: !!user.password,
+      storedPasswordLength: user.password?.length || 0,
+      isPasswordValid,
+      mustChangePassword: user.mustChangePassword,
+      hasExpiry: !!user.tempPasswordExpiry,
+      action: 'PASSWORD_VERIFICATION_DEBUG',
+    });
+
     if (!isPasswordValid) {
       // Increment failed login attempts
       const newFailedAttempts = user.failedLoginAttempts + 1;
@@ -161,11 +175,26 @@ export class AuthService {
       },
     });
 
-    // Check password expiration
+    // Check if temporary password has expired (72-hour window)
+    if (user.mustChangePassword && user.tempPasswordExpiry) {
+      if (passwordPolicyService.checkTempPasswordExpiration(user.tempPasswordExpiry)) {
+        auditLogger.warn('Login with expired temporary password', {
+          userId: user.id,
+          email: user.email,
+          action: 'TEMP_PASSWORD_EXPIRED',
+        });
+        throw new UnauthorizedError(
+          'Your temporary password has expired. Please contact your administrator for a new one.'
+        );
+      }
+    }
+
+    // Check permanent password expiration (using passwordExpiresAt or 90-day fallback)
     const passwordExpired = passwordPolicyService.checkPasswordExpiration(
-      user.passwordChangedAt
+      user.passwordChangedAt,
+      user.passwordExpiresAt
     );
-    if (passwordExpired) {
+    if (passwordExpired && !user.mustChangePassword) {
       auditLogger.warn('Login with expired password', {
         userId: user.id,
         email: user.email,
@@ -206,16 +235,15 @@ export class AuthService {
       };
     }
 
-    // Check if password change is required
-    if (user.mustChangePassword) {
-      auditLogger.info('Password change required', {
+    // Check if password change is required - allow login but flag for password change
+    const requiresPasswordChange = user.mustChangePassword === true;
+
+    if (requiresPasswordChange) {
+      auditLogger.info('Password change required - allowing login for password change', {
         userId: user.id,
         email: user.email,
         action: 'PASSWORD_CHANGE_REQUIRED',
       });
-      throw new UnauthorizedError(
-        'You must change your password before continuing. Please use the password reset flow.'
-      );
     }
 
     // Check concurrent session limit
@@ -247,6 +275,7 @@ export class AuthService {
 
     return {
       requiresMfa: false,
+      requiresPasswordChange,
       user: {
         id: user.id,
         email: user.email,

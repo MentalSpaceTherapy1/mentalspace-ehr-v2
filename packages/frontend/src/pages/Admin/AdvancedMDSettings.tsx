@@ -40,7 +40,7 @@ import { useAdvancedMD } from '../../components/AdvancedMD';
  * AdvancedMD Settings Component
  */
 export default function AdvancedMDSettings() {
-  const { config, isLoadingConfig, refreshConfig, testConnection } = useAdvancedMD();
+  const { config, isLoadingConfig, configError, refreshConfig, testConnection } = useAdvancedMD();
 
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionTestResult, setConnectionTestResult] = useState<{
@@ -163,6 +163,21 @@ export default function AdvancedMDSettings() {
               Connection Settings
             </Typography>
             <Divider sx={{ mb: 3 }} />
+
+            {configError && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                Failed to load configuration: {configError}
+                <Button size="small" onClick={() => refreshConfig()} sx={{ ml: 2 }}>
+                  Retry
+                </Button>
+              </Alert>
+            )}
+
+            {!config && !configError && !isLoadingConfig && (
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                No AdvancedMD configuration found. Please contact your administrator to set up the integration.
+              </Alert>
+            )}
 
             {config && (
               <Stack spacing={3}>

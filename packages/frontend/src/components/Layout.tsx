@@ -246,8 +246,8 @@ export default function Layout({ children }: LayoutProps) {
             ? 'bg-gradient-to-r from-purple-600 to-blue-600'
             : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
         }`}
-        title="Open AI Assistant"
-        aria-label="Open AI Assistant"
+        title="Chat with Lisa"
+        aria-label="Chat with Lisa"
       >
         <Sparkles className="w-6 h-6 text-white" />
       </button>

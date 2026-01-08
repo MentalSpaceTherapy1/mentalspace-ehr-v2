@@ -1,0 +1,156 @@
+{
+    "events": [
+        {
+            "timestamp": 1767751775203,
+            "message": "{\"duration\":\"0ms\",\"environment\":\"production\",\"hostname\":\"ip-172-31-42-105.ec2.internal\",\"ip\":\"::ffff:172.31.13.26\",\"level\":\"info\",\"message\":\"API request\",\"method\":\"GET\",\"pid\":1,\"service\":\"mentalspace-backend\",\"statusCode\":200,\"timestamp\":\"2026-01-07 02:09:35.202\",\"url\":\"/live\",\"userAgent\":\"ELB-HealthChecker/2.0\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767751777300
+        },
+        {
+            "timestamp": 1767751800285,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767751802306
+        },
+        {
+            "timestamp": 1767751860135,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767751862302
+        },
+        {
+            "timestamp": 1767751920109,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767751922301
+        },
+        {
+            "timestamp": 1767751980112,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767751982307
+        },
+        {
+            "timestamp": 1767752023823,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767752027306
+        },
+        {
+            "timestamp": 1767752040113,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752042304
+        },
+        {
+            "timestamp": 1767752100112,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752102303
+        },
+        {
+            "timestamp": 1767752100208,
+            "message": "{\"action\":\"REMINDERS_PROCESSED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-42-105.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Reminder processing completed\",\"pid\":1,\"results\":{\"emailSent\":0,\"failed\":0,\"smsSent\":0,\"total\":0},\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 02:15:00.208\"}",
+            "ingestionTime": 1767752102303
+        },
+        {
+            "timestamp": 1767752160184,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752162303
+        },
+        {
+            "timestamp": 1767752220112,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752222308
+        },
+        {
+            "timestamp": 1767752280094,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752282306
+        },
+        {
+            "timestamp": 1767752323850,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767752327303
+        },
+        {
+            "timestamp": 1767752340097,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752342299
+        },
+        {
+            "timestamp": 1767752400179,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752402315
+        },
+        {
+            "timestamp": 1767752406021,
+            "message": "{\"action\":\"SESSION_TERMINATED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-42-105.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Session terminated\",\"pid\":1,\"service\":\"mentalspace-audit\",\"sessionId\":\"31e15581-5d33-45ac-b3ab-5bfac9a5ee7a\",\"timestamp\":\"2026-01-07 02:20:06.020\",\"userId\":\"245fd0f5-1b4e-4efd-86ca-944cd4899fdf\"}",
+            "ingestionTime": 1767752407288
+        },
+        {
+            "timestamp": 1767752460084,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752462293
+        },
+        {
+            "timestamp": 1767752520214,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752522303
+        },
+        {
+            "timestamp": 1767752580121,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752582301
+        },
+        {
+            "timestamp": 1767752623823,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767752627303
+        },
+        {
+            "timestamp": 1767752640120,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752642300
+        },
+        {
+            "timestamp": 1767752700120,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752702301
+        },
+        {
+            "timestamp": 1767752760107,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752762305
+        },
+        {
+            "timestamp": 1767752820081,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752822305
+        },
+        {
+            "timestamp": 1767752880223,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752882301
+        },
+        {
+            "timestamp": 1767752923847,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767752927303
+        },
+        {
+            "timestamp": 1767752940070,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767752942365
+        },
+        {
+            "timestamp": 1767752963492,
+            "message": "(node:1) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 31 error listeners added to [Console]. MaxListeners is 30. Use emitter.setMaxListeners() to increase limit",
+            "ingestionTime": 1767752967306
+        },
+        {
+            "timestamp": 1767752963492,
+            "message": "(Use `node --trace-warnings ...` to show where the warning was created)",
+            "ingestionTime": 1767752967306
+        },
+        {
+            "timestamp": 1767752963493,
+            "message": "(node:1) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 31 finish listeners added to [Console]. MaxListeners is 30. Use emitter.setMaxListeners() to increase limit",
+            "ingestionTime": 1767752967306
+        }
+    ],
+    "nextForwardToken": "f/39422208412804799689698813760461589084278528298364567554/s",
+    "nextBackwardToken": "b/39422181913052287727744639466353806331684679354189021185/s"
+}

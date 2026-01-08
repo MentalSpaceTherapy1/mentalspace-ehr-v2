@@ -8,6 +8,59 @@ const router = Router();
 router.use(authenticate);
 
 // ============================================================================
+// CHANNEL ROUTES (MUST come before /:id routes to prevent path conflicts)
+// ============================================================================
+
+/**
+ * @route   POST /api/v1/messages/channels
+ * @desc    Create a new channel
+ * @access  Private
+ */
+router.post('/channels', messagingController.createChannel);
+
+/**
+ * @route   GET /api/v1/messages/channels
+ * @desc    Get channels for current user
+ * @access  Private
+ */
+router.get('/channels', messagingController.getChannels);
+
+/**
+ * @route   GET /api/v1/messages/channels/:id
+ * @desc    Get channel by ID
+ * @access  Private
+ */
+router.get('/channels/:id', messagingController.getChannelById);
+
+/**
+ * @route   PUT /api/v1/messages/channels/:id
+ * @desc    Update a channel
+ * @access  Private
+ */
+router.put('/channels/:id', messagingController.updateChannel);
+
+/**
+ * @route   POST /api/v1/messages/channels/:id/members
+ * @desc    Add member to channel
+ * @access  Private
+ */
+router.post('/channels/:id/members', messagingController.addMember);
+
+/**
+ * @route   DELETE /api/v1/messages/channels/:id/members/:memberId
+ * @desc    Remove member from channel
+ * @access  Private
+ */
+router.delete('/channels/:id/members/:memberId', messagingController.removeMember);
+
+/**
+ * @route   PUT /api/v1/messages/channels/:id/archive
+ * @desc    Archive a channel
+ * @access  Private
+ */
+router.put('/channels/:id/archive', messagingController.archiveChannel);
+
+// ============================================================================
 // MESSAGE ROUTES
 // ============================================================================
 
@@ -66,58 +119,5 @@ router.put('/:id/archive', messagingController.archiveMessage);
  * @access  Private
  */
 router.delete('/:id', messagingController.deleteMessage);
-
-// ============================================================================
-// CHANNEL ROUTES
-// ============================================================================
-
-/**
- * @route   POST /api/v1/messages/channels
- * @desc    Create a new channel
- * @access  Private
- */
-router.post('/channels', messagingController.createChannel);
-
-/**
- * @route   GET /api/v1/messages/channels
- * @desc    Get channels for current user
- * @access  Private
- */
-router.get('/channels', messagingController.getChannels);
-
-/**
- * @route   GET /api/v1/messages/channels/:id
- * @desc    Get channel by ID
- * @access  Private
- */
-router.get('/channels/:id', messagingController.getChannelById);
-
-/**
- * @route   PUT /api/v1/messages/channels/:id
- * @desc    Update a channel
- * @access  Private
- */
-router.put('/channels/:id', messagingController.updateChannel);
-
-/**
- * @route   POST /api/v1/messages/channels/:id/members
- * @desc    Add member to channel
- * @access  Private
- */
-router.post('/channels/:id/members', messagingController.addMember);
-
-/**
- * @route   DELETE /api/v1/messages/channels/:id/members/:memberId
- * @desc    Remove member from channel
- * @access  Private
- */
-router.delete('/channels/:id/members/:memberId', messagingController.removeMember);
-
-/**
- * @route   PUT /api/v1/messages/channels/:id/archive
- * @desc    Archive a channel
- * @access  Private
- */
-router.put('/channels/:id/archive', messagingController.archiveChannel);
 
 export default router;

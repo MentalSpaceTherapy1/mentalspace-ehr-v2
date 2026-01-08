@@ -209,7 +209,7 @@ export const createCharge = async (req: Request, res: Response) => {
           auditLogger.info('Charge synced to AdvancedMD', {
             userId,
             chargeId: charge.id,
-            amdChargeId: amdSyncResult.amdChargeId,
+            advancedMDChargeId: amdSyncResult.advancedMDChargeId,
             action: 'CHARGE_AMD_SYNC',
           });
         } else {

@@ -200,6 +200,117 @@ export async function verifyEmail(token: string) {
 }
 
 // ============================================================================
+// ACTIVATE ACCOUNT (For staff-invited clients)
+// ============================================================================
+
+/**
+ * Activate a portal account using the invitation token
+ * This is for clients who were invited by staff and need to set their password
+ * Requires MRN for identity verification (two-factor: email access + MRN knowledge)
+ */
+export async function activateAccount(data: {
+  token: string;
+  email: string;
+  password: string;
+  mrn: string; // Required for identity verification
+}) {
+  try {
+    // Find portal account by verification token
+    const portalAccount = await prisma.portalAccount.findFirst({
+      where: {
+        verificationToken: data.token,
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            medicalRecordNumber: true,
+          },
+        },
+      },
+    });
+
+    if (!portalAccount) {
+      throw new AppError('Invalid or expired invitation token. Please contact your therapist for a new invitation.', 400);
+    }
+
+    // Verify email matches (case-insensitive)
+    if (portalAccount.email.toLowerCase() !== data.email.toLowerCase()) {
+      throw new AppError('Email address does not match the invitation. Please use the email address the invitation was sent to.', 400);
+    }
+
+    // Verify MRN matches for identity confirmation
+    // The client.medicalRecordNumber is decrypted by the PHI middleware
+    if (portalAccount.client.medicalRecordNumber !== data.mrn) {
+      logger.warn('MRN mismatch during account activation', {
+        portalAccountId: portalAccount.id,
+        clientId: portalAccount.client.id,
+      });
+      throw new AppError('MRN does not match our records. Please check your Medical Record Number and try again.', 400);
+    }
+
+    // Check if account is already active
+    if (portalAccount.accountStatus === 'ACTIVE' && portalAccount.emailVerified) {
+      throw new AppError('This account has already been activated. Please log in.', 400);
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(data.password, TOKEN_CONFIG.BCRYPT_SALT_ROUNDS);
+
+    // Calculate password expiration (6 months)
+    const passwordExpiresAt = new Date();
+    passwordExpiresAt.setMonth(passwordExpiresAt.getMonth() + PERMANENT_PASSWORD_EXPIRY_MONTHS);
+
+    // Update the portal account
+    const updatedAccount = await prisma.portalAccount.update({
+      where: { id: portalAccount.id },
+      data: {
+        password: hashedPassword,
+        emailVerified: true,
+        verificationToken: null,
+        accountStatus: 'ACTIVE',
+        portalAccessGranted: true,
+        mustChangePassword: false,
+        tempPasswordExpiry: null,
+        passwordExpiresAt,
+        passwordChangedAt: new Date(),
+        grantedDate: new Date(),
+      },
+    });
+
+    logger.info(`Portal account activated for client ${portalAccount.client.id}`, {
+      portalAccountId: portalAccount.id,
+      clientId: portalAccount.client.id,
+    });
+
+    // Send welcome/activation confirmation email
+    const portalUrl = `${PORTAL_URL}/login`;
+    const emailTemplate = EmailTemplates.clientAccountActivated(
+      portalAccount.client.firstName,
+      portalUrl
+    );
+
+    await sendEmail({
+      to: updatedAccount.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+
+    return {
+      success: true,
+      message: 'Your account has been activated! You can now log in.',
+      email: updatedAccount.email,
+      clientName: `${portalAccount.client.firstName} ${portalAccount.client.lastName}`,
+    };
+  } catch (error) {
+    logger.error('Error activating portal account:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
 // RESEND VERIFICATION EMAIL
 // ============================================================================
 
@@ -973,14 +1084,31 @@ export async function adminCreateTempPassword(clientId: string, adminUserId: str
       `${PORTAL_URL}/login`
     );
 
+    // DEBUG: Log before sending email
+    console.log('[AUTH DEBUG] About to send temp password email:', {
+      to: portalAccount.email,
+      subject: emailTemplate.subject,
+      clientName: portalAccount.client.firstName,
+      hasHtml: !!emailTemplate.html,
+    });
+
     const emailSent = await sendEmail({
       to: portalAccount.email,
       subject: emailTemplate.subject,
       html: emailTemplate.html,
     });
 
+    // DEBUG: Log result of email send
+    console.log('[AUTH DEBUG] Email send result:', {
+      emailSent,
+      to: portalAccount.email,
+    });
+
     if (!emailSent) {
       logger.warn(`Failed to send temp password email to ${portalAccount.email}`);
+      console.log('[AUTH DEBUG] Email send FAILED for:', portalAccount.email);
+    } else {
+      console.log('[AUTH DEBUG] Email send SUCCESS for:', portalAccount.email);
     }
 
     logger.info(`Admin ${adminUserId} created temp password for client ${clientId}`, {

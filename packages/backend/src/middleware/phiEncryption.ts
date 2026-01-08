@@ -130,11 +130,10 @@ export const PHI_FIELDS_BY_MODEL: Record<string, string[]> = {
     'notes',
   ],
 
-  // Portal Account - Credentials
-  PortalAccount: [
-    'verificationToken',
-    'passwordResetToken',
-  ],
+  // Portal Account - NO PHI encryption needed
+  // Note: verificationToken and passwordResetToken are NOT PHI
+  // They are security tokens that need to be matched directly with URL tokens
+  // Encrypting them breaks the token lookup flow
 
   // Prior Authorization - Clinical and Insurance PHI
   PriorAuthorization: [
@@ -322,6 +321,23 @@ function getRelationModelName(parentModel: string, fieldName: string): string | 
     Appointment: {
       client: 'Client',
       clinician: 'User',
+    },
+    // Portal and related models - need to decrypt nested client PHI
+    PortalAccount: {
+      client: 'Client',
+    },
+    TelehealthSession: {
+      client: 'Client',
+      clinician: 'User',
+    },
+    Charge: {
+      client: 'Client',
+    },
+    Payment: {
+      client: 'Client',
+    },
+    Claim: {
+      client: 'Client',
     },
   };
 

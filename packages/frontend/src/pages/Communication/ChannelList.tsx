@@ -37,12 +37,14 @@ import { useMessaging } from '../../hooks/useMessaging';
 interface Channel {
   id: string;
   name: string;
-  type: 'DIRECT' | 'GROUP' | 'TEAM' | 'BROADCAST';
+  channelType: 'DEPARTMENT' | 'TEAM' | 'PROJECT' | 'GENERAL' | 'ANNOUNCEMENTS';
   description?: string;
-  memberCount: number;
-  unreadCount: number;
-  lastMessageAt?: string;
+  memberIds?: string[];
+  adminIds?: string[];
+  isPrivate?: boolean;
+  isArchived?: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface ChannelListProps {
@@ -83,34 +85,38 @@ const ChannelList: React.FC<ChannelListProps> = ({
   const [openDialog, setOpenDialog] = useState(false);
   const [newChannel, setNewChannel] = useState({
     name: '',
-    type: 'GROUP',
+    channelType: 'GENERAL' as 'DEPARTMENT' | 'TEAM' | 'PROJECT' | 'GENERAL' | 'ANNOUNCEMENTS',
     description: '',
   });
 
-  const getChannelIcon = (type: string) => {
-    switch (type) {
-      case 'DIRECT':
-        return <PersonIcon />;
-      case 'GROUP':
-        return <GroupIcon />;
-      case 'TEAM':
+  const getChannelIcon = (channelType: string) => {
+    switch (channelType) {
+      case 'DEPARTMENT':
         return <BusinessIcon />;
-      case 'BROADCAST':
+      case 'TEAM':
+        return <GroupIcon />;
+      case 'PROJECT':
+        return <BusinessIcon />;
+      case 'GENERAL':
+        return <GroupIcon />;
+      case 'ANNOUNCEMENTS':
         return <CampaignIcon />;
       default:
         return <GroupIcon />;
     }
   };
 
-  const getChannelColor = (type: string) => {
-    switch (type) {
-      case 'DIRECT':
+  const getChannelColor = (channelType: string) => {
+    switch (channelType) {
+      case 'DEPARTMENT':
         return '#3b82f6';
-      case 'GROUP':
-        return '#8b5cf6';
       case 'TEAM':
         return '#10b981';
-      case 'BROADCAST':
+      case 'PROJECT':
+        return '#8b5cf6';
+      case 'GENERAL':
+        return '#6b7280';
+      case 'ANNOUNCEMENTS':
         return '#f59e0b';
       default:
         return '#6b7280';
@@ -119,14 +125,16 @@ const ChannelList: React.FC<ChannelListProps> = ({
 
   const handleCreateChannel = async () => {
     try {
+      // TODO: Add proper member selection UI. For now, use current user as admin/member
       await createChannel({
         name: newChannel.name,
-        type: newChannel.type,
-        description: newChannel.description,
-        memberIds: [], // Add member selection logic
+        channelType: newChannel.channelType,
+        description: newChannel.description || undefined,
+        memberIds: [], // Will be populated from member selection UI
+        adminIds: [], // Will be populated - current user should be admin
       });
       setOpenDialog(false);
-      setNewChannel({ name: '', type: 'GROUP', description: '' });
+      setNewChannel({ name: '', channelType: 'GENERAL', description: '' });
     } catch (err) {
       console.error('Failed to create channel:', err);
     }
@@ -181,14 +189,14 @@ const ChannelList: React.FC<ChannelListProps> = ({
                         width: 48,
                         height: 48,
                         borderRadius: 2,
-                        bgcolor: alpha(getChannelColor(channel.type), 0.1),
+                        bgcolor: alpha(getChannelColor(channel.channelType), 0.1),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: getChannelColor(channel.type),
+                        color: getChannelColor(channel.channelType),
                       }}
                     >
-                      {getChannelIcon(channel.type)}
+                      {getChannelIcon(channel.channelType)}
                     </Box>
 
                     <Box sx={{ flex: 1 }}>
@@ -196,18 +204,7 @@ const ChannelList: React.FC<ChannelListProps> = ({
                         <Typography variant="subtitle1" fontWeight={600}>
                           {channel.name}
                         </Typography>
-                        {channel.unreadCount > 0 && (
-                          <Badge
-                            badgeContent={channel.unreadCount}
-                            sx={{
-                              '& .MuiBadge-badge': {
-                                bgcolor: '#ef4444',
-                                color: 'white',
-                                fontWeight: 600,
-                              },
-                            }}
-                          />
-                        )}
+                        {/* Unread count would be calculated from messages */}
                       </Box>
 
                       {channel.description && (
@@ -223,18 +220,18 @@ const ChannelList: React.FC<ChannelListProps> = ({
 
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Chip
-                          label={channel.type}
+                          label={channel.channelType}
                           size="small"
                           sx={{
-                            bgcolor: alpha(getChannelColor(channel.type), 0.1),
-                            color: getChannelColor(channel.type),
+                            bgcolor: alpha(getChannelColor(channel.channelType), 0.1),
+                            color: getChannelColor(channel.channelType),
                             fontWeight: 600,
                             fontSize: '0.7rem',
                           }}
                         />
                         <Chip
                           icon={<GroupIcon sx={{ fontSize: 14 }} />}
-                          label={`${channel.memberCount} members`}
+                          label={`${channel.memberIds?.length || 0} members`}
                           size="small"
                           sx={{
                             bgcolor: alpha('#6b7280', 0.1),
@@ -292,32 +289,38 @@ const ChannelList: React.FC<ChannelListProps> = ({
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Channel Type</InputLabel>
             <Select
-              value={newChannel.type}
-              onChange={(e) => setNewChannel({ ...newChannel, type: e.target.value })}
+              value={newChannel.channelType}
+              onChange={(e) => setNewChannel({ ...newChannel, channelType: e.target.value as Channel['channelType'] })}
               label="Channel Type"
             >
-              <MenuItem value="DIRECT">
+              <MenuItem value="GENERAL">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <PersonIcon sx={{ color: '#3b82f6' }} />
-                  Direct Message
+                  <GroupIcon sx={{ color: '#6b7280' }} />
+                  General
                 </Box>
               </MenuItem>
-              <MenuItem value="GROUP">
+              <MenuItem value="DEPARTMENT">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <GroupIcon sx={{ color: '#8b5cf6' }} />
-                  Group Chat
+                  <BusinessIcon sx={{ color: '#3b82f6' }} />
+                  Department
                 </Box>
               </MenuItem>
               <MenuItem value="TEAM">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <BusinessIcon sx={{ color: '#10b981' }} />
-                  Team Channel
+                  <GroupIcon sx={{ color: '#10b981' }} />
+                  Team
                 </Box>
               </MenuItem>
-              <MenuItem value="BROADCAST">
+              <MenuItem value="PROJECT">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BusinessIcon sx={{ color: '#8b5cf6' }} />
+                  Project
+                </Box>
+              </MenuItem>
+              <MenuItem value="ANNOUNCEMENTS">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <CampaignIcon sx={{ color: '#f59e0b' }} />
-                  Broadcast
+                  Announcements
                 </Box>
               </MenuItem>
             </Select>

@@ -124,6 +124,10 @@ export const auditLogger = winston.createLogger({
     logType: 'AUDIT',
   },
   transports: [
+    // Console transport for CloudWatch in containerized environments
+    new winston.transports.Console({
+      format: logFormat,
+    }),
     // Audit logs - critical for compliance, keep longer
     new winston.transports.File({
       filename: path.join(logsDir, 'audit.log'),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -14,6 +14,23 @@ import {
 } from 'lucide-react';
 import { useStaff, Staff } from '../../hooks/useStaff';
 
+// Custom hook for debounced value
+function useDebouncedValue<T>(value: T, delay: number = 300): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 const StaffDirectory: React.FC = () => {
   const navigate = useNavigate();
   const { staff, loading, error, fetchStaff } = useStaff();
@@ -23,14 +40,17 @@ const StaffDirectory: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Debounce search term to avoid excessive API calls
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
+
   useEffect(() => {
     fetchStaff({
-      search: searchTerm,
+      search: debouncedSearchTerm,
       department: departmentFilter,
       role: roleFilter,
       status: statusFilter,
     });
-  }, [searchTerm, departmentFilter, roleFilter, statusFilter]);
+  }, [debouncedSearchTerm, departmentFilter, roleFilter, statusFilter]);
 
   const departments = Array.from(new Set(staff.map((s) => s.department))).filter(Boolean);
   const roles = Array.from(new Set(staff.map((s) => s.jobTitle))).filter(Boolean);
@@ -243,8 +263,17 @@ const StaffDirectory: React.FC = () => {
           {staff.map((member) => (
             <div
               key={member.id}
+              role="button"
+              tabIndex={0}
               onClick={() => navigate(`/staff/${member.id}`)}
-              className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 overflow-hidden group hover:scale-105 transform"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate(`/staff/${member.id}`);
+                }
+              }}
+              aria-label={`View ${member.firstName} ${member.lastName}'s profile`}
+              className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 overflow-hidden group hover:scale-105 transform focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {/* Card Header with Gradient */}
               <div className="h-24 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 relative">

@@ -207,7 +207,16 @@ export const getConfig = async (): Promise<AdvancedMDConfig> => {
   const response = await api.get<ApiResponse<AdvancedMDConfig>>(
     '/advancedmd/sync/config'
   );
-  return response.data.data;
+  // Ensure we return a valid config object even if response is incomplete
+  return response.data?.data ?? {
+    officeKey: '******',
+    username: '******',
+    environment: 'sandbox',
+    autoSyncEnabled: false,
+    syncFrequency: 'manual',
+    connectionStatus: 'unknown',
+    lastConnectionTest: null,
+  };
 };
 
 /**
@@ -218,7 +227,13 @@ export const testConnection = async (): Promise<ConnectionTestResult> => {
   const response = await api.post<ApiResponse<ConnectionTestResult>>(
     '/advancedmd/sync/test-connection'
   );
-  return response.data.data;
+  // Ensure we return a valid ConnectionTestResult even if response.data.data is undefined
+  return response.data?.data ?? {
+    success: false,
+    connected: false,
+    timestamp: new Date().toISOString(),
+    message: 'Invalid response from server',
+  };
 };
 
 // ============================================================================

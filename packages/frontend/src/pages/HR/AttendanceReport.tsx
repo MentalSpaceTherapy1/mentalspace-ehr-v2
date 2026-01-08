@@ -297,7 +297,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box>
                     <Typography variant="h3" sx={{ fontWeight: 700 }}>
-                      {stats.totalHours.toFixed(0)}
+                      {(stats.totalHours ?? 0).toFixed(0)}
                     </Typography>
                     <Typography variant="body2">Total Hours</Typography>
                   </Box>
@@ -313,7 +313,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box>
                     <Typography variant="h3" sx={{ fontWeight: 700 }}>
-                      {stats.overtimeHours.toFixed(0)}
+                      {(stats.overtimeHours ?? 0).toFixed(0)}
                     </Typography>
                     <Typography variant="body2">Overtime Hours</Typography>
                   </Box>
@@ -329,7 +329,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box>
                     <Typography variant="h3" sx={{ fontWeight: 700 }}>
-                      {stats.averageHoursPerDay.toFixed(1)}
+                      {(stats.averageHoursPerDay ?? 0).toFixed(1)}
                     </Typography>
                     <Typography variant="body2">Avg Hours/Day</Typography>
                   </Box>
@@ -465,7 +465,7 @@ const AttendanceReport: React.FC<AttendanceReportProps> = ({
                           High Overtime Hours
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
-                          Employee has accumulated {stats.overtimeHours.toFixed(0)} hours of overtime.
+                          Employee has accumulated {(stats.overtimeHours ?? 0).toFixed(0)} hours of overtime.
                           Consider workload balancing or additional support.
                         </Typography>
                       </Box>

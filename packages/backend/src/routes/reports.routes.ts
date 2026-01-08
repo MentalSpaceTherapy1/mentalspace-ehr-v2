@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import {
+  handleNaturalLanguageQuery,
+  getQueryExamples,
+  getSuggestions,
+} from '../controllers/natural-language-reports.controller';
+import {
   // Dashboard Quick Stats
   getReportQuickStats,
 
@@ -96,6 +101,14 @@ router.use(authenticate);
 
 // Quick stats for dashboard
 router.get('/quick-stats', getReportQuickStats);
+
+/**
+ * NATURAL LANGUAGE REPORTS (AI-powered)
+ * Query reports using plain English
+ */
+router.post('/natural-language', handleNaturalLanguageQuery);
+router.get('/natural-language/examples', getQueryExamples);
+router.get('/natural-language/suggest', getSuggestions);
 
 /**
  * FINANCIAL REPORTS (15 routes)

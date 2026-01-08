@@ -40,7 +40,66 @@ export interface UpdatePTOBalanceDto {
   accrualRate?: number;
 }
 
+// Valid PTO status transitions
+const VALID_PTO_TRANSITIONS: Record<PTOStatus, PTOStatus[]> = {
+  [PTOStatus.PENDING]: [PTOStatus.APPROVED, PTOStatus.DENIED, PTOStatus.CANCELLED],
+  [PTOStatus.APPROVED]: [PTOStatus.CANCELLED],
+  [PTOStatus.DENIED]: [],
+  [PTOStatus.CANCELLED]: [],
+};
+
 class PTOService {
+  /**
+   * Validate status transition
+   */
+  private validateStatusTransition(currentStatus: PTOStatus, newStatus: PTOStatus): void {
+    const validNextStatuses = VALID_PTO_TRANSITIONS[currentStatus] || [];
+    if (!validNextStatuses.includes(newStatus)) {
+      throw new Error(`Cannot transition from ${currentStatus} to ${newStatus}`);
+    }
+  }
+
+  /**
+   * Check for overlapping approved PTO requests
+   */
+  private async checkForOverlappingPTO(userId: string, startDate: Date, endDate: Date, excludeId?: string): Promise<void> {
+    const overlapping = await prisma.pTORequest.findFirst({
+      where: {
+        userId,
+        status: PTOStatus.APPROVED,
+        id: excludeId ? { not: excludeId } : undefined,
+        OR: [
+          {
+            startDate: { lte: endDate },
+            endDate: { gte: startDate },
+          },
+        ],
+      },
+    });
+
+    if (overlapping) {
+      throw new Error('You already have approved PTO during this period');
+    }
+  }
+
+  /**
+   * Validate employee is not terminated
+   */
+  private async validateEmployeeStatus(userId: string): Promise<void> {
+    const employee = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { employmentStatus: true, isActive: true },
+    });
+
+    if (!employee) {
+      throw new Error('Employee not found');
+    }
+
+    if (employee.employmentStatus === 'TERMINATED' || !employee.isActive) {
+      throw new Error('Terminated or inactive employees cannot submit PTO requests');
+    }
+  }
+
   /**
    * Calculate business days between two dates (excluding weekends)
    */
@@ -63,10 +122,16 @@ class PTOService {
    * Create a new PTO request
    */
   async createRequest(data: CreatePTORequestDto) {
+    // Validate employee status (not terminated)
+    await this.validateEmployeeStatus(data.userId);
+
     // Validate dates
     if (data.startDate > data.endDate) {
       throw new Error('Start date must be before end date');
     }
+
+    // Check for overlapping approved PTO
+    await this.checkForOverlappingPTO(data.userId, data.startDate, data.endDate);
 
     // Calculate total days
     const totalDays = this.calculateBusinessDays(data.startDate, data.endDate);
@@ -289,53 +354,87 @@ class PTOService {
   }
 
   /**
-   * Approve a PTO request
+   * Approve a PTO request (atomic transaction)
    */
   async approveRequest(id: string, data: ApprovePTORequestDto) {
-    const request = await prisma.pTORequest.findUnique({
-      where: { id },
-    });
+    // Use transaction for atomic balance deduction and status update
+    return prisma.$transaction(async (tx) => {
+      const request = await tx.pTORequest.findUnique({
+        where: { id },
+      });
 
-    if (!request) {
-      throw new Error('PTO request not found');
-    }
+      if (!request) {
+        throw new Error('PTO request not found');
+      }
 
-    if (request.status !== PTOStatus.PENDING) {
-      throw new Error('Request is not pending approval');
-    }
+      // Validate status transition
+      this.validateStatusTransition(request.status, PTOStatus.APPROVED);
 
-    // Deduct from balance
-    await this.deductFromBalance(request.userId, request.requestType, request.totalDays.toNumber());
+      // Check for overlapping approved PTO before approving
+      await this.checkForOverlappingPTO(request.userId, request.startDate, request.endDate, id);
 
-    const updatedRequest = await prisma.pTORequest.update({
-      where: { id },
-      data: {
-        status: PTOStatus.APPROVED,
-        approvedById: data.approvedById,
-        approvalDate: new Date(),
-        approvalNotes: data.approvalNotes,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+      // Get and update balance within transaction
+      const balance = await tx.pTOBalance.findUnique({
+        where: { userId: request.userId },
+      });
+
+      if (balance) {
+        const updateData: Prisma.PTOBalanceUpdateInput = {};
+
+        switch (request.requestType) {
+          case AbsenceType.PTO:
+            updateData.ptoBalance = balance.ptoBalance.minus(request.totalDays);
+            break;
+          case AbsenceType.SICK:
+            updateData.sickBalance = balance.sickBalance.minus(request.totalDays);
+            break;
+          case AbsenceType.VACATION:
+            updateData.vacationBalance = balance.vacationBalance.minus(request.totalDays);
+            break;
+          default:
+            // No deduction for FMLA, BEREAVEMENT, etc.
+            break;
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await tx.pTOBalance.update({
+            where: { userId: request.userId },
+            data: updateData,
+          });
+        }
+      }
+
+      // Update request status
+      const updatedRequest = await tx.pTORequest.update({
+        where: { id },
+        data: {
+          status: PTOStatus.APPROVED,
+          approvedById: data.approvedById,
+          approvalDate: new Date(),
+          approvalNotes: data.approvalNotes,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          approvedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
           },
         },
-        approvedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
+      });
 
-    return updatedRequest;
+      return updatedRequest;
+    });
   }
 
   /**
@@ -350,9 +449,8 @@ class PTOService {
       throw new Error('PTO request not found');
     }
 
-    if (request.status !== PTOStatus.PENDING) {
-      throw new Error('Request is not pending approval');
-    }
+    // Validate status transition
+    this.validateStatusTransition(request.status, PTOStatus.DENIED);
 
     const updatedRequest = await prisma.pTORequest.update({
       where: { id },
@@ -386,44 +484,73 @@ class PTOService {
   }
 
   /**
-   * Cancel a PTO request
+   * Cancel a PTO request (atomic transaction)
    */
   async cancelRequest(id: string) {
-    const request = await prisma.pTORequest.findUnique({
-      where: { id },
-    });
+    return prisma.$transaction(async (tx) => {
+      const request = await tx.pTORequest.findUnique({
+        where: { id },
+      });
 
-    if (!request) {
-      throw new Error('PTO request not found');
-    }
+      if (!request) {
+        throw new Error('PTO request not found');
+      }
 
-    if (request.status === PTOStatus.CANCELLED) {
-      throw new Error('Request is already cancelled');
-    }
+      // Validate status transition
+      this.validateStatusTransition(request.status, PTOStatus.CANCELLED);
 
-    // If request was approved, restore balance
-    if (request.status === PTOStatus.APPROVED) {
-      await this.restoreBalance(request.userId, request.requestType, request.totalDays.toNumber());
-    }
+      // If request was approved, restore balance within transaction
+      if (request.status === PTOStatus.APPROVED) {
+        const balance = await tx.pTOBalance.findUnique({
+          where: { userId: request.userId },
+        });
 
-    const updatedRequest = await prisma.pTORequest.update({
-      where: { id },
-      data: {
-        status: PTOStatus.CANCELLED,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+        if (balance) {
+          const updateData: Prisma.PTOBalanceUpdateInput = {};
+
+          switch (request.requestType) {
+            case AbsenceType.PTO:
+              updateData.ptoBalance = balance.ptoBalance.plus(request.totalDays);
+              break;
+            case AbsenceType.SICK:
+              updateData.sickBalance = balance.sickBalance.plus(request.totalDays);
+              break;
+            case AbsenceType.VACATION:
+              updateData.vacationBalance = balance.vacationBalance.plus(request.totalDays);
+              break;
+            default:
+              // No restoration for FMLA, BEREAVEMENT, etc.
+              break;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            await tx.pTOBalance.update({
+              where: { userId: request.userId },
+              data: updateData,
+            });
+          }
+        }
+      }
+
+      const updatedRequest = await tx.pTORequest.update({
+        where: { id },
+        data: {
+          status: PTOStatus.CANCELLED,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    return updatedRequest;
+      return updatedRequest;
+    });
   }
 
   /**

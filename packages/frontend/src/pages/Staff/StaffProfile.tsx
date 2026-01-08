@@ -20,18 +20,23 @@ import {
   CheckCircle,
   AlertCircle,
   FileText,
+  X,
+  Plus,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useStaff, useStaffCredentials, useStaffTraining, Staff } from '../../hooks/useStaff';
 
 const StaffProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getStaffById } = useStaff();
-  const { credentials, loading: credLoading } = useStaffCredentials(id || '');
-  const { training, loading: trainingLoading } = useStaffTraining(id || '');
+  const { credentials, loading: credLoading, fetchCredentials, addCredential } = useStaffCredentials(id || '');
+  const { training, loading: trainingLoading, fetchTraining, addTraining } = useStaffTraining(id || '');
   const [staff, setStaff] = useState<Staff | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'credentials' | 'training' | 'performance'>('overview');
+  const [showCredentialModal, setShowCredentialModal] = useState(false);
+  const [showTrainingModal, setShowTrainingModal] = useState(false);
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -157,7 +162,7 @@ const StaffProfile: React.FC = () => {
                   staff.employmentStatus
                 )}`}
               >
-                {staff.employmentStatus.replace('_', ' ')}
+                {staff.employmentStatus?.replace('_', ' ') || 'N/A'}
               </div>
             </div>
 
@@ -166,19 +171,19 @@ const StaffProfile: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 {staff.firstName} {staff.lastName}
               </h1>
-              <p className="text-xl text-gray-600 mb-4">{staff.jobTitle}</p>
+              <p className="text-xl text-gray-600 mb-4">{staff.jobTitle || 'No title'}</p>
               <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-blue-500" />
-                  <span>{staff.department}</span>
+                  <span>{staff.department || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-4 h-4 text-purple-500" />
-                  <span>{staff.employmentType.replace('_', ' ')}</span>
+                  <span>{staff.employmentType?.replace('_', ' ') || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-green-500" />
-                  <span>Hired {new Date(staff.hireDate).toLocaleDateString()}</span>
+                  <span>Hired {staff.hireDate ? new Date(staff.hireDate).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -232,37 +237,37 @@ const StaffProfile: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Department</label>
-                  <p className="text-lg text-gray-900 mt-1">{staff.department}</p>
+                  <p className="text-lg text-gray-900 mt-1">{staff.department || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Job Title</label>
-                  <p className="text-lg text-gray-900 mt-1">{staff.jobTitle}</p>
+                  <p className="text-lg text-gray-900 mt-1">{staff.jobTitle || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Employment Type</label>
                   <p className="text-lg text-gray-900 mt-1">
-                    {staff.employmentType.replace('_', ' ')}
+                    {staff.employmentType?.replace('_', ' ') || 'N/A'}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Employment Status</label>
                   <p className="text-lg text-gray-900 mt-1">
-                    {staff.employmentStatus.replace('_', ' ')}
+                    {staff.employmentStatus?.replace('_', ' ') || 'N/A'}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Hire Date</label>
                   <p className="text-lg text-gray-900 mt-1">
-                    {new Date(staff.hireDate).toLocaleDateString()}
+                    {staff.hireDate ? new Date(staff.hireDate).toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Years of Service</label>
                   <p className="text-lg text-gray-900 mt-1">
-                    {Math.floor(
+                    {staff.hireDate ? Math.floor(
                       (new Date().getTime() - new Date(staff.hireDate).getTime()) /
                         (1000 * 60 * 60 * 24 * 365)
-                    )}{' '}
+                    ) : 0}{' '}
                     years
                   </p>
                 </div>
@@ -415,8 +420,11 @@ const StaffProfile: React.FC = () => {
               <Award className="w-6 h-6 text-yellow-600" />
               Credentials & Licenses
             </h2>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <FileText className="w-4 h-4" />
+            <button
+              onClick={() => setShowCredentialModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
               Add Credential
             </button>
           </div>
@@ -470,8 +478,11 @@ const StaffProfile: React.FC = () => {
               <GraduationCap className="w-6 h-6 text-blue-600" />
               Training & Certifications
             </h2>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <FileText className="w-4 h-4" />
+            <button
+              onClick={() => setShowTrainingModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
               Add Training
             </button>
           </div>
@@ -498,7 +509,7 @@ const StaffProfile: React.FC = () => {
                         train.status
                       )}`}
                     >
-                      {train.status.replace('_', ' ')}
+                      {train.status?.replace('_', ' ') || 'N/A'}
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -527,6 +538,318 @@ const StaffProfile: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Add Credential Modal */}
+      {showCredentialModal && (
+        <AddCredentialModal
+          staffId={id || ''}
+          onClose={() => setShowCredentialModal(false)}
+          onSuccess={() => {
+            setShowCredentialModal(false);
+            fetchCredentials();
+            toast.success('Credential added successfully');
+          }}
+          addCredential={addCredential}
+        />
+      )}
+
+      {/* Add Training Modal */}
+      {showTrainingModal && (
+        <AddTrainingModal
+          staffId={id || ''}
+          onClose={() => setShowTrainingModal(false)}
+          onSuccess={() => {
+            setShowTrainingModal(false);
+            fetchTraining();
+            toast.success('Training record added successfully');
+          }}
+          addTraining={addTraining}
+        />
+      )}
+    </div>
+  );
+};
+
+// Inline Add Credential Modal Component (to be moved to separate file in Phase 5)
+interface AddCredentialModalProps {
+  staffId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+  addCredential: (data: Partial<import('../../hooks/useStaff').Credential>) => Promise<import('../../hooks/useStaff').Credential | null>;
+}
+
+const AddCredentialModal: React.FC<AddCredentialModalProps> = ({ staffId, onClose, onSuccess, addCredential }) => {
+  const [formData, setFormData] = useState({
+    credentialType: '',
+    licenseNumber: '',
+    issuingOrganization: '',
+    issueDate: '',
+    expirationDate: '',
+    status: 'PENDING' as 'ACTIVE' | 'EXPIRED' | 'PENDING',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.credentialType || !formData.issuingOrganization || !formData.issueDate) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await addCredential({
+        ...formData,
+        staffId,
+      });
+      if (result) {
+        onSuccess();
+      } else {
+        toast.error('Failed to add credential');
+      }
+    } catch (error) {
+      toast.error('Failed to add credential');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Add Credential</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Credential Type <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.credentialType}
+              onChange={(e) => setFormData({ ...formData, credentialType: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., Licensed Clinical Psychologist"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">License Number</label>
+            <input
+              type="text"
+              value={formData.licenseNumber}
+              onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="PSY12345"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Issuing Organization <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.issuingOrganization}
+              onChange={(e) => setFormData({ ...formData, issuingOrganization: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., State Board of Psychology"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Issue Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={formData.issueDate}
+                onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Expiration Date</label>
+              <input
+                type="date"
+                value={formData.expirationDate}
+                onChange={(e) => setFormData({ ...formData, expirationDate: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="PENDING">Pending</option>
+              <option value="ACTIVE">Active</option>
+              <option value="EXPIRED">Expired</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {submitting ? 'Adding...' : 'Add Credential'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Inline Add Training Modal Component (to be moved to separate file in Phase 5)
+interface AddTrainingModalProps {
+  staffId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+  addTraining: (data: Partial<import('../../hooks/useStaff').Training>) => Promise<import('../../hooks/useStaff').Training | null>;
+}
+
+const AddTrainingModal: React.FC<AddTrainingModalProps> = ({ staffId, onClose, onSuccess, addTraining }) => {
+  const [formData, setFormData] = useState({
+    trainingName: '',
+    trainingType: '',
+    completionDate: '',
+    expirationDate: '',
+    status: 'IN_PROGRESS' as 'COMPLETED' | 'IN_PROGRESS' | 'REQUIRED' | 'OVERDUE',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.trainingName || !formData.trainingType) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await addTraining({
+        ...formData,
+        staffId,
+      });
+      if (result) {
+        onSuccess();
+      } else {
+        toast.error('Failed to add training record');
+      }
+    } catch (error) {
+      toast.error('Failed to add training record');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Add Training</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Training Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.trainingName}
+              onChange={(e) => setFormData({ ...formData, trainingName: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., HIPAA Compliance Training"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Training Type <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.trainingType}
+              onChange={(e) => setFormData({ ...formData, trainingType: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="">Select Type</option>
+              <option value="MANDATORY">Mandatory</option>
+              <option value="CERTIFICATION">Certification</option>
+              <option value="PROFESSIONAL_DEVELOPMENT">Professional Development</option>
+              <option value="COMPLIANCE">Compliance</option>
+              <option value="SKILL_BUILDING">Skill Building</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Completion Date</label>
+              <input
+                type="date"
+                value={formData.completionDate}
+                onChange={(e) => setFormData({ ...formData, completionDate: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Expiration Date</label>
+              <input
+                type="date"
+                value={formData.expirationDate}
+                onChange={(e) => setFormData({ ...formData, expirationDate: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="REQUIRED">Required</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="OVERDUE">Overdue</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {submitting ? 'Adding...' : 'Add Training'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

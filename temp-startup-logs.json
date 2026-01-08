@@ -1,0 +1,6 @@
+{
+    "events": [
+        {
+            "timestamp": 1767236700138,
+            "message": 
+'charmap' codec can't encode character '\u2705' in position 125: character maps to <undefined>

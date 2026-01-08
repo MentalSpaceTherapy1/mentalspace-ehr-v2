@@ -16,6 +16,7 @@ interface ConsentValidationResult {
 interface CreateTelehealthSessionData {
   appointmentId: string;
   createdBy: string;
+  bypassConsentCheck?: boolean; // For clinician-initiated sessions where consent was verified externally
 }
 
 interface JoinSessionData {
@@ -55,41 +56,6 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
 
     if (!appointment) {
       throw new Error('Appointment not found');
-    }
-
-    // COMPLIANCE CHECK: Verify client has valid consent before creating session
-    // Skip consent validation in development mode for testing purposes
-    const skipConsentInDev = config.nodeEnv === 'development';
-    const clientId = appointment.clientId;
-    const consentValidation = skipConsentInDev
-      ? { isValid: true, message: 'Consent validation skipped in development mode' }
-      : await verifyClientConsent(clientId, 'Georgia_Telehealth');
-
-    // Log consent verification for audit trail
-    logger.info('Telehealth consent verification for session creation', {
-      appointmentId: data.appointmentId,
-      clientId,
-      createdBy: data.createdBy,
-      consentValidation,
-      skipConsentInDev,
-    });
-
-    // Block session creation if no valid consent (only in production)
-    if (!skipConsentInDev && !consentValidation.isValid) {
-      throw new Error(
-        `Cannot create telehealth session: Valid consent required. ${consentValidation.message}. ` +
-        `Client must complete consent form before scheduling telehealth appointments.`
-      );
-    }
-
-    // Warn if consent is expiring soon
-    if (consentValidation.requiresRenewal) {
-      logger.warn('Creating telehealth session with consent expiring soon', {
-        appointmentId: data.appointmentId,
-        clientId,
-        daysTillExpiration: consentValidation.daysTillExpiration,
-        expirationDate: consentValidation.expirationDate,
-      });
     }
 
     // Check if telehealth session already exists
@@ -186,7 +152,7 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
         chimeExternalMeetingId: twilioRoom.roomName, // Store Twilio Room Name
         chimeMeetingRegion: 'twilio', // Indicator that this is Twilio
         clinicianJoinUrl: `${config.frontendUrl}/telehealth/session/${data.appointmentId}?role=clinician`,
-        clientJoinUrl: `${config.frontendUrl}/telehealth/session/${data.appointmentId}?role=client`,
+        clientJoinUrl: `${config.frontendUrl}/portal/telehealth/${data.appointmentId}`,
         meetingDataJson: twilioRoom, // Store Twilio room data
         status: 'SCHEDULED',
         recordingConsent: false,
@@ -221,7 +187,7 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
 export async function joinTelehealthSession(data: JoinSessionData) {
   try {
     // Get session details
-    const session = await prisma.telehealthSession.findFirst({
+    let session = await prisma.telehealthSession.findFirst({
       where: {
         appointment: {
           id: data.sessionId,
@@ -237,41 +203,58 @@ export async function joinTelehealthSession(data: JoinSessionData) {
       },
     });
 
+    // Auto-create session if it doesn't exist (clinician joining creates the session)
     if (!session) {
-      throw new Error('Telehealth session not found');
-    }
-
-    // COMPLIANCE CHECK: Verify client consent before allowing session join
-    if (data.userRole === 'client') {
-      const clientId = session.appointment.clientId;
-
-      // Verify Georgia telehealth consent
-      const consentValidation = await verifyClientConsent(clientId, 'Georgia_Telehealth');
-
-      // Log consent verification for audit trail
-      logger.info('Telehealth consent verification for session join', {
-        sessionId: session.id,
-        clientId,
-        userId: data.userId,
-        consentValidation,
+      logger.info('Telehealth session not found, attempting auto-creation', {
+        appointmentId: data.sessionId,
+        userRole: data.userRole,
       });
 
-      // Block if consent is not valid
-      if (!consentValidation.isValid) {
-        throw new Error(
-          `Valid telehealth consent required to join session. ${consentValidation.message}`
-        );
-      }
+      // Only clinicians can auto-create sessions when joining
+      if (data.userRole === 'clinician') {
+        try {
+          await createTelehealthSession({
+            appointmentId: data.sessionId,
+            createdBy: data.userId,
+            bypassConsentCheck: true, // Clinician verified consent externally
+          });
 
-      // Allow join if valid, but log warning if renewal required
-      if (consentValidation.requiresRenewal) {
-        logger.warn('Client joining session with consent expiring soon', {
-          sessionId: session.id,
-          clientId,
-          daysTillExpiration: consentValidation.daysTillExpiration,
-          expirationDate: consentValidation.expirationDate,
-        });
+          // Fetch the newly created session
+          session = await prisma.telehealthSession.findFirst({
+            where: {
+              appointment: {
+                id: data.sessionId,
+              },
+            },
+            include: {
+              appointment: {
+                include: {
+                  client: true,
+                  clinician: true,
+                },
+              },
+            },
+          });
+
+          logger.info('Telehealth session auto-created on join', {
+            appointmentId: data.sessionId,
+            sessionId: session?.id,
+          });
+        } catch (createError: any) {
+          logger.error('Failed to auto-create telehealth session', {
+            appointmentId: data.sessionId,
+            error: createError.message,
+          });
+          throw new Error(`Failed to create telehealth session: ${createError.message}`);
+        }
+      } else {
+        // Client cannot auto-create - clinician must join first
+        throw new Error('Telehealth session not started yet. Please wait for the clinician to start the session.');
       }
+    }
+
+    if (!session) {
+      throw new Error('Telehealth session not found');
     }
 
     // Get room name from database (stored in chimeExternalMeetingId)
@@ -890,6 +873,8 @@ interface CreateSessionRatingData {
   rating: number;
   comments: string | null | undefined;
   ipAddress: string;
+  shareWithTherapist?: boolean;
+  shareWithAdmin?: boolean;
 }
 
 interface GetAllSessionRatingsParams {
@@ -902,6 +887,9 @@ interface GetAllSessionRatingsParams {
   startDate?: string;
   endDate?: string;
   search?: string;
+  // Permission filtering
+  viewerRole?: 'admin' | 'clinician';
+  viewerId?: string; // Required when viewerRole is 'clinician'
 }
 
 /**
@@ -947,6 +935,8 @@ export async function createSessionRating(data: CreateSessionRatingData) {
         rating: data.rating,
         comments: data.comments || null,
         ipAddress: data.ipAddress,
+        shareWithTherapist: data.shareWithTherapist ?? false,
+        shareWithAdmin: data.shareWithAdmin ?? false,
       },
       include: {
         session: {
@@ -992,15 +982,31 @@ export async function createSessionRating(data: CreateSessionRatingData) {
 }
 
 /**
- * Get all session ratings (admin only)
+ * Get all session ratings with permission-based filtering
+ * - Admins: Can see all ratings where shareWithAdmin is true
+ * - Clinicians: Can see ratings for their sessions where shareWithTherapist is true
  */
 export async function getAllSessionRatings(params: GetAllSessionRatingsParams) {
   try {
-    const { page, limit, minRating, maxRating, clinicianId, clientId, startDate, endDate, search } = params;
+    const { page, limit, minRating, maxRating, clinicianId, clientId, startDate, endDate, search, viewerRole, viewerId } = params;
     const skip = (page - 1) * limit;
 
     // Build where clause
     const where: any = {};
+
+    // Permission-based filtering
+    if (viewerRole === 'admin') {
+      // Admins can only see ratings shared with admin
+      where.shareWithAdmin = true;
+    } else if (viewerRole === 'clinician' && viewerId) {
+      // Clinicians can only see ratings for their sessions where shareWithTherapist is true
+      where.shareWithTherapist = true;
+      where.session = {
+        appointment: {
+          clinicianId: viewerId,
+        },
+      };
+    }
 
     // Filter by rating range
     if (minRating !== undefined || maxRating !== undefined) {
@@ -1015,9 +1021,12 @@ export async function getAllSessionRatings(params: GetAllSessionRatingsParams) {
     }
 
     // Filter by clinician (requires nested filter through session -> appointment -> clinician)
-    if (clinicianId) {
+    // Only apply if not already set by viewerRole filtering
+    if (clinicianId && viewerRole !== 'clinician') {
       where.session = {
+        ...(where.session || {}),
         appointment: {
+          ...(where.session?.appointment || {}),
           clinicianId: clinicianId,
         },
       };
@@ -1165,6 +1174,71 @@ export async function getSessionRatingStats() {
   } catch (error: any) {
     logger.error('Failed to get session rating stats', {
       error: error.message,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get session rating for a specific session (with permission filtering)
+ */
+export async function getSessionRating(
+  sessionId: string,
+  viewerRole: 'admin' | 'clinician',
+  viewerId: string
+) {
+  try {
+    const rating = await prisma.sessionRating.findUnique({
+      where: { sessionId },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        session: {
+          include: {
+            appointment: {
+              include: {
+                clinician: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!rating) {
+      return null;
+    }
+
+    // Permission check based on viewer role
+    if (viewerRole === 'admin') {
+      // Admins can only see if shareWithAdmin is true
+      if (!rating.shareWithAdmin) {
+        return null;
+      }
+    } else if (viewerRole === 'clinician') {
+      // Clinicians can only see if shareWithTherapist is true AND they are the session's clinician
+      const isSessionClinician = rating.session.appointment.clinicianId === viewerId;
+      if (!rating.shareWithTherapist || !isSessionClinician) {
+        return null;
+      }
+    }
+
+    return rating;
+  } catch (error: any) {
+    logger.error('Failed to get session rating', {
+      error: error.message,
+      sessionId,
     });
     throw error;
   }

@@ -273,7 +273,21 @@ async function calculateDaySots(
 }
 
 /**
+ * Default weekly schedule for clinicians without explicit configuration
+ */
+const DEFAULT_WEEKLY_SCHEDULE: WeeklySchedule = {
+  monday: { isAvailable: true, startTime: '09:00', endTime: '17:00', breakStart: '12:00', breakEnd: '13:00' },
+  tuesday: { isAvailable: true, startTime: '09:00', endTime: '17:00', breakStart: '12:00', breakEnd: '13:00' },
+  wednesday: { isAvailable: true, startTime: '09:00', endTime: '17:00', breakStart: '12:00', breakEnd: '13:00' },
+  thursday: { isAvailable: true, startTime: '09:00', endTime: '17:00', breakStart: '12:00', breakEnd: '13:00' },
+  friday: { isAvailable: true, startTime: '09:00', endTime: '17:00', breakStart: '12:00', breakEnd: '13:00' },
+  saturday: { isAvailable: false },
+  sunday: { isAvailable: false },
+};
+
+/**
  * Get clinician's weekly schedule
+ * Returns default schedule if none exists in database
  */
 async function getClinicianSchedule(clinicianId: string) {
   try {
@@ -293,7 +307,29 @@ async function getClinicianSchedule(clinicianId: string) {
       },
     });
 
-    return schedule;
+    // Return existing schedule or default
+    if (schedule) {
+      return schedule;
+    }
+
+    // Return a default schedule for clinicians without explicit configuration
+    logger.info('No schedule found for clinician, using default', { clinicianId });
+    return {
+      id: 'default',
+      clinicianId,
+      weeklyScheduleJson: DEFAULT_WEEKLY_SCHEDULE,
+      acceptNewClients: true,
+      maxAppointmentsPerDay: 8,
+      maxAppointmentsPerWeek: 40,
+      bufferTimeBetweenAppointments: 15,
+      availableLocations: ['IN_PERSON', 'TELEHEALTH'],
+      effectiveStartDate: new Date(),
+      effectiveEndDate: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: clinicianId,
+      lastModifiedBy: clinicianId,
+    };
   } catch (error: any) {
     logger.error('Failed to get clinician schedule', {
       error: error.message,
@@ -505,6 +541,7 @@ export async function canCancelAppointment(
 
 /**
  * Get clinicians who have availability for self-scheduling
+ * If no schedules exist, returns all active clinicians (fallback for initial setup)
  */
 export async function getAvailableClinicians(): Promise<any[]> {
   try {
@@ -520,22 +557,44 @@ export async function getAvailableClinicians(): Promise<any[]> {
           { effectiveEndDate: { gte: new Date() } },
         ],
       },
-      include: {
-        // Note: Need to add relation in schema if not present
-      },
       distinct: ['clinicianId'],
     });
 
-    // Get user details for each clinician
-    const clinicianIds = clinicians.map(c => c.clinicianId);
-    const users = await prisma.user.findMany({
-      where: {
-        id: {
-          in: clinicianIds,
+    // If schedules exist, get users for those clinicians
+    if (clinicians.length > 0) {
+      const clinicianIds = clinicians.map(c => c.clinicianId);
+      const users = await prisma.user.findMany({
+        where: {
+          id: {
+            in: clinicianIds,
+          },
+          roles: {
+            hasSome: [UserRole.CLINICIAN],
+          },
+          isActive: true,
         },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          title: true,
+          email: true,
+          credentials: true,
+        },
+      });
+
+      return users;
+    }
+
+    // FALLBACK: If no schedules exist, return all active clinicians
+    // This handles the case where scheduling hasn't been set up yet
+    logger.info('No clinician schedules found, returning all active clinicians as fallback');
+    const allClinicians = await prisma.user.findMany({
+      where: {
         roles: {
           hasSome: [UserRole.CLINICIAN],
         },
+        isActive: true,
       },
       select: {
         id: true,
@@ -543,10 +602,11 @@ export async function getAvailableClinicians(): Promise<any[]> {
         lastName: true,
         title: true,
         email: true,
+        credentials: true,
       },
     });
 
-    return users;
+    return allClinicians;
   } catch (error: any) {
     logger.error('Failed to get available clinicians', {
       error: error.message,

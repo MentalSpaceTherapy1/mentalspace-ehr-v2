@@ -1,0 +1,661 @@
+{
+    "events": [
+        {
+            "timestamp": 1767789900136,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767789901424
+        },
+        {
+            "timestamp": 1767789900234,
+            "message": "{\"action\":\"REMINDERS_PROCESSED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Reminder processing completed\",\"pid\":1,\"results\":{\"emailSent\":0,\"failed\":0,\"smsSent\":0,\"total\":0},\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 12:45:00.234\"}",
+            "ingestionTime": 1767789901424
+        },
+        {
+            "timestamp": 1767789960074,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767789961430
+        },
+        {
+            "timestamp": 1767790020089,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790021428
+        },
+        {
+            "timestamp": 1767790080066,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790081433
+        },
+        {
+            "timestamp": 1767790140075,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790141430
+        },
+        {
+            "timestamp": 1767790188720,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767790191429
+        },
+        {
+            "timestamp": 1767790200201,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790201423
+        },
+        {
+            "timestamp": 1767790260102,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790261439
+        },
+        {
+            "timestamp": 1767790320059,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790321430
+        },
+        {
+            "timestamp": 1767790380072,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790381443
+        },
+        {
+            "timestamp": 1767790440071,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790441437
+        },
+        {
+            "timestamp": 1767790488753,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767790491431
+        },
+        {
+            "timestamp": 1767790500163,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790501425
+        },
+        {
+            "timestamp": 1767790560225,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790561439
+        },
+        {
+            "timestamp": 1767790620109,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790621428
+        },
+        {
+            "timestamp": 1767790680074,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790681432
+        },
+        {
+            "timestamp": 1767790740083,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790741433
+        },
+        {
+            "timestamp": 1767790788736,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767790791474
+        },
+        {
+            "timestamp": 1767790800161,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Starting automatic waitlist matching...\",\"pid\":1,\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 13:00:00.161\"}",
+            "ingestionTime": 1767790801442
+        },
+        {
+            "timestamp": 1767790800243,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790801442
+        },
+        {
+            "timestamp": 1767790800452,
+            "message": "{\"count\":0,\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"All priority scores updated\",\"pid\":1,\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 13:00:00.452\"}",
+            "ingestionTime": 1767790801442
+        },
+        {
+            "timestamp": 1767790800457,
+            "message": "{\"count\":0,\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"All priority scores updated\",\"pid\":1,\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 13:00:00.457\"}",
+            "ingestionTime": 1767790801442
+        },
+        {
+            "timestamp": 1767790800464,
+            "message": "{\"action\":\"REMINDERS_PROCESSED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Reminder processing completed\",\"pid\":1,\"results\":{\"emailSent\":0,\"failed\":0,\"smsSent\":0,\"total\":0},\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 13:00:00.464\"}",
+            "ingestionTime": 1767790801442
+        },
+        {
+            "timestamp": 1767790800466,
+            "message": "{\"accuracy\":0,\"averageMatchScore\":0,\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"matched\":0,\"message\":\"Waitlist matching complete\",\"offered\":0,\"pid\":1,\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 13:00:00.465\",\"totalEntries\":0}",
+            "ingestionTime": 1767790801442
+        },
+        {
+            "timestamp": 1767790800466,
+            "message": "{\"environment\":\"production\",\"errors\":0,\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"matched\":0,\"message\":\"Automatic waitlist matching complete\",\"offered\":0,\"pid\":1,\"processed\":0,\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 13:00:00.466\"}",
+            "ingestionTime": 1767790801442
+        },
+        {
+            "timestamp": 1767790860065,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790861446
+        },
+        {
+            "timestamp": 1767790920141,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790921424
+        },
+        {
+            "timestamp": 1767790980095,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767790981436
+        },
+        {
+            "timestamp": 1767791040093,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791041432
+        },
+        {
+            "timestamp": 1767791088765,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767791091428
+        },
+        {
+            "timestamp": 1767791100065,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791101429
+        },
+        {
+            "timestamp": 1767791160042,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791161430
+        },
+        {
+            "timestamp": 1767791220077,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791221433
+        },
+        {
+            "timestamp": 1767791280150,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791281432
+        },
+        {
+            "timestamp": 1767791340061,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791341426
+        },
+        {
+            "timestamp": 1767791388753,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767791391434
+        },
+        {
+            "timestamp": 1767791400121,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791401426
+        },
+        {
+            "timestamp": 1767791460107,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791461449
+        },
+        {
+            "timestamp": 1767791520075,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791521431
+        },
+        {
+            "timestamp": 1767791580066,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791581437
+        },
+        {
+            "timestamp": 1767791640225,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791641431
+        },
+        {
+            "timestamp": 1767791688784,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767791691432
+        },
+        {
+            "timestamp": 1767791700109,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791701429
+        },
+        {
+            "timestamp": 1767791700227,
+            "message": "{\"action\":\"REMINDERS_PROCESSED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Reminder processing completed\",\"pid\":1,\"results\":{\"emailSent\":0,\"failed\":0,\"smsSent\":0,\"total\":0},\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 13:15:00.225\"}",
+            "ingestionTime": 1767791701429
+        },
+        {
+            "timestamp": 1767791760086,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791761429
+        },
+        {
+            "timestamp": 1767791820052,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791821432
+        },
+        {
+            "timestamp": 1767791880063,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791881430
+        },
+        {
+            "timestamp": 1767791940105,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767791941431
+        },
+        {
+            "timestamp": 1767791988763,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767791991431
+        },
+        {
+            "timestamp": 1767792000205,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792001432
+        },
+        {
+            "timestamp": 1767792060055,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792061443
+        },
+        {
+            "timestamp": 1767792120114,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792121431
+        },
+        {
+            "timestamp": 1767792180100,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792181433
+        },
+        {
+            "timestamp": 1767792240054,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792241433
+        },
+        {
+            "timestamp": 1767792288802,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767792291426
+        },
+        {
+            "timestamp": 1767792300111,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792301424
+        },
+        {
+            "timestamp": 1767792360206,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792361431
+        },
+        {
+            "timestamp": 1767792420143,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792421427
+        },
+        {
+            "timestamp": 1767792480081,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792481429
+        },
+        {
+            "timestamp": 1767792540101,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792541448
+        },
+        {
+            "timestamp": 1767792588789,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767792591430
+        },
+        {
+            "timestamp": 1767792600135,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792601428
+        },
+        {
+            "timestamp": 1767792600249,
+            "message": "{\"action\":\"REMINDERS_PROCESSED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Reminder processing completed\",\"pid\":1,\"results\":{\"emailSent\":0,\"failed\":0,\"smsSent\":0,\"total\":0},\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 13:30:00.249\"}",
+            "ingestionTime": 1767792601428
+        },
+        {
+            "timestamp": 1767792660065,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792661429
+        },
+        {
+            "timestamp": 1767792720183,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792721435
+        },
+        {
+            "timestamp": 1767792780113,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792781425
+        },
+        {
+            "timestamp": 1767792840141,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792841428
+        },
+        {
+            "timestamp": 1767792888823,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767792891431
+        },
+        {
+            "timestamp": 1767792900095,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792901423
+        },
+        {
+            "timestamp": 1767792960117,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767792961434
+        },
+        {
+            "timestamp": 1767793020079,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793021429
+        },
+        {
+            "timestamp": 1767793079456,
+            "message": "{\"action\":\"PASSWORD_VERIFICATION_DEBUG\",\"email\":\"ejoseph@chctherapy.com\",\"environment\":\"production\",\"hasExpiry\":false,\"hasStoredPassword\":true,\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"isPasswordValid\":true,\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Password verification attempt\",\"mustChangePassword\":false,\"passwordLength\":10,\"passwordProvided\":true,\"pid\":1,\"service\":\"mentalspace-audit\",\"storedPasswordLength\":60,\"timestamp\":\"2026-01-07 13:37:59.456\",\"userId\":\"245fd0f5-1b4e-4efd-86ca-944cd4899fdf\"}",
+            "ingestionTime": 1767793081435
+        },
+        {
+            "timestamp": 1767793079484,
+            "message": "{\"action\":\"SESSION_CREATED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"ipAddress\":\"107.222.47.109\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Session created\",\"pid\":1,\"service\":\"mentalspace-audit\",\"sessionId\":\"da275b1c-2233-4d1f-8539-32a8710b1394\",\"timestamp\":\"2026-01-07 13:37:59.484\",\"userId\":\"245fd0f5-1b4e-4efd-86ca-944cd4899fdf\"}",
+            "ingestionTime": 1767793081435
+        },
+        {
+            "timestamp": 1767793079484,
+            "message": "{\"action\":\"LOGIN_SUCCESS\",\"email\":\"ejoseph@chctherapy.com\",\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"ipAddress\":\"107.222.47.109\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"User logged in\",\"pid\":1,\"service\":\"mentalspace-audit\",\"sessionId\":\"da275b1c-2233-4d1f-8539-32a8710b1394\",\"timestamp\":\"2026-01-07 13:37:59.484\",\"userId\":\"245fd0f5-1b4e-4efd-86ca-944cd4899fdf\"}",
+            "ingestionTime": 1767793081435
+        },
+        {
+            "timestamp": 1767793080167,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793081435
+        },
+        {
+            "timestamp": 1767793140101,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793141429
+        },
+        {
+            "timestamp": 1767793188801,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767793191430
+        },
+        {
+            "timestamp": 1767793200159,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793201422
+        },
+        {
+            "timestamp": 1767793260098,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793261432
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "[AUTH REFRESH] Endpoint reached {",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "  hasAccessTokenCookie: false,",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "  hasRefreshTokenCookie: true,",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "  hasBodyToken: false,",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "  cookieNames: [ 'refresh_token', 'csrf-token' ]",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "}",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "[AUTH REFRESH] Session token check {",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "  hasSessionToken: true,",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "  tokenLength: 43,",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "  tokenPrefix: 'VML6iWAOOtxnCox_kCI5...'",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "}",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308419,
+            "message": "[AUTH REFRESH] Calling sessionService.validateSession...",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308432,
+            "message": "{\"action\":\"SESSION_TERMINATED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Session terminated\",\"pid\":1,\"service\":\"mentalspace-audit\",\"sessionId\":\"dafd862b-bfbc-4468-90ac-ed532813ba06\",\"timestamp\":\"2026-01-07 13:41:48.432\",\"userId\":\"ad997245-45ed-4a0c-b9a5-a2b096f03cd3\"}",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308433,
+            "message": "{\"action\":\"SESSION_EXPIRED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Session expired\",\"pid\":1,\"service\":\"mentalspace-audit\",\"sessionId\":\"dafd862b-bfbc-4468-90ac-ed532813ba06\",\"timestamp\":\"2026-01-07 13:41:48.433\",\"userId\":\"ad997245-45ed-4a0c-b9a5-a2b096f03cd3\"}",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308433,
+            "message": "[AUTH REFRESH] Session validation result { hasResult: false, userId: undefined, sessionId: undefined }",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793308433,
+            "message": "[AUTH REFRESH] Session validation returned null - invalid/expired",
+            "ingestionTime": 1767793311426
+        },
+        {
+            "timestamp": 1767793320119,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793321440
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "[CLIENT CREATE] Request received {",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "  timestamp: '2026-01-07T13:42:24.453Z',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "  userId: '245fd0f5-1b4e-4efd-86ca-944cd4899fdf',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "  bodyKeys: [",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'firstName',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'lastName',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'dateOfBirth',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'primaryTherapistId',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'primaryPhone',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'email',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'addressCity',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'addressState',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'addressZipCode',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'gender',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'maritalStatus',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'primaryLanguage',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'okayToLeaveMessage',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'needsInterpreter',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'primaryPhoneType',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'secondaryPhoneType',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'preferredContactMethod',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'addressStreet1',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'addressCounty',",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "    'secondaryTherapist2Id'",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "  ],",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "  hasBody: true",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793344454,
+            "message": "}",
+            "ingestionTime": 1767793346432
+        },
+        {
+            "timestamp": 1767793380072,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793381427
+        },
+        {
+            "timestamp": 1767793440150,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793441445
+        },
+        {
+            "timestamp": 1767793488831,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767793491424
+        },
+        {
+            "timestamp": 1767793500125,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793501425
+        },
+        {
+            "timestamp": 1767793500166,
+            "message": "{\"action\":\"REMINDERS_PROCESSED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Reminder processing completed\",\"pid\":1,\"results\":{\"emailSent\":0,\"failed\":0,\"smsSent\":0,\"total\":0},\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 13:45:00.166\"}",
+            "ingestionTime": 1767793501425
+        },
+        {
+            "timestamp": 1767793560121,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793561432
+        },
+        {
+            "timestamp": 1767793620069,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767793621431
+        }
+    ],
+    "nextForwardToken": "f/39423115084746820385066944113969254688327219629554991104/s",
+    "nextBackwardToken": "b/39423032127468831779450404854368095511149837329892311040/s"
+}

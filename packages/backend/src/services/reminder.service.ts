@@ -1,17 +1,68 @@
+/**
+ * Reminder Service - Appointment Notification System
+ *
+ * Handles automated email and SMS reminders for appointments.
+ * Integrates with SendGrid for email and Twilio for SMS.
+ *
+ * Environment Variables Required:
+ * - SENDGRID_API_KEY: SendGrid API key for email notifications
+ * - SENDGRID_FROM_EMAIL: Verified sender email address
+ * - TWILIO_ACCOUNT_SID: Twilio account SID for SMS
+ * - TWILIO_AUTH_TOKEN: Twilio auth token
+ * - TWILIO_PHONE_NUMBER: Twilio phone number to send from
+ *
+ * @module reminder.service
+ */
+
 import logger, { logControllerError } from '../utils/logger';
 import { auditLogger } from '../utils/logger';
 import prisma from './database';
-// import sgMail from '@sendgrid/mail'; // Uncomment when SendGrid is configured
-// import twilio from 'twilio'; // Uncomment when Twilio is configured
+import sgMail from '@sendgrid/mail';
+import twilio from 'twilio';
 
-// TODO: Configure SendGrid
-// sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
+/**
+ * Service configuration state
+ * Tracks whether external notification services are properly configured
+ */
+interface NotificationServiceConfig {
+  sendgridConfigured: boolean;
+  twilioConfigured: boolean;
+}
 
-// TODO: Configure Twilio
-// const twilioClient = twilio(
-//   process.env.TWILIO_ACCOUNT_SID || '',
-//   process.env.TWILIO_AUTH_TOKEN || ''
-// );
+const serviceConfig: NotificationServiceConfig = {
+  sendgridConfigured: false,
+  twilioConfigured: false,
+};
+
+// Initialize SendGrid if API key is available
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  serviceConfig.sendgridConfigured = true;
+  logger.info('SendGrid email service initialized successfully');
+} else {
+  logger.warn('SendGrid API key not configured - email reminders will be logged but not sent');
+}
+
+// Initialize Twilio if credentials are available
+let twilioClient: ReturnType<typeof twilio> | null = null;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  twilioClient = twilio(
+    process.env.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_AUTH_TOKEN
+  );
+  serviceConfig.twilioConfigured = true;
+  logger.info('Twilio SMS service initialized successfully');
+} else {
+  logger.warn('Twilio credentials not configured - SMS reminders will be logged but not sent');
+}
+
+/**
+ * Get the current notification service configuration status
+ * @returns {NotificationServiceConfig} Current configuration status
+ */
+export function getNotificationServiceStatus(): NotificationServiceConfig {
+  return { ...serviceConfig };
+}
 
 interface ReminderSettingsData {
   clinicianId: string;
@@ -262,17 +313,24 @@ export async function sendEmailReminder(
 
     emailBody += `<p>If you have any questions, please contact our office.</p>`;
 
-    // TODO: Uncomment when SendGrid is configured
-    // const msg = {
-    //   to: client.email,
-    //   from: process.env.SENDGRID_FROM_EMAIL || 'noreply@mentalspace.com',
-    //   subject,
-    //   html: emailBody,
-    // };
-    // await sgMail.send(msg);
-
-    // Log the reminder (for now, just log to console)
-    logger.info(`[EMAIL REMINDER] Sent to ${client.email} for appointment ${appointment.id}`);
+    // Send email via SendGrid if configured, otherwise log only
+    if (serviceConfig.sendgridConfigured) {
+      const msg = {
+        to: client.email,
+        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@mentalspace.com',
+        subject,
+        html: emailBody,
+      };
+      await sgMail.send(msg);
+      logger.info(`[EMAIL REMINDER] Successfully sent to ${client.email} for appointment ${appointment.id}`);
+    } else {
+      // Log the reminder content when SendGrid is not configured (development mode)
+      logger.info(`[EMAIL REMINDER - DEV MODE] Would send to ${client.email} for appointment ${appointment.id}`, {
+        subject,
+        recipientEmail: client.email,
+        appointmentId: appointment.id,
+      });
+    }
 
     auditLogger.info('Email reminder sent', {
       appointmentId: appointment.id,
@@ -317,15 +375,22 @@ export async function sendSMSReminder(
       smsBody += ' Reply C to confirm, R to reschedule.';
     }
 
-    // TODO: Uncomment when Twilio is configured
-    // await twilioClient.messages.create({
-    //   body: smsBody,
-    //   from: process.env.TWILIO_PHONE_NUMBER || '',
-    //   to: client.primaryPhone,
-    // });
-
-    // Log the reminder (for now, just log to console)
-    logger.info(`[SMS REMINDER] Sent to ${client.primaryPhone} for appointment ${appointment.id}`);
+    // Send SMS via Twilio if configured, otherwise log only
+    if (serviceConfig.twilioConfigured && twilioClient) {
+      await twilioClient.messages.create({
+        body: smsBody,
+        from: process.env.TWILIO_PHONE_NUMBER || '',
+        to: client.primaryPhone,
+      });
+      logger.info(`[SMS REMINDER] Successfully sent to ${client.primaryPhone} for appointment ${appointment.id}`);
+    } else {
+      // Log the reminder content when Twilio is not configured (development mode)
+      logger.info(`[SMS REMINDER - DEV MODE] Would send to ${client.primaryPhone} for appointment ${appointment.id}`, {
+        smsBody,
+        recipientPhone: client.primaryPhone,
+        appointmentId: appointment.id,
+      });
+    }
 
     auditLogger.info('SMS reminder sent', {
       appointmentId: appointment.id,

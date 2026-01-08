@@ -189,14 +189,15 @@ const MessagingHub: React.FC = () => {
 
   // Handle conversation selection
   const handleSelectConversation = async (thread: ConversationThread) => {
+    console.log('Selecting conversation:', thread.threadId, thread.subject);
+    setSelectedThread(null); // Clear staff thread first
     setSelectedConversation(thread);
-    setSelectedThread(null);
-    // Mark all unread messages from client as read
-    for (const msg of thread.messages) {
+    // Mark all unread messages from client as read (don't await to prevent blocking UI)
+    thread.messages.forEach((msg) => {
       if (!msg.isRead && msg.sentByClient) {
-        await markPortalAsRead(msg.id);
+        markPortalAsRead(msg.id).catch(console.error);
       }
-    }
+    });
   };
 
   // Handle reply to conversation
@@ -275,7 +276,7 @@ const MessagingHub: React.FC = () => {
       <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
         <Grid container sx={{ height: '100%' }}>
           {/* Left Sidebar - Conversation List */}
-          <Grid size={{xs: 12, md: 4}} sx={{ height: '100%', borderRight: '1px solid #e2e8f0', minWidth: 320 }}>
+          <Grid size={{ xs: 12, md: 4 }} sx={{ height: '100%', borderRight: '1px solid #e2e8f0' }}>
             <Paper elevation={0} sx={{ height: '100%', borderRadius: 0, overflow: 'auto' }}>
               <Box sx={{ p: 2 }}>
                 {/* Tabs - Clients and Staff only (Channels available via sidebar) */}
@@ -578,7 +579,7 @@ const MessagingHub: React.FC = () => {
           </Grid>
 
           {/* Middle - Message Thread or Content (expanded to fill space after removing Quick Actions) */}
-          <Grid size={{xs: 12, md: 8}} sx={{ height: '100%', overflow: 'auto' }}>
+          <Grid size={{ xs: 12, md: 8 }} sx={{ height: '100%', overflow: 'auto' }}>
             {showComposer ? (
               <MessageComposer onClose={() => setShowComposer(false)} />
             ) : selectedThread ? (

@@ -20,12 +20,14 @@ interface Message {
 interface Channel {
   id: string;
   name: string;
-  type: 'DIRECT' | 'GROUP' | 'TEAM' | 'BROADCAST';
+  channelType: 'DEPARTMENT' | 'TEAM' | 'PROJECT' | 'GENERAL' | 'ANNOUNCEMENTS';
   description?: string;
-  memberCount: number;
-  unreadCount: number;
-  lastMessageAt?: string;
+  memberIds?: string[];
+  adminIds?: string[];
+  isPrivate?: boolean;
+  isArchived?: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface Thread {
@@ -44,10 +46,12 @@ export const useMessaging = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/messaging/messages', {
+      const response = await api.get<{ success: boolean; data: Message[]; count: number }>('/messages', {
         params: { channelId },
       });
-      setMessages(response.data);
+      if (response.data.success) {
+        setMessages(response.data.data || []);
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch messages');
     } finally {
@@ -59,8 +63,10 @@ export const useMessaging = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/messaging/channels');
-      setChannels(response.data);
+      const response = await api.get<{ success: boolean; data: Channel[]; count: number }>('/messages/channels');
+      if (response.data.success) {
+        setChannels(response.data.data || []);
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch channels');
     } finally {
@@ -71,34 +77,31 @@ export const useMessaging = () => {
   const sendMessage = async (data: {
     subject?: string;
     body: string;
-    priority?: string;
+    priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
     recipientIds?: string[];
+    recipientType?: 'INDIVIDUAL' | 'DEPARTMENT' | 'TEAM' | 'ALL_STAFF' | 'ROLE_BASED';
     channelId?: string;
     threadId?: string;
-    attachments?: File[];
+    replyToId?: string;
+    messageType?: 'DIRECT' | 'BROADCAST' | 'ANNOUNCEMENT' | 'ALERT' | 'SHIFT_HANDOFF';
   }) => {
     setLoading(true);
     setError(null);
     try {
-      const formData = new FormData();
-      if (data.subject) formData.append('subject', data.subject);
-      formData.append('body', data.body);
-      if (data.priority) formData.append('priority', data.priority);
-      if (data.recipientIds) formData.append('recipientIds', JSON.stringify(data.recipientIds));
-      if (data.channelId) formData.append('channelId', data.channelId);
-      if (data.threadId) formData.append('threadId', data.threadId);
-      if (data.attachments) {
-        data.attachments.forEach((file) => {
-          formData.append('attachments', file);
-        });
-      }
+      // Backend expects JSON, not FormData
+      const payload = {
+        body: data.body,
+        subject: data.subject,
+        priority: data.priority || 'NORMAL',
+        recipientType: data.recipientType || 'INDIVIDUAL',
+        recipientIds: data.recipientIds || [],
+        messageType: data.messageType || 'DIRECT',
+        threadId: data.threadId,
+        replyToId: data.replyToId,
+      };
 
-      const response = await api.post('/messaging/messages', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
+      const response = await api.post<{ success: boolean; message: string; data: Message }>('/messages', payload);
+      return response.data.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to send message');
       throw err;
@@ -109,15 +112,17 @@ export const useMessaging = () => {
 
   const createChannel = async (data: {
     name: string;
-    type: string;
+    channelType: 'DEPARTMENT' | 'TEAM' | 'PROJECT' | 'GENERAL' | 'ANNOUNCEMENTS';
     description?: string;
     memberIds: string[];
+    adminIds: string[];
+    isPrivate?: boolean;
   }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post('/messaging/channels', data);
-      return response.data;
+      const response = await api.post<{ success: boolean; message: string; data: Channel }>('/messages/channels', data);
+      return response.data.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create channel');
       throw err;
@@ -128,7 +133,7 @@ export const useMessaging = () => {
 
   const markAsRead = async (messageId: string) => {
     try {
-      await api.patch(`/messaging/messages/${messageId}/read`, {});
+      await api.put(`/messages/${messageId}/read`);
     } catch (err: any) {
       console.error('Failed to mark message as read:', err);
     }
@@ -138,10 +143,18 @@ export const useMessaging = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/messaging/messages/search', {
-        params: { query },
-      });
-      return response.data;
+      // Note: Backend doesn't have a dedicated search endpoint yet
+      // For now, fetch all messages and filter client-side
+      const response = await api.get<{ success: boolean; data: Message[]; count: number }>('/messages');
+      if (response.data.success) {
+        const allMessages = response.data.data || [];
+        const filtered = allMessages.filter(msg =>
+          msg.subject?.toLowerCase().includes(query.toLowerCase()) ||
+          msg.body?.toLowerCase().includes(query.toLowerCase())
+        );
+        return filtered;
+      }
+      return [];
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to search messages');
       throw err;

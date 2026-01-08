@@ -1,0 +1,20 @@
+{
+    "events": [
+        {
+            "logStreamName": "ecs/mentalspace-backend/411957aee49e442e84e5869d238c89f8",
+            "timestamp": 1767806911209,
+            "message": "  \"error\": null,",
+            "ingestionTime": 1767806915528,
+            "eventId": "39423411487073358383373421576593238524110431935282479118"
+        },
+        {
+            "logStreamName": "ecs/mentalspace-backend/4b0d6f92d22543399b45e23e801af379",
+            "timestamp": 1767807116371,
+            "message": "(node:1) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 31 error listeners added to [Console]. MaxListeners is 30. Use emitter.setMaxListeners() to increase limit",
+            "ingestionTime": 1767807119786,
+            "eventId": "39423416062338844804313126787277141947550897084518105088"
+        }
+    ],
+    "searchedLogStreams": [],
+    "nextToken": "Bxkq6kVGFtq2y_MoigeqscPOdhXVbhiVtLoAmXb5jCroMs7xT-0Ktzizfy4ZNGpRzrvTx85Vju3CHvRgnijudOoPVP-qefUFyhKY7CnBaNFmjAzF81r-CUwRdSolz2U845LRh3WoSZ_GyqGlmWPsJLmgAE_vJXDlKoGNZyz3pzdba7KS8j5Phu-oKhARNIiCx9J-bEsRDgL8spLKDEm09_d9G69rVBykUJNtLo5pAhTXVs4DJE86XF5IcNA_T8j_RN7FgQXai6wh-PhZWG0R6dPe6j6fxF2z4n-TaEvcXiY"
+}

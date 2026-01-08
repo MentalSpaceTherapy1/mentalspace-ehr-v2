@@ -15,6 +15,7 @@ const router = Router();
 
 // Registration & Email Verification
 router.post('/register', accountCreationRateLimiter, portalAuthController.register);
+router.post('/activate', accountCreationRateLimiter, portalAuthController.activateAccount);
 router.post('/verify-email', portalAuthController.verifyEmail);
 router.post('/resend-verification', authRateLimiter, portalAuthController.resendVerificationEmail);
 

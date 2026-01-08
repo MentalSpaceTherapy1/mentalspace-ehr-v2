@@ -117,6 +117,8 @@ model User {
 
   // Password Management
   mustChangePassword     Boolean   @default(false)
+  tempPasswordExpiry     DateTime? // Temporary password expires in 72 hours
+  passwordExpiresAt      DateTime? // Permanent password expires in 6 months
   passwordResetToken     String?   @unique
   passwordResetExpiry    DateTime?
   emailVerified          Boolean   @default(true) // Default true for staff (manual creation)
@@ -632,11 +634,12 @@ model Client {
   deceasedDate     DateTime?
 
   // Assignment
-  primaryTherapistId   String
-  primaryTherapist     User    @relation("ClientTherapist", fields: [primaryTherapistId], references: [id])
-  secondaryTherapistId String?
-  psychiatristId       String?
-  caseManagerId        String?
+  primaryTherapistId    String
+  primaryTherapist      User    @relation("ClientTherapist", fields: [primaryTherapistId], references: [id])
+  secondaryTherapistId  String?
+  secondaryTherapist2Id String?
+  psychiatristId        String?
+  caseManagerId         String?
 
   // Consents
   treatmentConsent         Boolean   @default(false)
@@ -1347,7 +1350,7 @@ model AIGeneratedNote {
 
   // AI Metadata
   generationConfidence Float?
-  modelUsed            String  @default("claude-3-5-sonnet-20241022")
+  modelUsed            String  @default("claude-sonnet-4-20250514")
   promptVersion        String  @default("1.0")
   generationTimeMs     Int?
   tokenCount           Int?
@@ -2229,6 +2232,12 @@ model PortalAccount {
   // Password Reset
   passwordResetToken       String?
   passwordResetTokenExpiry DateTime?
+
+  // Password Management (72-hour temp passwords, 6-month permanent passwords)
+  mustChangePassword     Boolean   @default(false)
+  tempPasswordExpiry     DateTime? // Temporary password expires in 72 hours
+  passwordExpiresAt      DateTime? // Permanent password expires in 6 months
+  passwordChangedAt      DateTime?
 
   lastLoginDate       DateTime?
   failedLoginAttempts Int       @default(0)
@@ -6400,7 +6409,11 @@ model ClinicalNoteReminderConfig {
 
 enum AIConversationTopic {
   CLINICAL    // Client-related queries, diagnoses, treatment
-  OPERATIONAL // Revenue, scheduling, staff management
+  OPERATIONAL // Scheduling, appointments, waitlist, calendar
+  BILLING     // Charges, payments, claims, revenue, AR
+  STAFF       // Users, employees, credentials, supervision, org chart
+  HR          // PTO, time attendance, performance reviews, onboarding
+  COMPLIANCE  // Policies, incidents, audits, HIPAA, training
   REPORTING   // Reports, analytics, dashboards
   GENERAL     // Help, navigation, general questions
 }

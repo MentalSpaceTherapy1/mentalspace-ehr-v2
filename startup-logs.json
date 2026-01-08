@@ -1,0 +1,170 @@
+{
+    "events": [
+        {
+            "timestamp": 1767754166523,
+            "message": "Starting MentalSpace EHR Backend",
+            "ingestionTime": 1767754171487
+        },
+        {
+            "timestamp": 1767754166523,
+            "message": "==================================",
+            "ingestionTime": 1767754171487
+        },
+        {
+            "timestamp": 1767754166523,
+            "message": "Running database migrations...",
+            "ingestionTime": 1767754171487
+        },
+        {
+            "timestamp": 1767754166524,
+            "message": "Checking migration status...",
+            "ingestionTime": 1767754171487
+        },
+        {
+            "timestamp": 1767754172883,
+            "message": "Checking for failed migrations...",
+            "ingestionTime": 1767754176412
+        },
+        {
+            "timestamp": 1767754179273,
+            "message": "Environment variables loaded from .env",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754179355,
+            "message": "Prisma schema loaded from prisma/schema.prisma",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754179550,
+            "message": "Datasource \"db\": PostgreSQL database \"mentalspace_ehr\", schema \"public\" at \"mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432\"",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754179888,
+            "message": "39 migrations found in prisma/migrations",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754180079,
+            "message": "Error: P3005",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754180079,
+            "message": "The database schema is not empty. Read more about how to baseline an existing production database: https://pris.ly/d/migrate-baseline",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754180097,
+            "message": "Migration command exited with code 1",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754180097,
+            "message": "Continuing with application startup...",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754180097,
+            "message": "Migrations check complete",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754180097,
+            "message": "Starting application server...",
+            "ingestionTime": 1767754181411
+        },
+        {
+            "timestamp": 1767754181654,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"PHI encryption middleware registered for HIPAA compliance\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:41.654\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754182058,
+            "message": "{\"apiKeyPrefix\":\"re_VtEkf5M...\",\"configured\":true,\"environment\":\"production\",\"fromEmail\":\"CHC Therapy <support@chctherapy.com>\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"Resend service initialized\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:42.058\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754182267,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"Registered 23 metric calculators\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:42.267\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754182376,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"warn\",\"message\":\"SendGrid API key not configured - email reminders will be logged but not sent\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:42.376\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754182377,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"Twilio SMS service initialized successfully\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:42.376\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754183594,
+            "message": "{\"environment\":\"production\",\"fromEmail\":\"CHC Therapy <support@chctherapy.com>\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"Resend Email Service initialized successfully\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:43.593\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754183676,
+            "message": "{\"environment\":\"production\",\"hasHost\":false,\"hasPassword\":false,\"hasUser\":false,\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"warn\",\"message\":\"SMTP configuration incomplete. Email reminders will not be sent.\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:43.676\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754183688,
+            "message": "[PROGRESS-TRACKING] Router being created, applying authenticateDual middleware",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754183688,
+            "message": "[PROGRESS-TRACKING] authenticateDual middleware applied",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185078,
+            "message": "[ROUTES] Progress tracking routes imported: true",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185078,
+            "message": "[ROUTES] Registering progress tracking routes at /tracking",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185078,
+            "message": "[ROUTES] Progress tracking routes registered successfully",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185084,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"Starting HR automation jobs\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:45.084\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185085,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"Scheduled: Performance review reminders (daily at 9:00 AM)\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:45.085\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185085,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"Scheduled: PTO accrual processing (1st of month at 12:00 AM)\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:45.085\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185085,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"Scheduled: Attendance compliance check (Mondays at 8:00 AM)\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:45.085\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185086,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"Scheduled: Expiring PTO alerts (15th of month at 10:00 AM)\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:45.085\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185086,
+            "message": "{\"environment\":\"production\",\"hostname\":\"ip-172-31-37-168.ec2.internal\",\"level\":\"info\",\"message\":\"All HR automation jobs started\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 02:49:45.086\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767754186408
+        },
+        {
+            "timestamp": 1767754185086,
+            "message": 

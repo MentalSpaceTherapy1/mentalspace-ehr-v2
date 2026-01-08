@@ -211,14 +211,14 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
                     Vacation
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {balance.vacation.available}
+                    {balance.vacation?.available ?? 0}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
                     days available
                   </Typography>
                   <LinearProgress
                     variant="determinate"
-                    value={(balance.vacation.available / balance.vacation.accrued) * 100}
+                    value={balance.vacation?.accrued ? ((balance.vacation?.available ?? 0) / balance.vacation.accrued) * 100 : 0}
                     sx={{
                       mt: 1,
                       height: 6,
@@ -241,14 +241,14 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
                     Sick Leave
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {balance.sick.available}
+                    {balance.sick?.available ?? 0}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
                     days available
                   </Typography>
                   <LinearProgress
                     variant="determinate"
-                    value={(balance.sick.available / balance.sick.accrued) * 100}
+                    value={balance.sick?.accrued ? ((balance.sick?.available ?? 0) / balance.sick.accrued) * 100 : 0}
                     sx={{
                       mt: 1,
                       height: 6,
@@ -271,14 +271,14 @@ const PTORequestForm: React.FC<PTORequestFormProps> = ({
                     Personal
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {balance.personal.available}
+                    {balance.personal?.available ?? 0}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
                     days available
                   </Typography>
                   <LinearProgress
                     variant="determinate"
-                    value={(balance.personal.available / balance.personal.accrued) * 100}
+                    value={balance.personal?.accrued ? ((balance.personal?.available ?? 0) / balance.personal.accrued) * 100 : 0}
                     sx={{
                       mt: 1,
                       height: 6,

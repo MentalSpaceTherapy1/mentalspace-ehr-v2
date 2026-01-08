@@ -2,7 +2,7 @@ import { Sparkles } from 'lucide-react';
 
 /**
  * AI Floating Button
- * Toggles the AI Assistant sidebar
+ * Opens Lisa - the AI Assistant chat
  */
 
 interface AIFloatingButtonProps {
@@ -24,7 +24,7 @@ export default function AIFloatingButton({
           ? 'bg-gradient-to-r from-purple-600 to-blue-600'
           : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
       }`}
-      title="Toggle AI Assistant"
+      title="Chat with Lisa"
     >
       <Sparkles className="w-6 h-6 text-white" />
       {hasNewSuggestions && !isActive && (

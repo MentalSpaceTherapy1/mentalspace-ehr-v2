@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -16,6 +16,23 @@ import {
 } from 'lucide-react';
 import { useOnboarding, OnboardingProcess, OnboardingStats } from '../../hooks/useOnboarding';
 
+// Custom hook for debounced value
+function useDebouncedValue<T>(value: T, delay: number = 300): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 const OnboardingDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { onboardings, loading, error, fetchOnboardings } = useOnboarding();
@@ -25,13 +42,33 @@ const OnboardingDashboard: React.FC = () => {
   const [mentorFilter, setMentorFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Debounce search term to avoid excessive API calls
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
+
+  // Extract unique mentors from onboarding data for filter dropdown
+  const mentors = useMemo(() => {
+    const mentorMap = new Map<string, { id: string; firstName: string; lastName: string }>();
+    onboardings.forEach((onboarding) => {
+      if (onboarding.mentor && onboarding.mentor.id) {
+        mentorMap.set(onboarding.mentor.id, {
+          id: onboarding.mentor.id,
+          firstName: onboarding.mentor.firstName || '',
+          lastName: onboarding.mentor.lastName || '',
+        });
+      }
+    });
+    return Array.from(mentorMap.values()).sort((a, b) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
+    );
+  }, [onboardings]);
+
   useEffect(() => {
     fetchOnboardings({
       status: statusFilter,
       mentorId: mentorFilter,
-      search: searchTerm,
+      search: debouncedSearchTerm,
     });
-  }, [statusFilter, mentorFilter, searchTerm]);
+  }, [statusFilter, mentorFilter, debouncedSearchTerm]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -153,7 +190,11 @@ const OnboardingDashboard: React.FC = () => {
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="">All Mentors</option>
-                  {/* Populate with mentors from data */}
+                  {mentors.map((mentor) => (
+                    <option key={mentor.id} value={mentor.id}>
+                      {mentor.firstName} {mentor.lastName}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -238,8 +279,17 @@ const OnboardingDashboard: React.FC = () => {
           {onboardings.map((onboarding) => (
             <div
               key={onboarding.id}
+              role="button"
+              tabIndex={0}
               onClick={() => navigate(`/onboarding/${onboarding.id}`)}
-              className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer group"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate(`/onboarding/${onboarding.id}`);
+                }
+              }}
+              aria-label={`View onboarding details for ${onboarding.staff?.firstName} ${onboarding.staff?.lastName} - ${onboarding.completionPercentage}% complete`}
+              className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             >
               <div className="flex flex-col lg:flex-row gap-6">
                 {/* Left: Employee Info */}

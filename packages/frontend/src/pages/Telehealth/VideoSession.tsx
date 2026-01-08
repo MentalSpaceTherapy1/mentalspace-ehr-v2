@@ -67,8 +67,12 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Detect if we're in portal context (client portal route)
+  const isPortalContext = window.location.pathname.startsWith('/portal/');
+
   // Get user from localStorage similar to other components
-  const userStr = localStorage.getItem('user');
+  // For portal users, use portalClient; for staff, use user
+  const userStr = isPortalContext ? localStorage.getItem('portalClient') : localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
 
   // State
@@ -104,22 +108,28 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   const localVideoRef = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLDivElement>(null);
 
-  // Determine user role
-  const userRole = user?.roles?.includes('CLINICIAN') ? 'clinician' : 'client';
+  // Determine user role - portal users are always clients
+  const userRole = isPortalContext ? 'client' : (user?.roles?.includes('CLINICIAN') ? 'clinician' : 'client');
 
   // Validate appointment ID format
   const isValidAppointmentId = appointmentId &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentId);
 
   // Fetch session data - REDUCED POLLING INTERVAL
-  const { data: sessionDataResponse, isLoading, refetch } = useQuery({
-    queryKey: ['telehealth-session', appointmentId],
+  // Use portal endpoint for portal users, staff endpoint otherwise
+  const { data: sessionDataResponse, isLoading, isError, error: queryError, refetch } = useQuery({
+    queryKey: ['telehealth-session', appointmentId, isPortalContext],
     queryFn: async () => {
       if (!isValidAppointmentId) {
         throw new Error('Invalid appointment ID format');
       }
 
-      const response = await api.get(`/telehealth/sessions/${appointmentId}`);
+      // Use portal API for portal users, staff API for clinicians
+      const endpoint = isPortalContext
+        ? `/portal/telehealth/session/${appointmentId}`
+        : `/telehealth/sessions/${appointmentId}`;
+
+      const response = await api.get(endpoint);
       console.log('📡 Session data fetched:', response.data);
       return response.data;
     },
@@ -131,80 +141,22 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   // Extract session data from response
   const sessionData = sessionDataResponse?.data || sessionDataResponse;
 
-  // Auto-show waiting room when session data loads (React Query v4+ pattern - onSuccess is deprecated)
-  useEffect(() => {
-    console.log('🔍 Session status check:', {
-      hasSessionData: !!sessionDataResponse,
-      currentStatus: sessionStatus,
-      hasRoom: !!room,
-      hasJoinedOnce,
-      showWaitingRoom,
-    });
-
-    // Auto-show waiting room when session data loads (if not already joined)
-    if (sessionDataResponse && !room && !hasJoinedOnce && showWaitingRoom && sessionStatus === 'loading') {
-      console.log('✅ Transitioning to waiting room');
-      setSessionStatus('waiting_room');
-    }
-  }, [sessionDataResponse, room, hasJoinedOnce, showWaitingRoom, sessionStatus]);
-
-  // Create local tracks - NEW FUNCTION
-  const createLocalTracks = useCallback(async () => {
-    try {
-      console.log('📹 Creating local video and audio tracks...');
-
-      // Ensure Twilio Video is loaded
-      if (!Video && (window as any).Twilio?.Video) {
-        Video = (window as any).Twilio.Video;
-      }
-
-      if (!Video) {
-        throw new Error('Twilio Video SDK not loaded');
-      }
-
-      const tracks = await Video.createLocalTracks({
-        audio: true,
-        video: { width: 1280, height: 720 }
-      });
-
-      console.log('✅ Local tracks created:', tracks.map((t: any) => t.kind));
-
-      // Attach video track to preview container
-      tracks.forEach((track: any) => {
-        if (track.kind === 'video' && localVideoRef.current) {
-          const element = track.attach();
-          localVideoRef.current.appendChild(element);
-          console.log('✅ Video track attached to preview');
-        }
-      });
-
-      setLocalTracks(tracks);
-      return tracks;
-    } catch (error) {
-      console.error('❌ Failed to create local tracks:', error);
-
-      // Check for permission errors
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
-        toast.error('Camera/microphone access denied. Please allow permissions and try again.');
-      } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('DevicesNotFoundError')) {
-        toast.error('No camera or microphone found. Please connect a device and try again.');
-      } else {
-        toast.error('Failed to access camera/microphone. Please check your device settings.');
-      }
-
-      throw error;
-    }
-  }, []);
-
   // Join session mutation
+  // Use portal endpoint for portal users, staff endpoint otherwise
   const joinMutation = useMutation({
     mutationFn: async () => {
-      console.log('🚀 Calling join endpoint...');
-      const response = await api.post('/telehealth/sessions/join', {
-        appointmentId: appointmentId, // Backend expects appointmentId
-        userRole: userRole,
-      });
+      console.log('🚀 Calling join endpoint... isPortalContext:', isPortalContext);
+
+      // Use portal API for portal users, staff API for clinicians
+      const endpoint = isPortalContext
+        ? `/portal/telehealth/session/${appointmentId}/join`
+        : '/telehealth/sessions/join';
+
+      const body = isPortalContext
+        ? {} // Portal endpoint doesn't need body (uses path param and auth)
+        : { appointmentId: appointmentId, userRole: userRole };
+
+      const response = await api.post(endpoint, body);
       console.log('✅ Join response:', response.data);
       return response.data;
     },
@@ -312,6 +264,91 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   // Extract stable mutate function and isPending state
   const joinSession = joinMutation.mutate;
   const isJoining = joinMutation.isPending;
+
+  // Auto-show waiting room when session data loads (React Query v4+ pattern - onSuccess is deprecated)
+  // CLINICIANS skip waiting room and join directly
+  useEffect(() => {
+    console.log('🔍 Session status check:', {
+      hasSessionData: !!sessionDataResponse,
+      currentStatus: sessionStatus,
+      hasRoom: !!room,
+      hasJoinedOnce,
+      showWaitingRoom,
+      userRole,
+    });
+
+    // For clinicians: Skip waiting room entirely and join directly
+    if (sessionDataResponse && !room && !hasJoinedOnce && sessionStatus === 'loading') {
+      if (userRole === 'clinician') {
+        console.log('✅ Clinician detected - skipping waiting room, joining directly');
+        setShowWaitingRoom(false);
+        setSessionStatus('joining');
+        joinMutation.mutate(); // Use mutate directly here
+      } else {
+        // Clients go through waiting room
+        console.log('✅ Client detected - showing waiting room');
+        setSessionStatus('waiting_room');
+      }
+    }
+  }, [sessionDataResponse, room, hasJoinedOnce, showWaitingRoom, sessionStatus, userRole, joinMutation]);
+
+  // Handle query errors - transition to error state when API call fails
+  useEffect(() => {
+    if (isError && sessionStatus === 'loading') {
+      console.error('❌ Failed to load telehealth session:', queryError);
+      toast.error('Failed to load telehealth session. Please try again.');
+      setSessionStatus('error');
+    }
+  }, [isError, queryError, sessionStatus]);
+
+  // Create local tracks - NEW FUNCTION
+  const createLocalTracks = useCallback(async () => {
+    try {
+      console.log('📹 Creating local video and audio tracks...');
+
+      // Ensure Twilio Video is loaded
+      if (!Video && (window as any).Twilio?.Video) {
+        Video = (window as any).Twilio.Video;
+      }
+
+      if (!Video) {
+        throw new Error('Twilio Video SDK not loaded');
+      }
+
+      const tracks = await Video.createLocalTracks({
+        audio: true,
+        video: { width: 1280, height: 720 }
+      });
+
+      console.log('✅ Local tracks created:', tracks.map((t: any) => t.kind));
+
+      // Attach video track to preview container
+      tracks.forEach((track: any) => {
+        if (track.kind === 'video' && localVideoRef.current) {
+          const element = track.attach();
+          localVideoRef.current.appendChild(element);
+          console.log('✅ Video track attached to preview');
+        }
+      });
+
+      setLocalTracks(tracks);
+      return tracks;
+    } catch (error) {
+      console.error('❌ Failed to create local tracks:', error);
+
+      // Check for permission errors
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
+        toast.error('Camera/microphone access denied. Please allow permissions and try again.');
+      } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('DevicesNotFoundError')) {
+        toast.error('No camera or microphone found. Please connect a device and try again.');
+      } else {
+        toast.error('Failed to access camera/microphone. Please check your device settings.');
+      }
+
+      throw error;
+    }
+  }, []);
 
   // Set up room event handlers
   const setupRoomHandlers = useCallback((twilioRoom: any) => {

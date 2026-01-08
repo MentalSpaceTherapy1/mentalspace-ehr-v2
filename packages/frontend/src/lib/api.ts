@@ -98,14 +98,18 @@ api.interceptors.request.use(
                                       config.url?.includes('/tracking/export/') ||
                                       config.url?.includes('/tracking/notes') ||
                                       config.url?.includes('/tracking/report');
-    const isPortalRoute = config.url?.includes('/portal/') ||
+    // Note: /client-portal/* routes are EHR routes (therapists viewing client portal data)
+    // They use EHR cookie auth and require CSRF. Only /portal/* routes are for portal clients.
+    const isClientPortalRoute = config.url?.includes('/client-portal/');
+    const isPortalRoute = !isClientPortalRoute && (
+                          config.url?.includes('/portal/') ||
                           config.url?.includes('/portal-') ||
                           (isTrackingRoute && !isClinicianTrackingRoute) ||
                           config.url?.includes('/self-schedule/') ||
                           config.url?.includes('/waitlist/my-entries') ||
                           config.url?.includes('/waitlist/my-offers') ||
                           config.url?.match(/\/waitlist\/[^/]+\/accept/) ||
-                          config.url?.match(/\/waitlist\/[^/]+\/decline/);
+                          config.url?.match(/\/waitlist\/[^/]+\/decline/));
 
     // DEBUG: Log route classification (only in development)
     if (process.env.NODE_ENV === 'development') {

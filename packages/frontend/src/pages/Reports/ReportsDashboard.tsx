@@ -23,6 +23,7 @@ import {
   useClientDemographicsReport,
 } from '../../hooks/useReports';
 import ReportViewModalEnhanced from '../../components/ReportViewModalEnhanced';
+import NaturalLanguageSearch from '../../components/Reports/NaturalLanguageSearch';
 
 type ReportType =
   | 'revenue-clinician'
@@ -469,6 +470,9 @@ export default function ReportsDashboard() {
           Generate comprehensive reports for revenue, productivity, compliance, and demographics
         </p>
       </div>
+
+      {/* AI-Powered Natural Language Search */}
+      <NaturalLanguageSearch className="mb-8" />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

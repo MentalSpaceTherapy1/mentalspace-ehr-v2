@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
 
+// Helper to extract data from API response (handles both {success, data} and direct array formats)
+const extractData = <T>(response: any): T => {
+  return response?.data?.data ?? response?.data ?? response;
+};
+
+const extractArray = <T>(response: any): T[] => {
+  const data = extractData<T[] | T>(response);
+  return Array.isArray(data) ? data : [];
+};
+
 export interface OnboardingProcess {
   id: string;
   staffId: string;
@@ -86,7 +96,7 @@ export const useOnboarding = () => {
       if (filters?.search) params.append('search', filters.search);
 
       const response = await api.get(`/onboarding?${params.toString()}`);
-      setOnboardings(response.data);
+      setOnboardings(extractArray<OnboardingProcess>(response));
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch onboardings');
@@ -98,7 +108,7 @@ export const useOnboarding = () => {
   const getOnboardingById = async (id: string): Promise<OnboardingProcess | null> => {
     try {
       const response = await api.get(`/onboarding/${id}`);
-      return response.data;
+      return extractData<OnboardingProcess>(response);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch onboarding');
       return null;
@@ -109,7 +119,7 @@ export const useOnboarding = () => {
     try {
       const response = await api.post('/onboarding', data);
       await fetchOnboardings();
-      return response.data;
+      return extractData<OnboardingProcess>(response);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create onboarding');
       return null;
@@ -120,7 +130,7 @@ export const useOnboarding = () => {
     try {
       const response = await api.put(`/onboarding/${id}`, data);
       await fetchOnboardings();
-      return response.data;
+      return extractData<OnboardingProcess>(response);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update onboarding');
       return null;
@@ -130,7 +140,7 @@ export const useOnboarding = () => {
   const getStats = async (): Promise<OnboardingStats | null> => {
     try {
       const response = await api.get('/onboarding/stats');
-      return response.data;
+      return extractData<OnboardingStats>(response);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch stats');
       return null;
@@ -162,7 +172,7 @@ export const useOnboardingChecklist = (onboardingId: string) => {
     try {
       setLoading(true);
       const response = await api.get(`/onboarding/${onboardingId}/checklist`);
-      setChecklist(response.data);
+      setChecklist(extractArray<OnboardingChecklist>(response));
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch checklist');
@@ -175,7 +185,7 @@ export const useOnboardingChecklist = (onboardingId: string) => {
     try {
       const response = await api.post(`/onboarding/${onboardingId}/checklist`, data);
       await fetchChecklist();
-      return response.data;
+      return extractData<OnboardingChecklist>(response);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add checklist item');
       return null;
@@ -186,7 +196,7 @@ export const useOnboardingChecklist = (onboardingId: string) => {
     try {
       const response = await api.put(`/onboarding/${onboardingId}/checklist/${itemId}`, data);
       await fetchChecklist();
-      return response.data;
+      return extractData<OnboardingChecklist>(response);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update checklist item');
       return null;
@@ -231,7 +241,7 @@ export const useOnboardingMilestones = (onboardingId: string) => {
     try {
       setLoading(true);
       const response = await api.get(`/onboarding/${onboardingId}/milestones`);
-      setMilestones(response.data);
+      setMilestones(extractArray<OnboardingMilestone>(response));
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch milestones');
@@ -258,7 +268,7 @@ export const useOnboardingMilestones = (onboardingId: string) => {
     try {
       const response = await api.post(`/onboarding/${onboardingId}/milestones`, data);
       await fetchMilestones();
-      return response.data;
+      return extractData<OnboardingMilestone>(response);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add milestone');
       return null;

@@ -47,9 +47,9 @@ export default function AIIntegrationTab({ settings, onSave }: AIIntegrationTabP
       { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
     ],
     Anthropic: [
-      { value: 'claude-3-opus', label: 'Claude 3 Opus (Most Capable)' },
-      { value: 'claude-3-sonnet', label: 'Claude 3 Sonnet (Balanced)' },
-      { value: 'claude-3-haiku', label: 'Claude 3 Haiku (Fast)' },
+      { value: 'claude-opus-4-20250514', label: 'Claude Opus 4 (Most Capable)' },
+      { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (Recommended)' },
+      { value: 'claude-haiku-4-20250414', label: 'Claude Haiku 4 (Fast)' },
     ],
     Custom: [{ value: 'custom', label: 'Custom Model' }],
   };

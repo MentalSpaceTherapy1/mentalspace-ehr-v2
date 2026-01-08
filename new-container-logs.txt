@@ -1,0 +1,8 @@
+aws : 
+At C:\Users\Jarvis 2.0\mentalspace-ehr-v2\check-new-logs.ps1:2 char:11
++ $result = aws logs get-log-events --log-group-name '/ecs/mentalspace- ...
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+'charmap' codec can't encode character '\U0001f514' in position 5936: character maps to <undefined>

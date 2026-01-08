@@ -37,6 +37,14 @@ interface ResendEmailOptions {
 export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
   const toAddresses = Array.isArray(options.to) ? options.to.join(', ') : options.to;
 
+  // DEBUG: Always output to console
+  console.log('[EMAIL DEBUG] sendEmail called:', {
+    to: toAddresses,
+    subject: options.subject,
+    hasResendClient: !!resendClient,
+    nodeEnv: process.env.NODE_ENV,
+  });
+
   logger.info('Attempting to send email', {
     to: toAddresses,
     subject: options.subject,
@@ -47,6 +55,10 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
   try {
     // In development or if Resend not configured, log emails instead of sending
     if (process.env.NODE_ENV === 'development' || !resendClient) {
+      console.log('[EMAIL DEBUG] SKIPPING - dev mode or no client:', {
+        isDevelopment: process.env.NODE_ENV === 'development',
+        hasResendClient: !!resendClient,
+      });
       logger.warn('Email NOT actually sent - development mode or Resend not configured', {
         isDevelopment: process.env.NODE_ENV === 'development',
         hasResendClient: !!resendClient,
@@ -57,6 +69,8 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
     }
 
     const fromEmail = options.from || process.env.RESEND_FROM_EMAIL || 'MentalSpace EHR <noreply@mentalspace.com>';
+
+    console.log('[EMAIL DEBUG] Sending via Resend API:', { from: fromEmail, to: toAddresses });
 
     logger.info('Sending email via Resend API', {
       from: fromEmail,
@@ -74,6 +88,32 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
       reply_to: options.replyTo,
     });
 
+    // DEBUG: Log FULL Resend response
+    console.log('[EMAIL DEBUG] Full Resend response:', JSON.stringify(result, null, 2));
+
+    // Check for Resend API error (SDK doesn't throw, it returns error object)
+    if ((result as any).error) {
+      const resendError = (result as any).error;
+      console.error('[EMAIL DEBUG] Resend API returned error:', {
+        statusCode: resendError.statusCode,
+        name: resendError.name,
+        message: resendError.message,
+      });
+      logger.error('Resend API returned error', {
+        statusCode: resendError.statusCode,
+        name: resendError.name,
+        message: resendError.message,
+        to: toAddresses,
+        subject: options.subject,
+      });
+      return false;
+    }
+
+    console.log('[EMAIL DEBUG] Email sent successfully:', {
+      emailId: result.data?.id,
+      hasData: !!result.data,
+    });
+
     logger.info('Email sent successfully via Resend', {
       emailId: result.data?.id,
       to: toAddresses,
@@ -82,6 +122,7 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
     return true;
 
   } catch (error) {
+    console.error('[EMAIL DEBUG] FAILED to send email:', error);
     logger.error('Failed to send email via Resend', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -445,8 +486,8 @@ export const EmailTemplates = {
   /**
    * Client portal invitation email
    */
-  clientInvitation: (firstName: string, invitationLink: string, clinicianName: string) => ({
-    subject: 'You\'re Invited to MentalSpace Client Portal',
+  clientInvitation: (firstName: string, invitationLink: string, clinicianName: string, mrn: string) => ({
+    subject: `MentalSpace Therapy - Welcome to Your Secure Client Portal, ${firstName}!`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -457,33 +498,72 @@ export const EmailTemplates = {
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
             <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 20px; text-align: center;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to MentalSpace Client Portal</h1>
+              <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to Your Secure Client Portal!</h1>
             </div>
             <div style="padding: 40px 30px;">
-              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
-              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Your therapist, ${clinicianName}, has invited you to access our secure client portal.</p>
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-top: 24px;"><strong>What you can do in the portal:</strong></p>
-              <ul style="color: #374151; line-height: 1.8; font-size: 15px;">
-                <li>View and manage your appointments</li>
-                <li>Complete intake forms and assessments</li>
-                <li>Communicate securely with your provider</li>
-                <li>Access session summaries and resources</li>
-                <li>Track your therapeutic goals and progress</li>
-                <li>Access crisis resources 24/7</li>
-              </ul>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Welcome! Your therapist, <strong>${clinicianName}</strong>, has invited you to access our secure client portal. This is your personal space to manage your care and stay connected throughout your therapeutic journey.</p>
+
+              <!-- MRN Box -->
+              <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 20px; border-radius: 12px; margin: 24px 0; text-align: center;">
+                <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 8px 0; font-weight: 500;">Your Medical Record Number (MRN)</p>
+                <p style="color: white; font-size: 24px; font-weight: bold; margin: 0; letter-spacing: 1px; font-family: 'Courier New', monospace;">${mrn}</p>
+                <p style="color: rgba(255,255,255,0.8); font-size: 12px; margin: 8px 0 0 0;">You will need this to create your account</p>
+              </div>
+
+              <!-- Instructions Box -->
+              <div style="background-color: #ecfdf5; border: 2px solid #10b981; border-radius: 12px; padding: 20px; margin: 24px 0;">
+                <p style="color: #065f46; font-size: 16px; font-weight: bold; margin: 0 0 12px 0;">📋 How to Create Your Account:</p>
+                <ol style="color: #047857; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                  <li><strong>Click the button below</strong> to open the registration page</li>
+                  <li><strong>Enter your MRN</strong> (shown above: ${mrn})</li>
+                  <li><strong>Enter your email address</strong> (use the same email this was sent to)</li>
+                  <li><strong>Create a secure password</strong> (at least 8 characters)</li>
+                  <li><strong>Click "Create Account"</strong> to complete registration</li>
+                </ol>
+              </div>
+
               <div style="text-align: center; margin: 32px 0;">
-                <a href="${invitationLink}" style="display: inline-block; background-color: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Set Up Your Portal Account</a>
+                <a href="${invitationLink}" style="display: inline-block; background-color: #10b981; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 18px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">Create My Portal Account</a>
               </div>
-              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">Or copy and paste this link:</p>
+
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center;">Or copy and paste this link into your browser:</p>
               <p style="color: #6b7280; font-size: 12px; word-break: break-all; background-color: #f9fafb; padding: 12px; border-radius: 4px;">${invitationLink}</p>
+
               <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
-                <p style="margin: 0; color: #92400e; font-size: 14px;">This invitation link will expire in 7 days.</p>
+                <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>⏰ Important:</strong> This invitation link will expire in 7 days.</p>
               </div>
-              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">If you have any questions, please contact your therapist.</p>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-top: 24px;"><strong>Once registered, you'll be able to:</strong></p>
+
+              <div style="margin: 20px 0;">
+                <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 16px 0;"><span style="font-size: 18px;">📅</span> <strong>Manage Your Appointments</strong><br>
+                <span style="color: #6b7280;">Schedule sessions at your convenience with our self-scheduling feature.</span></p>
+
+                <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 16px 0;"><span style="font-size: 18px;">💬</span> <strong>Secure Messaging</strong><br>
+                <span style="color: #6b7280;">Communicate directly with your care team between sessions through our encrypted messaging system.</span></p>
+
+                <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 16px 0;"><span style="font-size: 18px;">📝</span> <strong>Complete Forms & Documents</strong><br>
+                <span style="color: #6b7280;">Fill out intake forms, consent documents, and assessments online before your first session.</span></p>
+
+                <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 16px 0;"><span style="font-size: 18px;">📊</span> <strong>Track Your Progress</strong><br>
+                <span style="color: #6b7280;">Use our wellness tools: Mood Journal, Sleep Diary, Symptom Diary, and Exercise Log.</span></p>
+
+                <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 16px 0;"><span style="font-size: 18px;">💳</span> <strong>Billing & Payments</strong><br>
+                <span style="color: #6b7280;">View your account balance, review charges, and make payments securely online.</span></p>
+
+                <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 16px 0;"><span style="font-size: 18px;">🎥</span> <strong>Attend Telehealth Sessions</strong><br>
+                <span style="color: #6b7280;">Join your therapy sessions from anywhere through our integrated video conferencing.</span></p>
+              </div>
+
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">If you have any questions, please don't hesitate to reach out to our office at <strong>(404) 832-0102</strong> or <a href="mailto:support@chctherapy.com" style="color: #10b981;">support@chctherapy.com</a>.</p>
+              <p style="color: #374151; font-size: 14px; line-height: 1.6; margin-top: 24px;">We look forward to supporting you on your mental health journey.</p>
+              <p style="color: #374151; font-size: 14px; line-height: 1.6;">Warm regards,<br><strong>The CHC Therapy Team</strong></p>
             </div>
             <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="color: #9ca3af; font-size: 11px; margin: 0;">This email contains confidential health information protected by HIPAA. If you received this in error, please delete it immediately and notify the sender.</p>
-              <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">© ${new Date().getFullYear()} CHC Therapy. All rights reserved.</p>
             </div>
           </div>
         </body>

@@ -333,7 +333,9 @@ export default function PortalSelfScheduling() {
       const response = await api.get('/portal/self-schedule/my-appointments');
 
       if (response.data.success) {
-        setMyAppointments(response.data.data || []);
+        // Backend returns { upcoming: [...], past: [...] } format
+        const appointments = response.data.data?.upcoming || response.data.data || [];
+        setMyAppointments(Array.isArray(appointments) ? appointments : []);
       }
     } catch (error: any) {
       console.error('Failed to load appointments', error);

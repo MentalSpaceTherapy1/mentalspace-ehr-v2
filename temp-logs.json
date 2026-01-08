@@ -1,0 +1,256 @@
+{
+    "events": [
+        {
+            "timestamp": 1767806759375,
+            "message": "{\"duration\":\"1ms\",\"environment\":\"production\",\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"ip\":\"4.222.232.3\",\"level\":\"info\",\"message\":\"API request\",\"method\":\"GET\",\"pid\":1,\"service\":\"mentalspace-backend\",\"statusCode\":404,\"timestamp\":\"2026-01-07 17:25:59.375\",\"url\":\"/core/php/database.log\",\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767806760512
+        },
+        {
+            "timestamp": 1767806759818,
+            "message": "{\"environment\":\"production\",\"errorId\":\"ERR-1767806759817-89h1ky7kj\",\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"ip\":\"4.222.232.3\",\"level\":\"warn\",\"message\":\"Route not found\",\"method\":\"GET\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 17:25:59.818\",\"url\":\"/core/php/database.sql\",\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767806760512
+        },
+        {
+            "timestamp": 1767806759819,
+            "message": "{\"duration\":\"2ms\",\"environment\":\"production\",\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"ip\":\"4.222.232.3\",\"level\":\"info\",\"message\":\"API request\",\"method\":\"GET\",\"pid\":1,\"service\":\"mentalspace-backend\",\"statusCode\":404,\"timestamp\":\"2026-01-07 17:25:59.819\",\"url\":\"/core/php/database.sql\",\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767806760512
+        },
+        {
+            "timestamp": 1767806760264,
+            "message": "{\"environment\":\"production\",\"errorId\":\"ERR-1767806760263-3mnyjn067\",\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"ip\":\"4.222.232.3\",\"level\":\"warn\",\"message\":\"Route not found\",\"method\":\"GET\",\"pid\":1,\"service\":\"mentalspace-backend\",\"timestamp\":\"2026-01-07 17:26:00.264\",\"url\":\"/core/php/database.txt\",\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767806760512
+        },
+        {
+            "timestamp": 1767806760270,
+            "message": "{\"duration\":\"8ms\",\"environment\":\"production\",\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"ip\":\"4.222.232.3\",\"level\":\"info\",\"message\":\"API request\",\"method\":\"GET\",\"pid\":1,\"service\":\"mentalspace-backend\",\"statusCode\":404,\"timestamp\":\"2026-01-07 17:26:00.270\",\"url\":\"/core/php/database.txt\",\"userAgent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36\",\"version\":\"1.0.0\"}",
+            "ingestionTime": 1767806760512
+        },
+        {
+            "timestamp": 1767806760291,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767806760512
+        },
+        {
+            "timestamp": 1767806773042,
+            "message": "{\"action\":\"SESSION_TERMINATED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Session terminated\",\"pid\":1,\"service\":\"mentalspace-audit\",\"sessionId\":\"0030dbda-147f-42c9-a83e-e557fa21ea16\",\"timestamp\":\"2026-01-07 17:26:13.042\",\"userId\":\"245fd0f5-1b4e-4efd-86ca-944cd4899fdf\"}",
+            "ingestionTime": 1767806775532
+        },
+        {
+            "timestamp": 1767806820084,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767806820530
+        },
+        {
+            "timestamp": 1767806880061,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767806880529
+        },
+        {
+            "timestamp": 1767806889445,
+            "message": "{\"action\":\"PASSWORD_VERIFICATION_DEBUG\",\"email\":\"ejoseph@chctherapy.com\",\"environment\":\"production\",\"hasExpiry\":false,\"hasStoredPassword\":true,\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"isPasswordValid\":true,\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Password verification attempt\",\"mustChangePassword\":false,\"passwordLength\":10,\"passwordProvided\":true,\"pid\":1,\"service\":\"mentalspace-audit\",\"storedPasswordLength\":60,\"timestamp\":\"2026-01-07 17:28:09.445\",\"userId\":\"245fd0f5-1b4e-4efd-86ca-944cd4899fdf\"}",
+            "ingestionTime": 1767806890526
+        },
+        {
+            "timestamp": 1767806889470,
+            "message": "{\"action\":\"SESSION_CREATED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"ipAddress\":\"107.222.47.109\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Session created\",\"pid\":1,\"service\":\"mentalspace-audit\",\"sessionId\":\"abd823d2-56ce-4ce6-b8c3-d4b55b22740e\",\"timestamp\":\"2026-01-07 17:28:09.470\",\"userId\":\"245fd0f5-1b4e-4efd-86ca-944cd4899fdf\"}",
+            "ingestionTime": 1767806890526
+        },
+        {
+            "timestamp": 1767806889470,
+            "message": "{\"action\":\"LOGIN_SUCCESS\",\"email\":\"ejoseph@chctherapy.com\",\"environment\":\"production\",\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"ipAddress\":\"107.222.47.109\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"User logged in\",\"pid\":1,\"service\":\"mentalspace-audit\",\"sessionId\":\"abd823d2-56ce-4ce6-b8c3-d4b55b22740e\",\"timestamp\":\"2026-01-07 17:28:09.470\",\"userId\":\"245fd0f5-1b4e-4efd-86ca-944cd4899fdf\"}",
+            "ingestionTime": 1767806890526
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "[EMAIL DEBUG] sendEmail called: {",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "  to: 'lelejoseli@yahoo.fr',",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "  subject: 'Reset Your MentalSpace Portal Password',",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "  hasResendClient: true,",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "  nodeEnv: 'production'",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "}",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "[EMAIL DEBUG] Sending via Resend API: {",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "  from: 'CHC Therapy <support@chctherapy.com>',",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "  to: 'lelejoseli@yahoo.fr'",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911067,
+            "message": "}",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "[EMAIL DEBUG] Full Resend response: {",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "  \"data\": {",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"id\": \"2835e6c6-ca3d-47cc-9c46-fb88061551f1\"",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "  },",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "  \"error\": null,",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "  \"headers\": {",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"cf-cache-status\": \"DYNAMIC\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"cf-ray\": \"9ba52c0a5c2e8009-IAD\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"connection\": \"keep-alive\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"content-encoding\": \"br\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"content-type\": \"application/json\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"date\": \"Wed, 07 Jan 2026 17:28:31 GMT\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"ratelimit-limit\": \"2\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"ratelimit-policy\": \"2;w=1\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"ratelimit-remaining\": \"1\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"ratelimit-reset\": \"1\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"server\": \"cloudflare\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"transfer-encoding\": \"chunked\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"x-resend-daily-quota\": \"13\",",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "    \"x-resend-monthly-quota\": \"157\"",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "  }",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "}",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806911209,
+            "message": "[EMAIL DEBUG] Email sent successfully: { emailId: '2835e6c6-ca3d-47cc-9c46-fb88061551f1', hasData: true }",
+            "ingestionTime": 1767806915528
+        },
+        {
+            "timestamp": 1767806940121,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767806940529
+        },
+        {
+            "timestamp": 1767807000231,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767807000537
+        },
+        {
+            "timestamp": 1767807000242,
+            "message": "{\"action\":\"REMINDERS_PROCESSED\",\"environment\":\"production\",\"hostname\":\"ip-172-31-0-159.ec2.internal\",\"level\":\"info\",\"logType\":\"AUDIT\",\"message\":\"Reminder processing completed\",\"pid\":1,\"results\":{\"emailSent\":0,\"failed\":0,\"smsSent\":0,\"total\":0},\"service\":\"mentalspace-audit\",\"timestamp\":\"2026-01-07 17:30:00.240\"}",
+            "ingestionTime": 1767807000537
+        },
+        {
+            "timestamp": 1767807034402,
+            "message": "[Delivery Tracker] Found 0 failed deliveries to retry",
+            "ingestionTime": 1767807035525
+        },
+        {
+            "timestamp": 1767807060137,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767807060530
+        }
+    ],
+    "nextForwardToken": "f/39423414808278739310142064974521418242065878855254343680/s",
+    "nextBackwardToken": "b/39423408101062011909674787317256106804522459116721143825/s"
+}

@@ -1,17 +1,31 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 export default function PortalRegister() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Check if this is an activation flow (has token from invitation email)
+  const invitationToken = searchParams.get('token');
+  const invitationEmail = searchParams.get('email');
+  const isActivationFlow = !!invitationToken;
+
   const [formData, setFormData] = useState({
-    email: '',
+    email: invitationEmail || '',
     password: '',
     confirmPassword: '',
-    clientId: '',
+    clientId: '', // MRN - always required for identity verification
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  // Update email from URL params if present
+  useEffect(() => {
+    if (invitationEmail) {
+      setFormData(prev => ({ ...prev, email: invitationEmail }));
+    }
+  }, [invitationEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,15 +45,31 @@ export default function PortalRegister() {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/portal-auth/register', {
-        email: formData.email,
-        password: formData.password,
-        clientId: formData.clientId,
-      });
+      if (isActivationFlow) {
+        // Activation flow - account was created by staff, client is setting password
+        const response = await api.post('/portal-auth/activate', {
+          token: invitationToken,
+          email: formData.email,
+          password: formData.password,
+          mrn: formData.clientId,
+        });
 
-      if (response.data.success) {
-        toast.success('Account created! Please check your email to verify your account.');
-        navigate('/portal/login');
+        if (response.data.success) {
+          toast.success('Account activated successfully! You can now log in.');
+          navigate('/portal/login');
+        }
+      } else {
+        // Self-registration flow - client is creating a new account
+        const response = await api.post('/portal-auth/register', {
+          email: formData.email,
+          password: formData.password,
+          clientId: formData.clientId,
+        });
+
+        if (response.data.success) {
+          toast.success('Account created! Please check your email to verify your account.');
+          navigate('/portal/login');
+        }
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Registration failed');
@@ -62,7 +92,14 @@ export default function PortalRegister() {
 
         {/* Registration Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Create Account</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {isActivationFlow ? 'Activate Your Account' : 'Create Account'}
+          </h2>
+          {isActivationFlow && (
+            <p className="text-sm text-gray-600 mb-6">
+              Welcome! Please enter your MRN and create a password to activate your portal account.
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -76,10 +113,12 @@ export default function PortalRegister() {
                 onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                placeholder="Enter your MRN"
+                placeholder="Enter your MRN (e.g., MRN-123456)"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Your therapist will provide you with your MRN
+                {isActivationFlow
+                  ? 'Enter the MRN provided in your invitation email'
+                  : 'Your therapist will provide you with your MRN'}
               </p>
             </div>
 
@@ -93,9 +132,17 @@ export default function PortalRegister() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                readOnly={isActivationFlow && !!invitationEmail}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${
+                  isActivationFlow && invitationEmail ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
                 placeholder="you@example.com"
               />
+              {isActivationFlow && invitationEmail && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Email is pre-filled from your invitation
+                </p>
+              )}
             </div>
 
             <div>
@@ -138,7 +185,9 @@ export default function PortalRegister() {
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {isLoading
+                ? (isActivationFlow ? 'Activating Account...' : 'Creating Account...')
+                : (isActivationFlow ? 'Activate Account' : 'Create Account')}
             </button>
           </form>
 

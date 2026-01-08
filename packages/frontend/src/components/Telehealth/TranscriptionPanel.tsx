@@ -53,7 +53,7 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
 
   // Setup WebSocket listeners
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !socket) return;
 
     // Join transcription room
     socket.emit('transcription:join-session', { sessionId });
@@ -64,10 +64,12 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
     socket.on('transcription:error', handleTranscriptionError);
 
     return () => {
-      socket.emit('transcription:leave-session', { sessionId });
-      socket.off('transcript-update', handleTranscriptUpdate);
-      socket.off('transcription:status-change', handleStatusChange);
-      socket.off('transcription:error', handleTranscriptionError);
+      if (socket) {
+        socket.emit('transcription:leave-session', { sessionId });
+        socket.off('transcript-update', handleTranscriptUpdate);
+        socket.off('transcription:status-change', handleStatusChange);
+        socket.off('transcription:error', handleTranscriptionError);
+      }
     };
   }, [sessionId]);
 

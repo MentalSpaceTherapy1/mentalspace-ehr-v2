@@ -2,6 +2,14 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import logger from '../utils/logger';
 import prisma from '../services/database';
+import {
+  uploadDocument,
+  generateUploadPresignedUrl,
+  generatePresignedUrl,
+  getDocumentsBucket,
+  isStorageConfigured,
+} from '../services/storage.service';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * EHR-side controller for managing client documents
@@ -178,35 +186,191 @@ export const getDocumentAnalytics = async (req: Request, res: Response) => {
 };
 
 /**
- * Upload file endpoint placeholder
+ * Upload file to S3
  * POST /api/v1/clients/documents/upload
+ *
+ * Supports two modes:
+ * 1. Direct upload: Send file in request body (for small files)
+ * 2. Presigned URL: Request a presigned URL for client-side upload (for large files)
  */
 export const uploadDocumentFile = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.userId;
 
-    // TODO: Implement actual file upload to S3
-    // This is a placeholder that returns a mock S3 URL
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
 
-    const mockFileUrl = `https://s3.amazonaws.com/mentalspace-documents/${Date.now()}_document.pdf`;
+    // Check if S3 is configured
+    if (!isStorageConfigured()) {
+      logger.error('S3 storage not configured');
+      return res.status(503).json({
+        success: false,
+        message: 'File storage service is not configured. Please contact administrator.',
+      });
+    }
 
-    logger.info(`File upload initiated by user ${userId}`);
+    const { fileName, mimeType, clientId, documentType, requestPresignedUrl } = req.body;
+
+    if (!fileName) {
+      return res.status(400).json({
+        success: false,
+        message: 'fileName is required',
+      });
+    }
+
+    const bucket = getDocumentsBucket();
+    const fileExtension = fileName.split('.').pop() || 'pdf';
+    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const key = `documents/${clientId || 'general'}/${Date.now()}_${uuidv4()}.${fileExtension}`;
+
+    // Mode 1: Return presigned URL for client-side upload
+    if (requestPresignedUrl) {
+      const { url, key: s3Key } = await generateUploadPresignedUrl({
+        bucket,
+        key,
+        contentType: mimeType || 'application/octet-stream',
+        expiresIn: 3600, // 1 hour
+      });
+
+      logger.info(`Presigned upload URL generated for user ${userId}`, {
+        bucket,
+        key: s3Key,
+        fileName: sanitizedFileName,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Presigned URL generated for upload',
+        data: {
+          uploadUrl: url,
+          s3Key: s3Key,
+          bucket,
+          expiresIn: 3600,
+          method: 'PUT',
+          headers: {
+            'Content-Type': mimeType || 'application/octet-stream',
+          },
+        },
+      });
+    }
+
+    // Mode 2: Direct upload from request body (for small files via base64)
+    const { fileContent } = req.body;
+
+    if (!fileContent) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either fileContent (base64) or requestPresignedUrl must be provided',
+      });
+    }
+
+    // Decode base64 file content
+    const fileBuffer = Buffer.from(fileContent, 'base64');
+
+    // Upload to S3
+    const uploadResult = await uploadDocument({
+      bucket,
+      key,
+      body: fileBuffer,
+      contentType: mimeType || 'application/octet-stream',
+      metadata: {
+        'original-filename': sanitizedFileName,
+        'uploaded-by': userId,
+        'client-id': clientId || '',
+        'document-type': documentType || '',
+      },
+      tags: {
+        Type: 'ClientDocument',
+        UploadedBy: userId,
+        ClientId: clientId || 'general',
+      },
+    });
+
+    // Generate a presigned URL for accessing the uploaded file
+    const downloadUrl = await generatePresignedUrl({
+      bucket,
+      key,
+      expiresIn: 86400, // 24 hours for download
+      contentType: mimeType || 'application/octet-stream',
+    });
+
+    logger.info(`File uploaded successfully by user ${userId}`, {
+      bucket,
+      key,
+      size: uploadResult.size,
+      fileName: sanitizedFileName,
+    });
 
     return res.status(200).json({
       success: true,
-      message: 'File upload placeholder - implement S3 integration',
+      message: 'File uploaded successfully',
       data: {
-        fileUrl: mockFileUrl,
-        fileName: req.body.fileName || 'document.pdf',
-        fileSize: req.body.fileSize || 0,
-        mimeType: req.body.mimeType || 'application/pdf',
+        s3Key: key,
+        bucket,
+        fileUrl: downloadUrl,
+        fileName: sanitizedFileName,
+        fileSize: uploadResult.size,
+        mimeType: mimeType || 'application/octet-stream',
+        etag: uploadResult.etag,
       },
     });
-  } catch (error) {
-    logger.error('Error uploading file:', error);
+  } catch (error: any) {
+    logger.error('Error uploading file:', { error: error.message });
     return res.status(500).json({
       success: false,
-      message: 'Failed to upload file',
+      message: 'Failed to upload file: ' + error.message,
+    });
+  }
+};
+
+/**
+ * Get a presigned URL for downloading a document
+ * GET /api/v1/clients/documents/download/:s3Key
+ */
+export const getDocumentDownloadUrl = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { s3Key } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    if (!s3Key) {
+      return res.status(400).json({
+        success: false,
+        message: 's3Key is required',
+      });
+    }
+
+    const bucket = getDocumentsBucket();
+    const downloadUrl = await generatePresignedUrl({
+      bucket,
+      key: decodeURIComponent(s3Key),
+      expiresIn: 3600, // 1 hour
+    });
+
+    logger.info(`Download URL generated for document by user ${userId}`, { s3Key });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        downloadUrl,
+        expiresIn: 3600,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error generating download URL:', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate download URL',
     });
   }
 };

@@ -329,14 +329,66 @@ export const viewFormSubmission = async (req: Request, res: Response) => {
       });
     }
 
+    // Look up the user names for assignedBy and reviewedBy
+    let assignedByName = 'System';
+    let reviewedByName: string | null = null;
+
+    if (assignment.assignedBy) {
+      const assignedByUser = await prisma.user.findUnique({
+        where: { id: assignment.assignedBy },
+        select: { firstName: true, lastName: true },
+      });
+      if (assignedByUser) {
+        assignedByName = `${assignedByUser.firstName} ${assignedByUser.lastName}`;
+      }
+    }
+
+    if (assignment.submission.reviewedBy) {
+      const reviewedByUser = await prisma.user.findUnique({
+        where: { id: assignment.submission.reviewedBy },
+        select: { firstName: true, lastName: true },
+      });
+      if (reviewedByUser) {
+        reviewedByName = `${reviewedByUser.firstName} ${reviewedByUser.lastName}`;
+      }
+    }
+
     logger.info(`Form submission ${assignment.submission.id} viewed`);
 
+    // Transform data to match frontend expected format
     return res.status(200).json({
       success: true,
       data: {
-        form: assignment.form,
-        submission: assignment.submission,
-        assignment,
+        form: {
+          id: assignment.form.id,
+          name: assignment.form.formName,
+          description: assignment.form.formDescription,
+          formType: assignment.form.formType,
+        },
+        assignment: {
+          id: assignment.id,
+          assignedDate: assignment.assignedAt?.toISOString() || null,
+          dueDate: assignment.dueDate?.toISOString() || null,
+          completedDate: assignment.completedAt?.toISOString() || null,
+          status: assignment.status,
+          assignedByName,
+          messageFromAssigner: assignment.clientMessage || null,
+        },
+        submission: {
+          id: assignment.submission.id,
+          responsesJson: assignment.submission.responsesJson,
+          status: assignment.submission.status,
+          submittedDate: assignment.submission.submittedDate?.toISOString() || null,
+          reviewedDate: assignment.submission.reviewedDate?.toISOString() || null,
+          reviewedByName,
+          reviewerNotes: assignment.submission.reviewerNotes || null,
+          // E-signature fields
+          signatureData: assignment.submission.signatureData || null,
+          signedByName: assignment.submission.signedByName || null,
+          signedDate: assignment.submission.signedDate?.toISOString() || null,
+          signatureIpAddress: assignment.submission.signatureIpAddress || null,
+          consentAgreed: assignment.submission.consentAgreed || false,
+        },
       },
     });
   } catch (error) {

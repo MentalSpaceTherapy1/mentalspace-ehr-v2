@@ -1,0 +1,1 @@
+SELECT 'tables exist: ' || COUNT(*)::text as result FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('ai_conversations', 'ai_conversation_messages', 'ai_data_access_logs');

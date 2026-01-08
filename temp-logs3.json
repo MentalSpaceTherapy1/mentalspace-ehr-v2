@@ -1,0 +1,26 @@
+{
+    "events": [
+        {
+            "timestamp": 1767807120199,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767807120532
+        },
+        {
+            "timestamp": 1767807180086,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767807180529
+        },
+        {
+            "timestamp": 1767807240102,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767807240533
+        },
+        {
+            "timestamp": 1767807300091,
+            "message": "[Report Scheduler] Found 0 due schedules",
+            "ingestionTime": 1767807300525
+        }
+    ],
+    "nextForwardToken": "f/39423420159431752678359210568719017435358952272747692032/s",
+    "nextBackwardToken": "b/39423416147706097424288352173977244191135432773434277888/s"
+}

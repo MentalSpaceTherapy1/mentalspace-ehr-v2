@@ -58,6 +58,7 @@ export const changePasswordSchema = z.object({
 });
 
 // Create User Schema (for admin creating users)
+// Note: password is optional - if not provided, a temporary password will be generated
 export const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z
@@ -66,7 +67,8 @@ export const createUserSchema = z.object({
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
       'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-    ),
+    )
+    .optional(), // Password is now optional - system will generate temporary password
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   title: z.string().optional(),

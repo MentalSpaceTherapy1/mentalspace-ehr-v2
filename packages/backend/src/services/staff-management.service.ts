@@ -32,7 +32,6 @@ export interface CreateStaffMemberDto {
   emergencyContactPhone?: string;
   licenseNumber?: string;
   licenseState?: string;
-  licenseType?: string;
   licenseExpiration?: Date;
   npiNumber?: string;
   defaultRate?: number;
@@ -59,7 +58,6 @@ export interface UpdateStaffMemberDto {
   managerId?: string;
   licenseNumber?: string;
   licenseState?: string;
-  licenseType?: string;
   licenseExpiration?: Date;
   npiNumber?: string;
   defaultRate?: number;
@@ -116,7 +114,6 @@ class StaffManagementService {
       emergencyContactPhone,
       licenseNumber,
       licenseState,
-      licenseType,
       licenseExpiration,
       npiNumber,
       defaultRate,
@@ -162,7 +159,7 @@ class StaffManagementService {
         password, // Should be hashed by the controller before calling this service
         firstName,
         lastName,
-        role,
+        roles,
         employeeId: employeeId || `EMP-${Date.now()}`,
         hireDate: hireDate ? new Date(hireDate) : new Date(),
         department,
@@ -177,7 +174,6 @@ class StaffManagementService {
         emergencyContactPhone,
         licenseNumber,
         licenseState,
-        licenseType,
         licenseExpiration: licenseExpiration ? new Date(licenseExpiration) : undefined,
         npiNumber,
         defaultRate,
@@ -206,7 +202,6 @@ class StaffManagementService {
         emergencyContactPhone: true,
         licenseNumber: true,
         licenseState: true,
-        licenseType: true,
         licenseExpiration: true,
         npiNumber: true,
         isActive: true,
@@ -240,13 +235,13 @@ class StaffManagementService {
         workLocation: true,
         employmentType: true,
         phoneNumber: true,
+        profilePhotoS3: true,
         officeExtension: true,
         personalEmail: true,
         emergencyContactName: true,
         emergencyContactPhone: true,
         licenseNumber: true,
         licenseState: true,
-        licenseType: true,
         licenseExpiration: true,
         npiNumber: true,
         defaultRate: true,
@@ -292,7 +287,19 @@ class StaffManagementService {
       throw new NotFoundError('Staff member not found');
     }
 
-    return staffMember;
+    // Transform response to match frontend interface expectations
+    const result = staffMember as any;
+    return {
+      ...staffMember,
+      phone: result.phoneNumber,
+      photoUrl: result.profilePhotoS3,
+      directReports: result.subordinates,
+      emergencyContact: result.emergencyContactName ? {
+        name: result.emergencyContactName,
+        phone: result.emergencyContactPhone || '',
+        relationship: '',
+      } : undefined,
+    };
   }
 
   /**
@@ -365,6 +372,7 @@ class StaffManagementService {
         workLocation: true,
         employmentType: true,
         phoneNumber: true,
+        profilePhotoS3: true,
         isActive: true,
         lastLoginDate: true,
         manager: {
@@ -386,8 +394,15 @@ class StaffManagementService {
       take: limit,
     });
 
+    // Transform field names to match frontend expectations
+    const transformedStaffMembers = staffMembers.map((member: any) => ({
+      ...member,
+      phone: member.phoneNumber,
+      photoUrl: member.profilePhotoS3,
+    }));
+
     return {
-      staffMembers,
+      staffMembers: transformedStaffMembers,
       pagination: {
         total,
         page,
@@ -603,26 +618,54 @@ class StaffManagementService {
         department: true,
         employeeId: true,
         managerId: true,
-        subordinates: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            jobTitle: true,
-            department: true,
-          },
-        },
+        profilePhotoS3: true,
       },
     });
 
-    // Build hierarchy tree (top-level managers have no managerId)
-    const topLevelManagers = allStaff.filter((staff) => !staff.managerId);
+    // Define the OrgChartNode type
+    interface OrgChartNode {
+      id: string;
+      name: string;
+      title: string;
+      department: string;
+      photoUrl?: string;
+      children: OrgChartNode[];
+    }
 
-    return {
-      topLevelManagers,
-      totalStaff: allStaff.length,
-      departments: [...new Set(allStaff.map((s) => s.department).filter(Boolean))],
+    // Build hierarchical tree recursively
+    const buildTree = (managerId: string | null): OrgChartNode[] => {
+      return allStaff
+        .filter((staff) => staff.managerId === managerId)
+        .map((staff) => ({
+          id: staff.id,
+          name: `${staff.firstName} ${staff.lastName}`,
+          title: staff.jobTitle || '',
+          department: staff.department || '',
+          photoUrl: staff.profilePhotoS3 || undefined,
+          children: buildTree(staff.id),
+        }));
     };
+
+    // Get top-level nodes (staff with no manager)
+    const rootNodes = buildTree(null);
+
+    // If there's only one root, return it directly; otherwise create a virtual root
+    if (rootNodes.length === 1) {
+      return rootNodes[0];
+    } else if (rootNodes.length > 1) {
+      // Multiple top-level managers - return first one or create organization node
+      return {
+        id: 'organization',
+        name: 'Organization',
+        title: 'Company',
+        department: '',
+        photoUrl: undefined,
+        children: rootNodes,
+      };
+    }
+
+    // No org chart data
+    return null;
   }
 
   /**

@@ -347,7 +347,7 @@ export default function AIAssistantChat({
         setConversations(response.data.data || []);
       }
     } catch (err: any) {
-      console.error('Failed to fetch conversations:', err);
+      console.error('Failed to fetch conversations:', err.response?.data?.message || err.message || err);
     } finally {
       setIsLoading(false);
     }
@@ -372,7 +372,7 @@ export default function AIAssistantChat({
         );
       }
     } catch (err: any) {
-      console.error('Failed to fetch conversation:', err);
+      console.error('Failed to fetch conversation:', err.response?.data?.message || err.message || err);
       setError('Failed to load conversation');
     }
   }, []);
@@ -466,7 +466,7 @@ export default function AIAssistantChat({
         }
       }
     } catch (err: any) {
-      console.error('Failed to send message:', err);
+      console.error('Failed to send message:', err.response?.data?.message || err.message || err);
       // Remove streaming placeholder and show error
       setMessages((prev) =>
         prev
@@ -507,8 +507,8 @@ export default function AIAssistantChat({
       if (activeConversation?.id === id) {
         setActiveConversation((prev) => (prev ? { ...prev, isPinned: !pinned } : null));
       }
-    } catch (err) {
-      console.error('Failed to pin conversation:', err);
+    } catch (err: any) {
+      console.error('Failed to pin conversation:', err.response?.data?.message || err.message || err);
     }
   };
 
@@ -520,8 +520,8 @@ export default function AIAssistantChat({
       if (activeConversation?.id === id) {
         startNewConversation();
       }
-    } catch (err) {
-      console.error('Failed to archive conversation:', err);
+    } catch (err: any) {
+      console.error('Failed to archive conversation:', err.response?.data?.message || err.message || err);
     }
   };
 
@@ -535,8 +535,8 @@ export default function AIAssistantChat({
       if (activeConversation?.id === id) {
         startNewConversation();
       }
-    } catch (err) {
-      console.error('Failed to delete conversation:', err);
+    } catch (err: any) {
+      console.error('Failed to delete conversation:', err.response?.data?.message || err.message || err);
     }
   };
 
@@ -635,7 +635,7 @@ export default function AIAssistantChat({
                 <Sparkles className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="font-semibold text-lg">MindSpace AI</h2>
+                <h2 className="font-semibold text-lg">Lisa</h2>
                 <p className="text-sm text-indigo-100">Your intelligent practice assistant</p>
               </div>
             </div>

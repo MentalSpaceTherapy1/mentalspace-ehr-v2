@@ -12,6 +12,9 @@ import {
   Alert,
   CircularProgress,
   TextField,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import {
   CheckCircle,
@@ -45,8 +48,13 @@ export default function SessionSummaryModal({
   const navigate = useNavigate();
   const [rating, setRating] = useState<number | null>(null);
   const [comments, setComments] = useState('');
+  const [shareWithTherapist, setShareWithTherapist] = useState(false);
+  const [shareWithAdmin, setShareWithAdmin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Detect if we're in portal context
+  const isPortalContext = window.location.pathname.startsWith('/portal/');
 
   // Calculate session duration
   const formatDuration = (minutes: number) => {
@@ -75,11 +83,18 @@ export default function SessionSummaryModal({
     try {
       // Save client rating if provided (clients only)
       if (userRole === 'client' && rating) {
-        await api.post(`/telehealth/sessions/${sessionData.id}/rating`, {
+        // Use portal endpoint for portal users, staff endpoint otherwise
+        const endpoint = isPortalContext
+          ? `/portal/telehealth/session/${sessionData.id}/rate`
+          : `/telehealth/sessions/${sessionData.id}/rating`;
+
+        await api.post(endpoint, {
           rating,
           comments: comments.trim() || null,
+          shareWithTherapist,
+          shareWithAdmin,
         });
-        console.log('✅ Session rating saved:', { rating, comments });
+        console.log('✅ Session rating saved:', { rating, comments, shareWithTherapist, shareWithAdmin });
       }
 
       // Save clinician rating if provided (clinicians only)
@@ -92,7 +107,8 @@ export default function SessionSummaryModal({
       await new Promise(resolve => setTimeout(resolve, 500));
 
       onClose();
-      navigate('/appointments');
+      // Navigate to the appropriate page based on context
+      navigate(isPortalContext ? '/portal/appointments' : '/appointments');
     } catch (err) {
       console.error('❌ Failed to save rating:', err);
       setError('Failed to save your feedback. You can still close this window.');
@@ -102,7 +118,7 @@ export default function SessionSummaryModal({
 
   const handleSkip = () => {
     onClose();
-    navigate('/appointments');
+    navigate(isPortalContext ? '/portal/appointments' : '/appointments');
   };
 
   return (
@@ -232,7 +248,7 @@ export default function SessionSummaryModal({
                 <Star fontSize="small" /> How was your session?
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
-                Your feedback is optional and helps us improve our services. Only administrators can view your rating.
+                Your feedback is optional and helps us improve our services.
               </Typography>
 
               {/* Rating Stars */}
@@ -255,6 +271,54 @@ export default function SessionSummaryModal({
                   </Typography>
                 )}
               </Box>
+
+              {/* Sharing Preferences */}
+              {rating && (
+                <Box sx={{ mb: 3, p: 2, bgcolor: '#f0f9ff', borderRadius: 1, border: '1px solid #bae6fd' }}>
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#0369a1' }}>
+                    Who can see your feedback?
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Choose who you'd like to share your rating with:
+                  </Typography>
+                  <FormGroup>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={shareWithTherapist}
+                          onChange={(e) => setShareWithTherapist(e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>Share with my therapist</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Your therapist will be able to see your rating and comments
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={shareWithAdmin}
+                          onChange={(e) => setShareWithAdmin(e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>Share with practice administrators</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Practice staff can view your feedback to improve services
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </FormGroup>
+                </Box>
+              )}
 
               {/* Comments (Optional) */}
               {rating && (

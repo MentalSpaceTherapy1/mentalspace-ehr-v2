@@ -318,7 +318,7 @@ export const createAppointment = async (req: Request, res: Response) => {
       for (const clientId of validatedData.clientIds) {
         await assertCanAccessClient(req.user, { clientId });
       }
-    } else {
+    } else if (validatedData.clientId) {
       // For individual appointments, validate single client access
       await assertCanAccessClient(req.user, { clientId: validatedData.clientId });
     }
@@ -471,7 +471,7 @@ export const createAppointment = async (req: Request, res: Response) => {
     }
 
     // Auto-create telehealth session if service location is Telehealth
-    if (appointment.serviceLocation === 'Telehealth') {
+    if (appointment && appointment.serviceLocation === 'Telehealth') {
       try {
         const telehealthSession = await telehealthService.createTelehealthSession({
           appointmentId: appointment.id,
@@ -522,7 +522,9 @@ export const createRecurringAppointments = async (req: Request, res: Response) =
     const validatedData = createRecurringAppointmentSchema.parse(req.body);
     const userId = (req as any).user?.userId;
 
-    await assertCanAccessClient(req.user, { clientId: validatedData.clientId });
+    if (validatedData.clientId) {
+      await assertCanAccessClient(req.user, { clientId: validatedData.clientId });
+    }
 
     // Generate appointments from recurrence pattern
     const baseData = {

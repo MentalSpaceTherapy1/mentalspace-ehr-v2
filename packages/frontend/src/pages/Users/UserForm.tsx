@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
@@ -6,7 +6,6 @@ import { UserRole } from '@mentalspace/shared';
 
 interface UserFormData {
   email: string;
-  password?: string;
   firstName: string;
   lastName: string;
   title: string;
@@ -19,6 +18,14 @@ interface UserFormData {
   isActive: boolean;
 }
 
+interface CreatedUserResult {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  tempPassword?: string;
+}
+
 export default function UserForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -27,7 +34,6 @@ export default function UserForm() {
 
   const [formData, setFormData] = useState<UserFormData>({
     email: '',
-    password: '',
     firstName: '',
     lastName: '',
     title: '',
@@ -41,6 +47,9 @@ export default function UserForm() {
   });
 
   const [error, setError] = useState('');
+  const [createdUser, setCreatedUser] = useState<CreatedUserResult | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
 
   // Fetch user data if editing
   const { data: userData, isLoading } = useQuery({
@@ -86,9 +95,11 @@ export default function UserForm() {
       const response = await api.post('/users', submitData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      navigate('/users');
+      // Show success modal with temporary password
+      setCreatedUser(response.data);
+      setShowSuccessModal(true);
     },
     onError: (err: any) => {
       setError(err.response?.data?.message || 'Failed to create user');
@@ -125,15 +136,23 @@ export default function UserForm() {
     }
 
     if (isEdit) {
-      const { password, ...updateData } = formData;
-      updateMutation.mutate(updateData);
+      updateMutation.mutate(formData);
     } else {
-      if (!formData.password || formData.password.length < 8) {
-        setError('Password must be at least 8 characters long');
-        return;
-      }
       createMutation.mutate(formData);
     }
+  };
+
+  const copyPasswordToClipboard = () => {
+    if (createdUser?.tempPassword) {
+      navigator.clipboard.writeText(createdUser.tempPassword);
+      setCopiedPassword(true);
+      setTimeout(() => setCopiedPassword(false), 2000);
+    }
+  };
+
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
+    navigate('/users');
   };
 
   if (isEdit && isLoading) {
@@ -149,6 +168,55 @@ export default function UserForm() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-8">
+      {/* Success Modal with Temporary Password */}
+      {showSuccessModal && createdUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4">
+            <div className="text-center mb-6">
+              <div className="text-5xl mb-4">✅</div>
+              <h2 className="text-2xl font-bold text-gray-800">User Created Successfully!</h2>
+              <p className="text-gray-600 mt-2">
+                {createdUser.firstName} {createdUser.lastName} has been added to the system.
+              </p>
+            </div>
+
+            {createdUser.tempPassword && (
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 mb-6">
+                <p className="text-sm font-bold text-yellow-800 mb-2">
+                  Temporary Password (expires in 72 hours):
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-white px-3 py-2 rounded-lg border border-yellow-200 font-mono text-lg text-center">
+                    {createdUser.tempPassword}
+                  </code>
+                  <button
+                    onClick={copyPasswordToClipboard}
+                    className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-semibold transition-colors"
+                  >
+                    {copiedPassword ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <p className="text-xs text-yellow-700 mt-2">
+                  Please share this password securely with the user. They will be required to set a new password on first login.
+                </p>
+              </div>
+            )}
+
+            <div className="text-sm text-gray-500 mb-6">
+              <p><strong>Email:</strong> {createdUser.email}</p>
+              <p className="mt-1">An invitation email has been sent to the user.</p>
+            </div>
+
+            <button
+              onClick={handleCloseSuccessModal}
+              className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-bold transition-all"
+            >
+              Go to Users List
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <button
           onClick={() => navigate('/users')}
@@ -157,10 +225,10 @@ export default function UserForm() {
           <span className="mr-2">←</span> Back to Users
         </button>
         <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-          {isEdit ? '✏️ Edit User' : '✨ Create New User'}
+          {isEdit ? 'Edit User' : 'Create New User'}
         </h1>
         <p className="text-gray-600 text-lg">
-          {isEdit ? 'Update user information and permissions' : 'Add a new user to the system'}
+          {isEdit ? 'Update user information and permissions' : 'Add a new user to the system. A temporary password will be generated automatically.'}
         </p>
       </div>
 
@@ -168,15 +236,31 @@ export default function UserForm() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {error && (
             <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 text-red-700 px-6 py-4 rounded-xl flex items-center shadow-lg">
-              <span className="text-2xl mr-3">⚠️</span>
+              <span className="text-2xl mr-3">Warning</span>
               <span className="font-semibold">{error}</span>
+            </div>
+          )}
+
+          {/* Info Banner for New Users */}
+          {!isEdit && (
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+              <div className="flex items-start">
+                <span className="text-2xl mr-3">Info</span>
+                <div>
+                  <p className="font-semibold text-blue-800">Automatic Password Generation</p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    A secure temporary password will be generated for this user. The password expires in 72 hours,
+                    and the user will be required to set their own password on first login. The new password will be valid for 6 months.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Personal Information Section */}
           <div className="border-l-4 border-indigo-500 pl-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <span className="mr-2">👤</span> Personal Information
+              <span className="mr-2">Personal Information</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -223,7 +307,7 @@ export default function UserForm() {
 
               <div>
                 <label htmlFor="phoneNumber" className="block text-sm font-bold text-gray-700 mb-2">
-                  📞 Phone Number
+                  Phone Number
                 </label>
                 <input
                   id="phoneNumber"
@@ -240,12 +324,12 @@ export default function UserForm() {
           {/* Account Information Section */}
           <div className="border-l-4 border-purple-500 pl-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <span className="mr-2">🔐</span> Account Information
+              <span className="mr-2">Account Information</span>
             </h2>
             <div className="grid grid-cols-1 gap-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-bold text-gray-700 mb-2">
-                  📧 Email Address *
+                  Email Address *
                 </label>
                 <input
                   id="email"
@@ -257,39 +341,19 @@ export default function UserForm() {
                 />
               </div>
 
-              {!isEdit && (
-                <div>
-                  <label htmlFor="password" className="block text-sm font-bold text-gray-700 mb-2">
-                    🔑 Password *
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    required={!isEdit}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:ring-4 focus:ring-purple-300 focus:border-purple-400 transition-all duration-200 font-medium"
-                    minLength={8}
-                  />
-                  <p className="mt-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-                    💡 Minimum 8 characters, must include uppercase, lowercase, number, and special character
-                  </p>
-                </div>
-              )}
-
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-3">
-                  👑 Roles * (Select one or more)
+                  Roles * (Select one or more)
                 </label>
                 <div className="space-y-2 bg-purple-50 p-4 rounded-xl border-2 border-purple-200">
                   {[
-                    { value: 'SUPER_ADMIN', label: '⚡ Super Admin', color: 'from-yellow-500 to-red-500' },
-                    { value: 'ADMINISTRATOR', label: '🔴 Administrator', color: 'from-rose-500 to-pink-500' },
-                    { value: 'SUPERVISOR', label: '🟣 Supervisor', color: 'from-purple-500 to-indigo-500' },
-                    { value: 'CLINICIAN', label: '🔵 Clinician', color: 'from-blue-500 to-cyan-500' },
-                    { value: 'BILLING_STAFF', label: '🟢 Billing Staff', color: 'from-green-500 to-emerald-500' },
-                    { value: 'FRONT_DESK', label: '🟡 Front Desk', color: 'from-amber-500 to-orange-500' },
-                    { value: 'ASSOCIATE', label: '🟠 Associate', color: 'from-sky-500 to-cyan-500' },
+                    { value: 'SUPER_ADMIN', label: 'Super Admin', color: 'from-yellow-500 to-red-500' },
+                    { value: 'ADMINISTRATOR', label: 'Administrator', color: 'from-rose-500 to-pink-500' },
+                    { value: 'SUPERVISOR', label: 'Supervisor', color: 'from-purple-500 to-indigo-500' },
+                    { value: 'CLINICIAN', label: 'Clinician', color: 'from-blue-500 to-cyan-500' },
+                    { value: 'BILLING_STAFF', label: 'Billing Staff', color: 'from-green-500 to-emerald-500' },
+                    { value: 'FRONT_DESK', label: 'Front Desk', color: 'from-amber-500 to-orange-500' },
+                    { value: 'ASSOCIATE', label: 'Associate', color: 'from-sky-500 to-cyan-500' },
                   ].map((roleOption) => (
                     <div key={roleOption.value} className="flex items-center bg-white p-3 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
                       <input
@@ -318,7 +382,7 @@ export default function UserForm() {
                   ))}
                 </div>
                 {formData.roles.length === 0 && (
-                  <p className="mt-2 text-sm text-red-600 font-semibold">⚠️ Please select at least one role</p>
+                  <p className="mt-2 text-sm text-red-600 font-semibold">Please select at least one role</p>
                 )}
               </div>
             </div>
@@ -327,7 +391,7 @@ export default function UserForm() {
           {/* Professional Information Section */}
           <div className="border-l-4 border-cyan-500 pl-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <span className="mr-2">🏥</span> Professional Information
+              <span className="mr-2">Professional Information</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -390,7 +454,7 @@ export default function UserForm() {
           {/* Status Section */}
           <div className="border-l-4 border-green-500 pl-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <span className="mr-2">⚡</span> Account Status
+              <span className="mr-2">Account Status</span>
             </h2>
             <div className="flex items-center bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border-2 border-green-200">
               <input
@@ -402,9 +466,9 @@ export default function UserForm() {
               />
               <label htmlFor="isActive" className="ml-4 block text-base font-bold text-gray-900">
                 {formData.isActive ? (
-                  <span className="text-green-700">✅ Active - User can log in and access the system</span>
+                  <span className="text-green-700">Active - User can log in and access the system</span>
                 ) : (
-                  <span className="text-red-700">❌ Inactive - User cannot log in</span>
+                  <span className="text-red-700">Inactive - User cannot log in</span>
                 )}
               </label>
             </div>
@@ -425,10 +489,10 @@ export default function UserForm() {
               className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-200 transform hover:scale-105 transition-all duration-200 font-bold text-base"
             >
               {createMutation.isPending || updateMutation.isPending
-                ? '💾 Saving...'
+                ? 'Saving...'
                 : isEdit
-                ? '✅ Update User'
-                : '✨ Create User'}
+                ? 'Update User'
+                : 'Create User'}
             </button>
           </div>
         </form>

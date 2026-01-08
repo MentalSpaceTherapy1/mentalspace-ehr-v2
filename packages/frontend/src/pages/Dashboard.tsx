@@ -135,11 +135,12 @@ export default function Dashboard() {
             <h2 className="text-2xl font-bold text-gray-800 flex items-center">
               <span className="mr-2">👥</span> User Management
             </h2>
-            {userRoles.length > 1 && (
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-                {isAdmin ? 'Admin View' : 'Supervisor View'}
-              </span>
-            )}
+            <button
+              onClick={() => navigate('/users')}
+              className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full hover:bg-purple-200 transition-colors cursor-pointer"
+            >
+              {isAdmin ? 'Admin View' : 'Supervisor View'}
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -237,11 +238,12 @@ export default function Dashboard() {
             <h2 className="text-2xl font-bold text-gray-800 flex items-center">
               <span className="mr-2">📈</span> Client Overview
             </h2>
-            {userRoles.length > 1 && isClinician && (
-              <span className="px-3 py-1 bg-cyan-100 text-cyan-700 text-xs font-semibold rounded-full">
-                Clinician View
-              </span>
-            )}
+            <button
+              onClick={() => navigate('/clients')}
+              className="px-3 py-1 bg-cyan-100 text-cyan-700 text-xs font-semibold rounded-full hover:bg-cyan-200 transition-colors cursor-pointer"
+            >
+              Clinician View
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

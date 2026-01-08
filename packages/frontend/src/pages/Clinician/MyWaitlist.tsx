@@ -189,7 +189,7 @@ export default function MyWaitlist() {
     queryKey: ['clinicianWaitlist', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) return [];
-      const response = await api.get(`/admin/waitlist?clinicianId=${currentUser.id}&status=ACTIVE`);
+      const response = await api.get(`/waitlist?clinicianId=${currentUser.id}&status=ACTIVE`);
       return response.data.data;
     },
     enabled: !!currentUser?.id,
@@ -201,7 +201,7 @@ export default function MyWaitlist() {
     queryKey: ['waitlistStats', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) return null;
-      const response = await api.get(`/admin/waitlist/stats?clinicianId=${currentUser.id}`);
+      const response = await api.get(`/waitlist/stats?clinicianId=${currentUser.id}`);
       return response.data.data;
     },
     enabled: !!currentUser?.id,
@@ -213,7 +213,7 @@ export default function MyWaitlist() {
     queryFn: async () => {
       if (!currentUser?.id) return [];
       const response = await api.get(
-        `/admin/waitlist/offers?clinicianId=${currentUser.id}&status=PENDING`
+        `/waitlist/offers?clinicianId=${currentUser.id}&status=PENDING`
       );
       return response.data.data;
     },
@@ -227,7 +227,7 @@ export default function MyWaitlist() {
     queryFn: async () => {
       if (!currentUser?.id) return [];
       const response = await api.get(
-        `/admin/waitlist/offers?clinicianId=${currentUser.id}&status=ACCEPTED&days=30`
+        `/waitlist/offers?clinicianId=${currentUser.id}&status=ACCEPTED&days=30`
       );
       return response.data.data;
     },
@@ -239,7 +239,7 @@ export default function MyWaitlist() {
     queryKey: ['clinicianCalendar', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) return [];
-      const response = await api.get(`/admin/waitlist/calendar?clinicianId=${currentUser.id}&days=7`);
+      const response = await api.get(`/waitlist/calendar?clinicianId=${currentUser.id}&days=7`);
       return response.data.data;
     },
     enabled: !!currentUser?.id,
@@ -254,7 +254,7 @@ export default function MyWaitlist() {
       duration: number;
       expirationHours: number;
     }) => {
-      const response = await api.post('/admin/waitlist/offer-slot', data);
+      const response = await api.post('/waitlist/offer-slot', data);
       return response.data;
     },
     onSuccess: () => {
@@ -272,7 +272,7 @@ export default function MyWaitlist() {
   // Adjust priority mutation
   const adjustPriorityMutation = useMutation({
     mutationFn: async (data: { entryId: string; priority: number; reason: string }) => {
-      const response = await api.patch(`/admin/waitlist/${data.entryId}/priority`, {
+      const response = await api.patch(`/waitlist/${data.entryId}/priority`, {
         priority: data.priority,
         reason: data.reason,
       });
@@ -292,7 +292,7 @@ export default function MyWaitlist() {
   // Cancel offer mutation
   const cancelOfferMutation = useMutation({
     mutationFn: async (offerId: string) => {
-      const response = await api.delete(`/admin/waitlist/offers/${offerId}`);
+      const response = await api.delete(`/waitlist/offers/${offerId}`);
       return response.data;
     },
     onSuccess: () => {

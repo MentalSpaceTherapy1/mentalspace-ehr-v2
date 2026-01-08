@@ -197,11 +197,30 @@ export const deleteGroupSession = async (req: Request, res: Response) => {
 /**
  * POST /api/v1/group-sessions/:id/generate-sessions
  * Generate recurring appointments for a group session
+ *
+ * @requires Authentication - Valid user ID must be present in request
+ * @param {string} req.params.id - Group session ID
+ * @param {string} req.body.startDate - ISO date string for start of generation period
+ * @param {string} req.body.endDate - ISO date string for end of generation period
+ * @returns {Object} Array of created appointments with count
  */
 export const generateRecurringSessions = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { startDate, endDate } = req.body;
+    const userId = req.user?.id;
+
+    // Validate authentication - never use 'system' fallback for audit trail integrity
+    if (!userId) {
+      logger.warn('Attempted to generate recurring sessions without authentication', {
+        groupSessionId: id,
+        ip: req.ip,
+      });
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please log in to generate recurring sessions.',
+      });
+    }
 
     if (!startDate || !endDate) {
       return res.status(400).json({
@@ -214,7 +233,7 @@ export const generateRecurringSessions = async (req: Request, res: Response) => 
       groupSessionId: id,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      createdBy: req.user?.id || 'system',
+      createdBy: userId,
     });
 
     logger.info('Recurring sessions generated', {

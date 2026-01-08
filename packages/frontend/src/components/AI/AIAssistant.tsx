@@ -68,7 +68,7 @@ export default function AIAssistant({
         <div className="flex items-center space-x-2">
           <Sparkles className="w-6 h-6" />
           <div>
-            <h2 className="text-lg font-bold">AI Assistant</h2>
+            <h2 className="text-lg font-bold">Lisa</h2>
             <p className="text-xs opacity-90">{noteType}</p>
           </div>
         </div>
@@ -226,7 +226,7 @@ export default function AIAssistant({
         {!isGenerating && !generatedContent && suggestions.length === 0 && warnings.length === 0 && (
           <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
             <Sparkles className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <h3 className="font-bold text-gray-700 mb-2">AI Assistant Ready</h3>
+            <h3 className="font-bold text-gray-700 mb-2">Lisa is Ready</h3>
             <p className="text-sm text-gray-600">
               Click "Generate Note with AI" to automatically create professional clinical
               documentation based on your session data.

@@ -14,6 +14,13 @@ const registerSchema = z.object({
   clientId: z.string().min(1), // Accept either UUID or MRN
 });
 
+const activateAccountSchema = z.object({
+  token: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(8).max(100),
+  mrn: z.string().min(1), // Medical Record Number for identity verification
+});
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
@@ -89,6 +96,47 @@ export const register = async (req: Request, res: Response) => {
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to create portal account',
+    });
+  }
+};
+
+// ============================================================================
+// ACCOUNT ACTIVATION (For staff-invited clients)
+// ============================================================================
+
+export const activateAccount = async (req: Request, res: Response) => {
+  try {
+    const data = activateAccountSchema.parse(req.body);
+
+    const result = await portalAuthService.activateAccount({
+      token: data.token,
+      email: data.email,
+      password: data.password,
+      mrn: data.mrn,
+    });
+
+    logger.info('Portal account activated', {
+      email: data.email,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        email: result.email,
+        clientName: result.clientName,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Portal account activation failed', {
+      message: error?.message,
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+      statusCode: error?.statusCode,
+    });
+
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to activate portal account',
     });
   }
 };

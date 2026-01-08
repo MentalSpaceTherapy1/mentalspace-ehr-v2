@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import html2canvas from 'html2canvas';
 import {
   ZoomIn,
   ZoomOut,
@@ -46,10 +47,40 @@ const OrganizationalChart: React.FC = () => {
     setZoom(1);
   };
 
-  const handleExportPNG = () => {
+  const handleExportPNG = async () => {
     if (chartRef.current) {
-      // In a real implementation, use html2canvas or similar library
-      toast('Export to PNG functionality - integrate html2canvas library', { icon: 'ℹ️' });
+      try {
+        toast.loading('Generating PNG...', { id: 'export' });
+
+        // Temporarily reset zoom for accurate capture
+        const originalZoom = zoom;
+        setZoom(1);
+
+        // Wait for zoom reset to apply
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const canvas = await html2canvas(chartRef.current, {
+          backgroundColor: '#ffffff',
+          scale: 2, // Higher resolution
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+        });
+
+        // Restore original zoom
+        setZoom(originalZoom);
+
+        // Create download link
+        const link = document.createElement('a');
+        link.download = `org-chart-${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        toast.success('Organizational chart exported successfully', { id: 'export' });
+      } catch (error) {
+        console.error('Export failed:', error);
+        toast.error('Failed to export chart. Please try again.', { id: 'export' });
+      }
     }
   };
 
@@ -106,8 +137,17 @@ const OrganizationalChart: React.FC = () => {
           }`}
         >
           <div
+            role="button"
+            tabIndex={0}
             onClick={() => navigate(`/staff/${node.id}`)}
-            className={`bg-white rounded-xl shadow-lg border-2 p-4 cursor-pointer hover:shadow-xl transition-all duration-300 w-64 ${
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(`/staff/${node.id}`);
+              }
+            }}
+            aria-label={`View ${node.name}'s profile - ${node.title}, ${node.department}`}
+            className={`bg-white rounded-xl shadow-lg border-2 p-4 cursor-pointer hover:shadow-xl transition-all duration-300 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
               isHighlighted
                 ? 'border-yellow-400 bg-yellow-50'
                 : 'border-gray-200 hover:border-blue-400'
@@ -149,7 +189,9 @@ const OrganizationalChart: React.FC = () => {
                 e.stopPropagation();
                 toggleCollapse(node.id);
               }}
-              className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-white border-2 border-gray-300 rounded-full p-1 hover:bg-gray-100 transition-colors shadow-md z-10"
+              aria-label={isCollapsed ? `Expand ${node.name}'s team (${node.children!.length} reports)` : `Collapse ${node.name}'s team`}
+              aria-expanded={!isCollapsed}
+              className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-white border-2 border-gray-300 rounded-full p-1 hover:bg-gray-100 transition-colors shadow-md z-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {isCollapsed ? (
                 <ChevronRight className="w-4 h-4 text-gray-600" />
