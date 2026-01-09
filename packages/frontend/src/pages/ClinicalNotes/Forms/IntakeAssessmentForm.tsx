@@ -21,6 +21,8 @@ import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidatedField from '../../../components/ClinicalNotes/ValidatedField';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
+import { useNoteSignature } from '../../../hooks/useNoteSignature';
+import { SignatureModal } from '../../../components/ClinicalNotes/SignatureModal';
 
 // Constants for dropdowns
 const RISK_LEVELS = ['None', 'Low', 'Moderate', 'High', 'Imminent'];
@@ -79,6 +81,14 @@ const IMPULSE_CONTROL_OPTIONS = ['Good', 'Fair', 'Poor', 'Impaired'];
 
 // Hallucination types
 const HALLUCINATION_TYPES = ['Auditory', 'Visual', 'Tactile', 'Olfactory', 'Gustatory'];
+
+// Helper function to format date to local YYYY-MM-DD (avoids UTC timezone issues)
+const formatLocalDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 // Appetite/Weight change options
 const APPETITE_CHANGE_OPTIONS = ['N/A', 'Increased', 'Decreased'];
@@ -348,7 +358,7 @@ export default function IntakeAssessmentForm() {
             const date = new Date(apt.appointmentDate);
             console.log('🔵 Date object created:', date);
             console.log('🔵 date.toISOString():', date.toISOString());
-            const sessionDateValue = date.toISOString().split('T')[0];
+            const sessionDateValue = formatLocalDate(date);
             console.log('🔵 sessionDate value being set:', sessionDateValue);
             setSessionDate(sessionDateValue);
           }
@@ -364,7 +374,7 @@ export default function IntakeAssessmentForm() {
   useEffect(() => {
     if (appointmentData?.appointmentDate) {
       const date = new Date(appointmentData.appointmentDate);
-      const sessionDateValue = date.toISOString().split('T')[0];
+      const sessionDateValue = formatLocalDate(date);
       console.log('🟢 SYNCING sessionDate from appointment:', sessionDateValue);
       setSessionDate(sessionDateValue);
     }
@@ -375,7 +385,7 @@ export default function IntakeAssessmentForm() {
     if (sessionDate && !dueDate) {
       const date = new Date(sessionDate);
       date.setDate(date.getDate() + 7);
-      setDueDate(date.toISOString().split('T')[0]);
+      setDueDate(formatLocalDate(date));
     }
   }, [sessionDate]);
 
@@ -398,11 +408,11 @@ export default function IntakeAssessmentForm() {
       // Session details - let appointment data drive sessionDate, only set if no appointment
       if (existingNoteData.dueDate) {
         const date = new Date(existingNoteData.dueDate);
-        setDueDate(date.toISOString().split('T')[0]);
+        setDueDate(formatLocalDate(date));
       }
       if (existingNoteData.nextSessionDate) {
         const date = new Date(existingNoteData.nextSessionDate);
-        setNextSessionDate(date.toISOString().split('T')[0]);
+        setNextSessionDate(formatLocalDate(date));
       }
 
       // Parse SOAP notes to extract field data
@@ -514,7 +524,7 @@ export default function IntakeAssessmentForm() {
       // Apply recovered data to form fields
       if (recovered.sessionDate) {
         const date = new Date(recovered.sessionDate);
-        setSessionDate(date.toISOString().split('T')[0]);
+        setSessionDate(formatLocalDate(date));
       }
       if (recovered.chiefComplaint) setChiefComplaint(recovered.chiefComplaint);
       if (recovered.presentingProblem) setPresentingProblem(recovered.presentingProblem);
@@ -617,6 +627,25 @@ export default function IntakeAssessmentForm() {
     },
     onError: (error: any, variables: any) => {
       handleSaveError(error, variables);
+    },
+  });
+
+  // Sign and Submit hook
+  const {
+    isSignatureModalOpen,
+    isSaving: isSignSaving,
+    isSigning,
+    isSignAndSubmitting,
+    initiateSignAndSubmit,
+    signatureModalProps,
+  } = useNoteSignature({
+    noteType: 'Intake Assessment',
+    clientId: clientId || undefined,
+    onSignSuccess: (noteId) => {
+      clearBackup();
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
+      navigate(`/clients/${clientId}/notes`);
     },
   });
 
@@ -927,9 +956,98 @@ export default function IntakeAssessmentForm() {
       billable,
       nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
       dueDate: new Date(dueDate).toISOString(),
+      status: 'COMPLETED', // Set status to COMPLETED when submitting (not saving as draft)
     };
 
     saveMutation.mutate(data);
+  };
+
+  // Sign and Submit handler - saves note then opens signature modal
+  const handleSignAndSubmit = () => {
+    // Phase 1.3: Validate note data before submission
+    const noteData = {
+      subjective: presentingProblem,
+      assessment,
+      plan,
+      diagnosisCodes,
+    };
+
+    const validation = validateNote(noteData);
+    setValidationErrors(validation.errors);
+    setShowValidation(true);
+
+    if (!validation.isValid) {
+      setAiWarnings(['Please complete all required fields before signing.']);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Build symptoms summary
+    const symptomsPresent = Array.isArray(selectedSymptoms)
+      ? selectedSymptoms
+        .map((symptom) => {
+          let text = `${symptom.label}: ${symptom.severity}`;
+          if (symptom.extra && symptom.extra !== 'N/A') {
+            text += ` (${symptom.extra})`;
+          }
+          return text;
+        })
+        .join('\n')
+      : '';
+
+    // Build MSE summary
+    const mseAppearance = `Grooming: ${grooming}, Hygiene: ${hygiene}, Dress: ${dress}`;
+    const mseBehavior = `Eye Contact: ${eyeContact}, Motor Activity: ${motorActivity}, Cooperation: ${cooperation}, Rapport: ${rapport}`;
+    const mseSpeech = `Rate: ${speechRate}, Volume: ${speechVolume}, Fluency: ${speechFluency}, Articulation: ${speechArticulation}, Spontaneity: ${speechSpontaneity}`;
+    const mseAffect = `Range: ${affectRange}, Appropriateness: ${affectAppropriateness}, Mobility: ${affectMobility}, Quality: ${affectQuality}`;
+    const mseThoughtProcess = `Organization: ${thoughtOrganization}, Coherence: ${thoughtCoherence}, Goal-directed: ${thoughtGoalDirected ? 'Yes' : 'No'}`;
+
+    const orientationItems = [];
+    if (orientedPerson) orientationItems.push('Person');
+    if (orientedPlace) orientationItems.push('Place');
+    if (orientedTime) orientationItems.push('Time');
+    if (orientedSituation) orientationItems.push('Situation');
+    const orientation = orientationItems.length > 0 ? `Oriented to ${orientationItems.join(', ')}` : 'Disoriented';
+
+    const mseCognition = `${orientation}\nAttention: ${attention}, Concentration: ${concentration}\nMemory (Immediate/Recent/Remote): ${memoryImmediate}/${memoryRecent}/${memoryRemote}\nFund of Knowledge: ${fundKnowledge}, Abstract Thinking: ${abstractThinking}, Calculation: ${calculation}`;
+
+    const thoughtContent = [];
+    if (suicidalIdeation) thoughtContent.push(`Suicidal Ideation (Frequency: ${siFrequency}, Intensity: ${siIntensity})`);
+    if (homicidalIdeation) thoughtContent.push(`Homicidal Ideation (Frequency: ${hiFrequency}, Intensity: ${hiIntensity})`);
+    if (delusions) thoughtContent.push(`Delusions: ${delusionDetails}`);
+    const mseThoughtContent = thoughtContent.length > 0 ? thoughtContent.join('\n') : 'No SI/HI/delusions reported';
+
+    const msePerception = hasHallucinations
+      ? `Hallucinations present: ${hallucinationTypes.join(', ')}`
+      : 'No hallucinations reported';
+
+    const substanceUse = `Alcohol: ${alcoholUse || 'Not reported'} (${alcoholFrequency})\nTobacco: ${tobaccoUse || 'Not reported'} (${tobaccoFrequency})\nDrugs: ${drugUse || 'Not reported'} (${drugFrequency})`;
+
+    const data = {
+      clientId,
+      noteType: 'Intake Assessment',
+      appointmentId: appointmentId,
+      sessionDate: new Date(sessionDate).toISOString(),
+      subjective: `Chief Complaint: ${chiefComplaint}\n\nPresenting Problem: ${presentingProblem}\n\nCurrent Symptoms:\n${symptomsPresent || 'No significant symptoms reported'}`,
+      objective: `Mental Status Examination:\n\nAppearance: ${mseAppearance}\nBehavior: ${mseBehavior}\nSpeech: ${mseSpeech}\nMood: ${mood}\nAffect: ${mseAffect}\nThought Process: ${mseThoughtProcess}\nThought Content: ${mseThoughtContent}\nPerception: ${msePerception}\nCognition: ${mseCognition}\nInsight: ${insight}\nJudgment: ${judgment}\nImpulse Control: ${impulseControl}`,
+      assessment: `${assessment}\n\nPsychiatric History: ${psychiatricHistory}\nMedical History: ${medicalHistory}\nMedications: ${medications}\nSubstance Use:\n${substanceUse}\nFamily History: ${familyHistory}\nSocial History: ${socialHistory}\nDevelopmental History: ${developmentalHistory}`,
+      plan: `${plan}\n\nTreatment Recommendations: ${treatmentRecommendations}\nRecommended Frequency: ${recommendedFrequency}`,
+      suicidalIdeation,
+      homicidalIdeation,
+      selfHarm,
+      riskLevel,
+      riskAssessmentNotes: `Risk Factors: ${riskFactors}\nProtective Factors: ${protectiveFactors}\nSafety Plan: ${safetyPlan}\nEmergency Contacts: ${emergencyContacts}`,
+      interventions: safetyPlan,
+      diagnosisCodes,
+      cptCode,
+      billingCode,
+      billable,
+      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
+      dueDate: new Date(dueDate).toISOString(),
+    };
+
+    // Initiate sign and submit - will save as DRAFT first, then open signature modal
+    initiateSignAndSubmit(data, isEditMode ? noteId : undefined);
   };
 
   return (
@@ -1887,6 +2005,10 @@ export default function IntakeAssessmentForm() {
               isSubmitting={saveMutation.isPending}
               onSaveDraft={() => handleSaveDraft({} as any)}
               isSavingDraft={saveDraftMutation.isPending}
+              onSignAndSubmit={handleSignAndSubmit}
+              isSigningAndSubmitting={isSignAndSubmitting}
+              canSign={diagnosisCodes.length > 0}
+              signAndSubmitLabel="Sign & Submit"
             />
           </form>
         )}
@@ -1907,6 +2029,9 @@ export default function IntakeAssessmentForm() {
             confidence={aiConfidence}
           />
         )}
+
+        {/* Signature Modal for Sign & Submit */}
+        <SignatureModal {...signatureModalProps} />
       </div>
     </div>
   );

@@ -18,6 +18,8 @@ import ReviewModal from '../../../components/AI/ReviewModal';
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
+import { useNoteSignature } from '../../../hooks/useNoteSignature';
+import { SignatureModal } from '../../../components/ClinicalNotes/SignatureModal';
 
 export default function ConsultationNoteForm() {
   const { clientId, noteId } = useParams();
@@ -76,6 +78,25 @@ export default function ConsultationNoteForm() {
     noteType: 'ConsultationNote',
     clientId: clientId || '',
     noteId,
+  });
+
+  // Sign and Submit hook
+  const {
+    isSignatureModalOpen,
+    isSaving: isSignSaving,
+    isSigning,
+    isSignAndSubmitting,
+    initiateSignAndSubmit,
+    signatureModalProps,
+  } = useNoteSignature({
+    noteType: 'Consultation Note',
+    clientId: clientId || undefined,
+    onSignSuccess: (noteId) => {
+      clearBackup();
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
+      navigate(`/clients/${clientId}/notes`);
+    },
   });
 
   // Fetch client data
@@ -360,6 +381,34 @@ export default function ConsultationNoteForm() {
     saveMutation.mutate(data);
   };
 
+  // Sign and Submit handler - saves note then opens signature modal
+  const handleSignAndSubmit = () => {
+    const data = {
+      clientId,
+      noteType: 'Consultation Note',
+      appointmentId: appointmentId,
+      sessionDate: new Date(sessionDate).toISOString(),
+      subjective: `Consultation with: ${consultedPerson}\nOrganization: ${organization}\n\nReason: ${reasonForConsultation}`,
+      objective: `Information Shared: ${informationShared}`,
+      assessment: `Recommendations Received: ${recommendationsReceived}`,
+      plan: `Follow-up Actions: ${followUpActions}`,
+      consultedPerson,
+      organization,
+      reasonForConsultation,
+      informationShared,
+      recommendationsReceived,
+      followUpActions,
+      cptCode,
+      billingCode,
+      billable,
+      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
+      dueDate: new Date(dueDate).toISOString(),
+    };
+
+    // Initiate sign and submit - will save as DRAFT first, then open signature modal
+    initiateSignAndSubmit(data, isEditMode ? noteId : undefined);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 p-8">
       <div className="max-w-5xl mx-auto">
@@ -583,6 +632,10 @@ export default function ConsultationNoteForm() {
             isSubmitting={saveMutation.isPending}
             onSaveDraft={() => handleSaveDraft({} as any)}
             isSavingDraft={saveDraftMutation.isPending}
+            onSignAndSubmit={handleSignAndSubmit}
+            isSigningAndSubmitting={isSignAndSubmitting}
+            canSign={true}
+            signAndSubmitLabel="Sign & Submit"
           />
         </form>
         )}
@@ -603,6 +656,9 @@ export default function ConsultationNoteForm() {
             confidence={aiConfidence}
           />
         )}
+
+        {/* Signature Modal for Sign & Submit */}
+        <SignatureModal {...signatureModalProps} />
       </div>
     </div>
   );

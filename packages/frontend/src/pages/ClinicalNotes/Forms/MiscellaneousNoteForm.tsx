@@ -19,6 +19,8 @@ import ReviewModal from '../../../components/AI/ReviewModal';
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
+import { useNoteSignature } from '../../../hooks/useNoteSignature';
+import { SignatureModal } from '../../../components/ClinicalNotes/SignatureModal';
 
 const PURPOSE_CATEGORY_OPTIONS = [
   { value: 'Administrative', label: 'Administrative' },
@@ -81,6 +83,25 @@ export default function MiscellaneousNoteForm() {
     noteType: 'MiscellaneousNote',
     clientId: clientId || '',
     noteId,
+  });
+
+  // Sign and Submit hook
+  const {
+    isSignatureModalOpen,
+    isSaving: isSignSaving,
+    isSigning,
+    isSignAndSubmitting,
+    initiateSignAndSubmit,
+    signatureModalProps,
+  } = useNoteSignature({
+    noteType: 'Miscellaneous Note',
+    clientId: clientId || undefined,
+    onSignSuccess: (noteId) => {
+      clearBackup();
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
+      navigate(`/clients/${clientId}/notes`);
+    },
   });
 
   // Fetch client data
@@ -331,6 +352,31 @@ export default function MiscellaneousNoteForm() {
     saveMutation.mutate(data);
   };
 
+  // Sign and Submit handler - saves note then opens signature modal
+  const handleSignAndSubmit = () => {
+    const data = {
+      clientId,
+      noteType: 'Miscellaneous Note',
+      appointmentId: appointmentId,
+      sessionDate: new Date(noteDate).toISOString(),
+      subjective: `Subject: ${subject}\nCategory: ${purposeCategory}`,
+      objective: content,
+      assessment: `Miscellaneous note - ${relatedToTreatment ? 'Related to treatment' : 'Administrative'}`,
+      plan: 'Continue as planned',
+      subject,
+      purposeCategory,
+      content,
+      relatedToTreatment,
+      cptCode: billable ? cptCode : '',
+      billingCode: billable ? billingCode : '',
+      billable,
+      dueDate: new Date(noteDate).toISOString(),
+    };
+
+    // Initiate sign and submit - will save as DRAFT first, then open signature modal
+    initiateSignAndSubmit(data, isEditMode ? noteId : undefined);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 p-8">
       <div className="max-w-5xl mx-auto">
@@ -549,6 +595,10 @@ export default function MiscellaneousNoteForm() {
             isSubmitting={saveMutation.isPending}
             onSaveDraft={() => handleSaveDraft({} as any)}
             isSavingDraft={saveDraftMutation.isPending}
+            onSignAndSubmit={handleSignAndSubmit}
+            isSigningAndSubmitting={isSignAndSubmitting}
+            canSign={true}
+            signAndSubmitLabel="Sign & Submit"
           />
         </form>
         )}
@@ -569,6 +619,9 @@ export default function MiscellaneousNoteForm() {
             confidence={aiConfidence}
           />
         )}
+
+        {/* Signature Modal for Sign & Submit */}
+        <SignatureModal {...signatureModalProps} />
       </div>
     </div>
   );

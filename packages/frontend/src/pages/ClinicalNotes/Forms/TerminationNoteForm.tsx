@@ -20,6 +20,8 @@ import ReviewModal from '../../../components/AI/ReviewModal';
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
+import { useNoteSignature } from '../../../hooks/useNoteSignature';
+import { SignatureModal } from '../../../components/ClinicalNotes/SignatureModal';
 
 const TERMINATION_REASON_OPTIONS = [
   { value: 'Treatment completed', label: 'Treatment completed' },
@@ -87,6 +89,25 @@ export default function TerminationNoteForm() {
     noteType: 'TerminationNote',
     clientId: clientId || '',
     noteId,
+  });
+
+  // Sign and Submit hook
+  const {
+    isSignatureModalOpen,
+    isSaving: isSignSaving,
+    isSigning,
+    isSignAndSubmitting,
+    initiateSignAndSubmit,
+    signatureModalProps,
+  } = useNoteSignature({
+    noteType: 'Termination Note',
+    clientId: clientId || undefined,
+    onSignSuccess: (noteId) => {
+      clearBackup();
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
+      navigate(`/clients/${clientId}/notes`);
+    },
   });
 
   // Fetch client data
@@ -384,6 +405,35 @@ export default function TerminationNoteForm() {
     saveMutation.mutate(data);
   };
 
+  // Sign and Submit handler - saves note then opens signature modal
+  const handleSignAndSubmit = () => {
+    const data = {
+      clientId,
+      noteType: 'Termination Note',
+      appointmentId: appointmentId,
+      sessionDate: new Date(terminationDate).toISOString(),
+      subjective: `Termination Reason: ${terminationReason}\n\nProgress Achieved:\n${progressAchieved}`,
+      objective: `Current Status and Functioning:\n${currentStatus}`,
+      assessment: `Final diagnosis codes: ${finalDiagnosis.join(', ')}`,
+      plan: `Aftercare Recommendations:\n${aftercareRecommendations}\n\nReferrals Made:\n${referralsMade}\n\nEmergency Plan:\n${emergencyPlan}`,
+      terminationReason,
+      progressAchieved,
+      finalDiagnosis,
+      currentStatus,
+      aftercareRecommendations,
+      referralsMade,
+      emergencyPlan,
+      diagnosisCodes: finalDiagnosis,
+      cptCode,
+      billingCode,
+      billable,
+      dueDate: new Date(terminationDate).toISOString(),
+    };
+
+    // Initiate sign and submit - will save as DRAFT first, then open signature modal
+    initiateSignAndSubmit(data, isEditMode ? noteId : undefined);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 p-8">
       <div className="max-w-5xl mx-auto">
@@ -641,6 +691,10 @@ export default function TerminationNoteForm() {
             isSubmitting={saveMutation.isPending}
             onSaveDraft={() => handleSaveDraft({} as any)}
             isSavingDraft={saveDraftMutation.isPending}
+            onSignAndSubmit={handleSignAndSubmit}
+            isSigningAndSubmitting={isSignAndSubmitting}
+            canSign={finalDiagnosis.length > 0}
+            signAndSubmitLabel="Sign & Submit"
           />
         </form>
         )}
@@ -661,6 +715,9 @@ export default function TerminationNoteForm() {
             confidence={aiConfidence}
           />
         )}
+
+        {/* Signature Modal for Sign & Submit */}
+        <SignatureModal {...signatureModalProps} />
       </div>
     </div>
   );

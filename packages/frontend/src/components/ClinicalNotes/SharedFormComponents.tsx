@@ -156,6 +156,11 @@ interface FormActionsProps {
   isSubmitting?: boolean;
   onSaveDraft?: () => void;
   isSavingDraft?: boolean;
+  // New props for Sign & Submit
+  onSignAndSubmit?: () => void;
+  isSigningAndSubmitting?: boolean;
+  canSign?: boolean;
+  signAndSubmitLabel?: string;
 }
 
 export function FormActions({
@@ -164,7 +169,11 @@ export function FormActions({
   submitLabel = 'Create Note',
   isSubmitting,
   onSaveDraft,
-  isSavingDraft
+  isSavingDraft,
+  onSignAndSubmit,
+  isSigningAndSubmitting,
+  canSign = true,
+  signAndSubmitLabel = 'Sign & Submit'
 }: FormActionsProps) {
   return (
     <div className="flex items-center justify-end gap-4 mt-8">
@@ -193,6 +202,20 @@ export function FormActions({
       >
         {isSubmitting ? 'Saving...' : submitLabel}
       </button>
+      {onSignAndSubmit && (
+        <button
+          type="button"
+          onClick={onSignAndSubmit}
+          disabled={isSigningAndSubmitting || !canSign}
+          title={!canSign ? 'Cannot sign: validation requirements not met' : ''}
+          className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+          {isSigningAndSubmitting ? 'Signing...' : signAndSubmitLabel}
+        </button>
+      )}
     </div>
   );
 }

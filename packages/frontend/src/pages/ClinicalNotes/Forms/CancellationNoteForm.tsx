@@ -18,6 +18,8 @@ import CreateAppointmentModal from '../../../components/ClinicalNotes/CreateAppo
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
+import { useNoteSignature } from '../../../hooks/useNoteSignature';
+import { SignatureModal } from '../../../components/ClinicalNotes/SignatureModal';
 
 const CANCELLED_BY_OPTIONS = [
   { value: 'Client', label: 'Client' },
@@ -86,6 +88,25 @@ export default function CancellationNoteForm() {
     noteType: 'CancellationNote',
     clientId: clientId || '',
     noteId,
+  });
+
+  // Sign and Submit hook
+  const {
+    isSignatureModalOpen,
+    isSaving: isSignSaving,
+    isSigning,
+    isSignAndSubmitting,
+    initiateSignAndSubmit,
+    signatureModalProps,
+  } = useNoteSignature({
+    noteType: 'Cancellation Note',
+    clientId: clientId || undefined,
+    onSignSuccess: (noteId) => {
+      clearBackup();
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
+      navigate(`/clients/${clientId}/notes`);
+    },
   });
 
   // Fetch client data
@@ -379,6 +400,37 @@ export default function CancellationNoteForm() {
     saveMutation.mutate(data);
   };
 
+  // Sign and Submit handler - saves note then opens signature modal
+  const handleSignAndSubmit = () => {
+    const cancellationDateTime = new Date(`${cancellationDate}T${cancellationTime}`);
+    const newDateTime = rescheduled && newAppointmentDate && newAppointmentTime
+      ? new Date(`${newAppointmentDate}T${newAppointmentTime}`)
+      : null;
+
+    const data = {
+      clientId,
+      noteType: 'Cancellation Note',
+      appointmentId: appointmentId,
+      sessionDate: cancellationDateTime.toISOString(),
+      subjective: `Appointment cancelled by: ${cancelledBy}\nNotification method: ${notificationMethod}\n\nReason: ${reason}`,
+      objective: rescheduled
+        ? `Rescheduled to: ${newDateTime?.toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })}`
+        : 'Not rescheduled',
+      assessment: `Cancellation documented`,
+      plan: notes || 'Follow up as scheduled',
+      cancelledBy,
+      reason,
+      notificationMethod,
+      rescheduled,
+      newAppointmentDate: newDateTime?.toISOString() || '',
+      billable,
+      dueDate: cancellationDateTime.toISOString(),
+    };
+
+    // Initiate sign and submit - will save as DRAFT first, then open signature modal
+    initiateSignAndSubmit(data, isEditMode ? noteId : undefined);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 p-8">
       <div className="max-w-4xl mx-auto">
@@ -615,6 +667,10 @@ export default function CancellationNoteForm() {
               isSubmitting={saveMutation.isPending}
               onSaveDraft={() => handleSaveDraft({} as any)}
               isSavingDraft={saveDraftMutation.isPending}
+              onSignAndSubmit={handleSignAndSubmit}
+              isSigningAndSubmitting={isSignAndSubmitting}
+              canSign={true}
+              signAndSubmitLabel="Sign & Submit"
             />
           </form>
         )}
@@ -635,6 +691,9 @@ export default function CancellationNoteForm() {
             confidence={aiConfidence}
           />
         )}
+
+        {/* Signature Modal for Sign & Submit */}
+        <SignatureModal {...signatureModalProps} />
       </div>
     </div>
   );

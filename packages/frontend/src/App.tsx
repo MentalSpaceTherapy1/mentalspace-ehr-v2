@@ -95,6 +95,7 @@ import PortalTherapistProfile from './pages/Portal/PortalTherapistProfile';
 import SupervisionSessionsList from './pages/Supervision/SupervisionSessionsList';
 import SupervisionSessionForm from './pages/Supervision/SupervisionSessionForm';
 import SupervisionHoursDashboard from './pages/Supervision/SupervisionHoursDashboard';
+import CosignQueue from './pages/ClinicalNotes/CosignQueue';
 import UnlockRequestManagement from './pages/UnlockRequests/UnlockRequestManagement';
 import EditNoteRouter from './pages/ClinicalNotes/EditNoteRouter';
 import SmartNoteCreator from './pages/ClinicalNotes/SmartNoteCreator';
@@ -872,6 +873,14 @@ function App() {
           element={
             <PrivateRoute>
               <SupervisionHoursDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/supervision/cosign-queue"
+          element={
+            <PrivateRoute>
+              <CosignQueue />
             </PrivateRoute>
           }
         />

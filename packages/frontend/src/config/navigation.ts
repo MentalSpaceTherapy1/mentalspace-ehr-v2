@@ -76,7 +76,7 @@ export const getNavItems = (userRole?: string): NavItem[] => [
   // Group Therapy Sessions
   { path: '/groups', icon: '👥', label: 'Group Sessions', color: 'from-cyan-500 to-blue-500' },
 
-  // Clinical Documentation - Now includes Crisis Detections
+  // Clinical Documentation - Now includes Crisis Detections and Cosign Queue
   {
     path: '/notes',
     icon: '📝',
@@ -87,6 +87,7 @@ export const getNavItems = (userRole?: string): NavItem[] => [
       { path: '/notes', label: 'Compliance Dashboard' },
       { path: '/notes/my-notes', label: 'My Notes' },
       { path: '/clinical-notes/new', label: 'Create New Note' },
+      { path: '/supervision/cosign-queue', label: 'Co-Sign Queue' },
       { path: '/admin/crisis-detections', label: 'Crisis Detections' },
     ]
   },

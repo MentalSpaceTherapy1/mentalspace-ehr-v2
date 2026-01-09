@@ -19,6 +19,8 @@ import ReviewModal from '../../../components/AI/ReviewModal';
 import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
+import { useNoteSignature } from '../../../hooks/useNoteSignature';
+import { SignatureModal } from '../../../components/ClinicalNotes/SignatureModal';
 
 const CONTACT_TYPE_OPTIONS = [
   { value: 'Phone', label: 'Phone' },
@@ -82,6 +84,25 @@ export default function ContactNoteForm() {
     noteType: 'ContactNote',
     clientId: clientId || '',
     noteId,
+  });
+
+  // Sign and Submit hook
+  const {
+    isSignatureModalOpen,
+    isSaving: isSignSaving,
+    isSigning,
+    isSignAndSubmitting,
+    initiateSignAndSubmit,
+    signatureModalProps,
+  } = useNoteSignature({
+    noteType: 'Contact Note',
+    clientId: clientId || undefined,
+    onSignSuccess: (noteId) => {
+      clearBackup();
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
+      navigate(`/clients/${clientId}/notes`);
+    },
   });
 
   // Fetch client data
@@ -349,6 +370,34 @@ export default function ContactNoteForm() {
     saveMutation.mutate(data);
   };
 
+  // Sign and Submit handler - saves note then opens signature modal
+  const handleSignAndSubmit = () => {
+    const contactDateTime = new Date(`${contactDate}T${contactTime}`);
+
+    const data = {
+      clientId,
+      noteType: 'Contact Note',
+      appointmentId: appointmentId,
+      sessionDate: contactDateTime.toISOString(),
+      subjective: `Type: ${contactType}\nDuration: ${duration}\n\nPurpose: ${purpose}`,
+      objective: summary,
+      assessment: followUpNeeded ? 'Follow-up needed' : 'No follow-up needed',
+      plan: followUpNeeded ? 'Schedule follow-up contact or session' : 'Continue as planned',
+      contactType,
+      duration,
+      purpose,
+      summary,
+      followUpNeeded,
+      cptCode,
+      billingCode,
+      billable,
+      dueDate: contactDateTime.toISOString(),
+    };
+
+    // Initiate sign and submit - will save as DRAFT first, then open signature modal
+    initiateSignAndSubmit(data, isEditMode ? noteId : undefined);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 p-8">
       <div className="max-w-4xl mx-auto">
@@ -587,6 +636,10 @@ export default function ContactNoteForm() {
             isSubmitting={saveMutation.isPending}
             onSaveDraft={() => handleSaveDraft({} as any)}
             isSavingDraft={saveDraftMutation.isPending}
+            onSignAndSubmit={handleSignAndSubmit}
+            isSigningAndSubmitting={isSignAndSubmitting}
+            canSign={true}
+            signAndSubmitLabel="Sign & Submit"
           />
         </form>
         )}
@@ -607,6 +660,9 @@ export default function ContactNoteForm() {
             confidence={aiConfidence}
           />
         )}
+
+        {/* Signature Modal for Sign & Submit */}
+        <SignatureModal {...signatureModalProps} />
       </div>
     </div>
   );

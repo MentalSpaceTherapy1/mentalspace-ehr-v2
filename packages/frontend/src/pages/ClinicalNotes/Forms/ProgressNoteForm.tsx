@@ -20,6 +20,8 @@ import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidatedField from '../../../components/ClinicalNotes/ValidatedField';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
+import { useNoteSignature } from '../../../hooks/useNoteSignature';
+import { SignatureModal } from '../../../components/ClinicalNotes/SignatureModal';
 
 // Constants
 const SESSION_TYPES = ['Individual', 'Couples', 'Family', 'Group'];
@@ -172,6 +174,25 @@ export default function ProgressNoteForm() {
     noteType: 'ProgressNote',
     clientId: clientId || '',
     noteId,
+  });
+
+  // Sign and Submit hook
+  const {
+    isSignatureModalOpen,
+    isSaving: isSignSaving,
+    isSigning,
+    isSignAndSubmitting,
+    initiateSignAndSubmit,
+    signatureModalProps,
+  } = useNoteSignature({
+    noteType: 'Progress Note',
+    clientId: clientId || undefined,
+    onSignSuccess: (noteId) => {
+      clearBackup();
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
+      navigate(`/clients/${clientId}/notes`);
+    },
   });
 
   // Fetch client data
@@ -674,6 +695,74 @@ export default function ProgressNoteForm() {
     };
 
     saveMutation.mutate(data);
+  };
+
+  // Sign and Submit handler - saves note then opens signature modal
+  const handleSignAndSubmit = () => {
+    // Phase 1.3: Validate note data before submission
+    const noteData = {
+      subjective,
+      objective,
+      assessment,
+      plan,
+      cptCode,
+    };
+
+    const validation = validateNote(noteData);
+    setValidationErrors(validation.errors);
+    setShowValidation(true);
+
+    if (!validation.isValid) {
+      setAiWarnings(['Please complete all required fields before signing.']);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const selectedInterventions = Object.entries(interventionsUsed)
+      .filter(([_, checked]) => checked)
+      .map(([intervention]) => intervention);
+
+    if (otherIntervention) {
+      selectedInterventions.push(`Other: ${otherIntervention}`);
+    }
+
+    const data = {
+      clientId,
+      noteType: 'Progress Note',
+      appointmentId,
+      sessionDate: new Date(sessionDate).toISOString(),
+      sessionDuration,
+      sessionType,
+      location,
+      symptoms,
+      goals: Array.isArray(goals) ? goals : [],
+      appearance,
+      mood,
+      affect,
+      thoughtProcess,
+      suicidalIdeation,
+      homicidalIdeation,
+      riskLevel,
+      interventionsUsed: selectedInterventions,
+      engagementLevel,
+      responseToInterventions,
+      homeworkCompliance,
+      clientResponseNotes,
+      subjective,
+      objective,
+      assessment,
+      plan,
+      diagnosisCodes: Array.isArray(diagnosisCodes) ? diagnosisCodes : [],
+      safetyPlanReviewed: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanReviewed : undefined,
+      safetyPlanUpdated: riskLevel === 'Moderate' || riskLevel === 'High' ? safetyPlanUpdated : undefined,
+      cptCode,
+      sessionDurationMinutes: sessionDurationMinutes ? parseInt(sessionDurationMinutes) : undefined,
+      billable,
+      dueDate: new Date(dueDate).toISOString(),
+    };
+
+    // Initiate sign and submit - will save as DRAFT first, then open signature modal
+    initiateSignAndSubmit(data, isEditMode ? noteId : undefined);
   };
 
   return (
@@ -1208,6 +1297,10 @@ export default function ProgressNoteForm() {
               isSubmitting={saveMutation.isPending}
               onSaveDraft={() => handleSaveDraft({} as any)}
               isSavingDraft={saveDraftMutation.isPending}
+              onSignAndSubmit={handleSignAndSubmit}
+              isSigningAndSubmitting={isSignAndSubmitting}
+              canSign={true}
+              signAndSubmitLabel="Sign & Submit"
             />
           </form>
         )}
@@ -1228,6 +1321,9 @@ export default function ProgressNoteForm() {
             confidence={aiConfidence}
           />
         )}
+
+        {/* Signature Modal for Sign & Submit */}
+        <SignatureModal {...signatureModalProps} />
       </div>
     </div>
   );

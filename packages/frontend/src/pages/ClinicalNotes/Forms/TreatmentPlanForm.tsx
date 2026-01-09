@@ -21,6 +21,8 @@ import { useNoteValidation } from '../../../hooks/useNoteValidation';
 import ValidatedField from '../../../components/ClinicalNotes/ValidatedField';
 import ValidationSummary from '../../../components/ClinicalNotes/ValidationSummary';
 import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../../hooks/useSessionSafeSave';
+import { useNoteSignature } from '../../../hooks/useNoteSignature';
+import { SignatureModal } from '../../../components/ClinicalNotes/SignatureModal';
 
 interface TreatmentGoal {
   goal: string;
@@ -99,6 +101,25 @@ export default function TreatmentPlanForm() {
     noteType: 'TreatmentPlan',
     clientId: clientId || '',
     noteId,
+  });
+
+  // Sign and Submit hook
+  const {
+    isSignatureModalOpen,
+    isSaving: isSignSaving,
+    isSigning,
+    isSignAndSubmitting,
+    initiateSignAndSubmit,
+    signatureModalProps,
+  } = useNoteSignature({
+    noteType: 'Treatment Plan',
+    clientId: clientId || undefined,
+    onSignSuccess: (noteId) => {
+      clearBackup();
+      queryClient.invalidateQueries({ queryKey: ['clinical-notes', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['my-notes'] });
+      navigate(`/clients/${clientId}/notes`);
+    },
   });
 
   // Fetch client data
@@ -564,6 +585,70 @@ export default function TreatmentPlanForm() {
     saveMutation.mutate(data);
   };
 
+  // Sign and Submit handler - saves note then opens signature modal
+  const handleSignAndSubmit = () => {
+    // Construct assessment and plan fields for validation
+    const goalsCount = Array.isArray(goals) ? goals.filter(g => g.goal.trim()).length : 0;
+    const assessmentText = `Formal Treatment Plan established with ${goalsCount} goals`;
+    const planText = dischargeCriteria ? `Discharge Criteria: ${dischargeCriteria}` : '';
+
+    // Phase 1.3: Validate note data before submission
+    const noteData = {
+      assessment: assessmentText,
+      plan: planText,
+      diagnosisCodes,
+    };
+
+    const validation = validateNote(noteData);
+    setValidationErrors(validation.errors);
+    setShowValidation(true);
+
+    if (!validation.isValid) {
+      setAiWarnings(['Please complete all required fields before signing.']);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const goalsText = Array.isArray(goals)
+      ? goals
+        .filter(g => g.goal.trim())
+        .map((g, i) => {
+          const objectivesText = Array.isArray(g.objectives)
+            ? g.objectives.filter(o => o.trim()).map((o, idx) => `  Objective ${idx + 1}: ${o}`).join('\n')
+            : '';
+          return `Goal ${i + 1}: ${g.goal}\nProgress: ${g.progress}\nTarget Date: ${g.targetDate || 'Not specified'}\nObjectives:\n${objectivesText}`;
+        })
+        .join('\n\n')
+      : '';
+
+    const modalityText = Array.isArray(treatmentModality) && treatmentModality.length > 0
+      ? treatmentModality.join(', ')
+      : 'Not specified';
+
+    const data = {
+      clientId,
+      noteType: 'Treatment Plan',
+      appointmentId: appointmentId,
+      sessionDate: new Date(sessionDate).toISOString(),
+      subjective: goalsText,
+      objective: `Treatment Modalities: ${modalityText}\nSession Duration: ${sessionDuration}\nFrequency: ${frequency}\nTreatment Setting: ${treatmentSetting}\nEstimated Duration: ${estimatedDuration}`,
+      assessment: `Formal Treatment Plan established with ${goals.filter(g => g.goal.trim()).length} goals`,
+      plan: `Discharge Criteria: ${dischargeCriteria}`,
+      interventions: modalityText,
+      frequency,
+      dischargeCriteria,
+      diagnosisCodes,
+      cptCode,
+      billingCode,
+      billable,
+      nextSessionDate: nextSessionDate ? new Date(nextSessionDate).toISOString() : undefined,
+      dueDate: new Date(dueDate).toISOString(),
+    };
+
+    // Initiate sign and submit - will save as DRAFT first, then open signature modal
+    initiateSignAndSubmit(data, isEditMode ? noteId : undefined);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 p-8">
       <div className="max-w-5xl mx-auto">
@@ -999,6 +1084,10 @@ export default function TreatmentPlanForm() {
               isSubmitting={saveMutation.isPending}
               onSaveDraft={() => handleSaveDraft({} as any)}
               isSavingDraft={saveDraftMutation.isPending}
+              onSignAndSubmit={handleSignAndSubmit}
+              isSigningAndSubmitting={isSignAndSubmitting}
+              canSign={diagnosisCodes.length > 0}
+              signAndSubmitLabel="Sign & Submit"
             />
           </form>
         )}
@@ -1019,6 +1108,9 @@ export default function TreatmentPlanForm() {
             confidence={aiConfidence}
           />
         )}
+
+        {/* Signature Modal for Sign & Submit */}
+        <SignatureModal {...signatureModalProps} />
       </div>
     </div>
   );
