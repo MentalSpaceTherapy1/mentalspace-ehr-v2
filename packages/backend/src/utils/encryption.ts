@@ -42,8 +42,12 @@ const SENSITIVE_FIELDS = [
   'clinicalNotes',
   'aiApiKey',
   'smtpPass',
+  'smtpUser',
   'apiSecret',
   'password',
+  'secret',
+  'token',
+  'key',
 ];
 
 /**
@@ -244,12 +248,8 @@ export function maskSensitiveFields(data: any): any {
       if (value === null || value === undefined) {
         masked[key] = value;
       } else if (typeof value === 'string' && isSensitiveField(key)) {
-        // Mask sensitive string fields
-        if (value.length <= 4) {
-          masked[key] = '****';
-        } else {
-          masked[key] = value.substring(0, 2) + '****' + value.substring(value.length - 2);
-        }
+        // Fully mask sensitive string fields for security
+        masked[key] = '********';
       } else if (typeof value === 'object') {
         masked[key] = maskSensitiveFields(value);
       } else {
