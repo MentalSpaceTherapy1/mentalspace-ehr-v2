@@ -14,6 +14,14 @@ BEGIN
   END IF;
 END $$;
 
+-- Create EmploymentType enum if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'EmploymentType') THEN
+    CREATE TYPE "EmploymentType" AS ENUM ('FULL_TIME', 'PART_TIME', 'CONTRACTOR', 'INTERN', 'TEMPORARY');
+  END IF;
+END $$;
+
 -- Add employmentStatus column to users
 DO $$
 BEGIN
@@ -48,6 +56,35 @@ END $$;
 
 -- Create unique index on employeeId (only if column exists)
 CREATE UNIQUE INDEX IF NOT EXISTS "users_employeeId_key" ON "users"("employeeId") WHERE "employeeId" IS NOT NULL;
+
+-- Add HR employment tracking fields (Module 9: Staff Management)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'hireDate') THEN
+    ALTER TABLE "users" ADD COLUMN "hireDate" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'terminationDate') THEN
+    ALTER TABLE "users" ADD COLUMN "terminationDate" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'department') THEN
+    ALTER TABLE "users" ADD COLUMN "department" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'jobTitle') THEN
+    ALTER TABLE "users" ADD COLUMN "jobTitle" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'workLocation') THEN
+    ALTER TABLE "users" ADD COLUMN "workLocation" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'employmentType') THEN
+    ALTER TABLE "users" ADD COLUMN "employmentType" "EmploymentType";
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'managerId') THEN
+    ALTER TABLE "users" ADD COLUMN "managerId" TEXT;
+  END IF;
+END $$;
+
+-- Create index on managerId for organizational hierarchy queries
+CREATE INDEX IF NOT EXISTS "users_managerId_idx" ON "users"("managerId");
 
 -- ========================================
 -- 2. APPOINTMENTS TABLE - Confirmation and Risk Prediction fields
