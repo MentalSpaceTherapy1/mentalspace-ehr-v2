@@ -415,8 +415,10 @@ export async function login(data: { email: string; password: string }) {
           'Please verify your email before logging in. Check your inbox for the verification link.',
           403
         );
-      } else if (portalAccount.accountStatus === 'SUSPENDED') {
-        throw new AppError('Your account has been suspended. Please contact support.', 403);
+      } else if (portalAccount.accountStatus === 'LOCKED') {
+        throw new AppError('Your account has been locked. Please contact support.', 403);
+      } else if (portalAccount.accountStatus === 'INACTIVE') {
+        throw new AppError('Your account is inactive. Please contact support.', 403);
       } else {
         throw new AppError('Account is not active. Please contact support.', 403);
       }
@@ -1084,31 +1086,14 @@ export async function adminCreateTempPassword(clientId: string, adminUserId: str
       `${PORTAL_URL}/login`
     );
 
-    // DEBUG: Log before sending email
-    console.log('[AUTH DEBUG] About to send temp password email:', {
-      to: portalAccount.email,
-      subject: emailTemplate.subject,
-      clientName: portalAccount.client.firstName,
-      hasHtml: !!emailTemplate.html,
-    });
-
     const emailSent = await sendEmail({
       to: portalAccount.email,
       subject: emailTemplate.subject,
       html: emailTemplate.html,
     });
 
-    // DEBUG: Log result of email send
-    console.log('[AUTH DEBUG] Email send result:', {
-      emailSent,
-      to: portalAccount.email,
-    });
-
     if (!emailSent) {
       logger.warn(`Failed to send temp password email to ${portalAccount.email}`);
-      console.log('[AUTH DEBUG] Email send FAILED for:', portalAccount.email);
-    } else {
-      console.log('[AUTH DEBUG] Email send SUCCESS for:', portalAccount.email);
     }
 
     logger.info(`Admin ${adminUserId} created temp password for client ${clientId}`, {

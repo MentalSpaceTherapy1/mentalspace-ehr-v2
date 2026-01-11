@@ -85,9 +85,9 @@ router.get('/odata', authenticate, (req: Request, res: Response) => {
     '@odata.context': `${baseUrl}/$metadata`,
     'value': [
       {
-        'name': 'RevenueByClincian',
+        'name': 'RevenueByClinician',
         'kind': 'EntitySet',
-        'url': 'RevenueByClincian'
+        'url': 'RevenueByClinician'
       },
       {
         'name': 'RevenueByCPT',
@@ -116,13 +116,13 @@ router.get('/odata', authenticate, (req: Request, res: Response) => {
 /**
  * Revenue by Clinician OData Feed
  */
-router.get('/odata/RevenueByClincian', authenticate, async (req: Request, res: Response) => {
+router.get('/odata/RevenueByClinician', authenticate, async (req: Request, res: Response) => {
   try {
     const { $metadata, $top, $skip, $filter, startDate, endDate } = req.query;
 
     // Return metadata if requested
     if ($metadata !== undefined) {
-      const metadata = generateODataMetadata('RevenueByClincian', [
+      const metadata = generateODataMetadata('RevenueByClinician', [
         { name: 'Id', type: 'string' },
         { name: 'ClinicianId', type: 'string' },
         { name: 'ClinicianName', type: 'string' },
@@ -180,7 +180,7 @@ router.get('/odata/RevenueByClincian', authenticate, async (req: Request, res: R
     }
 
     const baseUrl = `${req.protocol}://${req.get('host')}/api/v1/odata`;
-    const response = formatODataResponse('RevenueByClincian', data, baseUrl);
+    const response = formatODataResponse('RevenueByClinician', data, baseUrl);
 
     res.json(response);
   } catch (error) {

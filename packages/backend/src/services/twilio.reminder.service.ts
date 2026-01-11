@@ -206,7 +206,7 @@ export class TwilioReminderService {
         where: { messageId: messageSid },
         data: {
           deliveryStatus,
-          errorMessage:
+          failureReason:
             deliveryStatus === 'FAILED' && errorMessage
               ? `${errorCode}: ${errorMessage}`
               : undefined,

@@ -1,6 +1,10 @@
 import { doubleCsrf } from 'csrf-csrf';
 import cookieParser from 'cookie-parser';
 import { Request } from 'express';
+import { HttpError } from 'http-errors';
+
+// Re-export HttpError for use by csrf handler
+export type { HttpError };
 
 /**
  * CSRF Protection Middleware
@@ -69,4 +73,4 @@ export const generateCsrfToken = generateCsrfTokenFn;
 /**
  * Error handler for CSRF token errors
  */
-export const csrfErrorHandler: typeof invalidCsrfTokenError = invalidCsrfTokenError;
+export const csrfErrorHandler = invalidCsrfTokenError as HttpError;

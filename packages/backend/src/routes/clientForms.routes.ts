@@ -23,6 +23,7 @@ router.post('/:clientId/forms/assign', clientFormsController.assignFormToClient)
 router.delete('/:clientId/forms/:assignmentId', clientFormsController.removeFormAssignment);
 router.post('/:clientId/forms/:assignmentId/remind', clientFormsController.sendFormReminder);
 router.get('/:clientId/forms/:assignmentId/submission', clientFormsController.viewFormSubmission);
+router.patch('/:clientId/forms/:assignmentId/review', clientFormsController.markFormAsReviewed);
 
 // Data transfer routes
 router.post('/:clientId/forms/:assignmentId/transfer-to-demographics', clientFormsController.transferToDemographics);

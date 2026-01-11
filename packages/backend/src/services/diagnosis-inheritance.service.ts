@@ -43,7 +43,7 @@ export class DiagnosisInheritanceService {
       code: typeof code === 'string' ? code : code.toString(),
       description: '', // Description not stored in clinical note, would need ICD-10 lookup
       isPrimary: index === 0, // First code is primary
-      effectiveDate: latestIntake.sessionDate,
+      effectiveDate: latestIntake.sessionDate || new Date(),
     }));
   }
 
@@ -145,7 +145,7 @@ export class DiagnosisInheritanceService {
           where: { id: existing.id },
           data: {
             diagnosisType: isPrimary ? 'Primary' : 'Secondary',
-            diagnosisDate: note.sessionDate,
+            diagnosisDate: note.sessionDate || new Date(),
             status: 'Active',
           },
         });
@@ -158,7 +158,7 @@ export class DiagnosisInheritanceService {
             diagnosisDescription: '', // Would need ICD-10 lookup service
             diagnosisType: isPrimary ? 'Primary' : 'Secondary',
             diagnosedBy: note.clinicianId || '', // Need to pass this from context
-            diagnosisDate: note.sessionDate,
+            diagnosisDate: note.sessionDate || new Date(),
             status: 'Active',
           },
         });

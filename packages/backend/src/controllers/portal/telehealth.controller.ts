@@ -257,7 +257,7 @@ export const leaveSession = async (req: PortalRequest, res: Response) => {
       where: { id: appointment.telehealthSession.id },
       data: {
         clientInWaitingRoom: false,
-        clientLeftAt: new Date(),
+        sessionEndedAt: new Date(),
         lastModifiedBy: clientId,
       },
     });

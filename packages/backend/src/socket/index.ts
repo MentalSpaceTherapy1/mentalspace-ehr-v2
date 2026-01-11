@@ -71,15 +71,16 @@ export async function initializeSocketIO(server: HTTPServer): Promise<SocketIOSe
   io.use(authenticateSocket);
 
   // Connection handler
+  const ioInstance = io; // Capture reference for TypeScript
   io.on('connection', (socket: Socket) => {
     const userId = socket.data.userId;
     logger.info(`WebSocket connected: ${socket.id}`, { userId });
 
     // Setup various event handlers
-    setupProductivityHandlers(io, socket);
-    setupCollaborationHandlers(io, socket);
-    setupNotificationHandlers(io, socket);
-    setupTranscriptionHandlers(io, socket);
+    setupProductivityHandlers(ioInstance, socket);
+    setupCollaborationHandlers(ioInstance, socket);
+    setupNotificationHandlers(ioInstance, socket);
+    setupTranscriptionHandlers(ioInstance, socket);
 
     // Handle disconnection
     socket.on('disconnect', (reason) => {

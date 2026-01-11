@@ -436,7 +436,7 @@ class TrainingService {
       }
 
       // Determine if the training is passed
-      let status = TrainingStatus.COMPLETED;
+      let status: TrainingStatus = TrainingStatus.COMPLETED;
       let complianceMet = true;
 
       if (record.passingScore !== null && score !== undefined) {

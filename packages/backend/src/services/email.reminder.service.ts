@@ -113,7 +113,7 @@ export class EmailReminderService {
         to: options.to,
         subject: options.subject,
         hasAttachments: !!options.attachments?.length,
-        messageId: response.id,
+        messageId: (response as any)?.data?.id || 'unknown',
       });
     } catch (error: any) {
       logger.error('Failed to send email via Resend', {

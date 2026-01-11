@@ -111,7 +111,13 @@ const recurrencePatternSchema = z.object({
 const createRecurringAppointmentSchema = baseAppointmentSchema.extend({
   isRecurring: z.literal(true),
   recurrencePattern: recurrencePatternSchema,
-});
+}).refine(
+  (data) => !!data.clientId,
+  {
+    message: 'clientId is required for recurring appointments',
+    path: ['clientId'],
+  }
+);
 
 // Get appointments by client ID
 export const getAppointmentsByClientId = async (req: Request, res: Response) => {
@@ -357,9 +363,13 @@ export const createAppointment = async (req: Request, res: Response) => {
     }
 
     // Create appointment data
+    // For group appointments, use the first client as the primary (until AppointmentClient junction is implemented)
+    const primaryClientId = validatedData.isGroupAppointment
+      ? validatedData.clientIds![0]
+      : validatedData.clientId!;
+
     const appointmentData: Prisma.AppointmentUncheckedCreateInput = {
-      // For group appointments, clientId is null (clients linked via AppointmentClient junction)
-      clientId: validatedData.isGroupAppointment ? null : validatedData.clientId,
+      clientId: primaryClientId,
       clinicianId: validatedData.clinicianId,
       appointmentDate: new Date(validatedData.appointmentDate),
       startTime: validatedData.startTime,
@@ -527,8 +537,9 @@ export const createRecurringAppointments = async (req: Request, res: Response) =
     }
 
     // Generate appointments from recurrence pattern
+    // clientId is validated as required by the schema refinement
     const baseData = {
-      clientId: validatedData.clientId,
+      clientId: validatedData.clientId!,
       clinicianId: validatedData.clinicianId,
       appointmentDate: validatedData.appointmentDate,
       startTime: validatedData.startTime,

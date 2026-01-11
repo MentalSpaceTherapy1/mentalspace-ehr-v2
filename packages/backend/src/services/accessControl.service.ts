@@ -47,7 +47,7 @@ const SCHEDULING_ROLES = [
 // =============================================================================
 
 const hasRole = (user: JwtPayload | undefined, role: string) =>
-  Boolean(user?.roles?.includes(role) || user?.role === role);
+  Boolean(user?.roles?.includes(role) || (user as any)?.role === role);
 
 const hasAnyRole = (user: JwtPayload | undefined, roles: readonly string[]) =>
   roles.some(role => hasRole(user, role));
@@ -107,7 +107,8 @@ export const buildRLSContext = async (user: JwtPayload | undefined): Promise<RLS
   }
 
   const userId = user.userId || user.id;
-  const roles = user.roles || (user.role ? [user.role] : []);
+  const userAny = user as any;
+  const roles = user.roles || (userAny.role ? [userAny.role] : []);
 
   const userIsSuperAdmin = isSuperAdmin(user);
   const userIsAdmin = isAdministrator(user);
@@ -757,10 +758,10 @@ const logAccess = (
         action: `RLS_${granted ? 'GRANTED' : 'DENIED'}`,
         entityType: resource,
         entityId: resourceId,
-        details: {
+        changes: {
           reason,
           granted,
-        },
+        } as any,
         ipAddress: 'system',
         userAgent: 'RLS-Middleware',
       },

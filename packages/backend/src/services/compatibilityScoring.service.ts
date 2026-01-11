@@ -44,7 +44,7 @@ export async function calculateCompatibilityScore(
       where: { id: clientId },
       include: {
         insuranceInfo: true,
-        clientDiagnoses: { include: { diagnosis: true } }
+        clientDiagnoses: true
       }
     }),
     prisma.appointment.findMany({
@@ -55,8 +55,7 @@ export async function calculateCompatibilityScore(
       }
     }),
     prisma.clientDiagnosis.findMany({
-      where: { clientId, isActive: true },
-      include: { diagnosis: true }
+      where: { clientId, status: 'ACTIVE' }
     })
   ]);
 
@@ -120,9 +119,9 @@ export async function calculateCompatibilityScore(
       factors: {
         weights,
         specialty: provider.specialties,
-        diagnoses: clientDiagnoses.map(cd => cd.diagnosis.icdCode),
+        diagnoses: clientDiagnoses.map((cd: any) => cd.icd10Code),
         experience: provider.yearsOfExperience,
-        insurance: client.insuranceInfo.map(i => i.payerName)
+        insurance: client.insuranceInfo?.map((i: any) => i.insuranceCompany) || []
       }
     },
     update: {
@@ -142,9 +141,9 @@ export async function calculateCompatibilityScore(
       factors: {
         weights,
         specialty: provider.specialties,
-        diagnoses: clientDiagnoses.map(cd => cd.diagnosis.icdCode),
+        diagnoses: clientDiagnoses.map((cd: any) => cd.icd10Code),
         experience: provider.yearsOfExperience,
-        insurance: client.insuranceInfo.map(i => i.payerName)
+        insurance: client.insuranceInfo?.map((i: any) => i.insuranceCompany) || []
       }
     }
   });
@@ -163,7 +162,7 @@ export async function calculateCompatibilityScore(
       specialty: provider.specialties,
       availability: provider.availability?.length ? 'Available' : 'Limited',
       experience: `${provider.yearsOfExperience || 0} years`,
-      insurance: client.insuranceInfo.map(i => i.payerName).join(', '),
+      insurance: client.insuranceInfo?.map((i: any) => i.insuranceCompany).join(', ') || 'None',
       location: provider.defaultOfficeLocation || 'Not specified',
       style: provider.approachesToTherapy?.join(', ') || 'Not specified'
     }

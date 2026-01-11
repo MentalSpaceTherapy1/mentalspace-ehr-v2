@@ -181,7 +181,7 @@ export async function createSchedulingRule(
         cancellationWindowHours: data.cancellationWindowHours ?? 24,
         allowWeekends: data.allowWeekends ?? false,
         allowedDays: data.allowedDays ?? ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
-        blockoutPeriods: data.blockoutPeriods || [],
+        blockoutPeriods: (data.blockoutPeriods || []) as any,
         slotDuration: data.slotDuration ?? 60,
         bufferTime: data.bufferTime ?? 0,
         maxDailyAppointments: data.maxDailyAppointments,
@@ -240,7 +240,7 @@ export async function updateSchedulingRule(
         ...(data.cancellationWindowHours !== undefined && { cancellationWindowHours: data.cancellationWindowHours }),
         ...(data.allowWeekends !== undefined && { allowWeekends: data.allowWeekends }),
         ...(data.allowedDays !== undefined && { allowedDays: data.allowedDays }),
-        ...(data.blockoutPeriods !== undefined && { blockoutPeriods: data.blockoutPeriods }),
+        ...(data.blockoutPeriods !== undefined && { blockoutPeriods: data.blockoutPeriods as any }),
         ...(data.slotDuration !== undefined && { slotDuration: data.slotDuration }),
         ...(data.bufferTime !== undefined && { bufferTime: data.bufferTime }),
         ...(data.maxDailyAppointments !== undefined && { maxDailyAppointments: data.maxDailyAppointments }),
@@ -417,7 +417,7 @@ export async function validateSlot(
     // Check blockout periods
     if (rules.blockoutPeriods && Array.isArray(rules.blockoutPeriods)) {
       const slotDate = slotTime.toISOString().split('T')[0];
-      for (const blockout of rules.blockoutPeriods as BlockoutPeriod[]) {
+      for (const blockout of rules.blockoutPeriods as unknown as BlockoutPeriod[]) {
         if (slotDate >= blockout.startDate && slotDate <= blockout.endDate) {
           return {
             valid: false,

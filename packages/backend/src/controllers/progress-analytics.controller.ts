@@ -4,6 +4,7 @@ import dataExportService from '../services/data-export.service';
 import trackingRemindersService from '../services/tracking-reminders.service';
 import { ValidationError } from '../utils/errors';
 import logger, { logControllerError } from '../utils/logger';
+import prisma from '../services/database';
 
 /**
  * Get combined analytics across all tracking domains
@@ -307,6 +308,126 @@ export const getEngagementScore = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch engagement score',
+    });
+  }
+};
+
+/**
+ * Get clinician notes for a client (from clinical notes)
+ * Returns simplified note data for progress tracking view
+ */
+export const getClinicianNotes = async (req: Request, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    const { startDate, endDate, limit = '20' } = req.query;
+
+    const where: any = {
+      clientId,
+      status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] }, // Only show signed notes
+    };
+
+    if (startDate && endDate) {
+      where.sessionDate = {
+        gte: new Date(startDate as string),
+        lte: new Date(endDate as string),
+      };
+    }
+
+    const notes = await prisma.clinicalNote.findMany({
+      where,
+      orderBy: { sessionDate: 'desc' },
+      take: parseInt(limit as string),
+      select: {
+        id: true,
+        noteType: true,
+        sessionDate: true,
+        assessment: true,
+        plan: true,
+        progressTowardGoals: true,
+        createdAt: true,
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    // Transform to simplified format expected by frontend
+    const formattedNotes = notes.map((note) => ({
+      id: note.id,
+      content: note.progressTowardGoals || note.assessment || note.plan || 'Session note',
+      createdAt: note.sessionDate?.toISOString() || note.createdAt.toISOString(),
+      clinicianName: `${note.clinician.firstName} ${note.clinician.lastName}`,
+      noteType: note.noteType,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedNotes,
+    });
+  } catch (error) {
+    logControllerError('getClinicianNotes', error, { params: req.params });
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch clinician notes',
+    });
+  }
+};
+
+/**
+ * Create a progress observation note
+ * Quick note for clinicians to add observations about client progress
+ */
+export const createProgressNote = async (req: Request, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    const { content } = req.body;
+    const clinicianId = req.user!.id;
+
+    if (!content || content.trim().length === 0) {
+      throw new ValidationError('Note content is required');
+    }
+
+    // Create a simple progress note as a clinical note
+    const note = await prisma.clinicalNote.create({
+      data: {
+        clientId,
+        clinicianId,
+        noteType: 'PROGRESS_OBSERVATION',
+        sessionDate: new Date(),
+        progressTowardGoals: content.trim(),
+        status: 'SIGNED', // Auto-sign simple observations
+        signedDate: new Date(),
+        signedBy: clinicianId,
+        lastModifiedBy: clinicianId,
+      },
+    });
+
+    // Get clinician info for response
+    const clinician = await prisma.user.findUnique({
+      where: { id: clinicianId },
+      select: { id: true, firstName: true, lastName: true },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: note.id,
+        content: note.progressTowardGoals,
+        createdAt: note.sessionDate?.toISOString() || note.createdAt.toISOString(),
+        clinicianName: clinician ? `${clinician.firstName} ${clinician.lastName}` : 'Unknown',
+        noteType: note.noteType,
+      },
+      message: 'Progress note created successfully',
+    });
+  } catch (error) {
+    logControllerError('createProgressNote', error, { params: req.params });
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create progress note',
     });
   }
 };

@@ -307,7 +307,7 @@ export async function joinTelehealthSession(data: JoinSessionData) {
     } else {
       // Production: Generate real Twilio token
       try {
-        tokenData = await twilioService.generateTwilioAccessToken(roomName, identity);
+        tokenData = await twilioService.generateTwilioAccessToken(roomName || '', identity);
 
         if (!tokenData || !tokenData.token) {
           throw new Error('Invalid Twilio token response');
@@ -710,15 +710,17 @@ export async function activateEmergency(data: {
 
     auditLogEvents.push(emergencyAuditEntry);
 
-    // Update session with emergency data
+    // Update session with emergency data (stored in technicalIssues as emergency metadata)
     const updatedSession = await prisma.telehealthSession.update({
       where: { id: data.sessionId },
       data: {
-        emergencyActivated: true,
-        emergencyActivatedAt: new Date(),
-        emergencyNotes: data.emergencyNotes,
-        emergencyResolution: data.emergencyResolution,
-        emergencyContactNotified: data.emergencyContactNotified,
+        technicalIssues: JSON.stringify({
+          emergencyActivated: true,
+          emergencyActivatedAt: new Date(),
+          emergencyNotes: data.emergencyNotes,
+          emergencyResolution: data.emergencyResolution,
+          emergencyContactNotified: data.emergencyContactNotified,
+        }),
         hipaaAuditLog: {
           ...existingAuditLog,
           events: auditLogEvents,

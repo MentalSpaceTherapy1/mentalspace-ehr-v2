@@ -43,7 +43,7 @@ export async function parseSchedulingRequest(
 
   // Step 1: Extract intent
   const intent = extractIntent(normalizedText);
-  entities.intent = intent;
+  entities.intent = intent || undefined;
 
   if (intent) {
     reasoning.push(`Detected intent: ${intent}`);
@@ -588,7 +588,7 @@ async function logParsingAttempt(
         userId,
         requestText,
         parsedIntent: intent,
-        parsedEntities: entities,
+        parsedEntities: entities as any,
         confidence,
         parsingSuccess: success,
         executionStatus: success ? 'PENDING' : 'CLARIFICATION_NEEDED',
@@ -645,7 +645,7 @@ export async function executeSchedulingRequest(
         // Auto-accept the best suggestion and create the appointment
         if (suggestions && suggestions.length > 0) {
           const bestSuggestion = suggestions[0];
-          const appointment = await schedulingSuggestionsService.acceptSuggestion(bestSuggestion.id, userId);
+          const appointment = await schedulingSuggestionsService.acceptSuggestion((bestSuggestion as any).id, userId);
           result = {
             success: true,
             message: 'Appointment created successfully',

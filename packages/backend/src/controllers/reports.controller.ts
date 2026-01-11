@@ -1,6 +1,7 @@
 import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import prisma from '../services/database';
+import * as cache from '../services/cache.service';
 
 /**
  * ============================================================================
@@ -15,6 +16,16 @@ export async function getRevenueByClinicianReport(req: Request, res: Response) {
 
     const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = endDate ? new Date(endDate as string) : new Date();
+
+    // Check cache first
+    const cacheKey = cache.generateKey('revenue-by-clinician', {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+    });
+    const cachedData = await cache.get(cacheKey);
+    if (cachedData) {
+      return res.json({ success: true, data: cachedData, cached: true });
+    }
 
     // Get all charges grouped by clinician (providerId in schema)
     const chargesByClinician = await prisma.chargeEntry.groupBy({
@@ -64,14 +75,19 @@ export async function getRevenueByClinicianReport(req: Request, res: Response) {
       };
     });
 
+    const responseData = {
+      report,
+      period: { startDate: start, endDate: end },
+      totalRevenue: report.reduce((sum, r) => sum + r.totalRevenue, 0),
+      totalSessions: report.reduce((sum, r) => sum + r.sessionCount, 0),
+    };
+
+    // Cache result for 5 minutes
+    await cache.set(cacheKey, responseData, cache.CacheTTL.MEDIUM, cache.CacheCategory.REVENUE);
+
     res.json({
       success: true,
-      data: {
-        report,
-        period: { startDate: start, endDate: end },
-        totalRevenue: report.reduce((sum, r) => sum + r.totalRevenue, 0),
-        totalSessions: report.reduce((sum, r) => sum + r.sessionCount, 0),
-      },
+      data: responseData,
     });
   } catch (error) {
     logger.error('Error generating revenue by clinician report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
@@ -90,6 +106,16 @@ export async function getRevenueByCPTReport(req: Request, res: Response) {
 
     const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = endDate ? new Date(endDate as string) : new Date();
+
+    // Check cache first
+    const cacheKey = cache.generateKey('revenue-by-cpt', {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+    });
+    const cachedData = await cache.get(cacheKey);
+    if (cachedData) {
+      return res.json({ success: true, data: cachedData, cached: true });
+    }
 
     const chargesByCPT = await prisma.chargeEntry.groupBy({
       by: ['cptCode'],
@@ -130,13 +156,18 @@ export async function getRevenueByCPTReport(req: Request, res: Response) {
       };
     });
 
+    const responseData = {
+      report: report.sort((a, b) => b.totalRevenue - a.totalRevenue),
+      period: { startDate: start, endDate: end },
+      totalRevenue: report.reduce((sum, r) => sum + r.totalRevenue, 0),
+    };
+
+    // Cache result for 5 minutes
+    await cache.set(cacheKey, responseData, cache.CacheTTL.MEDIUM, cache.CacheCategory.REVENUE);
+
     res.json({
       success: true,
-      data: {
-        report: report.sort((a, b) => b.totalRevenue - a.totalRevenue),
-        period: { startDate: start, endDate: end },
-        totalRevenue: report.reduce((sum, r) => sum + r.totalRevenue, 0),
-      },
+      data: responseData,
     });
   } catch (error) {
     logger.error('Error generating revenue by CPT report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
@@ -1490,7 +1521,7 @@ export async function getClinicalQualityMetricsReport(req: Request, res: Respons
 
     let timelyNotes = 0;
     notes.forEach(note => {
-      if (note.signedDate) {
+      if (note.signedDate && note.sessionDate) {
         const daysToSign = Math.floor((note.signedDate.getTime() - note.sessionDate.getTime()) / (1000 * 60 * 60 * 24));
         if (daysToSign <= 7) timelyNotes++;
       }
@@ -1956,9 +1987,11 @@ export async function getWorkflowEfficiencyMetricsReport(req: Request, res: Resp
       },
     });
 
-    const noteCompletionTimes = notes.map(n =>
-      Math.floor((n.signedDate!.getTime() - n.sessionDate.getTime()) / (1000 * 60 * 60 * 24))
-    );
+    const noteCompletionTimes = notes
+      .filter(n => n.sessionDate !== null)
+      .map(n =>
+        Math.floor((n.signedDate!.getTime() - n.sessionDate!.getTime()) / (1000 * 60 * 60 * 24))
+      );
 
     const avgNoteTime = noteCompletionTimes.length > 0
       ? noteCompletionTimes.reduce((sum, t) => sum + t, 0) / noteCompletionTimes.length

@@ -8,6 +8,10 @@
 import prisma from './database';
 import logger from '../utils/logger';
 
+// EmergencyProtocol model workaround - model may not exist in schema yet
+// TODO: Add EmergencyProtocol model to Prisma schema
+const emergencyProtocolModel = prisma as any;
+
 export interface CreateEmergencyProtocolData {
   name: string;
   description: string;
@@ -44,7 +48,7 @@ export async function getEmergencyProtocols(includeInactive: boolean = false) {
       where.isActive = true;
     }
 
-    const protocols = await prisma.emergencyProtocol.findMany({
+    const protocols = await emergencyProtocolModel.emergencyProtocol.findMany({
       where,
       orderBy: [
         { displayOrder: 'asc' },
@@ -103,7 +107,7 @@ export async function getProtocolForEmergencyType(emergencyType: string) {
     const triggers = triggerMap[emergencyType] || [];
 
     // Find protocol that matches any of the triggers
-    const protocol = await prisma.emergencyProtocol.findFirst({
+    const protocol = await emergencyProtocolModel.emergencyProtocol.findFirst({
       where: {
         isActive: true,
         triggerConditions: {
@@ -144,7 +148,7 @@ export async function getProtocolForEmergencyType(emergencyType: string) {
  */
 export async function getEmergencyProtocolById(id: string) {
   try {
-    const protocol = await prisma.emergencyProtocol.findUnique({
+    const protocol = await emergencyProtocolModel.emergencyProtocol.findUnique({
       where: { id },
     });
 
@@ -167,7 +171,7 @@ export async function getEmergencyProtocolById(id: string) {
  */
 export async function createEmergencyProtocol(data: CreateEmergencyProtocolData) {
   try {
-    const protocol = await prisma.emergencyProtocol.create({
+    const protocol = await emergencyProtocolModel.emergencyProtocol.create({
       data: {
         ...data,
         displayOrder: data.displayOrder || 0,
@@ -198,7 +202,7 @@ export async function updateEmergencyProtocol(
   data: UpdateEmergencyProtocolData
 ) {
   try {
-    const protocol = await prisma.emergencyProtocol.update({
+    const protocol = await emergencyProtocolModel.emergencyProtocol.update({
       where: { id },
       data,
     });
@@ -224,7 +228,7 @@ export async function updateEmergencyProtocol(
  */
 export async function deleteEmergencyProtocol(id: string, userId: string) {
   try {
-    const protocol = await prisma.emergencyProtocol.update({
+    const protocol = await emergencyProtocolModel.emergencyProtocol.update({
       where: { id },
       data: {
         isActive: false,
@@ -259,7 +263,7 @@ export async function reorderEmergencyProtocols(
     // Update all protocols in a transaction
     const results = await prisma.$transaction(
       updates.map((update) =>
-        prisma.emergencyProtocol.update({
+        emergencyProtocolModel.emergencyProtocol.update({
           where: { id: update.id },
           data: {
             displayOrder: update.displayOrder,
@@ -288,7 +292,7 @@ export async function reorderEmergencyProtocols(
  */
 export async function searchEmergencyProtocols(searchTerm: string) {
   try {
-    const protocols = await prisma.emergencyProtocol.findMany({
+    const protocols = await emergencyProtocolModel.emergencyProtocol.findMany({
       where: {
         isActive: true,
         OR: [

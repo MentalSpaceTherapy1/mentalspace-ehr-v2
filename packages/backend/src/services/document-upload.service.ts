@@ -14,10 +14,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
+// Cast config for AWS properties that may not be in the type definition
+const configAny = config as any;
+
 // Initialize S3 client
 const s3Client = new S3Client({
-  region: config.awsRegion || process.env.AWS_REGION || 'us-east-1',
-  credentials: config.awsCredentials || {
+  region: configAny.awsRegion || process.env.AWS_REGION || 'us-east-1',
+  credentials: configAny.awsCredentials || {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },

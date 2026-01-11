@@ -8,7 +8,7 @@ const router = Router();
 
 // Initialize Stripe
 const stripe = config.stripeApiKey
-  ? new Stripe(config.stripeApiKey, { apiVersion: '2025-09-30.clover' })
+  ? new Stripe(config.stripeApiKey, { apiVersion: '2025-10-29.clover' })
   : null;
 
 /**

@@ -4,8 +4,8 @@ const prisma = new PrismaClient();
 
 // Valid Performance Review status transitions
 const VALID_REVIEW_TRANSITIONS: Record<ReviewStatus, ReviewStatus[]> = {
-  [ReviewStatus.DRAFT]: [ReviewStatus.PENDING_SELF_EVALUATION],
-  [ReviewStatus.PENDING_SELF_EVALUATION]: [ReviewStatus.PENDING_MANAGER_REVIEW],
+  [ReviewStatus.DRAFT]: [ReviewStatus.PENDING_SELF_EVAL],
+  [ReviewStatus.PENDING_SELF_EVAL]: [ReviewStatus.PENDING_MANAGER_REVIEW],
   [ReviewStatus.PENDING_MANAGER_REVIEW]: [ReviewStatus.PENDING_EMPLOYEE_SIGNATURE],
   [ReviewStatus.PENDING_EMPLOYEE_SIGNATURE]: [ReviewStatus.COMPLETED],
   [ReviewStatus.COMPLETED]: [],

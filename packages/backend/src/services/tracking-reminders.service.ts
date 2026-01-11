@@ -1,5 +1,5 @@
 import prisma from './database';
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 import { auditLogger } from '../utils/logger';
 
 interface ReminderPreferences {
@@ -50,7 +50,7 @@ export class TrackingRemindersService {
     // In a real implementation, save to database
     // For now, just log and reschedule
 
-    auditLogger.log({
+    auditLogger.info('Reminder preferences updated', {
       action: 'REMINDER_PREFERENCES_UPDATED',
       userId,
       clientId,
@@ -177,7 +177,7 @@ export class TrackingRemindersService {
     //   priority: 'LOW',
     // });
 
-    auditLogger.log({
+    auditLogger.info('Reminder sent', {
       action: 'REMINDER_SENT',
       userId: 'SYSTEM',
       clientId,
@@ -233,7 +233,7 @@ export class TrackingRemindersService {
     //   priority: 'LOW',
     // });
 
-    auditLogger.log({
+    auditLogger.info('Reminder sent', {
       action: 'REMINDER_SENT',
       userId: 'SYSTEM',
       clientId,
@@ -288,7 +288,7 @@ export class TrackingRemindersService {
     //   priority: 'LOW',
     // });
 
-    auditLogger.log({
+    auditLogger.info('Reminder sent', {
       action: 'REMINDER_SENT',
       userId: 'SYSTEM',
       clientId,
@@ -306,7 +306,7 @@ export class TrackingRemindersService {
     // In a real implementation, reschedule for 1 hour later
     // For now, just log
 
-    auditLogger.log({
+    auditLogger.info('Reminder snoozed', {
       action: 'REMINDER_SNOOZED',
       userId: clientId,
       clientId,
@@ -327,7 +327,7 @@ export class TrackingRemindersService {
    * Dismiss a reminder (skip for today)
    */
   async dismissReminder(clientId: string, reminderType: 'SYMPTOM' | 'SLEEP' | 'EXERCISE') {
-    auditLogger.log({
+    auditLogger.info('Reminder dismissed', {
       action: 'REMINDER_DISMISSED',
       userId: clientId,
       clientId,

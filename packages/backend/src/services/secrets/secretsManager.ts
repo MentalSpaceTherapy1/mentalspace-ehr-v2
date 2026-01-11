@@ -228,7 +228,7 @@ class SecretsManager {
    * Get secret from environment variable (fallback)
    */
   private getFromEnvironment(secretName: string): any {
-    const envMapping: Record<string, string | (() => any)> = {
+    const envMapping: Record<string, string | undefined | (() => any)> = {
       [SecretNames.DATABASE_CREDENTIALS]: () => ({
         host: process.env.DATABASE_HOST || 'localhost',
         port: parseInt(process.env.DATABASE_PORT || '5432'),

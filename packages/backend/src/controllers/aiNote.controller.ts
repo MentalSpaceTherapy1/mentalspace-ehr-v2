@@ -438,12 +438,7 @@ export async function exportToClinicalNote(req: Request, res: Response): Promise
         interventionsUsed: finalSOAP.plan?.interventionsUsed || [],
         status: 'DRAFT',
         aiGenerated: true,
-        // TODO: Re-enable when these fields are added to ClinicalNote model
-        // generatedFrom: 'telehealth_transcript',
-        // aiGeneratedNoteId: aiNote.id,
-        // generationConfidence: aiNote.generationConfidence,
-        // clinicianReviewedAI: true,
-        // aiEditCount: aiNote.clinicianEdits?.changes?.length || 0,
+        lastModifiedBy: aiNote.clinicianId,
       },
     });
 

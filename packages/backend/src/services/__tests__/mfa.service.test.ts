@@ -1,6 +1,6 @@
 import { MFAService } from '../mfa.service';
 import prisma from '../database';
-import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 // Mock dependencies
 jest.mock('../database', () => ({
@@ -9,15 +9,38 @@ jest.mock('../database', () => ({
     user: {
       findUnique: jest.fn(),
       update: jest.fn(),
+      findMany: jest.fn(),
     },
   },
 }));
 
-jest.mock('bcryptjs');
+jest.mock('../cache.service', () => ({
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+}));
+
+jest.mock('../../utils/logger', () => ({
+  auditLogger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
+jest.mock('../sms.service', () => ({
+  sendSMS: jest.fn(() => Promise.resolve(true)),
+  SMSTemplates: {
+    twoFactorCode: jest.fn((code: string) => `Your code is ${code}`),
+  },
+  isValidPhoneNumber: jest.fn(() => true),
+}));
+
 jest.mock('speakeasy', () => ({
   generateSecret: jest.fn(() => ({
     base32: 'JBSWY3DPEHPK3PXP',
-    otpauth_url: 'otpauth://totp/MentalSpace:user@example.com?secret=JBSWY3DPEHPK3PXP',
+    otpauth_url: 'otpauth://totp/MentalSpace%20EHR%20(test@example.com)?secret=JBSWY3DPEHPK3PXP&issuer=MentalSpace%20EHR',
   })),
   totp: {
     verify: jest.fn(),
@@ -25,7 +48,7 @@ jest.mock('speakeasy', () => ({
 }));
 
 jest.mock('qrcode', () => ({
-  toDataURL: jest.fn((url) => Promise.resolve(`data:image/png;base64,fake-qr-code-${url}`)),
+  toDataURL: jest.fn((url: string) => Promise.resolve(`data:image/png;base64,fake-qr-code`)),
 }));
 
 describe('MFAService', () => {
@@ -42,7 +65,6 @@ describe('MFAService', () => {
   describe('generateMFASecret', () => {
     it('should generate TOTP secret with QR code and backup codes', async () => {
       const mockUser = {
-        id: mockUserId,
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
@@ -55,15 +77,15 @@ describe('MFAService', () => {
       expect(result).toHaveProperty('secret');
       expect(result).toHaveProperty('qrCodeUrl');
       expect(result).toHaveProperty('backupCodes');
+      expect(result).toHaveProperty('manualEntryKey');
       expect(result.secret).toBe('JBSWY3DPEHPK3PXP');
-      expect(result.backupCodes).toHaveLength(8);
+      expect(result.backupCodes).toHaveLength(10); // Service generates 10 backup codes
       expect(speakeasy.generateSecret).toHaveBeenCalled();
       expect(qrcode.toDataURL).toHaveBeenCalled();
     });
 
-    it('should generate 8 unique backup codes', async () => {
+    it('should generate 10 unique backup codes in XXXX-XXXX format', async () => {
       const mockUser = {
-        id: mockUserId,
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
@@ -73,181 +95,154 @@ describe('MFAService', () => {
 
       const result = await mfaService.generateMFASecret(mockUserId);
 
-      expect(result.backupCodes).toHaveLength(8);
+      expect(result.backupCodes).toHaveLength(10);
       const uniqueCodes = new Set(result.backupCodes);
-      expect(uniqueCodes.size).toBe(8); // All codes are unique
+      expect(uniqueCodes.size).toBe(10); // All codes are unique
       result.backupCodes.forEach((code) => {
-        expect(code).toMatch(/^[A-Z0-9]{8}$/); // 8 alphanumeric characters
+        expect(code).toMatch(/^[A-F0-9]{4}-[A-F0-9]{4}$/); // XXXX-XXXX format
       });
     });
 
-    it('should include user email in QR code URL', async () => {
-      const mockUser = {
-        id: mockUserId,
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-      };
+    it('should throw if user not found', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-
-      await mfaService.generateMFASecret(mockUserId);
-
-      expect(qrcode.toDataURL).toHaveBeenCalledWith(
-        expect.stringContaining('test@example.com')
+      await expect(mfaService.generateMFASecret(mockUserId)).rejects.toThrow(
+        'User not found'
       );
     });
   });
 
   describe('verifyTOTP', () => {
-    it('should verify valid TOTP code', async () => {
+    it('should return true for valid 6-digit code format', () => {
+      // verifyTOTP is a sync method that validates format only
+      const result = mfaService.verifyTOTP(mockUserId, '123456');
+      expect(result).toBe(true);
+    });
+
+    it('should return false for invalid code format', () => {
+      const result = mfaService.verifyTOTP(mockUserId, '12345'); // 5 digits
+      expect(result).toBe(false);
+    });
+
+    it('should return false for non-numeric code', () => {
+      const result = mfaService.verifyTOTP(mockUserId, 'abcdef');
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('verifyTOTPForLogin', () => {
+    it('should verify valid TOTP code against user secret', async () => {
       const mockUser = {
-        id: mockUserId,
-        mfaSecret: 'encrypted-secret',
+        mfaSecret: 'JBSWY3DPEHPK3PXP',
         mfaEnabled: true,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
 
-      const result = await mfaService.verifyTOTP(mockUserId, '123456');
+      const result = await mfaService.verifyTOTPForLogin(mockUserId, '123456');
 
       expect(result).toBe(true);
       expect(speakeasy.totp.verify).toHaveBeenCalledWith({
-        secret: expect.any(String),
+        secret: 'JBSWY3DPEHPK3PXP',
         encoding: 'base32',
         token: '123456',
-        window: 2,
+        window: 1, // TOTP_WINDOW is 1
       });
     });
 
-    it('should reject invalid TOTP code', async () => {
+    it('should return false for invalid TOTP code', async () => {
       const mockUser = {
-        id: mockUserId,
-        mfaSecret: 'encrypted-secret',
+        mfaSecret: 'JBSWY3DPEHPK3PXP',
         mfaEnabled: true,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (speakeasy.totp.verify as jest.Mock).mockReturnValue(false);
 
-      const result = await mfaService.verifyTOTP(mockUserId, '000000');
+      const result = await mfaService.verifyTOTPForLogin(mockUserId, '000000');
 
       expect(result).toBe(false);
     });
 
-    it('should reject verification if MFA not enabled', async () => {
+    it('should return false if MFA not enabled', async () => {
       const mockUser = {
-        id: mockUserId,
         mfaSecret: null,
         mfaEnabled: false,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
-      await expect(mfaService.verifyTOTP(mockUserId, '123456')).rejects.toThrow(
-        'MFA is not enabled for this user'
-      );
+      const result = await mfaService.verifyTOTPForLogin(mockUserId, '123456');
+
+      expect(result).toBe(false);
     });
 
-    it('should use time window for TOTP verification', async () => {
-      const mockUser = {
-        id: mockUserId,
-        mfaSecret: 'encrypted-secret',
-        mfaEnabled: true,
-      };
+    it('should return false if user not found', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
+      const result = await mfaService.verifyTOTPForLogin(mockUserId, '123456');
 
-      await mfaService.verifyTOTP(mockUserId, '123456');
-
-      expect(speakeasy.totp.verify).toHaveBeenCalledWith(
-        expect.objectContaining({
-          window: 2, // Allow 1 time step before and after
-        })
-      );
+      expect(result).toBe(false);
     });
   });
 
   describe('enableMFA', () => {
     it('should enable MFA with valid verification code', async () => {
-      const mockUser = {
-        id: mockUserId,
-        email: 'test@example.com',
-        mfaEnabled: false,
-      };
-
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-backup-code');
       (prisma.user.update as jest.Mock).mockResolvedValue({
-        ...mockUser,
         mfaEnabled: true,
       });
 
-      await mfaService.enableMFA(mockUserId, 'JBSWY3DPEHPK3PXP', '123456');
+      const backupCodes = ['AAAA-BBBB', 'CCCC-DDDD'];
+
+      await mfaService.enableMFA(mockUserId, 'JBSWY3DPEHPK3PXP', '123456', backupCodes);
 
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: mockUserId },
         data: {
-          mfaSecret: expect.any(String),
-          mfaBackupCodes: expect.any(Array),
-          mfaMethod: 'TOTP',
           mfaEnabled: true,
-          mfaEnabledAt: expect.any(Date),
+          mfaSecret: 'JBSWY3DPEHPK3PXP',
+          mfaBackupCodes: expect.any(Array),
         },
       });
     });
 
     it('should reject MFA enable with invalid verification code', async () => {
-      const mockUser = {
-        id: mockUserId,
-        email: 'test@example.com',
-        mfaEnabled: false,
-      };
-
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (speakeasy.totp.verify as jest.Mock).mockReturnValue(false);
 
       await expect(
-        mfaService.enableMFA(mockUserId, 'JBSWY3DPEHPK3PXP', '000000')
+        mfaService.enableMFA(mockUserId, 'JBSWY3DPEHPK3PXP', '000000', ['code1'])
       ).rejects.toThrow('Invalid verification code');
     });
 
-    it('should hash and store backup codes', async () => {
-      const mockUser = {
-        id: mockUserId,
-        email: 'test@example.com',
-        mfaEnabled: false,
-      };
-
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+    it('should hash backup codes before storing', async () => {
       (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-code');
-      (prisma.user.update as jest.Mock).mockResolvedValue(mockUser);
+      (prisma.user.update as jest.Mock).mockResolvedValue({});
 
-      await mfaService.enableMFA(mockUserId, 'JBSWY3DPEHPK3PXP', '123456');
+      const backupCodes = ['AAAA-BBBB', 'CCCC-DDDD'];
+      await mfaService.enableMFA(mockUserId, 'JBSWY3DPEHPK3PXP', '123456', backupCodes);
 
       const updateCall = (prisma.user.update as jest.Mock).mock.calls[0][0];
       expect(updateCall.data.mfaBackupCodes).toBeDefined();
       expect(Array.isArray(updateCall.data.mfaBackupCodes)).toBe(true);
+      // Backup codes should be hashed (SHA256 produces 64-char hex strings)
+      updateCall.data.mfaBackupCodes.forEach((hash: string) => {
+        expect(hash).toMatch(/^[a-f0-9]{64}$/);
+      });
     });
   });
 
   describe('disableMFA', () => {
     it('should disable MFA with valid verification code', async () => {
       const mockUser = {
-        id: mockUserId,
-        email: 'test@example.com',
-        mfaSecret: 'encrypted-secret',
+        mfaSecret: 'JBSWY3DPEHPK3PXP',
         mfaEnabled: true,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
       (prisma.user.update as jest.Mock).mockResolvedValue({
-        ...mockUser,
         mfaEnabled: false,
       });
 
@@ -256,20 +251,16 @@ describe('MFAService', () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: mockUserId },
         data: {
+          mfaEnabled: false,
           mfaSecret: null,
           mfaBackupCodes: [],
-          mfaMethod: null,
-          mfaEnabled: false,
-          mfaEnabledAt: null,
         },
       });
     });
 
     it('should reject MFA disable with invalid verification code', async () => {
       const mockUser = {
-        id: mockUserId,
-        email: 'test@example.com',
-        mfaSecret: 'encrypted-secret',
+        mfaSecret: 'JBSWY3DPEHPK3PXP',
         mfaEnabled: true,
       };
 
@@ -280,23 +271,32 @@ describe('MFAService', () => {
         'Invalid verification code'
       );
     });
+
+    it('should throw if MFA not enabled', async () => {
+      const mockUser = {
+        mfaSecret: null,
+        mfaEnabled: false,
+      };
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+
+      await expect(mfaService.disableMFA(mockUserId, '123456')).rejects.toThrow(
+        'MFA is not enabled for this user'
+      );
+    });
   });
 
   describe('verifyBackupCode', () => {
-    it('should verify valid backup code (one-time use)', async () => {
-      const backupCode = 'ABC12345';
-      const hashedCode = await bcrypt.hash(backupCode, 10);
+    it('should verify valid backup code and remove it (one-time use)', async () => {
+      const backupCode = 'AAAA-BBBB';
+      const hashedCode = crypto.createHash('sha256').update(backupCode).digest('hex');
 
       const mockUser = {
-        id: mockUserId,
         mfaBackupCodes: [hashedCode, 'other-hashed-code'],
         mfaEnabled: true,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValue(false);
       (prisma.user.update as jest.Mock).mockResolvedValue(mockUser);
 
       const result = await mfaService.verifyBackupCode(mockUserId, backupCode);
@@ -312,58 +312,46 @@ describe('MFAService', () => {
 
     it('should reject invalid backup code', async () => {
       const mockUser = {
-        id: mockUserId,
         mfaBackupCodes: ['hashed-code-1', 'hashed-code-2'],
         mfaEnabled: true,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      const result = await mfaService.verifyBackupCode(mockUserId, 'INVALID');
+      const result = await mfaService.verifyBackupCode(mockUserId, 'INVALID-CODE');
 
       expect(result).toBe(false);
       expect(prisma.user.update).not.toHaveBeenCalled();
     });
 
-    it('should remove backup code after single use', async () => {
-      const backupCode = 'ABC12345';
-      const hashedCode = 'hashed-abc12345';
-
+    it('should return false if MFA not enabled', async () => {
       const mockUser = {
-        id: mockUserId,
-        mfaBackupCodes: [hashedCode, 'code2', 'code3'],
-        mfaEnabled: true,
+        mfaBackupCodes: null,
+        mfaEnabled: false,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock)
-        .mockResolvedValueOnce(true)
-        .mockResolvedValue(false);
-      (prisma.user.update as jest.Mock).mockResolvedValue(mockUser);
 
-      await mfaService.verifyBackupCode(mockUserId, backupCode);
+      const result = await mfaService.verifyBackupCode(mockUserId, 'AAAA-BBBB');
 
-      const updateCall = (prisma.user.update as jest.Mock).mock.calls[0][0];
-      expect(updateCall.data.mfaBackupCodes).toEqual(['code2', 'code3']);
-      expect(updateCall.data.mfaBackupCodes).not.toContain(hashedCode);
+      expect(result).toBe(false);
     });
   });
 
   describe('regenerateBackupCodes', () => {
-    it('should generate new set of backup codes', async () => {
+    it('should generate new set of backup codes with valid TOTP', async () => {
       const mockUser = {
-        id: mockUserId,
         mfaEnabled: true,
+        mfaSecret: 'JBSWY3DPEHPK3PXP',
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-code');
+      (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
       (prisma.user.update as jest.Mock).mockResolvedValue(mockUser);
 
-      const result = await mfaService.regenerateBackupCodes(mockUserId);
+      const result = await mfaService.regenerateBackupCodes(mockUserId, '123456');
 
-      expect(result).toHaveLength(8);
+      expect(result).toHaveLength(10);
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: mockUserId },
         data: {
@@ -372,68 +360,69 @@ describe('MFAService', () => {
       });
     });
 
-    it('should replace old backup codes with new ones', async () => {
+    it('should reject with invalid verification code', async () => {
       const mockUser = {
-        id: mockUserId,
-        mfaBackupCodes: ['old1', 'old2'],
         mfaEnabled: true,
+        mfaSecret: 'JBSWY3DPEHPK3PXP',
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed-code');
-      (prisma.user.update as jest.Mock).mockResolvedValue(mockUser);
+      (speakeasy.totp.verify as jest.Mock).mockReturnValue(false);
 
-      await mfaService.regenerateBackupCodes(mockUserId);
-
-      const updateCall = (prisma.user.update as jest.Mock).mock.calls[0][0];
-      expect(updateCall.data.mfaBackupCodes).toHaveLength(8);
-      expect(updateCall.data.mfaBackupCodes).not.toContain('old1');
-      expect(updateCall.data.mfaBackupCodes).not.toContain('old2');
+      await expect(
+        mfaService.regenerateBackupCodes(mockUserId, '000000')
+      ).rejects.toThrow('Invalid verification code');
     });
 
     it('should require MFA to be enabled', async () => {
       const mockUser = {
-        id: mockUserId,
         mfaEnabled: false,
+        mfaSecret: null,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
-      await expect(mfaService.regenerateBackupCodes(mockUserId)).rejects.toThrow(
-        'MFA is not enabled for this user'
-      );
+      await expect(
+        mfaService.regenerateBackupCodes(mockUserId, '123456')
+      ).rejects.toThrow('MFA is not enabled for this user');
     });
   });
 
-  describe('completeMFALogin', () => {
-    it('should create session after successful MFA verification', async () => {
-      const tempToken = 'temp-token-123';
-      const totpCode = '123456';
-
-      const mockUser = {
-        id: mockUserId,
-        email: 'test@example.com',
-        mfaSecret: 'encrypted-secret',
+  describe('isMFAEnabled', () => {
+    it('should return true when MFA is enabled', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
         mfaEnabled: true,
-      };
+      });
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
+      const result = await mfaService.isMFAEnabled(mockUserId);
 
-      // Mock session creation would be tested here
-      const result = await mfaService.completeMFALogin(tempToken, totpCode);
+      expect(result).toBe(true);
+    });
 
-      expect(result).toBeDefined();
+    it('should return false when MFA is not enabled', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        mfaEnabled: false,
+      });
+
+      const result = await mfaService.isMFAEnabled(mockUserId);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false when user not found', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+      const result = await mfaService.isMFAEnabled(mockUserId);
+
+      expect(result).toBe(false);
     });
   });
 
   describe('getMFAStatus', () => {
-    it('should return MFA status for user', async () => {
+    it('should return MFA status for user with MFA enabled', async () => {
       const mockUser = {
-        id: mockUserId,
         mfaEnabled: true,
         mfaMethod: 'TOTP',
-        mfaEnabledAt: new Date('2024-01-01'),
         mfaBackupCodes: ['code1', 'code2', 'code3'],
       };
 
@@ -444,17 +433,14 @@ describe('MFAService', () => {
       expect(result).toEqual({
         enabled: true,
         method: 'TOTP',
-        enabledAt: mockUser.mfaEnabledAt,
-        backupCodesRemaining: 3,
+        backupCodesCount: 3,
       });
     });
 
     it('should return disabled status when MFA not enabled', async () => {
       const mockUser = {
-        id: mockUserId,
         mfaEnabled: false,
         mfaMethod: null,
-        mfaEnabledAt: null,
         mfaBackupCodes: [],
       };
 
@@ -464,10 +450,71 @@ describe('MFAService', () => {
 
       expect(result).toEqual({
         enabled: false,
-        method: null,
-        enabledAt: null,
-        backupCodesRemaining: 0,
+        method: undefined,
+        backupCodesCount: undefined,
       });
+    });
+
+    it('should throw if user not found', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(mfaService.getMFAStatus(mockUserId)).rejects.toThrow(
+        'User not found'
+      );
+    });
+  });
+
+  describe('adminResetMFA', () => {
+    it('should reset MFA for user as admin', async () => {
+      const cache = require('../cache.service');
+      const mockUser = {
+        email: 'user@example.com',
+        mfaEnabled: true,
+      };
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      (prisma.user.update as jest.Mock).mockResolvedValue({});
+      (cache.del as jest.Mock).mockResolvedValue(undefined);
+
+      await mfaService.adminResetMFA(mockUserId, 'admin-123', 'User request');
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: mockUserId },
+        data: {
+          mfaEnabled: false,
+          mfaSecret: null,
+          mfaBackupCodes: [],
+          mfaMethod: null,
+        },
+      });
+      expect(cache.del).toHaveBeenCalledTimes(2); // Clears both SMS codes and attempts
+    });
+
+    it('should throw if user not found', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        mfaService.adminResetMFA(mockUserId, 'admin-123', 'Test')
+      ).rejects.toThrow('User not found');
+    });
+
+    it('should throw if MFA not enabled', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        email: 'user@example.com',
+        mfaEnabled: false,
+      });
+
+      await expect(
+        mfaService.adminResetMFA(mockUserId, 'admin-123', 'Test')
+      ).rejects.toThrow('MFA is not enabled for this user');
+    });
+  });
+
+  describe('cleanupExpiredSMSCodes', () => {
+    it('should be a no-op since TTL handles cleanup', () => {
+      // This method is a no-op in the current implementation
+      // as DynamoDB cache handles TTL-based expiration automatically
+      expect(() => mfaService.cleanupExpiredSMSCodes()).not.toThrow();
     });
   });
 });

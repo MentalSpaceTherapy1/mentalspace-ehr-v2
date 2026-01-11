@@ -554,7 +554,7 @@ class OnboardingService {
   ) {
     const checklist = await this.getOnboardingChecklistById(checklistId);
 
-    const items = checklist.items as ChecklistItem[];
+    const items = checklist.items as unknown as ChecklistItem[];
     const itemIndex = items.findIndex((item) => item.id === itemId);
 
     if (itemIndex === -1) {
@@ -615,7 +615,7 @@ class OnboardingService {
   async addChecklistItem(checklistId: string, item: Omit<ChecklistItem, 'id' | 'completed'>) {
     const checklist = await this.getOnboardingChecklistById(checklistId);
 
-    const items = checklist.items as ChecklistItem[];
+    const items = checklist.items as unknown as ChecklistItem[];
 
     // Generate new item ID
     const newItem: ChecklistItem = {
@@ -667,7 +667,7 @@ class OnboardingService {
   async removeChecklistItem(checklistId: string, itemId: string) {
     const checklist = await this.getOnboardingChecklistById(checklistId);
 
-    let items = checklist.items as ChecklistItem[];
+    let items = checklist.items as unknown as ChecklistItem[];
     const itemExists = items.some((item) => item.id === itemId);
 
     if (!itemExists) {

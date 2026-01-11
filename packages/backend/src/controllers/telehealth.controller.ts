@@ -160,7 +160,7 @@ export const getTelehealthSession = async (req: Request, res: Response) => {
       // Try to create the session on-demand
       // Bypass consent check for clinician-initiated sessions (clinician can verify consent externally)
       try {
-        session = await telehealthService.createTelehealthSession({
+        const createdSession = await telehealthService.createTelehealthSession({
           appointmentId,
           createdBy: userId,
           bypassConsentCheck: true, // Clinician can verify consent was obtained verbally/on paper
@@ -168,7 +168,7 @@ export const getTelehealthSession = async (req: Request, res: Response) => {
 
         logger.info('Telehealth session auto-created on-demand', {
           appointmentId,
-          sessionId: session.id,
+          sessionId: createdSession.id,
         });
 
         // Fetch the full session with relations

@@ -28,7 +28,7 @@ async function initializeRedisStore(): Promise<void> {
     const redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
-      retryDelayOnFailover: 100,
+      retryStrategy: (times) => Math.min(times * 100, 3000),
     });
 
     redisClient.on('error', (err) => {

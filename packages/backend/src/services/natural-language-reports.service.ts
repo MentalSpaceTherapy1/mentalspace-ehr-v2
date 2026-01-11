@@ -210,7 +210,7 @@ async function executeReport(parsedQuery: ParsedQuery): Promise<any> {
       return generateAttendanceReport(reportParams);
 
     case 'vendor':
-      return generateVendorReport(reportParams);
+      return generateVendorReport(reportParams as any);
 
     case 'audit':
       return generateAuditTrailReport(reportParams);

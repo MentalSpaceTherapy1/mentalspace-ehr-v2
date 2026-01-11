@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import logger from '../utils/logger';
 import prisma from '../services/database';
 import { authenticate } from '../middleware/auth';
+import * as cache from '../services/cache.service';
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.get('/tableau/schema/:reportType', authenticate, (req: Request, res: Resp
     switch (reportType) {
       case 'revenue-by-clinician':
         schema = {
-          id: 'revenueByClincian',
+          id: 'revenueByClinician',
           alias: 'Revenue by Clinician',
           columns: [
             { id: 'clinicianId', alias: 'Clinician ID', dataType: 'string' },
@@ -123,10 +124,28 @@ router.get('/tableau/schema/:reportType', authenticate, (req: Request, res: Resp
  */
 router.get('/tableau/data/revenue-by-clinician', authenticate, async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, noCache } = req.query;
 
     const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = endDate ? new Date(endDate as string) : new Date();
+
+    // Check cache unless noCache is specified
+    if (!noCache) {
+      const cacheKey = cache.generateKey('tableau-revenue-clinician', {
+        start: start.toISOString(),
+        end: end.toISOString(),
+      });
+      const cachedData = await cache.get(cacheKey);
+      if (cachedData) {
+        logger.debug('Tableau cache hit: revenue-by-clinician');
+        return res.json({
+          success: true,
+          data: cachedData,
+          cached: true,
+          cacheExpiry: '5 minutes'
+        });
+      }
+    }
 
     const chargesByClinician = await prisma.chargeEntry.groupBy({
       by: ['providerId'],
@@ -157,6 +176,13 @@ router.get('/tableau/data/revenue-by-clinician', authenticate, async (req: Reque
         period: `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`
       };
     });
+
+    // Cache the result for 5 minutes
+    const cacheKey = cache.generateKey('tableau-revenue-clinician', {
+      start: start.toISOString(),
+      end: end.toISOString(),
+    });
+    await cache.set(cacheKey, data, cache.CacheTTL.MEDIUM, cache.CacheCategory.REVENUE);
 
     res.json({
       success: true,

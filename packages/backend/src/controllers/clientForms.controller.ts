@@ -507,6 +507,97 @@ export const transferToDemographics = async (req: Request, res: Response) => {
 };
 
 /**
+ * Mark a form submission as reviewed
+ * PATCH /api/v1/clients/:clientId/forms/:assignmentId/review
+ */
+export const markFormAsReviewed = async (req: Request, res: Response) => {
+  try {
+    const { clientId, assignmentId } = req.params;
+    const { notes } = req.body;
+    const userId = (req as any).user?.userId;
+
+    // Verify user has access to this client
+    await assertCanAccessClient(req.user, { clientId });
+
+    // Get the form assignment and submission
+    const assignment = await prisma.formAssignment.findFirst({
+      where: {
+        id: assignmentId,
+        clientId,
+        status: 'COMPLETED',
+      },
+      include: {
+        submission: true,
+        form: true,
+      },
+    });
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Completed form assignment not found',
+      });
+    }
+
+    if (!assignment.submission) {
+      return res.status(404).json({
+        success: false,
+        message: 'Form submission not found',
+      });
+    }
+
+    // Check if already reviewed
+    if (assignment.submission.reviewedDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Form has already been reviewed',
+        data: {
+          reviewedDate: assignment.submission.reviewedDate,
+          reviewedBy: assignment.submission.reviewedBy,
+        },
+      });
+    }
+
+    // Update the submission with review information
+    const updatedSubmission = await prisma.intakeFormSubmission.update({
+      where: { id: assignment.submission.id },
+      data: {
+        reviewedDate: new Date(),
+        reviewedBy: userId,
+        reviewerNotes: notes || null,
+        status: 'REVIEWED',
+      },
+    });
+
+    // Get reviewer name for response
+    const reviewer = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+
+    logger.info(`Form submission ${assignment.submission.id} marked as reviewed by user ${userId}`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Form marked as reviewed',
+      data: {
+        submissionId: updatedSubmission.id,
+        reviewedDate: updatedSubmission.reviewedDate,
+        reviewedBy: userId,
+        reviewedByName: reviewer ? `${reviewer.firstName} ${reviewer.lastName}` : null,
+        reviewerNotes: updatedSubmission.reviewerNotes,
+      },
+    });
+  } catch (error) {
+    logger.error('Error marking form as reviewed:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to mark form as reviewed',
+    });
+  }
+};
+
+/**
  * Transfer form submission data to clinical intake assessment
  * POST /api/v1/clients/:clientId/forms/:assignmentId/transfer-to-intake
  */

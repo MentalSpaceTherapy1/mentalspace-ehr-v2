@@ -13,6 +13,8 @@ import policyService from '../services/policy.service';
 import incidentService from '../services/incident.service';
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
+import { sendEmail, EmailTemplates, isResendConfigured } from '../services/resend.service';
+import config from '../config';
 
 const prisma = new PrismaClient();
 
@@ -57,15 +59,37 @@ export const policyReviewReminders = cron.schedule('0 9 * * *', async () => {
           return { policyNumber: policy.policyNumber, policyName: policy.policyName, daysOverdue };
         });
 
-        logger.info('Policy review reminder sent', {
-          ownerEmail: owner.email,
-          ownerName: `${owner.firstName} ${owner.lastName}`,
-          policyCount: policies.length,
-          policies: overdueDetails
-        });
+        // Send email notification
+        if (owner.email && isResendConfigured()) {
+          const dashboardUrl = `${config.frontendUrl}/compliance/policies`;
+          const template = EmailTemplates.policyReviewReminder(
+            owner.firstName,
+            overdueDetails,
+            dashboardUrl
+          );
 
-        // TODO: Send email notification using email service
-        // await emailService.sendPolicyReviewReminder(owner.email, policies);
+          const sent = await sendEmail({
+            to: owner.email,
+            subject: template.subject,
+            html: template.html,
+          });
+
+          if (sent) {
+            logger.info('Policy review reminder sent', {
+              ownerEmail: owner.email,
+              ownerName: `${owner.firstName} ${owner.lastName}`,
+              policyCount: policies.length,
+              policies: overdueDetails
+            });
+          }
+        } else {
+          logger.info('Policy review reminder logged (email not configured)', {
+            ownerEmail: owner.email,
+            ownerName: `${owner.firstName} ${owner.lastName}`,
+            policyCount: policies.length,
+            policies: overdueDetails
+          });
+        }
       }
     }
 
@@ -127,14 +151,43 @@ export const incidentFollowUpCheck = cron.schedule('0 10 * * *', async () => {
       });
 
       if (investigator) {
-        logger.info('Incident follow-up reminder sent', {
-          investigatorName: `${investigator.firstName} ${investigator.lastName}`,
-          investigatorEmail: investigator.email,
-          incidentCount: incidents.length
-        });
+        // Send email notification
+        if (investigator.email && isResendConfigured()) {
+          const dashboardUrl = `${config.frontendUrl}/compliance/incidents`;
+          const now = new Date();
+          const incidentDetails = incidents.map(incident => {
+            const daysOverdue = incident.followUpDate && incident.followUpDate < now
+              ? Math.floor((now.getTime() - incident.followUpDate.getTime()) / (1000 * 60 * 60 * 24))
+              : undefined;
+            return { incidentNumber: incident.incidentNumber, incidentType: incident.incidentType, daysOverdue };
+          });
 
-        // TODO: Send email notification
-        // await emailService.sendIncidentFollowUpReminder(investigator.email, incidents);
+          const template = EmailTemplates.incidentFollowUpReminder(
+            investigator.firstName,
+            incidentDetails,
+            dashboardUrl
+          );
+
+          const sent = await sendEmail({
+            to: investigator.email,
+            subject: template.subject,
+            html: template.html,
+          });
+
+          if (sent) {
+            logger.info('Incident follow-up reminder sent', {
+              investigatorName: `${investigator.firstName} ${investigator.lastName}`,
+              investigatorEmail: investigator.email,
+              incidentCount: incidents.length
+            });
+          }
+        } else {
+          logger.info('Incident follow-up reminder logged (email not configured)', {
+            investigatorName: `${investigator.firstName} ${investigator.lastName}`,
+            investigatorEmail: investigator.email,
+            incidentCount: incidents.length
+          });
+        }
       }
     }
 
@@ -173,8 +226,41 @@ export const highSeverityIncidentMonitor = cron.schedule('0 */4 * * *', async ()
       }));
       logger.error('CRITICAL unassigned incidents', { count: unassignedCritical.length, incidents: criticalDetails });
 
-      // TODO: Send urgent alert to compliance team
-      // await emailService.sendCriticalIncidentAlert(unassignedCritical);
+      // Send urgent alert to compliance team
+      if (isResendConfigured()) {
+        const complianceTeam = await prisma.user.findMany({
+          where: {
+            roles: { hasSome: ['ADMINISTRATOR', 'SUPER_ADMIN'] },
+            employmentStatus: 'ACTIVE',
+          },
+          select: { email: true, firstName: true },
+        });
+
+        const dashboardUrl = `${config.frontendUrl}/compliance/incidents`;
+
+        for (const member of complianceTeam) {
+          if (member.email) {
+            const template = EmailTemplates.criticalIncidentAlert(
+              member.firstName,
+              criticalDetails,
+              dashboardUrl
+            );
+
+            const sent = await sendEmail({
+              to: member.email,
+              subject: template.subject,
+              html: template.html,
+            });
+
+            if (sent) {
+              logger.info('Critical incident alert sent', {
+                recipient: member.email,
+                incidentCount: criticalDetails.length,
+              });
+            }
+          }
+        }
+      }
     }
 
     // Check for incidents open too long

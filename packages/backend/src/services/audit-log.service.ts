@@ -336,7 +336,7 @@ class AuditLogService {
   async exportAuditLogs(filters: AuditLogFilters): Promise<string> {
     try {
       const result = await this.getAuditLogs({ ...filters, limit: 10000 });
-      const logs: any[] = result.logs;
+      const logs: any[] = result.logs as any[];
 
       if (logs.length === 0) {
         return 'No audit logs found for the specified filters';

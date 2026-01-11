@@ -18,7 +18,13 @@ export interface EligibleAppointment {
 }
 
 // Mapping of note types to eligible appointment types/service codes
-const NOTE_TYPE_MAPPINGS = {
+interface NoteTypeMapping {
+  appointmentTypes: string[];
+  serviceCodes: string[];
+  allowMultipleNotes: boolean;
+}
+
+const NOTE_TYPE_MAPPINGS: Record<string, NoteTypeMapping> = {
   'Intake Assessment': {
     appointmentTypes: ['Intake', 'Initial Evaluation', 'INTAKE', 'Therapy', 'Individual Therapy'], // Allow various intake-related appointment types
     serviceCodes: [], // Any service code - intake can use various codes

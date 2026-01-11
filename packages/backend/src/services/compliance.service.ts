@@ -100,7 +100,7 @@ export async function sundayLockout() {
 
     // Lock each note and send notifications
     for (const note of notesToLock) {
-      const daysSinceSession = Math.floor((now.getTime() - new Date(note.sessionDate).getTime()) / (1000 * 60 * 60 * 24));
+      const daysSinceSession = Math.floor((now.getTime() - new Date(note.sessionDate || new Date()).getTime()) / (1000 * 60 * 60 * 24));
 
       // Lock the note
       await prisma.clinicalNote.update({
@@ -108,7 +108,7 @@ export async function sundayLockout() {
         data: {
           isLocked: true,
           lockedDate: now,
-          lockReason: `Automatically locked on Sunday due to note being ${daysSinceSession} days overdue (session date: ${new Date(note.sessionDate).toLocaleDateString()})`,
+          lockReason: `Automatically locked on Sunday due to note being ${daysSinceSession} days overdue (session date: ${new Date(note.sessionDate || new Date()).toLocaleDateString()})`,
         },
       });
 
@@ -145,9 +145,9 @@ export async function sundayLockout() {
               <strong>Note Details:</strong><br>
               <strong>Note Type:</strong> ${note.noteType}<br>
               <strong>Client:</strong> ${note.client.firstName} ${note.client.lastName}<br>
-              <strong>Session Date:</strong> ${new Date(note.sessionDate).toLocaleDateString()}<br>
+              <strong>Session Date:</strong> ${new Date(note.sessionDate || new Date()).toLocaleDateString()}<br>
               <strong>Days Since Session:</strong> ${daysSinceSession} days<br>
-              <strong>Due Date:</strong> ${calculateNoteDueDate(new Date(note.sessionDate)).toLocaleDateString()}<br>
+              <strong>Due Date:</strong> ${calculateNoteDueDate(new Date(note.sessionDate || new Date())).toLocaleDateString()}<br>
               <strong>Locked Date:</strong> ${now.toLocaleDateString()}
             </div>
 
@@ -189,7 +189,7 @@ export async function sundayLockout() {
                 <strong>Supervisee:</strong> ${note.clinician.firstName} ${note.clinician.lastName}<br>
                 <strong>Note Type:</strong> ${note.noteType}<br>
                 <strong>Client:</strong> ${note.client.firstName} ${note.client.lastName}<br>
-                <strong>Session Date:</strong> ${new Date(note.sessionDate).toLocaleDateString()}<br>
+                <strong>Session Date:</strong> ${new Date(note.sessionDate || new Date()).toLocaleDateString()}<br>
                 <strong>Days Overdue:</strong> ${daysSinceSession - COMPLIANCE_CONFIG.noteDueDays} days
               </div>
 
@@ -263,7 +263,7 @@ export async function sendNoteReminders() {
         // Only send if clinician has reminders enabled
         if (!note.clinician.noteReminders) continue;
 
-        const dueDate = calculateNoteDueDate(new Date(note.sessionDate));
+        const dueDate = calculateNoteDueDate(new Date(note.sessionDate || new Date()));
         const urgency = daysUntilDue === 0 ? 'TODAY' : daysUntilDue === 1 ? 'TOMORROW' : `in ${daysUntilDue} days`;
 
         await sendEmail({
@@ -278,7 +278,7 @@ export async function sendNoteReminders() {
               <div style="background-color: ${daysUntilDue === 0 ? '#fef2f2' : '#fef3c7'}; border-left: 4px solid ${daysUntilDue === 0 ? '#dc2626' : '#f59e0b'}; padding: 16px; margin: 16px 0;">
                 <strong>Note Type:</strong> ${note.noteType}<br>
                 <strong>Client:</strong> ${note.client.firstName} ${note.client.lastName}<br>
-                <strong>Session Date:</strong> ${new Date(note.sessionDate).toLocaleDateString()}<br>
+                <strong>Session Date:</strong> ${new Date(note.sessionDate || new Date()).toLocaleDateString()}<br>
                 <strong>Due Date:</strong> ${dueDate.toLocaleDateString()}<br>
                 ${daysUntilDue === 0 ? '<strong style="color: #dc2626;">⚠️ This note will be locked tonight at 11:59 PM if not completed!</strong>' : ''}
               </div>

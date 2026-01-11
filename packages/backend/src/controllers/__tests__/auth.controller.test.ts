@@ -6,16 +6,25 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import {
+import authController from '../auth.controller';
+import userController from '../user.controller';
+
+// Extract methods from the auth controller instance
+const {
   login,
   logout,
-  refreshToken,
-  forgotPassword,
-  resetPassword,
+  refresh: refreshToken,
   changePassword,
-  getCurrentUser,
-  verifyEmail,
-} from '../auth.controller';
+  getProfile: getCurrentUser,
+} = authController;
+
+// Extract methods from the user controller instance
+const {
+  forgotPassword,
+  resetPasswordWithToken: resetPassword,
+} = userController;
+
+// Note: verifyEmail is a portal auth function tested in portal auth tests
 
 // Mock dependencies
 jest.mock('../../services/database', () => ({
@@ -494,34 +503,7 @@ describe('Auth Controller', () => {
     });
   });
 
-  describe('verifyEmail', () => {
-    it('should verify email with valid token', async () => {
-      mockReq.params = { token: 'valid-verification-token' };
-
-      const mockUser = {
-        id: 'user-123',
-        emailVerificationToken: 'valid-verification-token',
-        emailVerified: false,
-      };
-
-      (prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser);
-      (prisma.user.update as jest.Mock).mockResolvedValue({ ...mockUser, emailVerified: true });
-
-      await verifyEmail(mockReq as Request, mockRes as Response, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-    });
-
-    it('should return 400 for invalid token', async () => {
-      mockReq.params = { token: 'invalid-token' };
-
-      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
-
-      await verifyEmail(mockReq as Request, mockRes as Response, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-    });
-  });
+  // Note: verifyEmail tests are in portal auth test file since verifyEmail is a portal function
 
   describe('HIPAA Audit - Login Events', () => {
     it('should log successful login for audit', async () => {

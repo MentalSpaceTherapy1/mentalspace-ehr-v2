@@ -70,7 +70,7 @@ export class SymptomTrackingService {
       },
     });
 
-    auditLogger.log({
+    auditLogger.info('Symptom tracking event', {
       action: 'SYMPTOM_LOG_CREATED',
       userId,
       clientId,
@@ -220,7 +220,7 @@ export class SymptomTrackingService {
       },
     });
 
-    auditLogger.log({
+    auditLogger.info('Symptom tracking event', {
       action: 'SYMPTOM_LOG_UPDATED',
       userId,
       clientId: existingLog.clientId,
@@ -241,7 +241,7 @@ export class SymptomTrackingService {
       where: { id: logId },
     });
 
-    auditLogger.log({
+    auditLogger.info('Symptom tracking event', {
       action: 'SYMPTOM_LOG_DELETED',
       userId,
       clientId: log.clientId,

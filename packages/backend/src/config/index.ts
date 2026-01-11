@@ -145,8 +145,8 @@ const config: Config = {
   // Frontend
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5175',
 
-  // Phase 1 Portal Services
-  stripeApiKey: process.env.STRIPE_API_KEY,
+  // Phase 1 Portal Services (Stripe)
+  stripeApiKey: process.env.STRIPE_SECRET_KEY || process.env.STRIPE_API_KEY,
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   s3BucketName: process.env.S3_BUCKET_NAME || 'mentalspace-portal-uploads-dev',
 

@@ -426,8 +426,9 @@ async function processTranscriptResult(sessionId: string, result: Result) {
     const speakerLabel = result.Alternatives[0].Items?.[0]?.Speaker || 'UNKNOWN';
     const startTime = result.StartTime || 0;
     const endTime = result.EndTime || 0;
-    const confidence = alternative.Items?.reduce((sum, item) =>
-      sum + (item.Confidence || 0), 0) / (alternative.Items?.length || 1);
+    const items = alternative.Items || [];
+    const confidence = items.reduce((sum, item) =>
+      sum + (item.Confidence || 0), 0) / (items.length || 1);
 
     // Save to database
     const transcript = await prisma.sessionTranscript.create({

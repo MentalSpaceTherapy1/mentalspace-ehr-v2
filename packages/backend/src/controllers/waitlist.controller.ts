@@ -49,14 +49,16 @@ export const addToWaitlist = async (req: Request, res: Response) => {
     const validatedData = addToWaitlistSchema.parse(req.body);
     const userId = (req as any).user?.userId;
 
+    // Convert preferredTimes string to array and priority string to number
+    const priorityMap: Record<string, number> = { 'Low': 1, 'Normal': 2, 'High': 3, 'Urgent': 4 };
     const entry = await waitlistService.addToWaitlist({
       clientId: validatedData.clientId,
       requestedClinicianId: validatedData.requestedClinicianId,
       alternateClinicianIds: validatedData.alternateClinicianIds,
       requestedAppointmentType: validatedData.requestedAppointmentType,
       preferredDays: validatedData.preferredDays,
-      preferredTimes: validatedData.preferredTimes,
-      priority: validatedData.priority,
+      preferredTimes: validatedData.preferredTimes.split(',').map(t => t.trim()),
+      priority: validatedData.priority ? priorityMap[validatedData.priority] : undefined,
       notes: validatedData.notes,
       addedBy: userId,
     });

@@ -8,8 +8,8 @@ interface WaitlistEntryData {
   alternateClinicianIds?: string[];
   requestedAppointmentType: string;
   preferredDays: string[];
-  preferredTimes: string;
-  priority?: string;
+  preferredTimes: string[];
+  priority?: number;
   notes?: string;
   addedBy: string;
 }
@@ -31,14 +31,17 @@ export async function addToWaitlist(data: WaitlistEntryData) {
     const entry = await prisma.waitlistEntry.create({
       data: {
         clientId: data.clientId,
+        clinicianId: data.requestedClinicianId,
         requestedClinicianId: data.requestedClinicianId,
         alternateClinicianIds: data.alternateClinicianIds || [],
+        appointmentType: data.requestedAppointmentType,
         requestedAppointmentType: data.requestedAppointmentType,
         preferredDays: data.preferredDays,
         preferredTimes: data.preferredTimes,
         priority: data.priority || 1,
         notes: data.notes,
         addedBy: data.addedBy,
+        addedDate: new Date(),
         status: WaitlistStatus.ACTIVE,
       },
     });
@@ -116,7 +119,7 @@ export async function findAvailableSlots(
   const clinicianIds = [
     entry.requestedClinicianId,
     ...entry.alternateClinicianIds,
-  ].filter(Boolean); // Remove any null/undefined values
+  ].filter((id): id is string => id != null); // Remove any null/undefined values
 
   if (clinicianIds.length === 0) {
     return [];
@@ -282,12 +285,12 @@ export async function findAvailableSlots(
 
       if (!hasConflict) {
         availableSlots.push({
-          clinicianId,
+          clinicianId: clinicianId as string,
           clinicianName: `${clinician.firstName} ${clinician.lastName}`,
           date: new Date(currentDate),
           startTime,
-          endTime,
-          appointmentType: entry.requestedAppointmentType,
+          endTime: endTime as string,
+          appointmentType: entry.requestedAppointmentType || entry.appointmentType,
         });
       }
 
@@ -439,12 +442,12 @@ export async function removeFromWaitlist(
  */
 export async function updatePriority(
   waitlistEntryId: string,
-  priority: string,
+  priority: number | string,
   updatedBy: string
 ) {
   const entry = await prisma.waitlistEntry.update({
     where: { id: waitlistEntryId },
-    data: { priority },
+    data: { priority: typeof priority === 'string' ? parseInt(priority, 10) : priority },
   });
 
   auditLogger.info('Waitlist entry priority updated', {
@@ -786,16 +789,24 @@ export async function getPositionInQueue(waitlistEntryId: string): Promise<numbe
     where: {
       status: 'ACTIVE',
       appointmentType: entry.appointmentType,
-      OR: [
-        { clinicianId: entry.clinicianId },
-        { clinicianId: null },
-      ],
-      OR: [
-        { priority: { gt: entry.priority } },
+      AND: [
+        // Match clinician or any clinician
         {
-          AND: [
-            { priority: entry.priority },
-            { joinedAt: { lt: entry.joinedAt } },
+          OR: [
+            { clinicianId: entry.clinicianId },
+            { clinicianId: null },
+          ],
+        },
+        // Higher priority or same priority but earlier join time
+        {
+          OR: [
+            { priority: { gt: entry.priority } },
+            {
+              AND: [
+                { priority: entry.priority },
+                { joinedAt: { lt: entry.joinedAt } },
+              ],
+            },
           ],
         },
       ],

@@ -28,7 +28,7 @@ import {
   SyncDirection,
   SyncStatus,
   AMDDateTimeString,
-} from '../../../../shared/src/types/advancedmd.types';
+} from '../../types/advancedmd.types';
 
 const prisma = new PrismaClient();
 

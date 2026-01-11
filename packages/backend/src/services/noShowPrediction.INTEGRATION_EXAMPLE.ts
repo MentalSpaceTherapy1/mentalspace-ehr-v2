@@ -242,7 +242,7 @@ export async function getHighRiskAppointments(
             id: true,
             firstName: true,
             lastName: true,
-            phoneNumber: true,
+            primaryPhone: true,
             email: true,
           },
         },

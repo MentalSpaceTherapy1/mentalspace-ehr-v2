@@ -3,6 +3,8 @@ import performanceReviewService from '../services/performance-review.service';
 import ptoService from '../services/pto.service';
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
+import { sendEmail, EmailTemplates, isResendConfigured } from '../services/resend.service';
+import config from '../config';
 
 const prisma = new PrismaClient();
 
@@ -53,29 +55,92 @@ export const performanceReviewReminders = cron.schedule('0 9 * * *', async () =>
       return daysUntil <= 30 && daysUntil > 14;
     });
 
-    // Log reminders (in production, this would send emails)
-    if (reviewsIn7Days.length > 0) {
-      const reviewDetails = reviewsIn7Days.map(r => ({
-        employee: `${r.user.firstName} ${r.user.lastName}`,
-        dueDate: new Date(r.nextReviewDate!).toLocaleDateString()
-      }));
-      logger.warn('URGENT: Performance reviews due within 7 days', {
-        count: reviewsIn7Days.length,
-        reviews: reviewDetails
+    // Send email reminders for upcoming reviews
+    const dashboardUrl = `${config.frontendUrl}/hr/performance-reviews`;
+    let emailsSent = 0;
+    let emailsFailed = 0;
+
+    // Send urgent emails for reviews due within 7 days
+    for (const review of reviewsIn7Days) {
+      const employeeName = `${review.user.firstName} ${review.user.lastName}`;
+      const daysUntil = Math.ceil(
+        (new Date(review.nextReviewDate!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Get supervisor email (if available)
+      const supervisor = await prisma.user.findFirst({
+        where: {
+          roles: { hasSome: ['SUPERVISOR', 'ADMINISTRATOR', 'SUPER_ADMIN'] },
+        },
+        select: { email: true, firstName: true },
       });
+
+      if (supervisor?.email && isResendConfigured()) {
+        const template = EmailTemplates.performanceReviewReminder(
+          supervisor.firstName,
+          employeeName,
+          new Date(review.nextReviewDate!),
+          daysUntil,
+          dashboardUrl
+        );
+
+        const sent = await sendEmail({
+          to: supervisor.email,
+          subject: template.subject,
+          html: template.html,
+        });
+
+        if (sent) {
+          emailsSent++;
+          logger.info('Performance review reminder sent', {
+            employee: employeeName,
+            supervisor: supervisor.email,
+            daysUntil,
+          });
+        } else {
+          emailsFailed++;
+        }
+      }
     }
 
-    if (reviewsIn14Days.length > 0) {
-      const reviewDetails = reviewsIn14Days.map(r => ({
-        employee: `${r.user.firstName} ${r.user.lastName}`,
-        dueDate: new Date(r.nextReviewDate!).toLocaleDateString()
-      }));
-      logger.info('Performance reviews due within 14 days', {
-        count: reviewsIn14Days.length,
-        reviews: reviewDetails
+    // Send emails for reviews due within 14 days
+    for (const review of reviewsIn14Days) {
+      const employeeName = `${review.user.firstName} ${review.user.lastName}`;
+      const daysUntil = Math.ceil(
+        (new Date(review.nextReviewDate!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      const supervisor = await prisma.user.findFirst({
+        where: {
+          roles: { hasSome: ['SUPERVISOR', 'ADMINISTRATOR', 'SUPER_ADMIN'] },
+        },
+        select: { email: true, firstName: true },
       });
+
+      if (supervisor?.email && isResendConfigured()) {
+        const template = EmailTemplates.performanceReviewReminder(
+          supervisor.firstName,
+          employeeName,
+          new Date(review.nextReviewDate!),
+          daysUntil,
+          dashboardUrl
+        );
+
+        const sent = await sendEmail({
+          to: supervisor.email,
+          subject: template.subject,
+          html: template.html,
+        });
+
+        if (sent) {
+          emailsSent++;
+        } else {
+          emailsFailed++;
+        }
+      }
     }
 
+    // Log 30-day reviews without emailing
     if (reviewsIn30Days.length > 0) {
       logger.info('Performance reviews due within 30 days', { count: reviewsIn30Days.length });
     }
@@ -84,7 +149,9 @@ export const performanceReviewReminders = cron.schedule('0 9 * * *', async () =>
       totalUpcoming: upcomingReviews.length,
       urgent7Days: reviewsIn7Days.length,
       within14Days: reviewsIn14Days.length,
-      within30Days: reviewsIn30Days.length
+      within30Days: reviewsIn30Days.length,
+      emailsSent,
+      emailsFailed,
     });
   } catch (error) {
     logger.error('Error in performance review reminders', { error: error instanceof Error ? error.message : error });
@@ -195,7 +262,7 @@ export const attendanceComplianceCheck = cron.schedule('0 8 * * 1', async () => 
       }
     }
 
-    // Report issues
+    // Report issues and send email alerts
     if (issues.length === 0) {
       logger.info('No attendance compliance issues found');
     } else {
@@ -203,6 +270,49 @@ export const attendanceComplianceCheck = cron.schedule('0 8 * * 1', async () => 
         issueCount: issues.length,
         issues: issues
       });
+
+      // Send email to HR/supervisors if configured
+      if (isResendConfigured()) {
+        const hrUsers = await prisma.user.findMany({
+          where: {
+            roles: { hasSome: ['ADMINISTRATOR', 'SUPER_ADMIN'] },
+            employmentStatus: 'ACTIVE',
+          },
+          select: { email: true, firstName: true },
+        });
+
+        const dashboardUrl = `${config.frontendUrl}/hr/attendance`;
+        const formattedIssues = issues.map(i => ({
+          employeeName: i.user,
+          issue: i.issue,
+          details: i.recordedDays !== undefined ? `${i.recordedDays}/${i.expectedDays} days recorded` : undefined,
+        }));
+
+        for (const hrUser of hrUsers) {
+          if (hrUser.email) {
+            const template = EmailTemplates.attendanceIssueAlert(
+              hrUser.firstName,
+              lastMonday,
+              lastSunday,
+              formattedIssues,
+              dashboardUrl
+            );
+
+            const sent = await sendEmail({
+              to: hrUser.email,
+              subject: template.subject,
+              html: template.html,
+            });
+
+            if (sent) {
+              logger.info('Attendance compliance alert sent', {
+                recipient: hrUser.email,
+                issueCount: issues.length,
+              });
+            }
+          }
+        }
+      }
     }
 
     logger.info('Attendance compliance check completed');
@@ -259,6 +369,45 @@ export const expiringPTOAlert = cron.schedule('0 10 15 * *', async () => {
         alertCount: alerts.length,
         alerts: alerts
       });
+
+      // Send email alerts to employees with high PTO balances
+      if (isResendConfigured()) {
+        const portalUrl = `${config.frontendUrl}/staff/pto`;
+        let emailsSent = 0;
+
+        for (const alert of alerts) {
+          const balance = balances.find(b =>
+            `${b.user.firstName} ${b.user.lastName}` === alert.user
+          );
+
+          if (balance?.user.email) {
+            const template = EmailTemplates.ptoBalanceAlert(
+              `${balance.user.firstName}`,
+              alert.ptoBalance,
+              alert.vacationBalance,
+              alert.totalBalance,
+              'Unused PTO may expire at year end. Please review your company\'s PTO policy.',
+              portalUrl
+            );
+
+            const sent = await sendEmail({
+              to: balance.user.email,
+              subject: template.subject,
+              html: template.html,
+            });
+
+            if (sent) {
+              emailsSent++;
+              logger.info('PTO balance alert sent', {
+                employee: alert.user,
+                totalBalance: alert.totalBalance,
+              });
+            }
+          }
+        }
+
+        logger.info('PTO balance alert emails completed', { emailsSent });
+      }
     }
 
     logger.info('Expiring PTO alert check completed');

@@ -7,8 +7,8 @@ import Anthropic from '@anthropic-ai/sdk';
  */
 class AnthropicService {
   private client: Anthropic | null = null;
-  // Claude Sonnet 4 - latest model as of 2025
-  private model: string = 'claude-sonnet-4-20250514';
+  // Default to Claude Sonnet 4, configurable via ANTHROPIC_MODEL env var
+  private model: string = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
 
   private initializeClient() {
     if (this.client) {

@@ -525,8 +525,9 @@ export const signClinicalNote = async (req: Request, res: Response) => {
     }
 
     // Calculate days to complete
+    const sessionDateValue = note.sessionDate ? new Date(note.sessionDate) : new Date();
     const daysToComplete = Math.floor(
-      (new Date().getTime() - new Date(note.sessionDate).getTime()) / (1000 * 60 * 60 * 24)
+      (new Date().getTime() - sessionDateValue.getTime()) / (1000 * 60 * 60 * 24)
     );
     const completedOnTime = daysToComplete <= 7; // 7-day rule
 
@@ -1042,6 +1043,7 @@ export const getMyNotes = async (req: Request, res: Response) => {
       locked: notes.filter((n) => n.isLocked).length,
       overdue: notes.filter((n) => {
         if (n.signedDate) return false;
+        if (!n.sessionDate) return false;
         const daysSince = Math.floor((new Date().getTime() - new Date(n.sessionDate).getTime()) / (1000 * 60 * 60 * 24));
         return daysSince > 3;
       }).length,

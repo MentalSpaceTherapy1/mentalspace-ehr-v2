@@ -12,7 +12,9 @@
  */
 
 import { PrismaClient, Client, PotentialDuplicate } from '@mentalspace/database';
+// @ts-ignore - no type declarations available
 import soundex from 'soundex-code';
+// @ts-ignore - no type declarations available
 import levenshtein from 'fast-levenshtein';
 
 const prisma = new PrismaClient();
@@ -84,7 +86,13 @@ export async function checkForDuplicates(clientData: {
 
     // Algorithm 6: Address Match
     if (clientData.addressStreet1 && clientData.addressZipCode) {
-      const addressMatch = checkAddressMatch(clientData, client);
+      const addressClientData = {
+        firstName: clientData.firstName,
+        lastName: clientData.lastName,
+        addressStreet1: clientData.addressStreet1,
+        addressZipCode: clientData.addressZipCode,
+      };
+      const addressMatch = checkAddressMatch(addressClientData, client);
       if (addressMatch) {
         matches.push(addressMatch);
       }

@@ -473,7 +473,7 @@ export class BreachDetectionService {
           action: 'BREACH_INDICATOR_DETECTED',
           entityType: 'SECURITY',
           entityId: indicator.type,
-          details: {
+          changes: {
             severity: indicator.severity,
             description: indicator.description,
             evidence: indicator.evidence,

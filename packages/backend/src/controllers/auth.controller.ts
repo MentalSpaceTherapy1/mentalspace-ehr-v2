@@ -208,25 +208,11 @@ export class AuthController {
    * The "refresh" endpoint validates the session token and extends the session.
    */
   refresh = asyncHandler(async (req: Request, res: Response) => {
-    console.log('[AUTH REFRESH] Endpoint reached', {
-      hasAccessTokenCookie: !!req.cookies?.[ACCESS_TOKEN_COOKIE],
-      hasRefreshTokenCookie: !!req.cookies?.[REFRESH_TOKEN_COOKIE],
-      hasBodyToken: !!req.body?.refreshToken,
-      cookieNames: Object.keys(req.cookies || {}),
-    });
-
     // Read session token from httpOnly cookie (primary) or body (legacy/fallback)
     // Note: Both access_token and refresh_token cookies contain the same session token
     const sessionToken = req.cookies?.[ACCESS_TOKEN_COOKIE] || req.cookies?.[REFRESH_TOKEN_COOKIE] || req.body?.refreshToken;
 
-    console.log('[AUTH REFRESH] Session token check', {
-      hasSessionToken: !!sessionToken,
-      tokenLength: sessionToken ? sessionToken.length : 0,
-      tokenPrefix: sessionToken ? sessionToken.substring(0, 20) + '...' : null,
-    });
-
     if (!sessionToken) {
-      console.log('[AUTH REFRESH] No session token found - returning 401');
       return res.status(401).json({
         success: false,
         message: 'Session token is required',
@@ -235,16 +221,9 @@ export class AuthController {
 
     try {
       // Validate the session token using session service
-      console.log('[AUTH REFRESH] Calling sessionService.validateSession...');
       const sessionResult = await sessionService.validateSession(sessionToken);
-      console.log('[AUTH REFRESH] Session validation result', {
-        hasResult: !!sessionResult,
-        userId: sessionResult?.userId,
-        sessionId: sessionResult?.sessionId,
-      });
 
       if (!sessionResult) {
-        console.log('[AUTH REFRESH] Session validation returned null - invalid/expired');
         return res.status(401).json({
           success: false,
           message: 'Invalid or expired session',
@@ -253,14 +232,12 @@ export class AuthController {
 
       // Session is valid and has been extended by validateSession()
       // Return success (cookies are already set and still valid)
-      console.log('[AUTH REFRESH] Session refresh successful for user:', sessionResult.userId);
       res.status(200).json({
         success: true,
         message: 'Session refreshed successfully',
       });
     } catch (error) {
       // Session validation failed (e.g., account locked, disabled)
-      console.log('[AUTH REFRESH] Session validation error:', error instanceof Error ? error.message : error);
       return res.status(401).json({
         success: false,
         message: error instanceof Error ? error.message : 'Session validation failed',

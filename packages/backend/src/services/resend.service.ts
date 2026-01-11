@@ -37,14 +37,6 @@ interface ResendEmailOptions {
 export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
   const toAddresses = Array.isArray(options.to) ? options.to.join(', ') : options.to;
 
-  // DEBUG: Always output to console
-  console.log('[EMAIL DEBUG] sendEmail called:', {
-    to: toAddresses,
-    subject: options.subject,
-    hasResendClient: !!resendClient,
-    nodeEnv: process.env.NODE_ENV,
-  });
-
   logger.info('Attempting to send email', {
     to: toAddresses,
     subject: options.subject,
@@ -55,10 +47,6 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
   try {
     // In development or if Resend not configured, log emails instead of sending
     if (process.env.NODE_ENV === 'development' || !resendClient) {
-      console.log('[EMAIL DEBUG] SKIPPING - dev mode or no client:', {
-        isDevelopment: process.env.NODE_ENV === 'development',
-        hasResendClient: !!resendClient,
-      });
       logger.warn('Email NOT actually sent - development mode or Resend not configured', {
         isDevelopment: process.env.NODE_ENV === 'development',
         hasResendClient: !!resendClient,
@@ -69,8 +57,6 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
     }
 
     const fromEmail = options.from || process.env.RESEND_FROM_EMAIL || 'MentalSpace EHR <noreply@mentalspace.com>';
-
-    console.log('[EMAIL DEBUG] Sending via Resend API:', { from: fromEmail, to: toAddresses });
 
     logger.info('Sending email via Resend API', {
       from: fromEmail,
@@ -85,20 +71,12 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
       html: options.html,
       cc: options.cc ? (Array.isArray(options.cc) ? options.cc : [options.cc]) : undefined,
       bcc: options.bcc ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc]) : undefined,
-      reply_to: options.replyTo,
+      replyTo: options.replyTo,
     });
-
-    // DEBUG: Log FULL Resend response
-    console.log('[EMAIL DEBUG] Full Resend response:', JSON.stringify(result, null, 2));
 
     // Check for Resend API error (SDK doesn't throw, it returns error object)
     if ((result as any).error) {
       const resendError = (result as any).error;
-      console.error('[EMAIL DEBUG] Resend API returned error:', {
-        statusCode: resendError.statusCode,
-        name: resendError.name,
-        message: resendError.message,
-      });
       logger.error('Resend API returned error', {
         statusCode: resendError.statusCode,
         name: resendError.name,
@@ -109,11 +87,6 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
       return false;
     }
 
-    console.log('[EMAIL DEBUG] Email sent successfully:', {
-      emailId: result.data?.id,
-      hasData: !!result.data,
-    });
-
     logger.info('Email sent successfully via Resend', {
       emailId: result.data?.id,
       to: toAddresses,
@@ -122,7 +95,6 @@ export async function sendEmail(options: ResendEmailOptions): Promise<boolean> {
     return true;
 
   } catch (error) {
-    console.error('[EMAIL DEBUG] FAILED to send email:', error);
     logger.error('Failed to send email via Resend', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -834,6 +806,329 @@ export const EmailTemplates = {
             <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="color: #9ca3af; font-size: 11px; margin: 0;">This email contains confidential health information protected by HIPAA. If you received this in error, please delete it immediately and notify the sender.</p>
               <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  // ============================================================================
+  // HR Notification Templates
+  // ============================================================================
+
+  /**
+   * Performance review reminder for supervisors
+   */
+  performanceReviewReminder: (
+    supervisorName: string,
+    employeeName: string,
+    reviewDueDate: Date,
+    daysUntilDue: number,
+    dashboardLink: string
+  ) => ({
+    subject: `${daysUntilDue <= 7 ? '🚨 URGENT: ' : ''}Performance Review Due${daysUntilDue <= 7 ? ' in ' + daysUntilDue + ' days' : ' Soon'} - ${employeeName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: ${daysUntilDue <= 7 ? '#dc2626' : '#f59e0b'}; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">📋 Performance Review ${daysUntilDue <= 7 ? 'Urgent' : 'Reminder'}</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${supervisorName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">A performance review for one of your team members is ${daysUntilDue <= 7 ? '<strong style="color: #dc2626;">due soon</strong>' : 'coming up'}.</p>
+              <div style="background-color: ${daysUntilDue <= 7 ? '#fef2f2' : '#fef3c7'}; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid ${daysUntilDue <= 7 ? '#dc2626' : '#f59e0b'};">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; color: ${daysUntilDue <= 7 ? '#991b1b' : '#92400e'}; font-weight: 600; width: 120px;">Employee:</td>
+                    <td style="padding: 8px 0; color: #374151; font-weight: 600;">${employeeName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: ${daysUntilDue <= 7 ? '#991b1b' : '#92400e'}; font-weight: 600;">Due Date:</td>
+                    <td style="padding: 8px 0; color: #374151;">${reviewDueDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: ${daysUntilDue <= 7 ? '#991b1b' : '#92400e'}; font-weight: 600;">Days Until Due:</td>
+                    <td style="padding: 8px 0; color: ${daysUntilDue <= 7 ? '#dc2626' : '#374151'}; font-weight: ${daysUntilDue <= 7 ? '700' : '400'}; font-size: ${daysUntilDue <= 7 ? '18px' : '16px'};">${daysUntilDue} day${daysUntilDue === 1 ? '' : 's'}</td>
+                  </tr>
+                </table>
+              </div>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${dashboardLink}" style="display: inline-block; background-color: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Complete Review</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">Please complete this review by the due date to maintain compliance with HR policies.</p>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
+   * High PTO balance alert for employees
+   */
+  ptoBalanceAlert: (
+    employeeName: string,
+    ptoBalance: number,
+    vacationBalance: number,
+    totalBalance: number,
+    expirationWarning: string,
+    portalLink: string
+  ) => ({
+    subject: `⚠️ High PTO Balance Alert - ${totalBalance} Days Available`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #3b82f6; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🏖️ PTO Balance Update</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${employeeName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">We noticed you have a significant amount of PTO and vacation time available. Here's your current balance:</p>
+              <div style="background-color: #dbeafe; padding: 24px; border-radius: 8px; margin: 24px 0; border: 2px solid #3b82f6;">
+                <div style="display: flex; justify-content: space-around; text-align: center;">
+                  <div style="flex: 1;">
+                    <p style="color: #1e40af; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">PTO Balance</p>
+                    <p style="color: #1d4ed8; font-size: 32px; font-weight: bold; margin: 0;">${ptoBalance}</p>
+                    <p style="color: #1e40af; font-size: 12px; margin: 4px 0 0 0;">days</p>
+                  </div>
+                  <div style="width: 1px; background-color: #93c5fd;"></div>
+                  <div style="flex: 1;">
+                    <p style="color: #1e40af; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">Vacation Balance</p>
+                    <p style="color: #1d4ed8; font-size: 32px; font-weight: bold; margin: 0;">${vacationBalance}</p>
+                    <p style="color: #1e40af; font-size: 12px; margin: 4px 0 0 0;">days</p>
+                  </div>
+                </div>
+                <hr style="border: none; border-top: 1px solid #93c5fd; margin: 20px 0;">
+                <div style="text-align: center;">
+                  <p style="color: #1e40af; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">Total Available</p>
+                  <p style="color: #1d4ed8; font-size: 40px; font-weight: bold; margin: 0;">${totalBalance}</p>
+                  <p style="color: #1e40af; font-size: 12px; margin: 4px 0 0 0;">days</p>
+                </div>
+              </div>
+              <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+                <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>⚠️ Reminder:</strong> ${expirationWarning}</p>
+              </div>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Consider scheduling some well-deserved time off to recharge. Your well-being is important to us!</p>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${portalLink}" style="display: inline-block; background-color: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Request Time Off</a>
+              </div>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
+   * Attendance issue alert for HR/supervisors
+   */
+  attendanceIssueAlert: (
+    recipientName: string,
+    weekStartDate: Date,
+    weekEndDate: Date,
+    issues: Array<{ employeeName: string; issue: string; details?: string }>,
+    dashboardLink: string
+  ) => ({
+    subject: `🚨 Attendance Compliance Issues - Week of ${weekStartDate.toLocaleDateString()}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #dc2626; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">⏰ Attendance Compliance Alert</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${recipientName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">The following attendance compliance issues were detected for the week of <strong>${weekStartDate.toLocaleDateString()}</strong> to <strong>${weekEndDate.toLocaleDateString()}</strong>:</p>
+              <div style="margin: 24px 0;">
+                ${issues.map(issue => `
+                  <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #dc2626;">
+                    <p style="margin: 0 0 8px 0; color: #991b1b; font-weight: 600;">${issue.employeeName}</p>
+                    <p style="margin: 0; color: #7f1d1d; font-size: 14px;">${issue.issue}</p>
+                    ${issue.details ? `<p style="margin: 8px 0 0 0; color: #9a3412; font-size: 13px; font-style: italic;">${issue.details}</p>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+              <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+                <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Action Required:</strong> Please review and resolve these issues to maintain accurate attendance records and compliance.</p>
+              </div>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${dashboardLink}" style="display: inline-block; background-color: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Review Attendance Records</a>
+              </div>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  // ============================================================================
+  // Compliance Notification Templates
+  // ============================================================================
+
+  /**
+   * Policy review reminder for policy owners
+   */
+  policyReviewReminder: (
+    ownerName: string,
+    policies: Array<{ policyNumber: string; policyName: string; daysOverdue: number }>,
+    dashboardLink: string
+  ) => ({
+    subject: `⚠️ ${policies.length} Polic${policies.length === 1 ? 'y' : 'ies'} Due for Review`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #f59e0b; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">📋 Policy Review Required</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${ownerName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">The following policies you own are due for review:</p>
+              <div style="margin: 24px 0;">
+                ${policies.map(policy => `
+                  <div style="background-color: ${policy.daysOverdue > 0 ? '#fef2f2' : '#fef3c7'}; padding: 16px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid ${policy.daysOverdue > 0 ? '#dc2626' : '#f59e0b'};">
+                    <p style="margin: 0 0 4px 0; color: #374151; font-weight: 600;">${policy.policyNumber}: ${policy.policyName}</p>
+                    <p style="margin: 0; color: ${policy.daysOverdue > 0 ? '#dc2626' : '#92400e'}; font-size: 14px;">${policy.daysOverdue > 0 ? `${policy.daysOverdue} days overdue` : 'Due today'}</p>
+                  </div>
+                `).join('')}
+              </div>
+              <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0;">
+                <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Action Required:</strong> Please review and update these policies to maintain compliance.</p>
+              </div>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${dashboardLink}" style="display: inline-block; background-color: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Review Policies</a>
+              </div>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
+   * Incident follow-up reminder for investigators
+   */
+  incidentFollowUpReminder: (
+    investigatorName: string,
+    incidents: Array<{ incidentNumber: string; incidentType: string; daysOverdue?: number }>,
+    dashboardLink: string
+  ) => ({
+    subject: `🔔 ${incidents.length} Incident${incidents.length === 1 ? '' : 's'} Requiring Follow-up`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #3b82f6; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🔍 Incident Follow-up Required</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${investigatorName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">The following incidents assigned to you require follow-up:</p>
+              <div style="margin: 24px 0;">
+                ${incidents.map(incident => `
+                  <div style="background-color: ${incident.daysOverdue && incident.daysOverdue > 0 ? '#fef2f2' : '#dbeafe'}; padding: 16px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid ${incident.daysOverdue && incident.daysOverdue > 0 ? '#dc2626' : '#3b82f6'};">
+                    <p style="margin: 0 0 4px 0; color: #374151; font-weight: 600;">${incident.incidentNumber}</p>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px;">Type: ${incident.incidentType}</p>
+                    ${incident.daysOverdue && incident.daysOverdue > 0 ? `<p style="margin: 4px 0 0 0; color: #dc2626; font-size: 14px; font-weight: 600;">${incident.daysOverdue} days overdue</p>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${dashboardLink}" style="display: inline-block; background-color: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">View Incidents</a>
+              </div>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  /**
+   * Critical incident alert for compliance team
+   */
+  criticalIncidentAlert: (
+    recipientName: string,
+    incidents: Array<{ incidentNumber: string; incidentType: string }>,
+    dashboardLink: string
+  ) => ({
+    subject: `🚨 URGENT: ${incidents.length} Critical Incident${incidents.length === 1 ? '' : 's'} Without Investigator`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background-color: #dc2626; padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🚨 CRITICAL INCIDENT ALERT</h1>
+            </div>
+            <div style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hi ${recipientName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;"><strong style="color: #dc2626;">URGENT:</strong> The following critical incidents have <strong>no investigator assigned</strong> and require immediate attention:</p>
+              <div style="margin: 24px 0;">
+                ${incidents.map(incident => `
+                  <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #dc2626;">
+                    <p style="margin: 0 0 4px 0; color: #991b1b; font-weight: 600;">${incident.incidentNumber}</p>
+                    <p style="margin: 0; color: #7f1d1d; font-size: 14px;">Type: ${incident.incidentType}</p>
+                    <p style="margin: 4px 0 0 0; color: #dc2626; font-size: 14px; font-weight: 600;">⚠️ No investigator assigned</p>
+                  </div>
+                `).join('')}
+              </div>
+              <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; border-left: 4px solid #dc2626; margin: 24px 0;">
+                <p style="margin: 0; color: #991b1b; font-size: 14px;"><strong>Immediate Action Required:</strong> Please assign investigators to these critical incidents as soon as possible to ensure timely resolution.</p>
+              </div>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${dashboardLink}" style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Assign Investigators Now</a>
+              </div>
+            </div>
+            <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} MentalSpace EHR. All rights reserved.</p>
             </div>
           </div>
         </body>

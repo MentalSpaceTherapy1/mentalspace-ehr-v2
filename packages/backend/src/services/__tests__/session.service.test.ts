@@ -8,8 +8,10 @@ jest.mock('../database', () => ({
     session: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       delete: jest.fn(),
       deleteMany: jest.fn(),
       count: jest.fn(),
@@ -17,6 +19,14 @@ jest.mock('../database', () => ({
     user: {
       findUnique: jest.fn(),
     },
+  },
+}));
+
+// Mock audit logger
+jest.mock('../../utils/logger', () => ({
+  auditLogger: {
+    info: jest.fn(),
+    error: jest.fn(),
   },
 }));
 
@@ -36,23 +46,26 @@ describe('SessionService', () => {
       const mockSession = {
         id: 'session-123',
         userId: mockUserId,
-        token: 'token-abc',
-        refreshToken: 'refresh-xyz',
+        token: 'generated-token-abc',
         ipAddress: mockIpAddress,
         userAgent: mockUserAgent,
         deviceTrusted: false,
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 20 * 60 * 1000), // 20 minutes
+        expiresAt: new Date(Date.now() + 20 * 60 * 1000),
         lastActivity: new Date(),
         isActive: true,
       };
 
-      (prisma.session.count as jest.Mock).mockResolvedValue(1); // 1 existing session
+      (prisma.session.count as jest.Mock).mockResolvedValue(1); // 1 existing session (under limit)
       (prisma.session.create as jest.Mock).mockResolvedValue(mockSession);
 
       const result = await sessionService.createSession(mockUserId, mockIpAddress, mockUserAgent);
 
-      expect(result).toEqual(mockSession);
+      // Service returns only sessionId and token
+      expect(result).toEqual({
+        sessionId: 'session-123',
+        token: 'generated-token-abc',
+      });
       expect(prisma.session.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           userId: mockUserId,
@@ -67,8 +80,7 @@ describe('SessionService', () => {
       const mockSession = {
         id: 'session-123',
         userId: mockUserId,
-        token: 'token-abc',
-        refreshToken: 'refresh-xyz',
+        token: 'generated-token-abc',
         ipAddress: mockIpAddress,
         userAgent: mockUserAgent,
         deviceTrusted: false,
@@ -81,13 +93,15 @@ describe('SessionService', () => {
       (prisma.session.count as jest.Mock).mockResolvedValue(0);
       (prisma.session.create as jest.Mock).mockResolvedValue(mockSession);
 
-      const result = await sessionService.createSession(mockUserId, mockIpAddress, mockUserAgent);
+      await sessionService.createSession(mockUserId, mockIpAddress, mockUserAgent);
 
-      const expirationTime = result.expiresAt.getTime() - result.createdAt.getTime();
-      const twentyMinutes = 20 * 60 * 1000;
+      // Verify the create was called with correct expiration
+      const callArgs = (prisma.session.create as jest.Mock).mock.calls[0][0];
+      const expiresAt = callArgs.data.expiresAt;
+      const expectedExpiration = Date.now() + 20 * 60 * 1000;
 
-      // Allow 1 second variance for test execution time
-      expect(Math.abs(expirationTime - twentyMinutes)).toBeLessThan(1000);
+      // Allow 2 second variance for test execution time
+      expect(Math.abs(expiresAt.getTime() - expectedExpiration)).toBeLessThan(2000);
     });
   });
 
@@ -103,11 +117,74 @@ describe('SessionService', () => {
         isActive: true,
         user: {
           id: mockUserId,
-          email: 'test@example.com',
-          firstName: 'Test',
-          lastName: 'User',
-          roles: ['CLINICIAN'],
           isActive: true,
+          accountLockedUntil: null,
+        },
+      };
+
+      (prisma.session.findUnique as jest.Mock).mockResolvedValue(mockSession);
+      (prisma.session.update as jest.Mock).mockResolvedValue(mockSession);
+
+      const result = await sessionService.validateSession('token-abc');
+
+      // Service returns { userId, sessionId }
+      expect(result).toEqual({
+        userId: mockUserId,
+        sessionId: 'session-123',
+      });
+      expect(prisma.session.findUnique).toHaveBeenCalledWith({
+        where: { token: 'token-abc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              isActive: true,
+              accountLockedUntil: true,
+            },
+          },
+        },
+      });
+    });
+
+    it('should return null for expired session', async () => {
+      const now = new Date();
+      const mockSession = {
+        id: 'session-123',
+        userId: mockUserId,
+        token: 'token-abc',
+        lastActivity: new Date(now.getTime() - 21 * 60 * 1000), // 21 minutes ago
+        expiresAt: new Date(now.getTime() - 1 * 60 * 1000), // 1 minute ago (expired)
+        isActive: true,
+        user: {
+          id: mockUserId,
+          isActive: true,
+          accountLockedUntil: null,
+        },
+      };
+
+      (prisma.session.findUnique as jest.Mock)
+        .mockResolvedValueOnce(mockSession)
+        .mockResolvedValueOnce({ userId: mockUserId }); // for terminateSession's findUnique
+      (prisma.session.update as jest.Mock).mockResolvedValue({ ...mockSession, isActive: false });
+
+      const result = await sessionService.validateSession('token-abc');
+
+      // Service returns null for expired session
+      expect(result).toBeNull();
+    });
+
+    it('should return null for inactive session', async () => {
+      const mockSession = {
+        id: 'session-123',
+        userId: mockUserId,
+        token: 'token-abc',
+        lastActivity: new Date(),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        isActive: false, // Session is inactive
+        user: {
+          id: mockUserId,
+          isActive: true,
+          accountLockedUntil: null,
         },
       };
 
@@ -115,54 +192,17 @@ describe('SessionService', () => {
 
       const result = await sessionService.validateSession('token-abc');
 
-      expect(result).toEqual(mockSession.user);
-      expect(prisma.session.findUnique).toHaveBeenCalledWith({
-        where: { token: 'token-abc' },
-        include: { user: true },
-      });
+      // Service returns null for inactive session
+      expect(result).toBeNull();
     });
 
-    it('should reject expired session (>20 min)', async () => {
-      const now = new Date();
-      const mockSession = {
-        id: 'session-123',
-        userId: mockUserId,
-        token: 'token-abc',
-        lastActivity: new Date(now.getTime() - 21 * 60 * 1000), // 21 minutes ago
-        expiresAt: new Date(now.getTime() - 1 * 60 * 1000), // 1 minute ago
-        isActive: true,
-      };
-
-      (prisma.session.findUnique as jest.Mock).mockResolvedValue(mockSession);
-
-      await expect(sessionService.validateSession('token-abc')).rejects.toThrow(
-        'Session has expired'
-      );
-    });
-
-    it('should reject inactive session', async () => {
-      const mockSession = {
-        id: 'session-123',
-        userId: mockUserId,
-        token: 'token-abc',
-        lastActivity: new Date(),
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        isActive: false,
-      };
-
-      (prisma.session.findUnique as jest.Mock).mockResolvedValue(mockSession);
-
-      await expect(sessionService.validateSession('token-abc')).rejects.toThrow(
-        'Session is not active'
-      );
-    });
-
-    it('should reject non-existent session', async () => {
+    it('should return null for non-existent session', async () => {
       (prisma.session.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(sessionService.validateSession('invalid-token')).rejects.toThrow(
-        'Session not found'
-      );
+      const result = await sessionService.validateSession('invalid-token');
+
+      // Service returns null for non-existent session
+      expect(result).toBeNull();
     });
   });
 
@@ -213,6 +253,10 @@ describe('SessionService', () => {
 
   describe('terminateSession', () => {
     it('should terminate session by setting isActive to false', async () => {
+      // terminateSession first finds the session to get userId for logging
+      (prisma.session.findUnique as jest.Mock).mockResolvedValue({
+        userId: mockUserId,
+      });
       (prisma.session.update as jest.Mock).mockResolvedValue({
         id: 'session-123',
         isActive: false,
@@ -220,6 +264,10 @@ describe('SessionService', () => {
 
       await sessionService.terminateSession('session-123');
 
+      expect(prisma.session.findUnique).toHaveBeenCalledWith({
+        where: { id: 'session-123' },
+        select: { userId: true },
+      });
       expect(prisma.session.update).toHaveBeenCalledWith({
         where: { id: 'session-123' },
         data: { isActive: false },
@@ -227,6 +275,9 @@ describe('SessionService', () => {
     });
 
     it('should handle already terminated session', async () => {
+      (prisma.session.findUnique as jest.Mock).mockResolvedValue({
+        userId: mockUserId,
+      });
       (prisma.session.update as jest.Mock).mockResolvedValue({
         id: 'session-123',
         isActive: false,
@@ -271,6 +322,9 @@ describe('SessionService', () => {
         where: {
           userId: mockUserId,
           isActive: true,
+          expiresAt: {
+            gt: expect.any(Date),
+          },
         },
       });
     });
@@ -293,17 +347,23 @@ describe('SessionService', () => {
   });
 
   describe('cleanupExpiredSessions', () => {
-    it('should delete all expired sessions', async () => {
-      const now = new Date();
+    it('should delete all expired and inactive sessions', async () => {
       (prisma.session.deleteMany as jest.Mock).mockResolvedValue({ count: 15 });
 
       await sessionService.cleanupExpiredSessions();
 
       expect(prisma.session.deleteMany).toHaveBeenCalledWith({
         where: {
-          expiresAt: {
-            lt: expect.any(Date),
-          },
+          OR: [
+            {
+              expiresAt: {
+                lt: expect.any(Date),
+              },
+            },
+            {
+              isActive: false,
+            },
+          ],
         },
       });
     });
@@ -325,40 +385,54 @@ describe('SessionService', () => {
     });
   });
 
-  describe('getActiveSessions', () => {
+  describe('getUserSessions', () => {
     it('should return all active sessions for user', async () => {
       const mockSessions = [
         {
           id: 'session-1',
-          userId: mockUserId,
           ipAddress: '192.168.1.1',
           userAgent: 'Chrome',
+          deviceTrusted: false,
           createdAt: new Date(),
           lastActivity: new Date(),
-          isActive: true,
+          expiresAt: new Date(Date.now() + 20 * 60 * 1000),
         },
         {
           id: 'session-2',
-          userId: mockUserId,
           ipAddress: '192.168.1.2',
           userAgent: 'Firefox',
+          deviceTrusted: false,
           createdAt: new Date(),
           lastActivity: new Date(),
-          isActive: true,
+          expiresAt: new Date(Date.now() + 20 * 60 * 1000),
         },
       ];
 
       (prisma.session.findMany as jest.Mock).mockResolvedValue(mockSessions);
 
-      const result = await sessionService.getActiveSessions(mockUserId);
+      const result = await sessionService.getUserSessions(mockUserId);
 
       expect(result).toEqual(mockSessions);
       expect(prisma.session.findMany).toHaveBeenCalledWith({
         where: {
           userId: mockUserId,
           isActive: true,
+          expiresAt: {
+            gt: expect.any(Date),
+          },
         },
-        orderBy: { lastActivity: 'desc' },
+        select: {
+          id: true,
+          ipAddress: true,
+          userAgent: true,
+          deviceTrusted: true,
+          createdAt: true,
+          lastActivity: true,
+          expiresAt: true,
+        },
+        orderBy: {
+          lastActivity: 'desc',
+        },
       });
     });
   });

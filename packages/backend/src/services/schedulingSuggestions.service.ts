@@ -464,7 +464,7 @@ async function saveSuggestions(
           suggestedDate: suggestion.suggestedDate,
           suggestedTime: suggestion.suggestedTime,
           suggestedDuration: suggestion.suggestedDuration,
-          alternativeSlots: suggestion.alternativeSlots,
+          alternativeSlots: suggestion.alternativeSlots as any,
           compatibilityScore: suggestion.compatibilityScore,
           loadBalanceScore: suggestion.loadBalanceScore,
           efficiencyScore: suggestion.efficiencyScore,

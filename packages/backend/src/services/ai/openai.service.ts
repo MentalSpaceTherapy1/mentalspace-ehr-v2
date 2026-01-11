@@ -8,7 +8,8 @@ import OpenAI from 'openai';
  */
 class OpenAIService {
   private client: OpenAI | null = null;
-  private model: string = 'gpt-4-turbo-preview';
+  // Default to GPT-4o (latest flagship model), configurable via OPENAI_MODEL env var
+  private model: string = process.env.OPENAI_MODEL || 'gpt-4o';
 
   private initializeClient() {
     if (this.client) {

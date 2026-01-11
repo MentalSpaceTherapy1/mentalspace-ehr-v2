@@ -188,7 +188,7 @@ export async function replyToMessage(messageId: string, clientId: string, replyT
       replyText,
       reply.id,
       clientId,
-      originalMessage.threadId
+      originalMessage.threadId || undefined
     ).catch(error => {
       // Log error but don't fail the reply send
       logger.error('Crisis detection failed for reply', {

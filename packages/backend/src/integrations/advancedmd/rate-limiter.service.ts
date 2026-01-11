@@ -27,7 +27,7 @@ import {
   TIER1_ENDPOINTS,
   TIER2_ENDPOINTS,
   TIER3_PATTERN,
-} from '../../../../shared/src/types/advancedmd.types';
+} from '../../types/advancedmd.types';
 
 const prisma = new PrismaClient();
 

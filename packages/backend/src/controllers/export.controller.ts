@@ -76,7 +76,7 @@ async function getReportData(reportId: string, reportType: string, req: Request)
       throw new Error(`Unknown report type: ${reportType}`);
   }
 
-  return result.data;
+  return (result as any)?.data;
 }
 
 /**

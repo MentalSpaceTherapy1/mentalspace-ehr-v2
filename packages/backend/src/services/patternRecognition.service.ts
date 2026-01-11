@@ -106,7 +106,7 @@ export async function detectNoShowClusters(
         lte: endDate
       },
       status: {
-        in: ['NO_SHOW', 'CANCELLED_BY_CLIENT', 'SCHEDULED', 'CONFIRMED', 'COMPLETED']
+        in: ['NO_SHOW', 'CANCELLED', 'SCHEDULED', 'CONFIRMED', 'COMPLETED']
       }
     },
     include: {
@@ -144,7 +144,7 @@ export async function detectNoShowClusters(
     const noShowRate = stats.noShows / stats.total;
 
     if (noShowRate >= DETECTION_CONFIG.NO_SHOW_RATE_THRESHOLD) {
-      const provider = appointments.find(a => a.clinicianId === providerId)?.clinician;
+      const provider = (appointments.find(a => a.clinicianId === providerId) as any)?.clinician;
       const providerName = provider ? `${provider.firstName} ${provider.lastName}` : 'Unknown';
 
       const severity: DetectedPattern['severity'] =
@@ -244,7 +244,7 @@ export async function detectUnderutilization(
   const providers = await prisma.user.findMany({
     where: {
       isActive: true,
-      role: { in: ['ADMIN', 'CLINICIAN'] }
+      roles: { hasSome: ['ADMINISTRATOR', 'CLINICIAN'] }
     },
     select: {
       id: true,
@@ -263,12 +263,12 @@ export async function detectUnderutilization(
         isActive: true,
         OR: [
           {
-            effectiveFrom: { lte: endDate },
-            effectiveTo: { gte: startDate }
+            effectiveDate: { lte: endDate },
+            expiryDate: { gte: startDate }
           },
           {
-            effectiveFrom: { lte: endDate },
-            effectiveTo: null
+            effectiveDate: { lte: endDate },
+            expiryDate: null
           }
         ]
       }
@@ -297,7 +297,7 @@ export async function detectUnderutilization(
           lte: endDate
         },
         status: {
-          in: ['SCHEDULED', 'CONFIRMED', 'COMPLETED', 'IN_PROGRESS']
+          in: ['SCHEDULED', 'CONFIRMED', 'COMPLETED', 'IN_SESSION']
         }
       },
       select: {
@@ -359,7 +359,7 @@ export async function detectGapTimeInefficiencies(
   const providers = await prisma.user.findMany({
     where: {
       isActive: true,
-      role: { in: ['ADMIN', 'CLINICIAN'] }
+      roles: { hasSome: ['ADMINISTRATOR', 'CLINICIAN'] }
     },
     select: { id: true, firstName: true, lastName: true }
   });
@@ -646,15 +646,16 @@ async function storeDetectedPatterns(patterns: DetectedPattern[]): Promise<void>
           patternType: pattern.patternType,
           category: pattern.category,
           severity: pattern.severity,
-          affectedEntities: pattern.affectedEntities as any,
+          title: pattern.category.replace(/_/g, ' '),
+          timeRange: { startDate: pattern.dateRangeStart, endDate: pattern.dateRangeEnd },
+          affectedDates: pattern.affectedEntities as any,
           detectedAt: new Date(),
-          dateRangeStart: pattern.dateRangeStart,
-          dateRangeEnd: pattern.dateRangeEnd,
           description: pattern.description,
-          recommendations: pattern.recommendations as any,
+          recommendation: Array.isArray(pattern.recommendations) ? pattern.recommendations.join('; ') : String(pattern.recommendations || ''),
           estimatedImpact: pattern.estimatedImpact,
           status: 'ACTIVE',
-          metadata: pattern.metrics as any
+          metrics: pattern.metrics as any,
+          confidence: 0.8
         }
       });
     } catch (error) {
@@ -696,7 +697,7 @@ export async function resolvePattern(
     data: {
       status: 'RESOLVED',
       resolvedAt: new Date(),
-      resolutionNotes
+      resolution: resolutionNotes
     }
   });
 }
@@ -712,7 +713,7 @@ export async function ignorePattern(
     where: { id: patternId },
     data: {
       status: 'IGNORED',
-      resolutionNotes: ignoreReason
+      resolution: ignoreReason
     }
   });
 }

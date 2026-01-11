@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request } from 'express';
 import { authenticate } from '../middleware/auth';
 import {
   requireGuardianAccess,
@@ -8,8 +8,10 @@ import {
   allowClientOrGuardian,
 } from '../middleware/guardian-access.middleware';
 import * as guardianController from '../controllers/guardian.controller.new';
-// @ts-ignore - multer types may not be installed
+// @ts-ignore - multer types may not be available
 import multer from 'multer';
+// Type definitions for multer since @types/multer may not be installed
+type FileFilterCallback = (error: Error | null, acceptFile?: boolean) => void;
 
 const router = express.Router();
 
@@ -19,7 +21,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: Request, file: { mimetype: string }, cb: FileFilterCallback) => {
     const allowedTypes = [
       'application/pdf',
       'image/jpeg',

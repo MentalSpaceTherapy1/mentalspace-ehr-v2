@@ -118,7 +118,7 @@ export async function calculateProviderLoadMetrics(
         lte: currentWeekEnd
       },
       status: {
-        in: ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS']
+        in: ['SCHEDULED', 'CONFIRMED', 'IN_SESSION']
       }
     },
     select: {
@@ -154,12 +154,12 @@ export async function calculateProviderLoadMetrics(
       isActive: true,
       OR: [
         {
-          effectiveFrom: { lte: currentWeekEnd },
-          effectiveTo: { gte: currentWeekStart }
+          effectiveDate: { lte: currentWeekEnd },
+          expiryDate: { gte: currentWeekStart }
         },
         {
-          effectiveFrom: { lte: currentWeekEnd },
-          effectiveTo: null
+          effectiveDate: { lte: currentWeekEnd },
+          expiryDate: null
         }
       ]
     }
@@ -321,8 +321,8 @@ export async function analyzeTeamLoadDistribution(): Promise<TeamLoadDistributio
   const providers = await prisma.user.findMany({
     where: {
       isActive: true,
-      role: {
-        in: ['ADMIN', 'CLINICIAN']
+      roles: {
+        hasSome: ['ADMINISTRATOR', 'CLINICIAN']
       }
     },
     select: {

@@ -64,4 +64,4 @@ export {
 } from '../../services/advancedmd/era.service';
 
 // Re-export types from shared package (using relative path for monorepo)
-export * from '../../../../shared/src/types/advancedmd.types';
+export * from '../../types/advancedmd.types';

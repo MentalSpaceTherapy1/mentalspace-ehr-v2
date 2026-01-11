@@ -252,13 +252,12 @@ export const bookAppointment = async (req: PortalRequest, res: Response) => {
         endTime: format(endTime, 'HH:mm'),
         duration,
         appointmentType,
-        appointmentNotes: notes,
+        appointmentNotes: notes ? `[Self-Scheduled] ${notes}` : '[Self-Scheduled]',
         status: 'SCHEDULED',
         serviceLocation,
-        selfScheduled: true,
-        confirmationStatus: 'PENDING',
         createdBy: clientId,
         lastModifiedBy: clientId,
+        statusUpdatedBy: clientId,
       },
       include: {
         clinician: {
@@ -375,16 +374,19 @@ export const rescheduleAppointment = async (req: PortalRequest, res: Response) =
     const newEndTime = addMinutes(newSlotTime, existingAppointment.duration);
 
     // Update the appointment
+    // Build reschedule note to append to existing notes
+    const rescheduleNote = `[Rescheduled ${new Date().toISOString()} by client${reason ? `: ${reason}` : ''}]`;
+    const updatedNotes = existingAppointment.appointmentNotes
+      ? `${existingAppointment.appointmentNotes}\n${rescheduleNote}`
+      : rescheduleNote;
+
     const updatedAppointment = await prisma.appointment.update({
       where: { id: appointmentId },
       data: {
         appointmentDate: newSlotTime,
         startTime: format(newSlotTime, 'HH:mm'),
         endTime: format(newEndTime, 'HH:mm'),
-        rescheduleReason: reason,
-        rescheduledDate: new Date(),
-        rescheduledBy: clientId,
-        confirmationStatus: 'PENDING',
+        appointmentNotes: updatedNotes,
         lastModifiedBy: clientId,
       },
       include: {

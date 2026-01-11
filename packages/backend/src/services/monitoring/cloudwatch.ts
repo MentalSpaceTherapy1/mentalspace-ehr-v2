@@ -467,8 +467,8 @@ export async function createAlarms(): Promise<void> {
       Threshold: 50,
       EvaluationPeriods: 3,
       Period: 300, // 5 minutes
-      Statistic: 'Sum',
-      ComparisonOperator: 'GreaterThanThreshold',
+      Statistic: 'Sum' as const,
+      ComparisonOperator: 'GreaterThanThreshold' as const,
       AlarmDescription: 'High error rate detected - more than 50 errors in 5 minutes',
     },
     // High latency
@@ -478,8 +478,8 @@ export async function createAlarms(): Promise<void> {
       Threshold: 5000, // 5 seconds
       EvaluationPeriods: 3,
       Period: 300,
-      Statistic: 'Average',
-      ComparisonOperator: 'GreaterThanThreshold',
+      Statistic: 'Average' as const,
+      ComparisonOperator: 'GreaterThanThreshold' as const,
       AlarmDescription: 'High API latency detected - average above 5 seconds',
     },
     // Security: Failed logins
@@ -489,8 +489,8 @@ export async function createAlarms(): Promise<void> {
       Threshold: 10,
       EvaluationPeriods: 2,
       Period: 300,
-      Statistic: 'Sum',
-      ComparisonOperator: 'GreaterThanThreshold',
+      Statistic: 'Sum' as const,
+      ComparisonOperator: 'GreaterThanThreshold' as const,
       AlarmDescription: 'Potential brute force attack - high failed login attempts',
     },
     // Security: Unauthorized access
@@ -500,8 +500,8 @@ export async function createAlarms(): Promise<void> {
       Threshold: 5,
       EvaluationPeriods: 1,
       Period: 300,
-      Statistic: 'Sum',
-      ComparisonOperator: 'GreaterThanThreshold',
+      Statistic: 'Sum' as const,
+      ComparisonOperator: 'GreaterThanThreshold' as const,
       AlarmDescription: 'Multiple unauthorized access attempts detected',
     },
     // HIPAA: PHI access denied
@@ -511,8 +511,8 @@ export async function createAlarms(): Promise<void> {
       Threshold: 10,
       EvaluationPeriods: 2,
       Period: 300,
-      Statistic: 'Sum',
-      ComparisonOperator: 'GreaterThanThreshold',
+      Statistic: 'Sum' as const,
+      ComparisonOperator: 'GreaterThanThreshold' as const,
       AlarmDescription: 'Multiple PHI access denials - potential data breach attempt',
     },
     // Memory threshold
@@ -522,8 +522,8 @@ export async function createAlarms(): Promise<void> {
       Threshold: 1024 * 1024 * 1024, // 1 GB
       EvaluationPeriods: 3,
       Period: 300,
-      Statistic: 'Average',
-      ComparisonOperator: 'GreaterThanThreshold',
+      Statistic: 'Average' as const,
+      ComparisonOperator: 'GreaterThanThreshold' as const,
       AlarmDescription: 'High memory usage detected',
     },
   ];

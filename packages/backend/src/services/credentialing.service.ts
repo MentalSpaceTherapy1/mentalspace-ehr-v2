@@ -370,9 +370,11 @@ class CredentialingService {
       }
 
       // Mock screening result - in production, call external API
+      // Type assertion for credential with user relation
+      const credWithUser = credential as typeof credential & { user: { firstName: string; lastName: string } };
       const screeningResult: ScreeningResult = await this.mockOIGSAMScreening(
         credential.credentialNumber,
-        credential.user.firstName + ' ' + credential.user.lastName
+        credWithUser.user.firstName + ' ' + credWithUser.user.lastName
       );
 
       // Update credential with screening results

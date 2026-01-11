@@ -89,7 +89,7 @@ export class ExerciseTrackingService {
       },
     });
 
-    auditLogger.log({
+    auditLogger.info('Exercise tracking event', {
       action: 'EXERCISE_LOG_CREATED',
       userId,
       clientId,
@@ -240,7 +240,7 @@ export class ExerciseTrackingService {
       },
     });
 
-    auditLogger.log({
+    auditLogger.info('Exercise tracking event', {
       action: 'EXERCISE_LOG_UPDATED',
       userId,
       clientId: existingLog.clientId,
@@ -261,7 +261,7 @@ export class ExerciseTrackingService {
       where: { id: logId },
     });
 
-    auditLogger.log({
+    auditLogger.info('Exercise tracking event', {
       action: 'EXERCISE_LOG_DELETED',
       userId,
       clientId: log.clientId,

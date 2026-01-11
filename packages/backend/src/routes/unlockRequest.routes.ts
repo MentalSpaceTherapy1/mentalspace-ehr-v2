@@ -215,7 +215,7 @@ router.post('/:noteId/request', authenticate, async (req: Request, res: Response
         `${note.clinician.firstName} ${note.clinician.lastName}`,
         note.noteType,
         `${note.client.firstName} ${note.client.lastName}`,
-        new Date(note.sessionDate),
+        new Date(note.sessionDate || new Date()),
         unlockReason,
         approveLink
       )

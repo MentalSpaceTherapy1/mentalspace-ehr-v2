@@ -40,7 +40,7 @@ export class SameDayDocumentationRateCalculator implements MetricCalculator {
     signedNotes.forEach((note) => {
       if (note.signedDate) {
         // Compare dates (ignore time)
-        const sessionDate = new Date(note.sessionDate).setHours(0, 0, 0, 0);
+        const sessionDate = new Date(note.sessionDate || new Date()).setHours(0, 0, 0, 0);
         const signedDate = new Date(note.signedDate).setHours(0, 0, 0, 0);
 
         if (sessionDate === signedDate) {
@@ -94,7 +94,7 @@ export class AvgDocumentationTimeCalculator implements MetricCalculator {
 
     signedNotes.forEach((note) => {
       if (note.signedDate) {
-        const sessionTime = new Date(note.sessionDate).getTime();
+        const sessionTime = new Date(note.sessionDate || new Date()).getTime();
         const signedTime = new Date(note.signedDate).getTime();
         const diffMs = signedTime - sessionTime;
         const diffHours = diffMs / (1000 * 60 * 60);
@@ -203,7 +203,7 @@ export class UnsignedNoteBacklogCalculator implements MetricCalculator {
 
     let daysOldest = 0;
     if (oldestUnsigned) {
-      const diffMs = Date.now() - new Date(oldestUnsigned.sessionDate).getTime();
+      const diffMs = Date.now() - new Date(oldestUnsigned.sessionDate || new Date()).getTime();
       daysOldest = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     }
 

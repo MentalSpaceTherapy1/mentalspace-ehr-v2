@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer';
 import { PrismaClient } from '@mentalspace/database';
+import * as reportsService from './reports.service';
+import { exportReportToPDF } from './export-pdf.service';
+import { exportReportToExcel } from './export-excel.service';
+import fs from 'fs';
 
 const prisma = new PrismaClient();
 
@@ -119,17 +123,121 @@ async function generateReportContent(
   reportType: string,
   format: 'PDF' | 'EXCEL' | 'CSV'
 ): Promise<Buffer> {
-  // This would integrate with the report generation service
-  // For now, return a placeholder buffer
   console.log(`[Email Distribution] Generating ${format} report for ${reportType}`);
 
-  // TODO: Integrate with actual report generation service
-  // This should call the appropriate service to generate the report
-  // based on reportType and format
+  try {
+    // Generate report data based on report type
+    let reportData: any = {};
+    const defaultParams = { startDate: getDefaultStartDate(), endDate: new Date() };
 
-  // Placeholder content
-  const content = `Report: ${reportType}\nGenerated: ${new Date().toISOString()}\nFormat: ${format}`;
-  return Buffer.from(content);
+    switch (reportType) {
+      case 'credentialing':
+        reportData = await reportsService.generateCredentialingReport(defaultParams);
+        break;
+      case 'training-compliance':
+        reportData = await reportsService.generateTrainingComplianceReport(defaultParams);
+        break;
+      case 'policy-compliance':
+        reportData = await reportsService.generatePolicyComplianceReport(defaultParams);
+        break;
+      case 'incident-analysis':
+        reportData = await reportsService.generateIncidentAnalysisReport(defaultParams);
+        break;
+      case 'audit-trail':
+        reportData = await reportsService.generateAuditTrailReport(defaultParams);
+        break;
+      default:
+        // For other report types, use a basic structure
+        reportData = {
+          success: true,
+          data: {
+            summary: { reportType, generatedAt: new Date().toISOString() },
+            records: []
+          }
+        };
+    }
+
+    if (!reportData.success) {
+      throw new Error(`Failed to generate report: ${reportData.error || 'Unknown error'}`);
+    }
+
+    // Export to requested format
+    let exportResult: { filepath: string };
+
+    switch (format) {
+      case 'PDF':
+        exportResult = await exportReportToPDF(reportId, reportType, reportData.data);
+        break;
+      case 'EXCEL':
+        exportResult = await exportReportToExcel(reportId, reportType, reportData.data);
+        break;
+      case 'CSV':
+        // For CSV, create a simple CSV from the data
+        const csvContent = generateCSVFromData(reportData.data);
+        return Buffer.from(csvContent, 'utf-8');
+      default:
+        throw new Error(`Unsupported format: ${format}`);
+    }
+
+    // Read the generated file into a buffer
+    const fileBuffer = fs.readFileSync(exportResult.filepath);
+
+    // Clean up the temporary file
+    try {
+      fs.unlinkSync(exportResult.filepath);
+    } catch (cleanupError) {
+      console.warn('[Email Distribution] Could not clean up temporary file:', cleanupError);
+    }
+
+    return fileBuffer;
+  } catch (error) {
+    console.error('[Email Distribution] Error generating report content:', error);
+    // Return a placeholder if report generation fails
+    const content = `Report: ${reportType}\nGenerated: ${new Date().toISOString()}\nFormat: ${format}\n\nError generating report. Please contact support.`;
+    return Buffer.from(content, 'utf-8');
+  }
+}
+
+function getDefaultStartDate(): Date {
+  const date = new Date();
+  date.setMonth(date.getMonth() - 1); // Default to last month
+  return date;
+}
+
+function generateCSVFromData(data: any): string {
+  const records = data.credentials || data.records || data.policies || data.incidents ||
+                  data.logs || [];
+
+  if (!Array.isArray(records) || records.length === 0) {
+    return 'No data available';
+  }
+
+  // Get headers from first record
+  const firstRecord = records[0];
+  const headers = Object.keys(firstRecord).filter(key =>
+    typeof firstRecord[key] !== 'object' || firstRecord[key] === null
+  );
+
+  // Create CSV header row
+  const csvRows = [headers.join(',')];
+
+  // Create data rows
+  records.forEach(record => {
+    const values = headers.map(header => {
+      const value = record[header];
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'string' && value.includes(',')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      return String(value);
+    });
+    csvRows.push(values.join(','));
+  });
+
+  return csvRows.join('\n');
 }
 
 async function generateChartImages(reportId: string, reportType: string): Promise<Buffer[]> {

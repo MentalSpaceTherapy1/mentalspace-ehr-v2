@@ -43,10 +43,10 @@ export async function validateNoteForBilling(
           supervisorId: true,
         },
       },
-      supervisor: {
+      cosigner: {
         select: {
           id: true,
-          title: true, // Changed from credential
+          title: true,
         },
       },
       appointment: {
@@ -72,8 +72,8 @@ export async function validateNoteForBilling(
   // Type assertion to include relations (TypeScript inference issue)
   const noteWithRelations = note as typeof note & {
     clinician: { id: string; title: string | null; supervisorId: string | null };
-    supervisor: { id: string; title: string | null } | null;
-    appointment: typeof note.appointment & { client: { id: string } };
+    cosigner: { id: string; title: string | null } | null;
+    appointment: { client: { id: string } } | null;
   };
 
   const holds: BillingHoldInfo[] = [];
@@ -93,12 +93,12 @@ export async function validateNoteForBilling(
   // 2. FIND MATCHING PAYER RULE
   // TODO: Client.payerId field missing - skipping payer rule validation
   const clientPayerId = null; // noteWithRelations.appointment.client.payerId doesn't exist
-  if (clientPayerId) {
+  if (clientPayerId && noteWithRelations.appointment) {
     matchingRule = await findMatchingPayerRule(
       clientPayerId,
       noteWithRelations.clinician.title || 'UNKNOWN',
       noteWithRelations.noteType,
-      noteWithRelations.appointment.placeOfService || 'OFFICE'
+      noteWithRelations.appointment.serviceLocation || 'OFFICE'
     );
 
     if (matchingRule) {
@@ -445,8 +445,8 @@ async function validateTreatmentPlan(
   }
 
   // Check if treatment plan is current (within 90 days)
-  const treatmentPlanDate = new Date(treatmentPlan.sessionDate);
-  const sessionDate = new Date(note.sessionDate);
+  const treatmentPlanDate = new Date(treatmentPlan.sessionDate || new Date());
+  const sessionDate = new Date(note.sessionDate || new Date());
   const daysDiff = Math.floor((sessionDate.getTime() - treatmentPlanDate.getTime()) / (1000 * 60 * 60 * 24));
 
   if (daysDiff > 90) {

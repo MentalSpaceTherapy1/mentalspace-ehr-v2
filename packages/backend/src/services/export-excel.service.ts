@@ -716,7 +716,7 @@ async function generateGenericExcelReport(workbook: ExcelJS.Workbook, reportType
     Object.entries(summary).forEach(([key, value]) => {
       if (typeof value !== 'object' || value === null) {
         worksheet.getCell(`A${currentRow}`).value = key.replace(/([A-Z])/g, ' $1').trim();
-        worksheet.getCell(`B${currentRow}`).value = value;
+        worksheet.getCell(`B${currentRow}`).value = value as any;
         currentRow++;
       }
     });

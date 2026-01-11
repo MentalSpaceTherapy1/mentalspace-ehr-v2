@@ -69,17 +69,14 @@ export async function createGroupTherapyNote(params: CreateGroupTherapyNoteParam
     });
 
     // Get appointment details (always needed)
+    // TODO: appointmentClients relation doesn't exist on Appointment model
+    // For group therapy, use GroupSession.members instead
     const appointment = await prisma.appointment.findUnique({
       where: { id: params.appointmentId },
       include: {
         client: true,
-        appointmentClients: {
-          include: {
-            client: true,
-          },
-        },
       },
-    });
+    }) as any;
 
     if (!appointment) {
       throw new Error('Appointment not found');
@@ -269,15 +266,15 @@ export async function updateGroupAttendance(params: UpdateAttendanceParams) {
           where: {
             groupMemberId_appointmentId: {
               groupMemberId: attendanceData.groupMemberId,
-              appointmentId: note.appointmentId,
+              appointmentId: note.appointmentId || '',
             },
           },
           create: {
             groupMemberId: attendanceData.groupMemberId,
-            appointmentId: note.appointmentId,
+            appointmentId: note.appointmentId || '',
             attended: attendanceData.attended,
-            checkedInAt: attendanceData.attended ? new Date() : null,
-            notes: attendanceData.notes || null,
+            checkedInAt: attendanceData.attended ? new Date() : undefined,
+            notes: attendanceData.notes,
           },
           update: {
             attended: attendanceData.attended,

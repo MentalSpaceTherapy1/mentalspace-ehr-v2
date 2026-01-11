@@ -7,7 +7,7 @@ import { applyClientScope, assertCanAccessClient } from '../services/accessContr
 import logger, { logControllerError } from '../utils/logger';
 import { sanitizeSearchInput, sanitizePagination } from '../utils/sanitize';
 import { AppError } from '../utils/errors';
-import { sendEmail, emailTemplates } from '../services/resend.service';
+import { sendEmail, EmailTemplates } from '../services/resend.service';
 
 // Generate Medical Record Number
 function generateMRN(): string {
@@ -317,7 +317,7 @@ export const createClient = async (req: Request, res: Response) => {
 
         const portalUrl = process.env.PORTAL_URL || 'https://portal.mentalspace.io';
 
-        const emailTemplate = emailTemplates.clientWelcome(
+        const emailTemplate = EmailTemplates.clientWelcome(
           client.firstName,
           medicalRecordNumber,
           clinicianName,

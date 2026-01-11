@@ -1,5 +1,8 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import * as dashboardController from '../controllers/portal/dashboard.controller';
+
+// Helper to cast portal controllers to RequestHandler (they use PortalRequest which extends Request)
+const asHandler = (fn: any): RequestHandler => fn as RequestHandler;
 import * as phase1Controller from '../controllers/portal/phase1.controller';
 import * as documentsController from '../controllers/portal/documents.controller';
 import * as assessmentsController from '../controllers/portal/assessments.controller';
@@ -24,161 +27,161 @@ const router = Router();
 // Note: Auth routes are in /portal-auth (see portalAuth.routes.ts)
 
 // Dashboard
-router.get('/dashboard', authenticatePortal, dashboardController.getDashboard);
+router.get('/dashboard', authenticatePortal, asHandler(dashboardController.getDashboard));
 
 // Profile & Account Management
-router.get('/profile', authenticatePortal, profileController.getProfile);
-router.put('/profile', authenticatePortal, profileController.updateProfile);
-router.get('/account/settings', authenticatePortal, profileController.getAccountSettings);
-router.put('/account/notifications', authenticatePortal, profileController.updateNotificationPreferences);
-router.post('/account/change-password', authenticatePortal, profileController.changePassword);
+router.get('/profile', authenticatePortal, asHandler(profileController.getProfile));
+router.put('/profile', authenticatePortal, asHandler(profileController.updateProfile));
+router.get('/account/settings', authenticatePortal, asHandler(profileController.getAccountSettings));
+router.put('/account/notifications', authenticatePortal, asHandler(profileController.updateNotificationPreferences));
+router.post('/account/change-password', authenticatePortal, asHandler(profileController.changePassword));
 
 // Appointments - Specific routes MUST come before wildcard routes
-router.get('/appointments/upcoming', authenticatePortal, dashboardController.getUpcomingAppointments);
-router.get('/appointments/past', authenticatePortal, dashboardController.getPastAppointments);
+router.get('/appointments/upcoming', authenticatePortal, asHandler(dashboardController.getUpcomingAppointments));
+router.get('/appointments/past', authenticatePortal, asHandler(dashboardController.getPastAppointments));
 
 // Appointment Requests (New Appointments) - These must come BEFORE :appointmentId wildcard
-router.get('/appointments/types', authenticatePortal, appointmentRequestController.getAppointmentTypes);
-router.get('/appointments/requested', authenticatePortal, appointmentRequestController.getRequestedAppointments);
-router.get('/appointments/availability', authenticatePortal, appointmentRequestController.getTherapistAvailability);
-router.post('/appointments/request', authenticatePortal, appointmentRequestController.requestAppointment);
-router.delete('/appointments/request/:appointmentId', authenticatePortal, appointmentRequestController.cancelRequestedAppointment);
+router.get('/appointments/types', authenticatePortal, asHandler(appointmentRequestController.getAppointmentTypes));
+router.get('/appointments/requested', authenticatePortal, asHandler(appointmentRequestController.getRequestedAppointments));
+router.get('/appointments/availability', authenticatePortal, asHandler(appointmentRequestController.getTherapistAvailability));
+router.post('/appointments/request', authenticatePortal, asHandler(appointmentRequestController.requestAppointment));
+router.delete('/appointments/request/:appointmentId', authenticatePortal, asHandler(appointmentRequestController.cancelRequestedAppointment));
 
 // Appointment Details - Wildcard route MUST be last
-router.get('/appointments/:appointmentId', authenticatePortal, dashboardController.getAppointmentDetails);
-router.post('/appointments/:appointmentId/cancel', authenticatePortal, dashboardController.cancelAppointment);
+router.get('/appointments/:appointmentId', authenticatePortal, asHandler(dashboardController.getAppointmentDetails));
+router.post('/appointments/:appointmentId/cancel', authenticatePortal, asHandler(dashboardController.cancelAppointment));
 
 // Messages (Secure Communication)
-router.get('/messages', authenticatePortal, messagesController.getMessages);
-router.post('/messages', authenticatePortal, messagesController.sendMessage);
-router.get('/messages/unread-count', authenticatePortal, messagesController.getUnreadCount);
-router.get('/messages/thread/:threadId', authenticatePortal, messagesController.getMessageThread);
-router.post('/messages/:messageId/reply', authenticatePortal, messagesController.replyToMessage);
-router.post('/messages/:messageId/read', authenticatePortal, messagesController.markMessageAsRead);
+router.get('/messages', authenticatePortal, asHandler(messagesController.getMessages));
+router.post('/messages', authenticatePortal, asHandler(messagesController.sendMessage));
+router.get('/messages/unread-count', authenticatePortal, asHandler(messagesController.getUnreadCount));
+router.get('/messages/thread/:threadId', authenticatePortal, asHandler(messagesController.getMessageThread));
+router.post('/messages/:messageId/reply', authenticatePortal, asHandler(messagesController.replyToMessage));
+router.post('/messages/:messageId/read', authenticatePortal, asHandler(messagesController.markMessageAsRead));
 
 // ========== PHASE 1: CORE TRANSACTIONAL FEATURES ==========
 
 // Billing & Payments
-router.get('/billing/balance', authenticatePortal, billingController.getBalance);
-router.get('/billing/charges', authenticatePortal, billingController.getCharges);
-router.get('/billing/payments', authenticatePortal, billingController.getPayments);
-router.post('/billing/payments', authenticatePortal, billingController.makePayment);
+router.get('/billing/balance', authenticatePortal, asHandler(billingController.getBalance));
+router.get('/billing/charges', authenticatePortal, asHandler(billingController.getCharges));
+router.get('/billing/payments', authenticatePortal, asHandler(billingController.getPayments));
+router.post('/billing/payments', authenticatePortal, asHandler(billingController.makePayment));
 
 // Payment Methods (TODO: Implement payment method management)
-router.post('/billing/payment-methods', authenticatePortal, phase1Controller.addPaymentMethod);
-router.get('/billing/payment-methods', authenticatePortal, phase1Controller.getPaymentMethods);
-router.put('/billing/payment-methods/default', authenticatePortal, phase1Controller.setDefaultPaymentMethod);
-router.delete('/billing/payment-methods/:paymentMethodId', authenticatePortal, phase1Controller.removePaymentMethod);
+router.post('/billing/payment-methods', authenticatePortal, asHandler(phase1Controller.addPaymentMethod));
+router.get('/billing/payment-methods', authenticatePortal, asHandler(phase1Controller.getPaymentMethods));
+router.put('/billing/payment-methods/default', authenticatePortal, asHandler(phase1Controller.setDefaultPaymentMethod));
+router.delete('/billing/payment-methods/:paymentMethodId', authenticatePortal, asHandler(phase1Controller.removePaymentMethod));
 
 // Insurance Cards
-router.post('/insurance/cards', authenticatePortal, phase1Controller.uploadInsuranceCard);
-router.get('/insurance/cards', authenticatePortal, phase1Controller.getInsuranceCards);
+router.post('/insurance/cards', authenticatePortal, asHandler(phase1Controller.uploadInsuranceCard));
+router.get('/insurance/cards', authenticatePortal, asHandler(phase1Controller.getInsuranceCards));
 
 // Session Reviews
-router.post('/reviews', authenticatePortal, phase1Controller.createSessionReview);
-router.get('/reviews', authenticatePortal, phase1Controller.getClientReviews);
-router.put('/reviews/:reviewId/sharing', authenticatePortal, phase1Controller.updateReviewSharing);
+router.post('/reviews', authenticatePortal, asHandler(phase1Controller.createSessionReview));
+router.get('/reviews', authenticatePortal, asHandler(phase1Controller.getClientReviews));
+router.put('/reviews/:reviewId/sharing', authenticatePortal, asHandler(phase1Controller.updateReviewSharing));
 
 // Therapist Change Requests
-router.post('/therapist-change-requests', authenticatePortal, phase1Controller.createChangeRequest);
-router.get('/therapist-change-requests', authenticatePortal, phase1Controller.getClientChangeRequests);
-router.delete('/therapist-change-requests/:requestId', authenticatePortal, phase1Controller.cancelChangeRequest);
+router.post('/therapist-change-requests', authenticatePortal, asHandler(phase1Controller.createChangeRequest));
+router.get('/therapist-change-requests', authenticatePortal, asHandler(phase1Controller.getClientChangeRequests));
+router.delete('/therapist-change-requests/:requestId', authenticatePortal, asHandler(phase1Controller.cancelChangeRequest));
 
 // Mood Tracking
-router.post('/mood-entries', authenticatePortal, moodTrackingController.createMoodEntry);
-router.get('/mood-entries', authenticatePortal, moodTrackingController.getMoodEntries);
-router.get('/mood-entries/trends', authenticatePortal, moodTrackingController.getMoodTrends);
+router.post('/mood-entries', authenticatePortal, asHandler(moodTrackingController.createMoodEntry));
+router.get('/mood-entries', authenticatePortal, asHandler(moodTrackingController.getMoodEntries));
+router.get('/mood-entries/trends', authenticatePortal, asHandler(moodTrackingController.getMoodTrends));
 
 // Symptom Diary - Specific routes MUST come before :logId wildcard
-router.post('/symptom-diary', authenticatePortal, symptomTrackingController.createSymptomLog);
-router.get('/symptom-diary', authenticatePortal, symptomTrackingController.getSymptomLogs);
-router.get('/symptom-diary/trends', authenticatePortal, symptomTrackingController.getSymptomTrends);
-router.get('/symptom-diary/:logId', authenticatePortal, symptomTrackingController.getSymptomLogById);
-router.put('/symptom-diary/:logId', authenticatePortal, symptomTrackingController.updateSymptomLog);
-router.delete('/symptom-diary/:logId', authenticatePortal, symptomTrackingController.deleteSymptomLog);
+router.post('/symptom-diary', authenticatePortal, asHandler(symptomTrackingController.createSymptomLog));
+router.get('/symptom-diary', authenticatePortal, asHandler(symptomTrackingController.getSymptomLogs));
+router.get('/symptom-diary/trends', authenticatePortal, asHandler(symptomTrackingController.getSymptomTrends));
+router.get('/symptom-diary/:logId', authenticatePortal, asHandler(symptomTrackingController.getSymptomLogById));
+router.put('/symptom-diary/:logId', authenticatePortal, asHandler(symptomTrackingController.updateSymptomLog));
+router.delete('/symptom-diary/:logId', authenticatePortal, asHandler(symptomTrackingController.deleteSymptomLog));
 
 // Sleep Diary - Specific routes MUST come before :logId wildcard
-router.post('/sleep-diary', authenticatePortal, sleepTrackingController.createSleepLog);
-router.get('/sleep-diary', authenticatePortal, sleepTrackingController.getSleepLogs);
-router.get('/sleep-diary/trends', authenticatePortal, sleepTrackingController.getSleepTrends);
-router.get('/sleep-diary/:logId', authenticatePortal, sleepTrackingController.getSleepLogById);
-router.put('/sleep-diary/:logId', authenticatePortal, sleepTrackingController.updateSleepLog);
-router.delete('/sleep-diary/:logId', authenticatePortal, sleepTrackingController.deleteSleepLog);
+router.post('/sleep-diary', authenticatePortal, asHandler(sleepTrackingController.createSleepLog));
+router.get('/sleep-diary', authenticatePortal, asHandler(sleepTrackingController.getSleepLogs));
+router.get('/sleep-diary/trends', authenticatePortal, asHandler(sleepTrackingController.getSleepTrends));
+router.get('/sleep-diary/:logId', authenticatePortal, asHandler(sleepTrackingController.getSleepLogById));
+router.put('/sleep-diary/:logId', authenticatePortal, asHandler(sleepTrackingController.updateSleepLog));
+router.delete('/sleep-diary/:logId', authenticatePortal, asHandler(sleepTrackingController.deleteSleepLog));
 
 // Exercise Log - Specific routes MUST come before :logId wildcard
-router.post('/exercise-log', authenticatePortal, exerciseTrackingController.createExerciseLog);
-router.get('/exercise-log', authenticatePortal, exerciseTrackingController.getExerciseLogs);
-router.get('/exercise-log/stats', authenticatePortal, exerciseTrackingController.getExerciseStats);
-router.get('/exercise-log/:logId', authenticatePortal, exerciseTrackingController.getExerciseLogById);
-router.put('/exercise-log/:logId', authenticatePortal, exerciseTrackingController.updateExerciseLog);
-router.delete('/exercise-log/:logId', authenticatePortal, exerciseTrackingController.deleteExerciseLog);
+router.post('/exercise-log', authenticatePortal, asHandler(exerciseTrackingController.createExerciseLog));
+router.get('/exercise-log', authenticatePortal, asHandler(exerciseTrackingController.getExerciseLogs));
+router.get('/exercise-log/stats', authenticatePortal, asHandler(exerciseTrackingController.getExerciseStats));
+router.get('/exercise-log/:logId', authenticatePortal, asHandler(exerciseTrackingController.getExerciseLogById));
+router.put('/exercise-log/:logId', authenticatePortal, asHandler(exerciseTrackingController.updateExerciseLog));
+router.delete('/exercise-log/:logId', authenticatePortal, asHandler(exerciseTrackingController.deleteExerciseLog));
 
 // ========== TELEHEALTH ==========
 
 // Telehealth consent and session access
-router.get('/telehealth/consent-status', authenticatePortal, telehealthController.getConsentStatus);
-router.get('/telehealth/session/:appointmentId', authenticatePortal, telehealthController.getSession);
-router.post('/telehealth/session/:appointmentId/join', authenticatePortal, telehealthController.joinSession);
-router.post('/telehealth/session/:appointmentId/leave', authenticatePortal, telehealthController.leaveSession);
-router.post('/telehealth/session/:sessionId/rate', authenticatePortal, telehealthController.rateSession);
+router.get('/telehealth/consent-status', authenticatePortal, asHandler(telehealthController.getConsentStatus));
+router.get('/telehealth/session/:appointmentId', authenticatePortal, asHandler(telehealthController.getSession));
+router.post('/telehealth/session/:appointmentId/join', authenticatePortal, asHandler(telehealthController.joinSession));
+router.post('/telehealth/session/:appointmentId/leave', authenticatePortal, asHandler(telehealthController.leaveSession));
+router.post('/telehealth/session/:sessionId/rate', authenticatePortal, asHandler(telehealthController.rateSession));
 
 // ========== SELF-SCHEDULING ==========
 
 // Get available clinicians and slots
-router.get('/self-schedule/clinicians', authenticatePortal, selfSchedulingController.getAvailableClinicians);
-router.get('/self-schedule/slots/:clinicianId', authenticatePortal, selfSchedulingController.getAvailableSlots);
-router.get('/self-schedule/appointment-types', authenticatePortal, selfSchedulingController.getAppointmentTypes);
+router.get('/self-schedule/clinicians', authenticatePortal, asHandler(selfSchedulingController.getAvailableClinicians));
+router.get('/self-schedule/slots/:clinicianId', authenticatePortal, asHandler(selfSchedulingController.getAvailableSlots));
+router.get('/self-schedule/appointment-types', authenticatePortal, asHandler(selfSchedulingController.getAppointmentTypes));
 
 // Appointment management
-router.post('/self-schedule/book', authenticatePortal, selfSchedulingController.bookAppointment);
-router.put('/self-schedule/reschedule/:appointmentId', authenticatePortal, selfSchedulingController.rescheduleAppointment);
-router.delete('/self-schedule/cancel/:appointmentId', authenticatePortal, selfSchedulingController.cancelAppointment);
-router.get('/self-schedule/my-appointments', authenticatePortal, selfSchedulingController.getMyAppointments);
+router.post('/self-schedule/book', authenticatePortal, asHandler(selfSchedulingController.bookAppointment));
+router.put('/self-schedule/reschedule/:appointmentId', authenticatePortal, asHandler(selfSchedulingController.rescheduleAppointment));
+router.delete('/self-schedule/cancel/:appointmentId', authenticatePortal, asHandler(selfSchedulingController.cancelAppointment));
+router.get('/self-schedule/my-appointments', authenticatePortal, asHandler(selfSchedulingController.getMyAppointments));
 
 // ========== WAITLIST ==========
 
 // Client waitlist management
-router.post('/waitlist', authenticatePortal, waitlistController.joinWaitlist);
-router.get('/waitlist/my-entries', authenticatePortal, waitlistController.getMyWaitlistEntries);
-router.get('/waitlist/my-offers', authenticatePortal, waitlistController.getMyWaitlistOffers);
-router.delete('/waitlist/:entryId', authenticatePortal, waitlistController.leaveWaitlist);
+router.post('/waitlist', authenticatePortal, asHandler(waitlistController.joinWaitlist));
+router.get('/waitlist/my-entries', authenticatePortal, asHandler(waitlistController.getMyWaitlistEntries));
+router.get('/waitlist/my-offers', authenticatePortal, asHandler(waitlistController.getMyWaitlistOffers));
+router.delete('/waitlist/:entryId', authenticatePortal, asHandler(waitlistController.leaveWaitlist));
 
 // ========== DOCUMENTS & FORMS ==========
 
 // Form Assignments
-router.get('/forms/assignments', authenticatePortal, documentsController.getFormAssignments);
-router.get('/forms/:formId', authenticatePortal, documentsController.getFormDetails);
-router.post('/forms/:formId/submit', authenticatePortal, documentsController.submitForm);
+router.get('/forms/assignments', authenticatePortal, asHandler(documentsController.getFormAssignments));
+router.get('/forms/:formId', authenticatePortal, asHandler(documentsController.getFormDetails));
+router.post('/forms/:formId/submit', authenticatePortal, asHandler(documentsController.submitForm));
 
 // Documents
-router.get('/documents/shared', authenticatePortal, documentsController.getSharedDocuments);
-router.get('/documents/:documentId/download', authenticatePortal, documentsController.downloadDocument);
-router.post('/documents/upload', authenticatePortal, documentsController.uploadDocument);
-router.get('/documents/uploads', authenticatePortal, documentsController.getUploadedDocuments);
+router.get('/documents/shared', authenticatePortal, asHandler(documentsController.getSharedDocuments));
+router.get('/documents/:documentId/download', authenticatePortal, asHandler(documentsController.downloadDocument));
+router.post('/documents/upload', authenticatePortal, asHandler(documentsController.uploadDocument));
+router.get('/documents/uploads', authenticatePortal, asHandler(documentsController.getUploadedDocuments));
 
 // ========== ASSESSMENTS ==========
 
 // Assessment Assignments
-router.get('/assessments/pending', authenticatePortal, assessmentsController.getPendingAssessments);
-router.get('/assessments/completed', authenticatePortal, assessmentsController.getCompletedAssessments);
-router.get('/assessments/history', authenticatePortal, assessmentsController.getAssessmentHistory);
-router.get('/assessments/:assessmentId', authenticatePortal, assessmentsController.getAssessmentDetails);
-router.post('/assessments/:assessmentId/start', authenticatePortal, assessmentsController.startAssessment);
-router.post('/assessments/:assessmentId/submit', authenticatePortal, assessmentsController.submitAssessment);
-router.get('/assessments/:assessmentId/results', authenticatePortal, assessmentsController.getAssessmentResults);
+router.get('/assessments/pending', authenticatePortal, asHandler(assessmentsController.getPendingAssessments));
+router.get('/assessments/completed', authenticatePortal, asHandler(assessmentsController.getCompletedAssessments));
+router.get('/assessments/history', authenticatePortal, asHandler(assessmentsController.getAssessmentHistory));
+router.get('/assessments/:assessmentId', authenticatePortal, asHandler(assessmentsController.getAssessmentDetails));
+router.post('/assessments/:assessmentId/start', authenticatePortal, asHandler(assessmentsController.startAssessment));
+router.post('/assessments/:assessmentId/submit', authenticatePortal, asHandler(assessmentsController.submitAssessment));
+router.get('/assessments/:assessmentId/results', authenticatePortal, asHandler(assessmentsController.getAssessmentResults));
 
 // ========== CLIENT REFERRALS ==========
 
-router.post('/referrals', authenticatePortal, referralController.submitReferral);
-router.get('/referrals', authenticatePortal, referralController.getReferrals);
-router.get('/referrals/stats', authenticatePortal, referralController.getReferralStats);
-router.get('/referrals/:referralId', authenticatePortal, referralController.getReferralDetails);
+router.post('/referrals', authenticatePortal, asHandler(referralController.submitReferral));
+router.get('/referrals', authenticatePortal, asHandler(referralController.getReferrals));
+router.get('/referrals/stats', authenticatePortal, asHandler(referralController.getReferralStats));
+router.get('/referrals/:referralId', authenticatePortal, asHandler(referralController.getReferralDetails));
 
 // ========== THERAPIST PROFILES ==========
 
-router.get('/therapist/profile', authenticatePortal, therapistProfileController.getMyTherapistProfile);
-router.get('/therapist/profile/:therapistId', authenticatePortal, therapistProfileController.getTherapistProfile);
-router.get('/therapist/available', authenticatePortal, therapistProfileController.getAvailableTherapists);
-router.get('/therapist/search', authenticatePortal, therapistProfileController.searchTherapists);
+router.get('/therapist/profile', authenticatePortal, asHandler(therapistProfileController.getMyTherapistProfile));
+router.get('/therapist/profile/:therapistId', authenticatePortal, asHandler(therapistProfileController.getTherapistProfile));
+router.get('/therapist/available', authenticatePortal, asHandler(therapistProfileController.getAvailableTherapists));
+router.get('/therapist/search', authenticatePortal, asHandler(therapistProfileController.searchTherapists));
 
 export default router;

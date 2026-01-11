@@ -6,7 +6,7 @@ import { processReminders } from './reminder.service';
  * Cron job scheduler for automated tasks
  */
 export class NotificationScheduler {
-  private reminderJob: cron.ScheduledTask | null = null;
+  private reminderJob: ReturnType<typeof cron.schedule> | null = null;
   private isRunning: boolean = false;
 
   /**

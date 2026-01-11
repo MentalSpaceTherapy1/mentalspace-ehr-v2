@@ -113,20 +113,6 @@ export class AuthService {
     // Verify password
     const isPasswordValid = await bcrypt.compare(data.password, user.password);
 
-    // Debug logging for password comparison (temporary)
-    auditLogger.info('Password verification attempt', {
-      userId: user.id,
-      email: user.email,
-      passwordProvided: !!data.password,
-      passwordLength: data.password?.length || 0,
-      hasStoredPassword: !!user.password,
-      storedPasswordLength: user.password?.length || 0,
-      isPasswordValid,
-      mustChangePassword: user.mustChangePassword,
-      hasExpiry: !!user.tempPasswordExpiry,
-      action: 'PASSWORD_VERIFICATION_DEBUG',
-    });
-
     if (!isPasswordValid) {
       // Increment failed login attempts
       const newFailedAttempts = user.failedLoginAttempts + 1;

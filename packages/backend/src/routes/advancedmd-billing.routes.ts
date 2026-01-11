@@ -173,7 +173,7 @@ router.post('/charges/batch-submit', requireAdminOrBilling, async (req: Request,
       message: `Batch submission completed`,
       totalCharges: result.totalCharges,
       successCount: result.successCount,
-      errorCount: result.errorCount,
+      failureCount: result.failureCount,
       results: result.results,
     });
   } catch (error: any) {
@@ -217,7 +217,7 @@ router.post('/appointments/:id/submit-charges', requireAdminOrBilling, async (re
       appointmentId: id,
       totalCharges: result.totalCharges,
       successCount: result.successCount,
-      errorCount: result.errorCount,
+      failureCount: result.failureCount,
       results: result.results,
     });
   } catch (error: any) {
@@ -535,11 +535,17 @@ router.get('/lookup/facility/:name', requireAdminOrBilling, async (req: Request,
  */
 router.post('/lookup/cpt/batch', requireAdminOrBilling, async (req: Request, res: Response) => {
   try {
-    await lookupService.lookupCPTCodesBatch();
+    const { cptCodes } = req.body;
+    if (!cptCodes || !Array.isArray(cptCodes)) {
+      return res.status(400).json({ error: 'cptCodes array is required' });
+    }
+
+    const results = await lookupService.lookupCPTCodesBatch(cptCodes);
 
     res.json({
       success: true,
       message: 'CPT codes batch lookup completed and cached',
+      count: results.size,
     });
   } catch (error: any) {
     console.error('[AdvancedMD Billing Routes] Error batch looking up CPT codes:', error);
@@ -553,11 +559,17 @@ router.post('/lookup/cpt/batch', requireAdminOrBilling, async (req: Request, res
  */
 router.post('/lookup/icd/batch', requireAdminOrBilling, async (req: Request, res: Response) => {
   try {
-    await lookupService.lookupICD10CodesBatch();
+    const { icdCodes } = req.body;
+    if (!icdCodes || !Array.isArray(icdCodes)) {
+      return res.status(400).json({ error: 'icdCodes array is required' });
+    }
+
+    const results = await lookupService.lookupICD10CodesBatch(icdCodes);
 
     res.json({
       success: true,
       message: 'ICD-10 codes batch lookup completed and cached',
+      count: results.size,
     });
   } catch (error: any) {
     console.error('[AdvancedMD Billing Routes] Error batch looking up ICD codes:', error);

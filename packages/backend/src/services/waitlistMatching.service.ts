@@ -58,21 +58,21 @@ export async function calculatePriorityScore(
 
   // Calculate wait time score (0-1, max at 30 days)
   const waitDays = Math.floor(
-    (Date.now() - new Date(entry.addedDate).getTime()) / (1000 * 60 * 60 * 24)
+    (Date.now() - new Date(entry.addedDate || entry.joinedAt).getTime()) / (1000 * 60 * 60 * 24)
   );
   const waitTimeScore = Math.min(waitDays / 30, 1.0);
 
-  // Clinical urgency score (0-1)
-  const urgencyMap: Record<string, number> = {
-    Urgent: 1.0,
-    High: 0.75,
-    Normal: 0.5,
-    Low: 0.25,
+  // Clinical urgency score (0-1) - priority is now a number (1=Low, 2=Normal, 3=High, 4=Urgent)
+  const urgencyMap: Record<number, number> = {
+    4: 1.0,    // Urgent
+    3: 0.75,   // High
+    2: 0.5,    // Normal
+    1: 0.25,   // Low
   };
   const urgencyScore = urgencyMap[entry.priority] || 0.5;
 
   // Referral priority score (0-1) - assume urgent referrals have higher priority
-  const referralScore = entry.priority === 'Urgent' ? 1.0 : 0.5;
+  const referralScore = entry.priority >= 4 ? 1.0 : 0.5;
 
   // Decline penalty (0-1) - reduces score based on declined offers
   const declinePenalty = Math.min(entry.declinedOffers * 0.1, 1.0);
@@ -141,7 +141,7 @@ export async function findMatchingSlots(
     include: {
       client: {
         include: {
-          insuranceInformation: true,
+          insuranceInfo: true,
         },
       },
     },
@@ -157,7 +157,7 @@ export async function findMatchingSlots(
       entry.requestedClinicianId,
       ...entry.alternateClinicianIds,
       ...(entry.preferredProviderId ? [entry.preferredProviderId] : []),
-    ])
+    ].filter((id): id is string => id != null))
   );
 
   const startDate = new Date();
@@ -166,7 +166,7 @@ export async function findMatchingSlots(
 
   // Respect maxWaitDays if set
   if (entry.maxWaitDays) {
-    const maxDate = new Date(entry.addedDate);
+    const maxDate = new Date(entry.addedDate || entry.joinedAt);
     maxDate.setDate(maxDate.getDate() + entry.maxWaitDays);
     if (maxDate < endDate) {
       endDate.setTime(maxDate.getTime());
@@ -458,11 +458,11 @@ export async function sendSlotOffer(
     throw new Error('Waitlist entry not found');
   }
 
-  // Update waitlist entry
+  // Update waitlist entry - MATCHED is the closest status to OFFERED in the enum
   await prisma.waitlistEntry.update({
     where: { id: matchedSlot.waitlistEntryId },
     data: {
-      status: 'OFFERED',
+      status: 'MATCHED',
       lastOfferDate: new Date(),
       offerCount: { increment: 1 },
       notificationsSent: { increment: 1 },

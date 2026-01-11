@@ -283,7 +283,7 @@ export class ReminderService {
 
       switch (reminder.reminderType) {
         case 'SMS':
-          if (config.smsEnabled && appointment.client.cellPhone) {
+          if (config.smsEnabled && appointment.client.primaryPhone) {
             success = await this.sendSmsReminder(reminder, appointment, config);
           } else {
             logger.warn('SMS reminder skipped - SMS not enabled or no phone', {
@@ -307,7 +307,7 @@ export class ReminderService {
           break;
 
         case 'VOICE':
-          if (config.voiceEnabled && appointment.client.cellPhone) {
+          if (config.voiceEnabled && appointment.client.primaryPhone) {
             success = await this.sendVoiceReminder(reminder, appointment, config);
           } else {
             logger.warn('Voice reminder skipped - voice not enabled or no phone', {
@@ -352,7 +352,7 @@ export class ReminderService {
       const message = this.formatSmsMessage(appointment, config);
 
       const result = await this.twilioService.sendSms({
-        to: appointment.client.cellPhone,
+        to: appointment.client.primaryPhone,
         from: config.twilioPhoneNumber!,
         body: message,
       });
@@ -371,7 +371,7 @@ export class ReminderService {
         reminderId: reminder.id,
         appointmentId: appointment.id,
         clientId: appointment.client.id,
-        phone: appointment.client.cellPhone,
+        phone: appointment.client.primaryPhone,
         messageSid: result.sid,
       });
 
@@ -450,7 +450,7 @@ export class ReminderService {
       }
 
       const result = await this.twilioService.makeVoiceCall({
-        to: appointment.client.cellPhone,
+        to: appointment.client.primaryPhone,
         from: config.voiceFromNumber,
         url: config.voiceScriptUrl,
       });
@@ -469,7 +469,7 @@ export class ReminderService {
         reminderId: reminder.id,
         appointmentId: appointment.id,
         clientId: appointment.client.id,
-        phone: appointment.client.cellPhone,
+        phone: appointment.client.primaryPhone,
         callSid: result.sid,
       });
 
@@ -501,7 +501,8 @@ export class ReminderService {
           )} at ${appointment.startTime} with ${
             appointment.clinician.firstName
           } ${appointment.clinician.lastName}.`,
-          messageType: 'SYSTEM_NOTIFICATION',
+          sentByClient: false,
+          sentBy: 'SYSTEM',
           isRead: false,
         },
       });
@@ -538,7 +539,7 @@ export class ReminderService {
         where: {
           appointment: {
             client: {
-              cellPhone: from,
+              primaryPhone: from,
             },
           },
           reminderType: 'SMS',
@@ -601,9 +602,9 @@ export class ReminderService {
     await this.prisma.appointment.update({
       where: { id: appointment.id },
       data: {
-        confirmationStatus: 'CONFIRMED',
-        confirmationDate: new Date(),
+        confirmedAt: new Date(),
         confirmationMethod,
+        status: 'CONFIRMED',
       },
     });
 
@@ -617,13 +618,12 @@ export class ReminderService {
    * Mark appointment for cancellation (requires staff review)
    */
   private async markAppointmentForCancellation(appointment: any): Promise<void> {
-    // Don't automatically cancel - create a note for staff to review
-    await this.prisma.appointmentNote.create({
+    // Don't automatically cancel - update the appointment with cancellation notes
+    // TODO: AppointmentNote model doesn't exist - using appointment update instead
+    await this.prisma.appointment.update({
+      where: { id: appointment.id },
       data: {
-        appointmentId: appointment.id,
-        noteText: 'Client responded to reminder indicating they want to cancel. Please contact client.',
-        noteType: 'CANCELLATION_REQUEST',
-        createdBy: 'SYSTEM',
+        cancellationNotes: 'Client responded to reminder indicating they want to cancel. Please contact client.',
       },
     });
 
@@ -779,7 +779,7 @@ export class ReminderService {
       data: {
         deliveryStatus: 'FAILED',
         retryCount,
-        errorMessage: error instanceof Error ? error.message : undefined,
+        failureReason: error instanceof Error ? error.message : undefined,
       },
     });
 
@@ -869,7 +869,7 @@ export class ReminderService {
       data: {
         deliveryStatus: 'PENDING',
         retryCount: 0,
-        errorMessage: null,
+        failureReason: null,
       },
     });
 

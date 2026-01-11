@@ -132,8 +132,8 @@ export class AdvancedMDEligibilityService {
       const client = await prisma.client.findUnique({
         where: { id: clientId },
         include: {
-          insurances: {
-            where: insuranceId ? { id: insuranceId } : { isPrimary: true },
+          insuranceInfo: {
+            where: insuranceId ? { id: insuranceId } : { rank: 'Primary' },
             take: 1,
           },
         },
@@ -161,7 +161,7 @@ export class AdvancedMDEligibilityService {
       }
 
       // Get insurance record
-      const insurance = client.insurances[0];
+      const insurance = client.insuranceInfo[0];
       if (!insurance) {
         return {
           success: false,
@@ -175,7 +175,7 @@ export class AdvancedMDEligibilityService {
       }
 
       // Get carrier code
-      const carrierCode = insurance.payerId || insurance.insuranceCompany;
+      const carrierCode = insurance.insuranceCompanyId || insurance.insuranceCompany;
       if (!carrierCode) {
         return {
           success: false,
@@ -263,8 +263,8 @@ export class AdvancedMDEligibilityService {
         include: {
           client: {
             include: {
-              insurances: {
-                where: { isPrimary: true },
+              insuranceInfo: {
+                where: { rank: 'Primary' },
                 take: 1,
               },
             },
@@ -284,7 +284,7 @@ export class AdvancedMDEligibilityService {
 
       return this.checkEligibility(
         appointment.clientId,
-        appointment.client.insurances[0]?.id,
+        appointment.client.insuranceInfo[0]?.id,
         appointment.appointmentDate
       );
     } catch (error: any) {
@@ -531,7 +531,7 @@ export class AdvancedMDEligibilityService {
             serviceDate,
             insuranceId,
             eligibilityData,
-          },
+          } as any,
         },
       });
     } catch (error: any) {

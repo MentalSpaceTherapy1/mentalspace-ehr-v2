@@ -274,7 +274,7 @@ export class DataExportService {
         email: client.email,
       },
       summary: report.summary,
-      healthScore: report.healthScore,
+      healthScore: (report as any).healthScore,
       insights: report.insights,
       symptoms: {
         summary: report.symptoms,

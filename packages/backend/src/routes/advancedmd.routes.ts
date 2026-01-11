@@ -108,24 +108,25 @@ router.get('/patients/:clientId/sync-status', requireAuth, async (req: Request, 
 router.post('/patients/:clientId/sync', requireAdminOrBilling, async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
+    const { profileId } = req.body;
 
     // Initialize sync service
     await advancedMDPatientSync.initialize();
 
-    // Perform sync
-    const result = await advancedMDPatientSync.syncPatientToAMD(clientId);
+    // Perform sync (profileId required for new patients)
+    const result = await advancedMDPatientSync.syncPatientToAMD(clientId, profileId);
 
     if (result.success) {
       res.json({
         success: true,
         message: 'Patient synced successfully',
-        amdPatientId: result.amdPatientId,
+        amdPatientId: result.advancedMDPatientId,
         syncLogId: result.syncLogId,
       });
     } else {
       res.status(400).json({
         success: false,
-        error: result.error,
+        error: result.errorMessage,
         syncLogId: result.syncLogId,
       });
     }
@@ -244,15 +245,15 @@ router.post('/appointments/:appointmentId/sync', requireAdminOrBilling, async (r
     if (result.success) {
       res.json({
         success: true,
-        message: 'Appointment synced successfully',
-        amdVisitId: result.amdVisitId,
-        syncLogId: result.syncLogId,
+        message: result.message || 'Appointment synced successfully',
+        amdVisitId: result.advancedMDVisitId,
+        appointmentId: result.appointmentId,
       });
     } else {
       res.status(400).json({
         success: false,
         error: result.error,
-        syncLogId: result.syncLogId,
+        appointmentId: result.appointmentId,
       });
     }
   } catch (error: any) {
@@ -276,18 +277,21 @@ router.post('/appointments/bulk-sync', requireAdminOrBilling, async (req: Reques
     // Initialize sync service
     await advancedMDAppointmentSync.initialize();
 
-    const result = await advancedMDAppointmentSync.bulkSyncAppointments(
+    const results = await advancedMDAppointmentSync.bulkSyncAppointments(
       new Date(startDate),
       new Date(endDate)
     );
 
+    const successCount = results.filter(r => r.success).length;
+    const errorCount = results.filter(r => !r.success).length;
+
     res.json({
       success: true,
       message: `Bulk sync completed`,
-      totalAppointments: result.totalAppointments,
-      successCount: result.successCount,
-      errorCount: result.errorCount,
-      results: result.results,
+      totalAppointments: results.length,
+      successCount,
+      errorCount,
+      results,
     });
   } catch (error: any) {
     console.error('[AdvancedMD Routes] Error bulk syncing appointments:', error);
@@ -568,9 +572,10 @@ router.post('/sync/test-connection', requireAdminOrBilling, async (req: Request,
     await advancedMDPatientSync.initialize();
 
     // Try to get a simple patient list to verify connection
-    const testResult = await advancedMDPatientSync.lookupPatient({
-      lastName: 'TEST',
-    });
+    const testResult = await advancedMDPatientSync.lookupPatient(
+      'TEST',
+      'CONNECTION'
+    );
 
     res.json({
       success: true,

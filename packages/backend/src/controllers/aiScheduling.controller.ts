@@ -489,7 +489,7 @@ export async function getSchedulingStats(req: Request, res: Response) {
     // Wrap Prisma model calls in try-catch in case table/model doesn't exist
     let totalSuggestions = 0;
     let acceptedSuggestions = 0;
-    let averageScore = { _avg: { overallScore: null } };
+    let averageScore: { _avg: { overallScore: number | null } } = { _avg: { overallScore: null } };
     let topProviders: any[] = [];
 
     try {

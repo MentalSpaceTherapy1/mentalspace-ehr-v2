@@ -517,7 +517,7 @@ export class IncidentService {
         throw new Error(`Incident with ID ${incidentId} not found`);
       }
 
-      const actions = (incident.correctiveActions as CorrectiveAction[]) || [];
+      const actions = (incident.correctiveActions as unknown as CorrectiveAction[]) || [];
       const actionIndex = actions.findIndex(a => a.id === actionId);
 
       if (actionIndex === -1) {

@@ -25,7 +25,7 @@ import {
   GetDateVisitsRequest,
   GetUpdatedVisitsRequest,
   UpdateVisitWithNewChargesRequest,
-} from '../../../../shared/src/types/advancedmd.types';
+} from '../../types/advancedmd.types';
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
@@ -407,7 +407,7 @@ export class AdvancedMDAppointmentSyncService {
         appointment,
         appointment.client.advancedMDPatientId,
         appointment.advancedMDProviderId || '',
-        appointment.advancedMDFacilityId,
+        appointment.advancedMDFacilityId || undefined,
         options
       );
 

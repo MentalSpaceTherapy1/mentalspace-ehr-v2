@@ -3,7 +3,7 @@ import { PrismaClient } from '@mentalspace/database';
 import { sendReportEmail } from './email-distribution.service';
 import { trackDelivery, updateDeliveryStatus } from './delivery-tracker.service';
 import { addMinutes, addDays, addWeeks, addMonths, parseISO } from 'date-fns';
-import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 const prisma = new PrismaClient();
 
@@ -177,14 +177,14 @@ function calculateNextCronRun(cronExpression: string, timezone: string): Date {
   const parts = cronExpression.split(' ');
 
   const now = new Date();
-  const zonedNow = utcToZonedTime(now, timezone);
+  const zonedNow = toZonedTime(now, timezone);
 
   // For now, default to next day same time if complex cron
   // In production, use a proper cron parser library
   let nextRun = addDays(zonedNow, 1);
 
   // Convert back to UTC
-  return zonedTimeToUtc(nextRun, timezone);
+  return fromZonedTime(nextRun, timezone);
 }
 
 async function evaluateDistributionCondition(

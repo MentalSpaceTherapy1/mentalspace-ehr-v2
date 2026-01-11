@@ -4,6 +4,14 @@ import { z } from 'zod';
 import prisma from '../services/database';
 import { Prisma } from '@mentalspace/database';
 
+// Helper to get authenticated user - all dashboard endpoints require auth
+const getAuthUser = (req: Request) => {
+  if (!req.user) {
+    throw new Error('Authentication required');
+  }
+  return req.user;
+};
+
 // ============================================================================
 // VALIDATION SCHEMAS
 // ============================================================================
@@ -751,7 +759,7 @@ export const createDashboard = async (req: Request, res: Response) => {
     if (validatedData.isDefault) {
       await prisma.dashboard.updateMany({
         where: {
-          userId: req.user.userId,
+          userId: req.user!.userId,
           isDefault: true,
         },
         data: {
@@ -764,11 +772,11 @@ export const createDashboard = async (req: Request, res: Response) => {
       data: {
         name: validatedData.name,
         description: validatedData.description,
-        layout: validatedData.layout as Prisma.JsonValue,
+        layout: validatedData.layout as any,
         isDefault: validatedData.isDefault,
         isPublic: validatedData.isPublic,
         role: validatedData.role,
-        userId: req.user.userId,
+        userId: req.user!.userId,
       },
       include: {
         widgets: true,
@@ -780,7 +788,7 @@ export const createDashboard = async (req: Request, res: Response) => {
       dashboardName: dashboard.name,
     });
 
-    logger.info(`Dashboard created: ${dashboard.id} by user ${req.user.userId}`);
+    logger.info(`Dashboard created: ${dashboard.id} by user ${req.user!.userId}`);
 
     res.status(201).json({
       success: true,
@@ -811,9 +819,9 @@ export const getDashboards = async (req: Request, res: Response) => {
     const dashboards = await prisma.dashboard.findMany({
       where: {
         OR: [
-          { userId: req.user.userId },
+          { userId: req.user!.userId },
           { isPublic: true },
-          ...(req.user.roles && req.user.roles.length > 0 ? req.user.roles.map(r => ({ role: r })) : []),
+          ...(req.user!.roles && req.user!.roles.length > 0 ? req.user!.roles.map(r => ({ role: r })) : []),
         ],
       },
       include: {
@@ -883,9 +891,9 @@ export const getDashboardById = async (req: Request, res: Response) => {
 
     // Check access: owner, public, or role-based
     const hasAccess =
-      dashboard.userId === req.user.userId ||
+      dashboard.userId === req.user!.userId ||
       dashboard.isPublic ||
-      (dashboard.role && req.user.roles && req.user.roles.includes(dashboard.role));
+      (dashboard.role && req.user!.roles && req.user!.roles.includes(dashboard.role));
 
     if (!hasAccess) {
       return res.status(403).json({
@@ -928,7 +936,7 @@ export const updateDashboard = async (req: Request, res: Response) => {
       });
     }
 
-    if (existingDashboard.userId !== req.user.userId) {
+    if (existingDashboard.userId !== req.user!.userId) {
       return res.status(403).json({
         success: false,
         error: 'You can only update your own dashboards',
@@ -939,7 +947,7 @@ export const updateDashboard = async (req: Request, res: Response) => {
     if (validatedData.isDefault) {
       await prisma.dashboard.updateMany({
         where: {
-          userId: req.user.userId,
+          userId: req.user!.userId,
           isDefault: true,
           id: { not: id },
         },
@@ -962,7 +970,7 @@ export const updateDashboard = async (req: Request, res: Response) => {
       changes: validatedData,
     });
 
-    logger.info(`Dashboard updated: ${dashboard.id} by user ${req.user.userId}`);
+    logger.info(`Dashboard updated: ${dashboard.id} by user ${req.user!.userId}`);
 
     res.json({
       success: true,
@@ -1004,7 +1012,7 @@ export const deleteDashboard = async (req: Request, res: Response) => {
       });
     }
 
-    if (existingDashboard.userId !== req.user.userId) {
+    if (existingDashboard.userId !== req.user!.userId) {
       return res.status(403).json({
         success: false,
         error: 'You can only delete your own dashboards',
@@ -1020,7 +1028,7 @@ export const deleteDashboard = async (req: Request, res: Response) => {
       dashboardName: existingDashboard.name,
     });
 
-    logger.info(`Dashboard deleted: ${id} by user ${req.user.userId}`);
+    logger.info(`Dashboard deleted: ${id} by user ${req.user!.userId}`);
 
     res.json({
       success: true,
@@ -1056,7 +1064,7 @@ export const addWidget = async (req: Request, res: Response) => {
       });
     }
 
-    if (dashboard.userId !== req.user.userId) {
+    if (dashboard.userId !== req.user!.userId) {
       return res.status(403).json({
         success: false,
         error: 'You can only add widgets to your own dashboards',
@@ -1067,8 +1075,8 @@ export const addWidget = async (req: Request, res: Response) => {
       data: {
         widgetType: validatedData.widgetType,
         title: validatedData.title,
-        config: validatedData.config as Prisma.JsonValue,
-        position: validatedData.position as Prisma.JsonValue,
+        config: validatedData.config as any,
+        position: validatedData.position as any,
         refreshRate: validatedData.refreshRate,
         dashboardId: id,
       },
@@ -1080,7 +1088,7 @@ export const addWidget = async (req: Request, res: Response) => {
       widgetType: widget.widgetType,
     });
 
-    logger.info(`Widget added: ${widget.id} to dashboard ${id} by user ${req.user.userId}`);
+    logger.info(`Widget added: ${widget.id} to dashboard ${id} by user ${req.user!.userId}`);
 
     res.status(201).json({
       success: true,
@@ -1126,7 +1134,7 @@ export const updateWidget = async (req: Request, res: Response) => {
       });
     }
 
-    if (widget.dashboard.userId !== req.user.userId) {
+    if (widget.dashboard.userId !== req.user!.userId) {
       return res.status(403).json({
         success: false,
         error: 'You can only update widgets on your own dashboards',
@@ -1143,7 +1151,7 @@ export const updateWidget = async (req: Request, res: Response) => {
       changes: validatedData,
     });
 
-    logger.info(`Widget updated: ${widgetId} by user ${req.user.userId}`);
+    logger.info(`Widget updated: ${widgetId} by user ${req.user!.userId}`);
 
     res.json({
       success: true,
@@ -1188,7 +1196,7 @@ export const deleteWidget = async (req: Request, res: Response) => {
       });
     }
 
-    if (widget.dashboard.userId !== req.user.userId) {
+    if (widget.dashboard.userId !== req.user!.userId) {
       return res.status(403).json({
         success: false,
         error: 'You can only delete widgets from your own dashboards',
@@ -1204,7 +1212,7 @@ export const deleteWidget = async (req: Request, res: Response) => {
       dashboardId: widget.dashboardId,
     });
 
-    logger.info(`Widget deleted: ${widgetId} by user ${req.user.userId}`);
+    logger.info(`Widget deleted: ${widgetId} by user ${req.user!.userId}`);
 
     res.json({
       success: true,
@@ -1243,9 +1251,9 @@ export const getDashboardData = async (req: Request, res: Response) => {
     }
 
     const hasAccess =
-      dashboard.userId === req.user.userId ||
+      dashboard.userId === req.user!.userId ||
       dashboard.isPublic ||
-      (dashboard.role && req.user.roles && req.user.roles.includes(dashboard.role));
+      (dashboard.role && req.user!.roles && req.user!.roles.includes(dashboard.role));
 
     if (!hasAccess) {
       return res.status(403).json({
@@ -1267,7 +1275,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
           };
         }
 
-        const data = await fetcher(req.user.userId, widget.config);
+        const data = await fetcher(req.user!.userId, widget.config);
         return {
           widgetId: widget.id,
           widgetType: widget.widgetType,

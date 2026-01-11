@@ -50,7 +50,7 @@ export const joinWaitlist = async (req: PortalRequest, res: Response) => {
     // Get client info
     const client = await prisma.client.findUnique({
       where: { id: clientId },
-      select: { id: true, primaryClinicianId: true },
+      select: { id: true, primaryTherapistId: true },
     });
 
     if (!client) {
@@ -67,8 +67,8 @@ export const joinWaitlist = async (req: PortalRequest, res: Response) => {
       throw new AppError('Appointment type not found', 404);
     }
 
-    // Use specified clinician or client's primary clinician
-    const requestedClinicianId = clinicianId || client.primaryClinicianId;
+    // Use specified clinician or client's primary therapist
+    const requestedClinicianId = clinicianId || client.primaryTherapistId;
 
     if (!requestedClinicianId) {
       throw new AppError('No clinician specified. Please select a clinician.', 400);
@@ -104,13 +104,14 @@ export const joinWaitlist = async (req: PortalRequest, res: Response) => {
     }
 
     // Create waitlist entry using service
+    // Service expects preferredTimes as string[] and priority as number
     const entry = await waitlistService.addToWaitlist({
       clientId,
       requestedClinicianId,
       requestedAppointmentType: appointmentType.typeName,
       preferredDays,
-      preferredTimes: preferredTimes.join(', '),
-      priority: priority === 5 ? 'Urgent' : priority === 4 ? 'High' : priority === 2 ? 'Low' : 'Normal',
+      preferredTimes: preferredTimes, // Already an array
+      priority: priority, // Already a number
       notes,
       addedBy: clientId, // Client added themselves
     });
@@ -300,7 +301,6 @@ export const getMyWaitlistOffers = async (req: PortalRequest, res: Response) => 
         appointmentDate: offer.appointmentDate,
         startTime: offer.startTime,
         endTime: offer.endTime,
-        duration: offer.duration,
         status: offer.status,
         expiresAt: offer.expiresAt,
         matchScore: offer.matchScore,

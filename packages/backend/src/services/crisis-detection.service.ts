@@ -98,7 +98,7 @@ async function getAdminUsers(): Promise<string[]> {
     const admins = await prisma.user.findMany({
       where: {
         roles: {
-          has: 'ADMIN',
+          hasSome: ['SUPER_ADMIN', 'ADMINISTRATOR'],
         },
       },
       select: {

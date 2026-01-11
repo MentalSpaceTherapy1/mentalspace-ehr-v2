@@ -192,7 +192,7 @@ app.use(requestLogger);
 
 // Monitoring middleware (CloudWatch metrics, request tracking)
 // HIPAA Audit: Tracks all API requests, latency, and errors
-app.use(monitoringMiddleware());
+app.use(monitoringMiddleware);
 
 // Rate limiting - Uses Redis when REDIS_URL is set, otherwise in-memory
 // Supports RATE_LIMIT_WHITELIST env var for admin IP bypass

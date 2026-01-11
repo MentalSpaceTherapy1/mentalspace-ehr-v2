@@ -293,10 +293,11 @@ export async function signNote(request: CreateSignatureEventRequest) {
         id: true,
         noteType: true,
         clinicianId: true,
-        cosignerId: true,
+        cosignedBy: true,
+        requiresCosign: true,
         status: true,
-        isSigned: true,
-        signedAt: true,
+        signedBy: true,
+        signedDate: true,
       },
     });
 
@@ -305,7 +306,7 @@ export async function signNote(request: CreateSignatureEventRequest) {
     }
 
     // Check if note is already signed (for AUTHOR signatures)
-    if (request.signatureType === 'AUTHOR' && note.isSigned) {
+    if (request.signatureType === 'AUTHOR' && note.signedBy) {
       throw new Error('Note is already signed. Use AMENDMENT signature type to modify.');
     }
 
@@ -314,7 +315,7 @@ export async function signNote(request: CreateSignatureEventRequest) {
       throw new Error('Only the note author can provide the initial signature');
     }
 
-    if (request.signatureType === 'COSIGN' && note.cosignerId !== request.userId) {
+    if (request.signatureType === 'COSIGN' && note.cosignedBy !== request.userId) {
       throw new Error('Only the assigned supervisor can co-sign this note');
     }
 
@@ -326,18 +327,18 @@ export async function signNote(request: CreateSignatureEventRequest) {
       await prisma.clinicalNote.update({
         where: { id: request.noteId },
         data: {
-          isSigned: true,
-          signedAt: new Date(),
-          status: note.cosignerId ? 'PENDING_COSIGN' : 'FINAL',
+          signedBy: request.userId,
+          signedDate: new Date(),
+          status: note.requiresCosign ? 'PENDING_COSIGN' : 'SIGNED',
         },
       });
     } else if (request.signatureType === 'COSIGN') {
       await prisma.clinicalNote.update({
         where: { id: request.noteId },
         data: {
-          isCosigned: true,
-          cosignedAt: new Date(),
-          status: 'FINAL',
+          cosignedBy: request.userId,
+          cosignedDate: new Date(),
+          status: 'COSIGNED',
         },
       });
     }

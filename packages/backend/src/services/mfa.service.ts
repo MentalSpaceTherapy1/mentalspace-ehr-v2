@@ -5,6 +5,7 @@ import prisma from './database';
 import { auditLogger } from '../utils/logger';
 import { UnauthorizedError, ValidationError } from '../utils/errors';
 import { sendSMS, SMSTemplates, isValidPhoneNumber } from './sms.service';
+import * as cache from './cache.service';
 
 /**
  * Multi-Factor Authentication (MFA) Service
@@ -22,17 +23,27 @@ import { sendSMS, SMSTemplates, isValidPhoneNumber } from './sms.service';
  * - Admin MFA reset functionality
  */
 
+// Cache key prefixes for MFA data
+const MFA_SMS_CODE_PREFIX = 'mfa:sms:';
+const MFA_ATTEMPTS_PREFIX = 'mfa:attempts:';
+
+interface SMSCodeData {
+  code: string;
+  expiresAt: number;
+  attempts: number;
+}
+
+interface VerificationAttemptData {
+  count: number;
+  lockedUntil: number | null;
+}
+
 export class MFAService {
   private readonly TOTP_WINDOW = 1; // Allow 1 step before/after for clock drift
   private readonly BACKUP_CODES_COUNT = 10;
-  private readonly SMS_CODE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+  private readonly SMS_CODE_EXPIRY_SECONDS = 5 * 60; // 5 minutes in seconds
   private readonly MAX_VERIFICATION_ATTEMPTS = 5;
-  private readonly VERIFICATION_LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
-
-  // In-memory store for SMS codes and rate limiting
-  // In production, use Redis for distributed systems
-  private smsCodeStore: Map<string, { code: string; expiresAt: number; attempts: number }> = new Map();
-  private verificationAttempts: Map<string, { count: number; lockedUntil: number | null }> = new Map();
+  private readonly VERIFICATION_LOCKOUT_DURATION_SECONDS = 15 * 60; // 15 minutes in seconds
 
   /**
    * Generate MFA secret and QR code for user
@@ -420,8 +431,8 @@ export class MFAService {
       throw new ValidationError('Invalid phone number format. Please use E.164 format (e.g., +12345678900)');
     }
 
-    // Check rate limiting
-    const attemptData = this.verificationAttempts.get(userId);
+    // Check rate limiting from distributed cache
+    const attemptData = await cache.get<VerificationAttemptData>(MFA_ATTEMPTS_PREFIX + userId);
     if (attemptData?.lockedUntil && Date.now() < attemptData.lockedUntil) {
       const remainingMinutes = Math.ceil((attemptData.lockedUntil - Date.now()) / (60 * 1000));
       throw new UnauthorizedError(
@@ -432,12 +443,13 @@ export class MFAService {
     // Generate 6-digit code
     const code = crypto.randomInt(100000, 999999).toString();
 
-    // Store code with expiry
-    this.smsCodeStore.set(userId, {
+    // Store code with expiry in distributed cache
+    const smsData: SMSCodeData = {
       code,
-      expiresAt: Date.now() + this.SMS_CODE_EXPIRY,
+      expiresAt: Date.now() + (this.SMS_CODE_EXPIRY_SECONDS * 1000),
       attempts: 0,
-    });
+    };
+    await cache.set(MFA_SMS_CODE_PREFIX + userId, smsData, this.SMS_CODE_EXPIRY_SECONDS);
 
     // Send SMS
     const success = await sendSMS({
@@ -461,9 +473,9 @@ export class MFAService {
    */
   async verifySMSCode(userId: string, code: string): Promise<boolean> {
     // Check rate limiting
-    this.checkAndUpdateVerificationAttempts(userId);
+    await this.checkAndUpdateVerificationAttempts(userId);
 
-    const storedData = this.smsCodeStore.get(userId);
+    const storedData = await cache.get<SMSCodeData>(MFA_SMS_CODE_PREFIX + userId);
 
     if (!storedData) {
       auditLogger.warn('SMS code verification failed - no code found', {
@@ -475,7 +487,7 @@ export class MFAService {
 
     // Check expiry
     if (Date.now() > storedData.expiresAt) {
-      this.smsCodeStore.delete(userId);
+      await cache.del(MFA_SMS_CODE_PREFIX + userId);
       auditLogger.warn('SMS code verification failed - code expired', {
         userId,
         action: 'MFA_SMS_VERIFICATION_FAILED',
@@ -485,7 +497,7 @@ export class MFAService {
 
     // Check attempts
     if (storedData.attempts >= 3) {
-      this.smsCodeStore.delete(userId);
+      await cache.del(MFA_SMS_CODE_PREFIX + userId);
       auditLogger.warn('SMS code verification failed - too many attempts', {
         userId,
         action: 'MFA_SMS_VERIFICATION_FAILED',
@@ -498,17 +510,20 @@ export class MFAService {
 
     if (isValid) {
       // Remove used code
-      this.smsCodeStore.delete(userId);
+      await cache.del(MFA_SMS_CODE_PREFIX + userId);
       // Reset verification attempts
-      this.verificationAttempts.delete(userId);
+      await cache.del(MFA_ATTEMPTS_PREFIX + userId);
 
       auditLogger.info('SMS code verified successfully', {
         userId,
         action: 'MFA_SMS_VERIFIED',
       });
     } else {
-      // Increment attempts
+      // Increment attempts and update in cache
       storedData.attempts++;
+      const remainingTTL = Math.max(1, Math.ceil((storedData.expiresAt - Date.now()) / 1000));
+      await cache.set(MFA_SMS_CODE_PREFIX + userId, storedData, remainingTTL);
+
       auditLogger.warn('SMS code verification failed - invalid code', {
         userId,
         attempts: storedData.attempts,
@@ -574,9 +589,9 @@ export class MFAService {
   /**
    * Check and update verification attempts for rate limiting
    */
-  private checkAndUpdateVerificationAttempts(userId: string): void {
+  private async checkAndUpdateVerificationAttempts(userId: string): Promise<void> {
     const now = Date.now();
-    const attemptData = this.verificationAttempts.get(userId);
+    const attemptData = await cache.get<VerificationAttemptData>(MFA_ATTEMPTS_PREFIX + userId);
 
     if (attemptData?.lockedUntil && now < attemptData.lockedUntil) {
       const remainingMinutes = Math.ceil((attemptData.lockedUntil - now) / (60 * 1000));
@@ -587,17 +602,21 @@ export class MFAService {
 
     if (!attemptData || (attemptData.lockedUntil && now >= attemptData.lockedUntil)) {
       // Reset or initialize
-      this.verificationAttempts.set(userId, { count: 1, lockedUntil: null });
+      const newAttemptData: VerificationAttemptData = { count: 1, lockedUntil: null };
+      await cache.set(MFA_ATTEMPTS_PREFIX + userId, newAttemptData, this.VERIFICATION_LOCKOUT_DURATION_SECONDS);
     } else {
       attemptData.count++;
 
       if (attemptData.count >= this.MAX_VERIFICATION_ATTEMPTS) {
-        attemptData.lockedUntil = now + this.VERIFICATION_LOCKOUT_DURATION;
+        attemptData.lockedUntil = now + (this.VERIFICATION_LOCKOUT_DURATION_SECONDS * 1000);
         auditLogger.warn('User locked out due to too many MFA verification attempts', {
           userId,
           action: 'MFA_LOCKOUT',
         });
       }
+
+      // Update the cache with new count/lockout state
+      await cache.set(MFA_ATTEMPTS_PREFIX + userId, attemptData, this.VERIFICATION_LOCKOUT_DURATION_SECONDS);
     }
   }
 
@@ -629,9 +648,9 @@ export class MFAService {
       },
     });
 
-    // Clear rate limiting
-    this.verificationAttempts.delete(userId);
-    this.smsCodeStore.delete(userId);
+    // Clear rate limiting from distributed cache
+    await cache.del(MFA_ATTEMPTS_PREFIX + userId);
+    await cache.del(MFA_SMS_CODE_PREFIX + userId);
 
     auditLogger.warn('Admin reset MFA', {
       userId,
@@ -687,22 +706,13 @@ export class MFAService {
   }
 
   /**
-   * Clean up expired SMS codes (call periodically)
+   * Clean up expired SMS codes
+   * Note: With DynamoDB cache, this is handled automatically by TTL.
+   * This method is kept for API compatibility but is now a no-op.
    */
   cleanupExpiredSMSCodes(): void {
-    const now = Date.now();
-    for (const [userId, data] of this.smsCodeStore.entries()) {
-      if (now > data.expiresAt) {
-        this.smsCodeStore.delete(userId);
-      }
-    }
-
-    // Also clean up verification attempts that are no longer locked
-    for (const [userId, data] of this.verificationAttempts.entries()) {
-      if (data.lockedUntil && now >= data.lockedUntil) {
-        this.verificationAttempts.delete(userId);
-      }
-    }
+    // No-op: DynamoDB cache handles TTL-based expiration automatically
+    auditLogger.debug('MFA cleanup called - using TTL-based cache, no action needed');
   }
 }
 

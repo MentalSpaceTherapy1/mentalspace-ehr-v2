@@ -148,12 +148,12 @@ async function createAuditLog(data: {
   try {
     await prisma.auditLog.create({
       data: {
-        userId: data.userId,
+        userId: data.userId ?? undefined,
         entityType: data.entityType,
-        entityId: data.entityId,
+        entityId: data.entityId ?? 'unknown',
         action: data.action,
-        ipAddress: data.ipAddress,
-        userAgent: data.userAgent,
+        ipAddress: data.ipAddress ?? 'unknown',
+        userAgent: data.userAgent ?? undefined,
         changes: {
           success: data.success,
           statusCode: data.statusCode,

@@ -115,12 +115,11 @@ export async function initiateStaffOnboarding(data: OnboardingData) {
       prisma.performanceGoal.create({
         data: {
           userId: data.userId,
-          goalDescription: 'Complete onboarding and required training',
           metricType: 'TRAINING_COMPLETION',
           targetValue: 100,
-          currentValue: 0,
-          targetDate: performanceGoalDate,
-          status: 'IN_PROGRESS'
+          startDate: new Date(),
+          endDate: performanceGoalDate,
+          status: 'ACTIVE'
         }
       })
     );
@@ -136,14 +135,12 @@ export async function initiateStaffOnboarding(data: OnboardingData) {
           changes: {
             department: data.department,
             jobTitle: data.jobTitle,
-            hireDate: data.hireDate
-          },
-          ipAddress: '0.0.0.0',
-          userAgent: 'System',
-          metadata: {
+            hireDate: data.hireDate,
             requiredTraining: data.requiredTraining,
             requiredPolicies: data.requiredPolicies
-          }
+          },
+          ipAddress: '0.0.0.0',
+          userAgent: 'System'
         }
       })
     );
@@ -482,6 +479,7 @@ export async function createCredentialExpirationAlerts() {
           alertType: 'CREDENTIAL_EXPIRATION',
           severity,
           message: `${credential.credentialType} credential will expire in ${daysUntilExpiration} days`,
+          actionRequired: 'Renew credential before expiration date',
           metadata: {
             credentialId: credential.id,
             credentialType: credential.credentialType,
@@ -590,6 +588,9 @@ export async function createTrainingDueAlerts() {
         message: daysUntilDue < 0
           ? `${training.courseName} is ${Math.abs(daysUntilDue)} days overdue`
           : `${training.courseName} is due in ${daysUntilDue} days`,
+        actionRequired: daysUntilDue < 0
+          ? 'Complete overdue training immediately'
+          : 'Complete training before due date',
         metadata: {
           trainingId: training.id,
           courseName: training.courseName,
@@ -762,7 +763,7 @@ export async function updatePerformanceMetrics(userId: string, period: { start: 
       prisma.performanceGoal.findMany({
         where: {
           userId,
-          targetDate: { gte: start, lte: end }
+          endDate: { gte: start, lte: end }
         }
       })
     ]);
@@ -776,18 +777,18 @@ export async function updatePerformanceMetrics(userId: string, period: { start: 
     // Create or update productivity metric
     const existingMetric = await prisma.productivityMetric.findFirst({
       where: {
-        userId,
+        clinicianId: userId,
         periodStart: start,
         periodEnd: end
       }
     });
 
     const metricData = {
-      userId,
+      clinicianId: userId,
       metricType: 'COMPLIANCE',
       periodStart: start,
       periodEnd: end,
-      productivityScore: goalCompletionRate,
+      metricValue: goalCompletionRate,
       metadata: {
         completedTraining,
         credentialsObtained,
@@ -851,10 +852,9 @@ export async function createAuditLog(params: {
         action: params.action,
         entityType: params.entityType,
         entityId: params.entityId,
-        changes: params.changes || {},
+        changes: { ...(params.changes || {}), metadata: params.metadata || {} },
         ipAddress: params.ipAddress || '0.0.0.0',
-        userAgent: params.userAgent || 'System',
-        metadata: params.metadata || {}
+        userAgent: params.userAgent || 'System'
       }
     });
 

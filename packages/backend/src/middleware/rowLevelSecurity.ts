@@ -99,7 +99,7 @@ export async function buildRLSContext(req: Request): Promise<RLSContext> {
   }
 
   const userId = req.user.userId || req.user.id;
-  const roles = (req.user.roles || [req.user.role]).filter(Boolean) as UserRole[];
+  const roles = (req.user.roles || (req.user as any).role ? [(req.user as any).role] : []).filter(Boolean) as UserRole[];
 
   const isSuperAdmin = roles.includes('SUPER_ADMIN');
   const isAdmin = roles.some(r => ADMIN_ROLES.includes(r));
@@ -579,7 +579,7 @@ export async function logRLSAccess(
         action: `RLS_${action}`,
         entityType: resource,
         entityId: resourceId,
-        details: {
+        changes: {
           roles: context.roles,
           granted,
           reason: reason || (granted ? 'Access granted by RLS policy' : 'Access denied by RLS policy'),

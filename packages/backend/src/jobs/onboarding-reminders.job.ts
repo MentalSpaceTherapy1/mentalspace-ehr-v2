@@ -89,7 +89,7 @@ class OnboardingRemindersJob {
           continue;
         }
 
-        const items = checklist.items as ChecklistItem[];
+        const items = checklist.items as unknown as ChecklistItem[];
         const incompleteTasks = items.filter((item) => !item.completed);
 
         // Count overdue tasks

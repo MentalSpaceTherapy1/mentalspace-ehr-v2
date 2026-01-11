@@ -114,7 +114,7 @@ export const getDocuments = async (req: Request, res: Response) => {
     const filters: documentService.DocumentFilters = {};
 
     if (category) filters.category = category as any;
-    if (folderId !== undefined) filters.folderId = folderId === 'null' ? null : (folderId as string);
+    if (folderId !== undefined) filters.folderId = folderId === 'null' ? undefined : (folderId as string);
     if (uploadedById) filters.uploadedById = uploadedById as string;
     if (isArchived !== undefined) filters.isArchived = isArchived === 'true';
     if (tags) filters.tags = (tags as string).split(',');

@@ -20,7 +20,7 @@ import {
   ClaimStatus,
   ClaimStatusDetail,
   CheckClaimStatusRequest,
-} from '../../../../shared/src/types/advancedmd.types';
+} from '../../types/advancedmd.types';
 
 const prisma = new PrismaClient();
 
@@ -121,8 +121,8 @@ export class AdvancedMDClaimsService {
         include: {
           client: {
             include: {
-              insurances: {
-                where: { isPrimary: true },
+              insuranceInfo: {
+                where: { rank: 'Primary' },
                 take: 1,
               },
             },
@@ -147,7 +147,7 @@ export class AdvancedMDClaimsService {
       }
 
       const client = charges[0].client;
-      const insurance = client.insurances[0];
+      const insurance = client.insuranceInfo[0];
 
       if (!insurance) {
         return {
@@ -184,14 +184,14 @@ export class AdvancedMDClaimsService {
           insuranceId: insurance.id,
           claimNumber: this.generateClaimNumber(),
           claimType: 'Professional',
-          billingProviderId: charges[0].providerId,
-          renderingProviderId: charges[0].providerId,
+          billingProvider: charges[0].providerId,
+          renderingProvider: charges[0].providerId,
           serviceStartDate: new Date(Math.min(...charges.map((c) => c.serviceDate.getTime()))),
           serviceEndDate: new Date(Math.max(...charges.map((c) => c.serviceDate.getTime()))),
           totalChargeAmount: charges.reduce((sum, c) => sum + Number(c.chargeAmount), 0),
-          diagnoses: this.extractDiagnoses(charges),
-          status: 'draft',
+          claimStatus: 'draft',
           notes,
+          createdBy: charges[0].providerId, // Use the provider as the creator
           charges: {
             connect: charges.map((c) => ({ id: c.id })),
           },
@@ -236,7 +236,6 @@ export class AdvancedMDClaimsService {
         where: { id: claimId },
         include: {
           client: true,
-          insurance: true,
           charges: true,
         },
       });
@@ -249,11 +248,11 @@ export class AdvancedMDClaimsService {
         };
       }
 
-      if (claim.status !== 'draft' && claim.status !== 'rejected') {
+      if (claim.claimStatus !== 'draft' && claim.claimStatus !== 'rejected') {
         return {
           success: false,
           claimId,
-          error: `Cannot submit claim with status: ${claim.status}`,
+          error: `Cannot submit claim with status: ${claim.claimStatus}`,
         };
       }
 
@@ -283,9 +282,9 @@ export class AdvancedMDClaimsService {
         await prisma.claim.update({
           where: { id: claimId },
           data: {
-            status: 'rejected',
+            claimStatus: 'rejected',
             rejectionReason: errorMsg,
-            lastSubmittedAt: new Date(),
+            submissionDate: new Date(),
           },
         });
 
@@ -304,10 +303,9 @@ export class AdvancedMDClaimsService {
       await prisma.claim.update({
         where: { id: claimId },
         data: {
-          status: 'submitted',
+          claimStatus: 'submitted',
           advancedMDClaimId,
-          lastSubmittedAt: new Date(),
-          submissionCount: { increment: 1 },
+          submissionDate: new Date(),
         },
       });
 
@@ -433,15 +431,14 @@ export class AdvancedMDClaimsService {
       await prisma.claim.update({
         where: { id: claimId },
         data: {
-          status: newStatus,
+          claimStatus: newStatus,
           clearinghouseStatus: statusData.clearinghouseStatus,
-          payerStatus: statusData.payerStatus,
           rejectionReason: statusData.rejectionReason,
           rejectionCode: statusData.rejectionCode,
-          paidAmount: statusData.totalPaid,
-          adjustmentAmount: statusData.totalAdjustment,
-          patientResponsibility: statusData.patientResponsibility,
-          lastStatusCheckAt: new Date(),
+          totalPaidAmount: statusData.totalPaid,
+          totalAdjustmentAmount: statusData.totalAdjustment,
+          totalPatientResponsibility: statusData.patientResponsibility,
+          statusDate: new Date(),
         },
       });
 
@@ -507,7 +504,7 @@ export class AdvancedMDClaimsService {
   async checkAllPendingClaimsStatus(): Promise<BatchClaimStatusResult> {
     const pendingClaims = await prisma.claim.findMany({
       where: {
-        status: {
+        claimStatus: {
           in: ['submitted', 'accepted', 'in_process'],
         },
         advancedMDClaimId: { not: null },
@@ -536,7 +533,7 @@ export class AdvancedMDClaimsService {
     };
 
     if (status) {
-      where.status = status;
+      where.claimStatus = status;
     }
 
     return prisma.claim.findMany({
@@ -545,12 +542,7 @@ export class AdvancedMDClaimsService {
         client: {
           select: { id: true, firstName: true, lastName: true },
         },
-        insurance: {
-          select: { id: true, insuranceCompany: true, memberId: true },
-        },
-        charges: {
-          select: { id: true, cptCode: true, chargeAmount: true },
-        },
+        charges: true,
       },
       orderBy: { serviceStartDate: 'desc' },
     });
@@ -584,27 +576,35 @@ export class AdvancedMDClaimsService {
         };
       }
 
-      if (claim.status !== 'rejected' && claim.status !== 'denied') {
+      if (claim.claimStatus !== 'rejected' && claim.claimStatus !== 'denied') {
         return {
           success: false,
           claimId,
-          error: `Cannot resubmit claim with status: ${claim.status}`,
+          error: `Cannot resubmit claim with status: ${claim.claimStatus}`,
         };
       }
 
       // Apply corrections if provided
       if (corrections) {
+        // Extract only valid Claim fields from corrections
+        const validCorrections: any = {};
+        if (corrections.claimNumber) validCorrections.claimNumber = corrections.claimNumber;
+        if (corrections.claimType) validCorrections.claimType = corrections.claimType;
+        if (corrections.billingProvider) validCorrections.billingProvider = corrections.billingProvider;
+        if (corrections.renderingProvider) validCorrections.renderingProvider = corrections.renderingProvider;
+        if (corrections.supervisingProvider) validCorrections.supervisingProvider = corrections.supervisingProvider;
+
         await prisma.claim.update({
           where: { id: claimId },
           data: {
-            ...corrections,
-            status: 'draft',
+            ...validCorrections,
+            claimStatus: 'draft',
           },
         });
       } else {
         await prisma.claim.update({
           where: { id: claimId },
-          data: { status: 'draft' },
+          data: { claimStatus: 'draft' },
         });
       }
 
@@ -743,8 +743,8 @@ export class AdvancedMDClaimsService {
     return {
       claimId: claim.claimId || claim['@claimid'],
       claimNumber: claim.claimNumber || claim['@claimnumber'],
-      status: claim.status || claim['@status'] || 'in_process',
-      statusDate: claim.statusDate || claim['@statusdate'],
+      status: claim.claimStatus || claim['@status'] || 'in_process',
+      statusDate: claim.claimStatusDate || claim['@statusdate'],
       clearinghouseStatus: claim.clearinghouseStatus || claim['@clearinghousestatus'],
       payerStatus: claim.payerStatus || claim['@payerstatus'],
       rejectionReason: claim.rejectionReason || claim['@rejectionreason'],
@@ -833,10 +833,10 @@ export class AdvancedMDClaimsService {
     const claims = await prisma.claim.findMany({
       where,
       select: {
-        status: true,
+        claimStatus: true,
         totalChargeAmount: true,
-        paidAmount: true,
-        adjustmentAmount: true,
+        totalPaidAmount: true,
+        totalAdjustmentAmount: true,
       },
     });
 
@@ -850,10 +850,10 @@ export class AdvancedMDClaimsService {
     };
 
     for (const claim of claims) {
-      stats.byStatus[claim.status] = (stats.byStatus[claim.status] || 0) + 1;
+      stats.byStatus[claim.claimStatus] = (stats.byStatus[claim.claimStatus] || 0) + 1;
       stats.totalBilled += Number(claim.totalChargeAmount) || 0;
-      stats.totalPaid += Number(claim.paidAmount) || 0;
-      stats.totalAdjustment += Number(claim.adjustmentAmount) || 0;
+      stats.totalPaid += Number(claim.totalPaidAmount) || 0;
+      stats.totalAdjustment += Number(claim.totalAdjustmentAmount) || 0;
     }
 
     stats.collectionRate = stats.totalBilled > 0

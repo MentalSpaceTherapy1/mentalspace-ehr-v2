@@ -156,7 +156,7 @@ class PTOService {
     }
 
     if (availableBalance.lessThan(new Decimal(totalDays)) &&
-        [AbsenceType.PTO, AbsenceType.SICK, AbsenceType.VACATION].includes(data.requestType)) {
+        (['PTO', 'SICK', 'VACATION'] as string[]).includes(data.requestType)) {
       throw new Error(`Insufficient ${data.requestType} balance. Available: ${availableBalance.toNumber()} days, Requested: ${totalDays} days`);
     }
 

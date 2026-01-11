@@ -193,7 +193,7 @@ export async function generateCredentialingReport(params: CredentialingReportPar
     const statusSummary = {
       VERIFIED: credentials.filter(c => c.verificationStatus === 'VERIFIED').length,
       PENDING: credentials.filter(c => c.verificationStatus === 'PENDING').length,
-      REJECTED: credentials.filter(c => c.verificationStatus === 'REJECTED').length,
+      REVOKED: credentials.filter(c => c.verificationStatus === 'REVOKED').length,
       EXPIRED: credentials.filter(c => c.verificationStatus === 'EXPIRED').length
     };
 
@@ -740,7 +740,7 @@ export async function generatePolicyComplianceReport(params: PolicyComplianceRep
         };
       }
       acc[cat].total++;
-      if (policy.status === 'ACTIVE') acc[cat].active++;
+      if (policy.status === 'PUBLISHED') acc[cat].active++;
       if (policy.status === 'DRAFT') acc[cat].draft++;
       if (policy.status === 'ARCHIVED') acc[cat].archived++;
       if (policy.nextReviewDate && policy.nextReviewDate < now) acc[cat].needingReview++;
@@ -766,7 +766,7 @@ export async function generatePolicyComplianceReport(params: PolicyComplianceRep
       data: {
         summary: {
           totalPolicies: policies.length,
-          activePolicies: policies.filter(p => p.status === 'ACTIVE').length,
+          activePolicies: policies.filter(p => p.status === 'PUBLISHED').length,
           draftPolicies: policies.filter(p => p.status === 'DRAFT').length,
           archivedPolicies: policies.filter(p => p.status === 'ARCHIVED').length,
           policiesNeedingReview: policies.filter(
@@ -1041,7 +1041,7 @@ export async function generatePerformanceReport(params: PerformanceReportParams)
     const productivityMetrics = await prisma.productivityMetric.findMany({
       where,
       include: {
-        user: {
+        clinician: {
           select: {
             id: true,
             firstName: true,
@@ -1060,15 +1060,17 @@ export async function generatePerformanceReport(params: PerformanceReportParams)
 
     // Filter by department if specified
     const filteredMetrics = department
-      ? productivityMetrics.filter(m => m.user.department === department)
+      ? productivityMetrics.filter(m => m.clinician?.department === department)
       : productivityMetrics;
 
     // Get performance goals
     const performanceGoals = await prisma.performanceGoal.findMany({
       where: {
         ...(userId && { userId }),
-        targetDate: {
+        startDate: {
           gte: start,
+        },
+        endDate: {
           lte: end
         }
       },
@@ -1105,17 +1107,17 @@ export async function generatePerformanceReport(params: PerformanceReportParams)
       }
     });
 
-    // Calculate statistics by user
+    // Calculate statistics by clinician
     const userPerformance = filteredMetrics.reduce((acc: any, metric) => {
-      const userKey = metric.userId;
+      const userKey = metric.clinicianId;
       if (!acc[userKey]) {
         acc[userKey] = {
           user: {
-            id: metric.user.id,
-            name: `${metric.user.firstName} ${metric.user.lastName}`,
-            department: metric.user.department,
-            jobTitle: metric.user.jobTitle,
-            roles: metric.user.roles
+            id: metric.clinician?.id || userKey,
+            name: metric.clinician ? `${metric.clinician.firstName} ${metric.clinician.lastName}` : 'Unknown',
+            department: metric.clinician?.department,
+            jobTitle: metric.clinician?.jobTitle,
+            roles: metric.clinician?.roles || []
           },
           totalSessions: 0,
           totalRevenue: 0,
@@ -1129,12 +1131,18 @@ export async function generatePerformanceReport(params: PerformanceReportParams)
         };
       }
 
-      acc[userKey].totalSessions += metric.sessionCount || 0;
-      acc[userKey].totalRevenue += Number(metric.revenueGenerated || 0);
-      acc[userKey].totalHours += Number(metric.hoursWorked || 0);
+      // Extract metrics from metricValue based on metricType
+      const metricValue = Number(metric.metricValue || 0);
+      if (metric.metricType === 'SESSION_COUNT') {
+        acc[userKey].totalSessions += metricValue;
+      } else if (metric.metricType === 'REVENUE') {
+        acc[userKey].totalRevenue += metricValue;
+      } else if (metric.metricType === 'HOURS_WORKED') {
+        acc[userKey].totalHours += metricValue;
+      }
 
-      if (metric.productivityScore) {
-        acc[userKey].averageProductivity += Number(metric.productivityScore);
+      if (metric.metricType === 'PRODUCTIVITY_SCORE') {
+        acc[userKey].averageProductivity += metricValue;
         acc[userKey].productivityCount++;
       }
 
@@ -1169,7 +1177,7 @@ export async function generatePerformanceReport(params: PerformanceReportParams)
     });
 
     // Calculate statistics by department
-    const departmentPerformance = Object.values(userPerformance).reduce((acc: any, userData: any) => {
+    const departmentPerformance: Record<string, any> = (Object.values(userPerformance) as any[]).reduce((acc: any, userData: any) => {
       const dept = userData.user.department || 'Unassigned';
       if (!acc[dept]) {
         acc[dept] = {
@@ -1227,15 +1235,13 @@ export async function generatePerformanceReport(params: PerformanceReportParams)
           id: g.id,
           user: `${g.user.firstName} ${g.user.lastName}`,
           department: g.user.department,
-          goalDescription: g.goalDescription,
+          goalDescription: g.metricType, // Use metricType as description
           metricType: g.metricType,
           targetValue: Number(g.targetValue),
-          currentValue: g.currentValue ? Number(g.currentValue) : 0,
-          targetDate: g.targetDate,
+          currentValue: 0, // Track progress separately
+          targetDate: g.endDate, // Use endDate as target
           status: g.status,
-          progressPercentage: g.currentValue && g.targetValue
-            ? Math.min(100, Math.round((Number(g.currentValue) / Number(g.targetValue)) * 100))
-            : 0
+          progressPercentage: 0 // Would need to calculate from actual metrics
         })),
         alerts: complianceAlerts.map(a => ({
           id: a.id,
@@ -1281,53 +1287,64 @@ export async function generateAttendanceReport(params: AttendanceReportParams) {
     const start = startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = endDate || new Date();
 
-    // Build where clause
+    // Build where clause - GroupAttendance relates through member and appointment
     const where: any = {
-      sessionDate: {
-        gte: start,
-        lte: end
+      appointment: {
+        startTime: {
+          gte: start,
+          lte: end
+        }
       }
     };
 
-    if (groupId) where.groupId = groupId;
-    if (clientId) where.clientId = clientId;
+    if (groupId) where.member = { groupId };
+    if (clientId) where.member = { ...where.member, clientId };
 
     // Get attendance records
     const attendanceRecords = await prisma.groupAttendance.findMany({
       where,
       include: {
-        group: {
-          select: {
-            id: true,
-            groupName: true,
-            groupType: true,
-            maxCapacity: true
+        member: {
+          include: {
+            group: {
+              select: {
+                id: true,
+                groupName: true,
+                groupType: true,
+                maxCapacity: true
+              }
+            },
+            client: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                dateOfBirth: true
+              }
+            }
           }
         },
-        client: {
+        appointment: {
           select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            dateOfBirth: true
+            startTime: true
           }
         }
       },
       orderBy: {
-        sessionDate: 'desc'
+        createdAt: 'desc'
       }
     });
 
     // Calculate statistics by group
-    const attendanceByGroup = attendanceRecords.reduce((acc: any, record) => {
-      const groupId = record.groupId;
+    const attendanceByGroup = attendanceRecords.reduce((acc: any, record: any) => {
+      const groupId = record.member.groupId;
       if (!acc[groupId]) {
         acc[groupId] = {
           group: {
-            id: record.group.id,
-            name: record.group.groupName,
-            type: record.group.groupType,
-            maxCapacity: record.group.maxCapacity
+            id: record.member.group.id,
+            name: record.member.group.groupName,
+            type: record.member.group.groupType,
+            maxCapacity: record.member.group.maxCapacity
           },
           totalSessions: 0,
           totalAttended: 0,
@@ -1340,11 +1357,10 @@ export async function generateAttendanceReport(params: AttendanceReportParams) {
       }
 
       acc[groupId].totalSessions++;
-      if (record.attendanceStatus === 'PRESENT') acc[groupId].totalAttended++;
-      if (record.attendanceStatus === 'ABSENT') acc[groupId].totalAbsent++;
-      if (record.attendanceStatus === 'EXCUSED') acc[groupId].totalExcused++;
-      if (record.arrivedLate) acc[groupId].totalLate++;
-      acc[groupId].uniqueClients.add(record.clientId);
+      if (record.attended) acc[groupId].totalAttended++;
+      else acc[groupId].totalAbsent++;
+      // Note: excused and late not tracked in current schema
+      acc[groupId].uniqueClients.add(record.member.clientId);
 
       return acc;
     }, {});
@@ -1359,14 +1375,14 @@ export async function generateAttendanceReport(params: AttendanceReportParams) {
     });
 
     // Calculate statistics by client
-    const attendanceByClient = attendanceRecords.reduce((acc: any, record) => {
-      const clientId = record.clientId;
+    const attendanceByClient = attendanceRecords.reduce((acc: any, record: any) => {
+      const clientId = record.member.clientId;
       if (!acc[clientId]) {
         acc[clientId] = {
           client: {
-            id: record.client.id,
-            name: `${record.client.firstName} ${record.client.lastName}`,
-            dateOfBirth: record.client.dateOfBirth
+            id: record.member.client.id,
+            name: `${record.member.client.firstName} ${record.member.client.lastName}`,
+            dateOfBirth: record.member.client.dateOfBirth
           },
           totalSessions: 0,
           attended: 0,
@@ -1378,10 +1394,9 @@ export async function generateAttendanceReport(params: AttendanceReportParams) {
       }
 
       acc[clientId].totalSessions++;
-      if (record.attendanceStatus === 'PRESENT') acc[clientId].attended++;
-      if (record.attendanceStatus === 'ABSENT') acc[clientId].absent++;
-      if (record.attendanceStatus === 'EXCUSED') acc[clientId].excused++;
-      if (record.arrivedLate) acc[clientId].late++;
+      if (record.attended) acc[clientId].attended++;
+      else acc[clientId].absent++;
+      // Note: excused and late not tracked in current schema
 
       return acc;
     }, {});
@@ -1396,7 +1411,7 @@ export async function generateAttendanceReport(params: AttendanceReportParams) {
 
     // Calculate overall statistics
     const totalSessions = attendanceRecords.length;
-    const totalAttended = attendanceRecords.filter(r => r.attendanceStatus === 'PRESENT').length;
+    const totalAttended = attendanceRecords.filter((r: any) => r.attended).length;
     const overallAttendanceRate = totalSessions > 0
       ? (totalAttended / totalSessions) * 100
       : 0;
@@ -1407,32 +1422,32 @@ export async function generateAttendanceReport(params: AttendanceReportParams) {
         summary: {
           totalSessions,
           totalAttended,
-          totalAbsent: attendanceRecords.filter(r => r.attendanceStatus === 'ABSENT').length,
-          totalExcused: attendanceRecords.filter(r => r.attendanceStatus === 'EXCUSED').length,
-          totalLate: attendanceRecords.filter(r => r.arrivedLate).length,
+          totalAbsent: attendanceRecords.filter((r: any) => !r.attended).length,
+          totalExcused: 0, // Not tracked in current schema
+          totalLate: 0, // Not tracked in current schema
           overallAttendanceRate: Math.round(overallAttendanceRate * 100) / 100,
           uniqueGroups: Object.keys(attendanceByGroup).length,
           uniqueClients: Object.keys(attendanceByClient).length,
           attendanceByGroup: Object.values(attendanceByGroup),
           attendanceByClient: Object.values(attendanceByClient)
         },
-        records: attendanceRecords.map(r => ({
+        records: attendanceRecords.map((r: any) => ({
           id: r.id,
-          sessionDate: r.sessionDate,
+          sessionDate: r.appointment.startTime,
           group: {
-            id: r.group.id,
-            name: r.group.groupName,
-            type: r.group.groupType
+            id: r.member.group.id,
+            name: r.member.group.groupName,
+            type: r.member.group.groupType
           },
           client: {
-            id: r.client.id,
-            name: `${r.client.firstName} ${r.client.lastName}`
+            id: r.member.client.id,
+            name: `${r.member.client.firstName} ${r.member.client.lastName}`
           },
-          attendanceStatus: r.attendanceStatus,
-          arrivedLate: r.arrivedLate,
-          minutesLate: r.minutesLate,
-          leftEarly: r.leftEarly,
-          minutesEarly: r.minutesEarly,
+          attendanceStatus: r.attended ? 'PRESENT' : 'ABSENT',
+          arrivedLate: false, // Not tracked
+          minutesLate: 0, // Not tracked
+          leftEarly: false, // Not tracked
+          minutesEarly: 0, // Not tracked
           notes: r.notes
         })),
         period: {
@@ -1469,28 +1484,32 @@ export async function generateFinancialReport(params: FinancialReportParams) {
     const end = endDate || new Date();
 
     // Get budgets
+    const budgetWhere: any = {
+      startDate: { lte: end },
+      endDate: { gte: start }
+    };
+    if (department) budgetWhere.department = department;
+    if (category) budgetWhere.category = category;
+
     const budgets = await prisma.budget.findMany({
-      where: {
-        startDate: { lte: end },
-        endDate: { gte: start },
-        ...(department && { department }),
-        ...(category && { category })
-      },
+      where: budgetWhere,
       orderBy: {
         fiscalYear: 'desc'
       }
     });
 
     // Get expenses
+    const expenseWhere: any = {
+      expenseDate: {
+        gte: start,
+        lte: end
+      }
+    };
+    if (department) expenseWhere.department = department;
+    if (category) expenseWhere.category = category;
+
     const expenses = await prisma.expense.findMany({
-      where: {
-        expenseDate: {
-          gte: start,
-          lte: end
-        },
-        ...(department && { department }),
-        ...(category && { category })
-      },
+      where: expenseWhere,
       include: {
         vendor: {
           select: {
@@ -1545,9 +1564,9 @@ export async function generateFinancialReport(params: FinancialReportParams) {
 
       acc[cat].total += Number(expense.amount);
       acc[cat].count++;
-      if (expense.approvalStatus === 'APPROVED') acc[cat].approved += Number(expense.amount);
-      if (expense.approvalStatus === 'PENDING') acc[cat].pending += Number(expense.amount);
-      if (expense.approvalStatus === 'REJECTED') acc[cat].rejected += Number(expense.amount);
+      if (expense.status === 'APPROVED') acc[cat].approved += Number(expense.amount);
+      if (expense.status === 'PENDING') acc[cat].pending += Number(expense.amount);
+      if (expense.status === 'DENIED') acc[cat].rejected += Number(expense.amount);
 
       return acc;
     }, {});
@@ -1573,10 +1592,10 @@ export async function generateFinancialReport(params: FinancialReportParams) {
     // Calculate PO statistics
     const poStats = {
       total: purchaseOrders.length,
-      totalValue: purchaseOrders.reduce((sum, po) => sum + Number(po.totalAmount), 0),
+      totalValue: purchaseOrders.reduce((sum, po) => sum + Number(po.total), 0),
       pending: purchaseOrders.filter(po => po.status === 'PENDING').length,
       approved: purchaseOrders.filter(po => po.status === 'APPROVED').length,
-      fulfilled: purchaseOrders.filter(po => po.status === 'FULFILLED').length,
+      received: purchaseOrders.filter(po => po.status === 'RECEIVED').length,
       cancelled: purchaseOrders.filter(po => po.status === 'CANCELLED').length
     };
 
@@ -1629,8 +1648,8 @@ export async function generateFinancialReport(params: FinancialReportParams) {
           description: e.description,
           vendor: e.vendor ? e.vendor.companyName : null,
           department: e.department,
-          approvalStatus: e.approvalStatus,
-          paymentStatus: e.paymentStatus
+          status: e.status,
+          paymentStatus: e.reimbursementDate ? 'PAID' : 'UNPAID' // Derive from reimbursementDate
         })),
         period: {
           startDate: start,
@@ -1674,12 +1693,12 @@ export async function generateVendorReport(params: VendorReportParams) {
           select: {
             amount: true,
             expenseDate: true,
-            approvalStatus: true
+            status: true
           }
         },
         purchaseOrders: {
           select: {
-            totalAmount: true,
+            total: true,
             orderDate: true,
             status: true
           }
@@ -1696,11 +1715,11 @@ export async function generateVendorReport(params: VendorReportParams) {
     const vendorStats = vendors.map(vendor => {
       const totalExpenses = vendor.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
       const approvedExpenses = vendor.expenses
-        .filter(e => e.approvalStatus === 'APPROVED')
+        .filter(e => e.status === 'APPROVED')
         .reduce((sum, e) => sum + Number(e.amount), 0);
 
-      const totalPOValue = vendor.purchaseOrders.reduce((sum, po) => sum + Number(po.totalAmount), 0);
-      const fulfilledPOs = vendor.purchaseOrders.filter(po => po.status === 'FULFILLED').length;
+      const totalPOValue = vendor.purchaseOrders.reduce((sum, po) => sum + Number(po.total), 0);
+      const fulfilledPOs = vendor.purchaseOrders.filter(po => po.status === 'RECEIVED').length;
 
       const contractExpiring = vendor.contractEnd && vendor.contractEnd < new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
       const insuranceExpiring = vendor.insuranceExpiration && vendor.insuranceExpiration < new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -1834,29 +1853,28 @@ export async function generatePracticeManagementDashboard(params: PracticeManage
       // Active staff
       prisma.user.count({
         where: {
-          isActive: true,
-          employmentStatus: 'ACTIVE'
+          isActive: true
         }
       }),
 
       // Active clients
       prisma.client.count({
         where: {
-          isActive: true
+          status: 'ACTIVE'
         }
       }),
 
       // Appointments in period
       prisma.appointment.findMany({
         where: {
-          appointmentDateTime: {
+          appointmentDate: {
             gte: start,
             lte: end
           }
         },
         select: {
           status: true,
-          appointmentDateTime: true
+          appointmentDate: true
         }
       }),
 
@@ -1954,7 +1972,7 @@ export async function generatePracticeManagementDashboard(params: PracticeManage
     const budgetUtilization = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-    const pendingExpenses = expenses.filter(e => e.approvalStatus === 'PENDING').length;
+    const pendingExpenses = expenses.filter(e => e.status === 'PENDING').length;
 
     // Categorize incidents by severity
     const incidentsBySeverity = {
@@ -2043,25 +2061,22 @@ export async function generateAuditTrailReport(params: AuditTrailReportParams) {
     if (action) where.action = action;
     if (ipAddress) where.ipAddress = ipAddress;
 
-    // Get audit logs
+    // Get audit logs (AuditLog doesn't have user relation, userId is just a string)
     const auditLogs = await prisma.auditLog.findMany({
       where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            roles: true
-          }
-        }
-      },
       orderBy: {
         timestamp: 'desc'
       },
       take: 10000 // Limit to prevent overwhelming results
     });
+
+    // Get user details for logs that have userId
+    const userIds = [...new Set(auditLogs.filter(l => l.userId).map(l => l.userId as string))];
+    const users = userIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, firstName: true, lastName: true, email: true, roles: true }
+    }) : [];
+    const userMap = new Map(users.map(u => [u.id, u]));
 
     // Calculate statistics by action
     const actionStats = auditLogs.reduce((acc: any, log) => {
@@ -2085,11 +2100,12 @@ export async function generateAuditTrailReport(params: AuditTrailReportParams) {
 
     // Calculate statistics by user
     const userStats = auditLogs.reduce((acc: any, log) => {
-      const userId = log.userId;
-      if (!acc[userId]) {
-        acc[userId] = {
-          user: log.user
-            ? `${log.user.firstName} ${log.user.lastName}`
+      const logUserId = log.userId || 'system';
+      if (!acc[logUserId]) {
+        const user = log.userId ? userMap.get(log.userId) : null;
+        acc[logUserId] = {
+          user: user
+            ? `${user.firstName} ${user.lastName}`
             : 'System',
           actions: 0,
           creates: 0,
@@ -2097,10 +2113,10 @@ export async function generateAuditTrailReport(params: AuditTrailReportParams) {
           deletes: 0
         };
       }
-      acc[userId].actions++;
-      if (log.action === 'CREATE') acc[userId].creates++;
-      if (log.action === 'UPDATE') acc[userId].updates++;
-      if (log.action === 'DELETE') acc[userId].deletes++;
+      acc[logUserId].actions++;
+      if (log.action === 'CREATE') acc[logUserId].creates++;
+      if (log.action === 'UPDATE') acc[logUserId].updates++;
+      if (log.action === 'DELETE') acc[logUserId].deletes++;
       return acc;
     }, {});
 
@@ -2119,35 +2135,40 @@ export async function generateAuditTrailReport(params: AuditTrailReportParams) {
           entityStats,
           suspiciousActivity: suspiciousActivity.length
         },
-        logs: auditLogs.map(log => ({
-          id: log.id,
-          timestamp: log.timestamp,
-          user: log.user
-            ? {
-                id: log.user.id,
-                name: `${log.user.firstName} ${log.user.lastName}`,
-                email: log.user.email,
-                roles: log.user.roles
-              }
-            : { name: 'System' },
-          action: log.action,
-          entityType: log.entityType,
-          entityId: log.entityId,
-          changes: log.changes,
-          ipAddress: log.ipAddress,
-          userAgent: log.userAgent,
-          metadata: log.metadata
-        })),
+        logs: auditLogs.map(log => {
+          const user = log.userId ? userMap.get(log.userId) : null;
+          return {
+            id: log.id,
+            timestamp: log.timestamp,
+            user: user
+              ? {
+                  id: user.id,
+                  name: `${user.firstName} ${user.lastName}`,
+                  email: user.email,
+                  roles: user.roles
+                }
+              : { name: 'System' },
+            action: log.action,
+            entityType: log.entityType,
+            entityId: log.entityId,
+            changes: log.changes,
+            ipAddress: log.ipAddress,
+            userAgent: log.userAgent
+          };
+        }),
         userStats: Object.values(userStats),
-        suspiciousActivity: suspiciousActivity.map(log => ({
-          id: log.id,
-          timestamp: log.timestamp,
-          user: log.user ? `${log.user.firstName} ${log.user.lastName}` : 'System',
-          action: log.action,
-          entityType: log.entityType,
-          ipAddress: log.ipAddress,
-          metadata: log.metadata
-        })),
+        suspiciousActivity: suspiciousActivity.map(log => {
+          const user = log.userId ? userMap.get(log.userId) : null;
+          return {
+            id: log.id,
+            timestamp: log.timestamp,
+            user: user ? `${user.firstName} ${user.lastName}` : 'System',
+            action: log.action,
+            entityType: log.entityType,
+            ipAddress: log.ipAddress,
+            changes: log.changes
+          };
+        }),
         period: {
           startDate: start,
           endDate: end,

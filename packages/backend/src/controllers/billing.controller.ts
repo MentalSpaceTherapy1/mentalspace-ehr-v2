@@ -5,6 +5,7 @@ import { auditLogger } from '../utils/logger';
 import prisma from '../services/database';
 import { Prisma } from '@mentalspace/database';
 import { AdvancedMDChargeSyncService } from '../integrations/advancedmd/charge-sync.service';
+import * as cache from '../services/cache.service';
 
 // ============================================================================
 // CHARGES
@@ -228,6 +229,9 @@ export const createCharge = async (req: Request, res: Response) => {
       }
     }
 
+    // Invalidate revenue report cache
+    await cache.invalidateCategory(cache.CacheCategory.REVENUE);
+
     res.status(201).json({
       success: true,
       message: validatedData.syncToAdvancedMD
@@ -276,6 +280,9 @@ export const updateCharge = async (req: Request, res: Response) => {
       chargeId: id,
       action: 'CHARGE_UPDATED',
     });
+
+    // Invalidate revenue report cache
+    await cache.invalidateCategory(cache.CacheCategory.REVENUE);
 
     res.status(200).json({
       success: true,

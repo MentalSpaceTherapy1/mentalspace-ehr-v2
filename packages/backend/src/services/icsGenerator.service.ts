@@ -78,14 +78,14 @@ export class IcsGeneratorService {
         attendees: [
           {
             name: `${appointment.client.firstName} ${appointment.client.lastName}`,
-            email: appointment.client.email,
+            email: appointment.client.email || 'client@mentalspaceehr.com',
             rsvp: true,
             status: 'NEEDS-ACTION' as any,
             role: 'REQ-PARTICIPANT' as any,
           },
         ],
         status: 'CONFIRMED' as any,
-        busyStatus: 'BUSY' as any,
+        busystatus: 'BUSY' as any,
         // Set reminder for 1 hour before
         alarms: [
           {
@@ -238,14 +238,14 @@ export class IcsGeneratorService {
           attendees: [
             {
               name: `${appointment.client.firstName} ${appointment.client.lastName}`,
-              email: appointment.client.email,
+              email: appointment.client.email || 'client@mentalspaceehr.com',
               rsvp: true,
               status: 'NEEDS-ACTION' as any,
               role: 'REQ-PARTICIPANT' as any,
             },
           ],
           status: 'CONFIRMED' as any,
-          busyStatus: 'BUSY' as any,
+          busystatus: 'BUSY' as any,
         });
       }
 
@@ -298,7 +298,7 @@ export class IcsGeneratorService {
         attendees: [
           {
             name: `${appointment.client.firstName} ${appointment.client.lastName}`,
-            email: appointment.client.email,
+            email: appointment.client.email || 'client@mentalspaceehr.com',
           },
         ],
       });

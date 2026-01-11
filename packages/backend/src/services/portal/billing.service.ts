@@ -5,8 +5,15 @@ import config from '../../config';
 import prisma from '../database';
 
 const stripe = config.stripeApiKey ? new Stripe(config.stripeApiKey, {
-  apiVersion: '2025-09-30.clover',
+  apiVersion: '2025-10-29.clover',
 }) : null;
+
+function getStripeClient(): Stripe {
+  if (!stripe) {
+    throw new AppError('Stripe is not configured. Please set STRIPE_API_KEY environment variable.', 500);
+  }
+  return stripe;
+}
 
 // ============================================================================
 // PAYMENT METHODS
@@ -29,7 +36,8 @@ export async function addPaymentMethod(data: {
 
     // Create or get Stripe customer ID
     // In a real implementation, you'd store stripeCustomerId on Client model
-    const customer = await stripe.customers.create({
+    const stripeClient = getStripeClient();
+    const customer = await stripeClient.customers.create({
       email: client.email || undefined,
       name: `${client.firstName} ${client.lastName}`,
       metadata: {
@@ -38,7 +46,7 @@ export async function addPaymentMethod(data: {
     });
 
     // Attach payment method to customer
-    const paymentMethod = await stripe.paymentMethods.attach(data.stripeToken, {
+    const paymentMethod = await stripeClient.paymentMethods.attach(data.stripeToken, {
       customer: customer.id,
     });
 
@@ -118,7 +126,8 @@ export async function removePaymentMethod(data: {
     }
 
     // Detach from Stripe
-    await stripe.paymentMethods.detach(paymentMethod.stripePaymentMethodId);
+    const stripeClient = getStripeClient();
+    await stripeClient.paymentMethods.detach(paymentMethod.stripePaymentMethodId);
 
     // Delete from database
     await prisma.paymentMethod.delete({
@@ -226,7 +235,8 @@ export async function makePayment(data: {
     }
 
     // Create Stripe payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
+    const stripeClient = getStripeClient();
+    const paymentIntent = await stripeClient.paymentIntents.create({
       amount: Math.round(data.amount * 100), // Convert to cents
       currency: 'usd',
       payment_method: paymentMethod.stripePaymentMethodId,

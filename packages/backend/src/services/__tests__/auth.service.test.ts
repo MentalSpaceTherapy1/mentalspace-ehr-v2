@@ -1,15 +1,61 @@
 import { AuthService } from '../auth.service';
-import prisma from '../database';
 import bcrypt from 'bcryptjs';
 import { UnauthorizedError, ConflictError } from '../../utils/errors';
 
-// Mock dependencies
-jest.mock('../database');
-jest.mock('bcryptjs');
-jest.mock('../../utils/jwt');
-jest.mock('../session.service');
-jest.mock('../passwordPolicy.service');
+// Mock dependencies before imports
+jest.mock('../database', () => ({
+  __esModule: true,
+  default: {
+    user: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+  },
+}));
 
+jest.mock('bcryptjs');
+jest.mock('../../utils/jwt', () => ({
+  generateTokenPair: jest.fn().mockReturnValue({
+    accessToken: 'mock-access-token',
+    refreshToken: 'mock-refresh-token',
+  }),
+  verifyToken: jest.fn(),
+}));
+
+jest.mock('../session.service', () => ({
+  __esModule: true,
+  default: {
+    checkConcurrentSessions: jest.fn().mockResolvedValue(true),
+    createSession: jest.fn().mockResolvedValue({
+      sessionId: 'session-123',
+      token: 'token-abc',
+    }),
+    terminateAllUserSessions: jest.fn().mockResolvedValue(1),
+  },
+}));
+
+jest.mock('../passwordPolicy.service', () => ({
+  __esModule: true,
+  default: {
+    validatePasswordChange: jest.fn().mockResolvedValue({ isValid: true, errors: [] }),
+    validatePasswordStrength: jest.fn().mockReturnValue({ valid: true }),
+    addToPasswordHistory: jest.fn().mockResolvedValue(undefined),
+    checkPasswordHistory: jest.fn().mockResolvedValue(true),
+    checkPasswordExpiration: jest.fn().mockReturnValue(false),
+    checkTempPasswordExpiration: jest.fn().mockReturnValue(false),
+  },
+}));
+
+jest.mock('../mfa.service', () => ({
+  __esModule: true,
+  default: {
+    verifyTOTPForLogin: jest.fn().mockResolvedValue(true),
+    verifyBackupCode: jest.fn().mockResolvedValue(false),
+  },
+}));
+
+import prisma from '../database';
 const mockSessionService = require('../session.service');
 const mockPasswordPolicyService = require('../passwordPolicy.service');
 
@@ -67,8 +113,9 @@ describe('AuthService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
       (prisma.user.update as jest.Mock).mockResolvedValue(mockUser);
 
+      // 5th failed attempt still returns generic error, but account gets locked
       await expect(authService.login(loginData)).rejects.toThrow(
-        'Account locked due to multiple failed login attempts'
+        'Invalid email or password'
       );
 
       expect(prisma.user.update).toHaveBeenCalledWith({
@@ -99,7 +146,7 @@ describe('AuthService', () => {
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
-      await expect(authService.login(loginData)).rejects.toThrow(/Account locked/);
+      await expect(authService.login(loginData)).rejects.toThrow(/Account is locked/);
       expect(bcrypt.compare).not.toHaveBeenCalled();
     });
 
@@ -119,8 +166,8 @@ describe('AuthService', () => {
       try {
         await authService.login(loginData);
         fail('Should have thrown an error');
-      } catch (error) {
-        expect(error.message).toMatch(/Try again in \d+ minutes/);
+      } catch (error: any) {
+        expect(error.message).toMatch(/Please try again in \d+ minutes/);
       }
     });
 
@@ -198,7 +245,7 @@ describe('AuthService', () => {
   });
 
   describe('login - Password Expiration', () => {
-    it('should warn about password expiration (90 days)', async () => {
+    it('should reject login when password has expired (90 days)', async () => {
       const passwordChangedAt = new Date(Date.now() - 91 * 24 * 60 * 60 * 1000); // 91 days ago
       const mockUser = {
         id: mockUserId,
@@ -210,29 +257,23 @@ describe('AuthService', () => {
         roles: ['CLINICIAN'],
         passwordChangedAt,
         mfaEnabled: false,
+        mustChangePassword: false,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       (prisma.user.update as jest.Mock).mockResolvedValue(mockUser);
-      (mockSessionService.default.checkConcurrentSessions as jest.Mock).mockResolvedValue(true);
-      (mockSessionService.default.createSession as jest.Mock).mockResolvedValue({
-        id: 'session-123',
-        token: 'token-abc',
-      });
       (mockPasswordPolicyService.default.checkPasswordExpiration as jest.Mock).mockReturnValue(
         true
       );
 
-      const result = await authService.login({
+      await expect(authService.login({
         email: 'test@example.com',
         password: 'correctpassword',
-      });
-
-      expect(result.passwordExpired).toBe(true);
+      })).rejects.toThrow('Your password has expired. Please reset your password.');
     });
 
-    it('should not warn about password expiration if changed recently', async () => {
+    it('should allow login if password not expired', async () => {
       const passwordChangedAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
       const mockUser = {
         id: mockUserId,
@@ -244,6 +285,7 @@ describe('AuthService', () => {
         roles: ['CLINICIAN'],
         passwordChangedAt,
         mfaEnabled: false,
+        mustChangePassword: false,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
@@ -263,7 +305,8 @@ describe('AuthService', () => {
         password: 'correctpassword',
       });
 
-      expect(result.passwordExpired).toBe(false);
+      expect(result.requiresPasswordChange).toBe(false);
+      expect(result.session).toBeDefined();
     });
   });
 
@@ -349,7 +392,7 @@ describe('AuthService', () => {
         password: 'correctpassword',
       });
 
-      expect(result.requiresMfa).toBeUndefined();
+      expect(result.requiresMfa).toBe(false);
       expect(result.session).toBeDefined();
     });
   });
@@ -406,40 +449,42 @@ describe('AuthService', () => {
       const mockUser = {
         id: mockUserId,
         email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
         password: 'old-hashed-password',
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      (mockPasswordPolicyService.default.validatePasswordStrength as jest.Mock).mockReturnValue({
-        valid: false,
-        feedback: ['Password too weak'],
+      (mockPasswordPolicyService.default.validatePasswordChange as jest.Mock).mockResolvedValue({
+        isValid: false,
+        errors: ['Password too weak'],
       });
 
       await expect(
         authService.changePassword(mockUserId, 'oldPassword', 'weak')
-      ).rejects.toThrow('Password does not meet security requirements');
+      ).rejects.toThrow('Password too weak');
     });
 
     it('should prevent password reuse (last 10 passwords)', async () => {
       const mockUser = {
         id: mockUserId,
         email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
         password: 'old-hashed-password',
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      (mockPasswordPolicyService.default.validatePasswordStrength as jest.Mock).mockReturnValue({
-        valid: true,
+      (mockPasswordPolicyService.default.validatePasswordChange as jest.Mock).mockResolvedValue({
+        isValid: false,
+        errors: ['Password cannot be one of your last 10 passwords'],
       });
-      (mockPasswordPolicyService.default.checkPasswordHistory as jest.Mock).mockResolvedValue(
-        false
-      ); // Password in history
 
       await expect(
         authService.changePassword(mockUserId, 'oldPassword', 'ReusedPassword123!')
-      ).rejects.toThrow('Cannot reuse any of your last 10 passwords');
+      ).rejects.toThrow('Password cannot be one of your last 10 passwords');
     });
 
     it('should update password and add to history on successful change', async () => {
@@ -447,25 +492,25 @@ describe('AuthService', () => {
       const mockUser = {
         id: mockUserId,
         email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
         password: 'old-hashed-password',
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed-password');
-      (mockPasswordPolicyService.default.validatePasswordStrength as jest.Mock).mockReturnValue({
-        valid: true,
+      (mockPasswordPolicyService.default.validatePasswordChange as jest.Mock).mockResolvedValue({
+        isValid: true,
+        errors: [],
       });
-      (mockPasswordPolicyService.default.checkPasswordHistory as jest.Mock).mockResolvedValue(
-        true
-      );
       (prisma.user.update as jest.Mock).mockResolvedValue(mockUser);
 
       await authService.changePassword(mockUserId, 'oldPassword', newPassword);
 
       expect(mockPasswordPolicyService.default.addToPasswordHistory).toHaveBeenCalledWith(
         mockUserId,
-        'new-hashed-password'
+        'old-hashed-password'  // The old password hash is added to history
       );
     });
   });

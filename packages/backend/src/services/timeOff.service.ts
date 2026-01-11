@@ -763,8 +763,8 @@ async function autoRescheduleAffectedAppointments(
               where: { id: appointment.id },
               data: {
                 clinicianId: coverageProviderId,
-                notes: appointment.notes
-                  ? `${appointment.notes}\n\nRescheduled to coverage provider due to time-off.`
+                appointmentNotes: appointment.appointmentNotes
+                  ? `${appointment.appointmentNotes}\n\nRescheduled to coverage provider due to time-off.`
                   : 'Rescheduled to coverage provider due to time-off.',
                 lastModifiedBy: coverageProviderId,
               },

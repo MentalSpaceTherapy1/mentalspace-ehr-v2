@@ -442,7 +442,7 @@ export const executeReport = async (req: Request, res: Response) => {
     }
 
     // Merge custom filters with report filters
-    const queryConfig = { ...report.queryConfig } as QueryConfig;
+    const queryConfig = { ...(report.queryConfig as Record<string, any>) } as QueryConfig;
     if (filters && Array.isArray(filters)) {
       queryConfig.filters = [...(queryConfig.filters || []), ...filters];
     }
@@ -513,7 +513,7 @@ export const cloneReport = async (req: Request, res: Response) => {
         name: name || `${originalReport.name} (Copy)`,
         description: originalReport.description,
         category: originalReport.category,
-        queryConfig: originalReport.queryConfig,
+        queryConfig: originalReport.queryConfig as any,
         isPublic: false,
         isTemplate: false
       }
@@ -524,7 +524,7 @@ export const cloneReport = async (req: Request, res: Response) => {
       data: {
         reportId: clonedReport.id,
         versionNumber: 1,
-        queryConfig: originalReport.queryConfig,
+        queryConfig: originalReport.queryConfig as any,
         changedBy: userId,
         changeNote: `Cloned from report: ${originalReport.name}`
       }
@@ -654,7 +654,7 @@ export const rollbackToVersion = async (req: Request, res: Response) => {
     // Update report with version's query config
     const updatedReport = await prisma.reportDefinition.update({
       where: { id },
-      data: { queryConfig: version.queryConfig }
+      data: { queryConfig: version.queryConfig as any }
     });
 
     // Create new version for rollback
@@ -667,7 +667,7 @@ export const rollbackToVersion = async (req: Request, res: Response) => {
       data: {
         reportId: id,
         versionNumber: (latestVersion?.versionNumber || 0) + 1,
-        queryConfig: version.queryConfig,
+        queryConfig: version.queryConfig as any,
         changedBy: userId,
         changeNote: `Rolled back to version ${version.versionNumber}`
       }

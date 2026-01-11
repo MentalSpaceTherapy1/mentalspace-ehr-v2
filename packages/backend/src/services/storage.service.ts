@@ -25,9 +25,10 @@ import axios from 'axios';
 import { Readable } from 'stream';
 
 // Initialize S3 client with AWS SDK v3
+const configAny = config as any;
 const s3Client = new S3Client({
-  region: config.awsRegion || process.env.AWS_REGION || 'us-east-1',
-  credentials: config.awsCredentials || {
+  region: configAny.awsRegion || process.env.AWS_REGION || 'us-east-1',
+  credentials: configAny.awsCredentials || {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
@@ -385,8 +386,8 @@ export async function copyRecording(
  */
 export function isStorageConfigured(): boolean {
   return !!(
-    config.s3RecordingBucket &&
-    (config.awsCredentials || (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY))
+    (configAny.s3RecordingBucket || process.env.S3_RECORDING_BUCKET) &&
+    (configAny.awsCredentials || (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY))
   );
 }
 
@@ -396,12 +397,12 @@ export function isStorageConfigured(): boolean {
 export function getStorageConfigStatus() {
   return {
     configured: isStorageConfigured(),
-    hasBucket: !!config.s3RecordingBucket,
+    hasBucket: !!(configAny.s3RecordingBucket || process.env.S3_RECORDING_BUCKET),
     hasCredentials: !!(
-      config.awsCredentials ||
+      configAny.awsCredentials ||
       (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY)
     ),
-    region: config.awsRegion || process.env.AWS_REGION || 'us-east-1',
+    region: configAny.awsRegion || process.env.AWS_REGION || 'us-east-1',
   };
 }
 
@@ -549,7 +550,7 @@ export async function generateUploadPresignedUrl(params: {
  * Get the documents bucket name from config
  */
 export function getDocumentsBucket(): string {
-  return config.s3DocumentsBucket || config.s3RecordingBucket || process.env.S3_DOCUMENTS_BUCKET || 'mentalspace-documents';
+  return configAny.s3DocumentsBucket || configAny.s3RecordingBucket || process.env.S3_DOCUMENTS_BUCKET || 'mentalspace-documents';
 }
 
 /**

@@ -286,7 +286,7 @@ async function checkOverduePurchaseOrders(): Promise<void> {
           : 0;
         return {
           poNumber: po.poNumber,
-          vendor: po.vendor.companyName,
+          vendor: po.vendorId, // vendor relation not included in query
           daysOverdue,
           expectedDate: po.expectedDate?.toISOString().split('T')[0]
         };

@@ -237,7 +237,7 @@ class GuardianRelationshipService {
               medicalRecordNumber: true,
               dateOfBirth: true,
               email: true,
-              phoneNumber: true,
+              primaryPhone: true,
             },
           },
         },
@@ -246,7 +246,7 @@ class GuardianRelationshipService {
 
       return relationships.map((rel) => ({
         relationshipId: rel.id,
-        minor: rel.minor,
+        minor: (rel as any).minor,
         relationshipType: rel.relationshipType,
         accessLevel: rel.accessLevel,
         permissions: {
@@ -671,7 +671,7 @@ class GuardianRelationshipService {
               medicalRecordNumber: true,
               dateOfBirth: true,
               email: true,
-              phoneNumber: true,
+              primaryPhone: true,
             },
           },
         },

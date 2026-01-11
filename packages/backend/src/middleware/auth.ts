@@ -161,7 +161,7 @@ export const authorize = (...allowedRoles: string[]) => {
             action: 'SUPER_ADMIN_AUTHORIZATION_BYPASS',
             entityType: 'AUTHORIZATION',
             entityId: req.path,
-            details: {
+            changes: {
               method: req.method,
               path: req.path,
               requiredRoles: allowedRoles,

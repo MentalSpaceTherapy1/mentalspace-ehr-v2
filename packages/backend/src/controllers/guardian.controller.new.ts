@@ -256,15 +256,24 @@ export const scheduleMinorAppointment = async (req: Request, res: Response) => {
     const { clinicianId, appointmentTypeId, startTime, notes } = req.body;
 
     // Create appointment
+    const startDate = new Date(startTime);
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Default 1 hour duration
     const appointment = await prisma.appointment.create({
       data: {
         clientId: minorId,
         clinicianId,
         appointmentTypeId,
-        appointmentDate: new Date(startTime),
+        appointmentDate: startDate,
+        startTime: startDate.toTimeString().slice(0, 5), // HH:MM format
+        endTime: endDate.toTimeString().slice(0, 5),
+        duration: 60, // Default 60 minutes
+        appointmentType: 'INDIVIDUAL_THERAPY',
+        serviceLocation: 'IN_PERSON',
         status: 'SCHEDULED',
-        // notes: notes || `Scheduled by guardian: ${(req as any).user?.userId}`, // TODO: notes field doesn't exist in Appointment model
+        statusUpdatedBy: (req as any).user?.userId || 'SYSTEM',
         createdBy: (req as any).user?.userId,
+        lastModifiedBy: (req as any).user?.userId || 'SYSTEM',
+        appointmentNotes: notes || `Scheduled by guardian: ${(req as any).user?.userId}`,
       },
       include: {
         clinician: {

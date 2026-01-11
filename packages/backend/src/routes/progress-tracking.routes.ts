@@ -47,6 +47,8 @@ import {
   updateReminderPreferences,
   getLoggingStreak,
   getEngagementScore,
+  getClinicianNotes,
+  createProgressNote,
 } from '../controllers/progress-analytics.controller';
 
 const router = Router();
@@ -296,6 +298,24 @@ router.get(
   '/reminders/:clientId/engagement',
   authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
   getEngagementScore
+);
+
+// ============================================================================
+// CLINICIAN NOTES ROUTES
+// ============================================================================
+
+// Get clinician notes for a client (from clinical notes)
+router.get(
+  '/notes/:clientId',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
+  getClinicianNotes
+);
+
+// Create a progress observation note
+router.post(
+  '/notes/:clientId',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
+  createProgressNote
 );
 
 export default router;

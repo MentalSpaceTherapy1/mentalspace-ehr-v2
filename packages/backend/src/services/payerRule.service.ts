@@ -236,14 +236,11 @@ export async function testRuleAgainstNotes(
   const notes = await prisma.clinicalNote.findMany({
     where: {
       clinician: {
-        credential: rule.clinicianCredential,
+        credentials: { some: { credentialType: rule.clinicianCredential as any } },
       },
       noteType: rule.serviceType,
       appointment: {
-        placeOfService: rule.placeOfService,
-        client: {
-          payerId: rule.payerId,
-        },
+        serviceLocation: rule.placeOfService as any,
       },
       ...(Object.keys(dateFilter).length > 0 ? { sessionDate: dateFilter } : {}),
       status: { in: ['SIGNED', 'COSIGNED'] },
@@ -278,7 +275,7 @@ export async function testRuleAgainstNotes(
       blockedNotes.push({
         noteId: note.id,
         clientId: note.clientId,
-        sessionDate: note.sessionDate,
+        sessionDate: note.sessionDate || new Date(),
         holds: validation.holds.map(h => h.reason),
       });
     } else {

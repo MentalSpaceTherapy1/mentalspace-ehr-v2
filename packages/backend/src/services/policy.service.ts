@@ -409,7 +409,7 @@ export class PolicyService {
         nextReviewDate: changes.nextReviewDate,
         ownerId: changes.ownerId || originalPolicy.ownerId,
         content: changes.content || originalPolicy.content,
-        summary: changes.summary || originalPolicy.summary,
+        summary: changes.summary || originalPolicy.summary || undefined,
         status: PolicyStatus.DRAFT // New versions start as draft
       });
 

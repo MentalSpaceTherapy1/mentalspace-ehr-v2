@@ -23,7 +23,7 @@ import {
   SyncStatus,
   AMDDateString,
   AMDDateTimeString,
-} from '../../../../shared/src/types/advancedmd.types';
+} from '../../types/advancedmd.types';
 import { AdvancedMDAuthService } from './auth.service';
 import { AdvancedMDRateLimiterService } from './rate-limiter.service';
 
@@ -388,6 +388,50 @@ export class AdvancedMDPatientSyncService {
         success: false,
         errorMessage: error.message,
         syncLogId: syncLog.id,
+      };
+    }
+  }
+
+  /**
+   * Sync patient to AdvancedMD (push)
+   * Creates or updates patient in AMD based on local client data
+   */
+  async syncPatientToAMD(clientId: string, profileId?: string, options: MappingOptions = {}): Promise<PatientSyncResult> {
+    try {
+      console.log(`[AMD Patient Sync] Syncing patient to AMD: ${clientId}`);
+
+      // Get client data
+      const client = await prisma.client.findUnique({
+        where: { id: clientId },
+      });
+
+      if (!client) {
+        return {
+          success: false,
+          errorMessage: `Client not found: ${clientId}`,
+        };
+      }
+
+      // If client already has AMD ID, update instead of create
+      if (client.advancedMDPatientId) {
+        return this.updatePatient(clientId, options);
+      }
+
+      // Profile ID required for creating new patient
+      if (!profileId) {
+        return {
+          success: false,
+          errorMessage: 'profileId is required to create a new patient in AdvancedMD',
+        };
+      }
+
+      // Create new patient in AMD
+      return this.createPatient(clientId, profileId, options);
+    } catch (error: any) {
+      console.error('[AMD Patient Sync] Sync to AMD failed:', error.message);
+      return {
+        success: false,
+        errorMessage: error.message,
       };
     }
   }

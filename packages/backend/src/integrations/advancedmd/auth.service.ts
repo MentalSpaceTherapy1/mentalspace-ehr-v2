@@ -23,7 +23,7 @@ import {
   AdvancedMDAuthConfig,
   SessionState,
   AdvancedMDError,
-} from '../../../../shared/src/types/advancedmd.types';
+} from '../../types/advancedmd.types';
 import { getAdvancedMDConfig as getEnvConfig } from '../../config/advancedmd.config';
 import logger from '../../utils/logger';
 

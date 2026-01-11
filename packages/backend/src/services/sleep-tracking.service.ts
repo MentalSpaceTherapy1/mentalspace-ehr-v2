@@ -97,7 +97,7 @@ export class SleepTrackingService {
       },
     });
 
-    auditLogger.log({
+    auditLogger.info('Sleep tracking event', {
       action: 'SLEEP_LOG_CREATED',
       userId,
       clientId,
@@ -247,7 +247,7 @@ export class SleepTrackingService {
       },
     });
 
-    auditLogger.log({
+    auditLogger.info('Sleep tracking event', {
       action: 'SLEEP_LOG_UPDATED',
       userId,
       clientId: existingLog.clientId,
@@ -268,7 +268,7 @@ export class SleepTrackingService {
       where: { id: logId },
     });
 
-    auditLogger.log({
+    auditLogger.info('Sleep tracking event', {
       action: 'SLEEP_LOG_DELETED',
       userId,
       clientId: log.clientId,
@@ -399,7 +399,7 @@ export class SleepTrackingService {
    * Helper: Calculate rolling averages
    */
   private calculateRollingAverages(
-    data: Array<{ hoursSlept: number; quality: number }>,
+    data: Array<{ hoursSlept: number; quality: number; date?: string }>,
     windowSize: number
   ) {
     const result = [];

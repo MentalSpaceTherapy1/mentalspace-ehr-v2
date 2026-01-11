@@ -12,6 +12,15 @@ import { EmploymentStatus, EmploymentType, UserRole } from '@prisma/client';
 // TYPES & INTERFACES
 // ============================================================================
 
+export interface OrgChartNode {
+  id: string;
+  name: string;
+  title: string;
+  department: string;
+  photoUrl?: string;
+  children: OrgChartNode[];
+}
+
 export interface CreateStaffMemberDto {
   email: string;
   password: string;
@@ -621,16 +630,6 @@ class StaffManagementService {
         profilePhotoS3: true,
       },
     });
-
-    // Define the OrgChartNode type
-    interface OrgChartNode {
-      id: string;
-      name: string;
-      title: string;
-      department: string;
-      photoUrl?: string;
-      children: OrgChartNode[];
-    }
 
     // Build hierarchical tree recursively
     const buildTree = (managerId: string | null): OrgChartNode[] => {

@@ -115,8 +115,8 @@ class EmailReminderService {
         recipientName,
         clientName,
         noteType: note.noteType,
-        sessionDate: note.sessionDate,
-        dueDate: note.dueDate,
+        sessionDate: note.sessionDate || new Date(),
+        dueDate: note.dueDate || new Date(),
         hoursRemaining: hoursRemaining || 0,
         noteId: note.id,
       });
@@ -163,8 +163,8 @@ class EmailReminderService {
         recipientName,
         clientName,
         noteType: note.noteType,
-        sessionDate: note.sessionDate,
-        dueDate: note.dueDate,
+        sessionDate: note.sessionDate || new Date(),
+        dueDate: note.dueDate || new Date(),
         hoursOverdue: hoursOverdue || 0,
         noteId: note.id,
       });
@@ -211,7 +211,7 @@ class EmailReminderService {
         recipientName,
         clientName,
         noteType: note.noteType,
-        sessionDate: note.sessionDate,
+        sessionDate: note.sessionDate || new Date(),
         noteId: note.id,
       });
 
@@ -259,8 +259,8 @@ class EmailReminderService {
         clinicianEmail: note.clinician.email,
         clientName,
         noteType: note.noteType,
-        sessionDate: note.sessionDate,
-        dueDate: note.dueDate,
+        sessionDate: note.sessionDate || new Date(),
+        dueDate: note.dueDate || new Date(),
         hoursOverdue: hoursOverdue || 0,
         noteId: note.id,
       });
@@ -612,21 +612,21 @@ class EmailReminderService {
   }): string {
     const appUrl = process.env.APP_URL || 'http://localhost:3001';
 
-    const overdueList = data.overdueNotes.map(note => `
+    const overdueList = data.overdueNotes.map((note: any) => `
       <li>
         <strong>${note.client.firstName} ${note.client.lastName}</strong> - ${note.noteType}
         <br>
-        <small>Due: ${new Date(note.dueDate).toLocaleDateString()}</small>
+        <small>Due: ${note.dueDate ? new Date(note.dueDate).toLocaleDateString() : 'N/A'}</small>
         <br>
         <a href="${appUrl}/clinical-notes/${note.id}">Complete Note</a>
       </li>
     `).join('');
 
-    const upcomingList = data.upcomingNotes.map(note => `
+    const upcomingList = data.upcomingNotes.map((note: any) => `
       <li>
         <strong>${note.client.firstName} ${note.client.lastName}</strong> - ${note.noteType}
         <br>
-        <small>Due: ${new Date(note.dueDate).toLocaleDateString()}</small>
+        <small>Due: ${note.dueDate ? new Date(note.dueDate).toLocaleDateString() : 'N/A'}</small>
         <br>
         <a href="${appUrl}/clinical-notes/${note.id}">View Note</a>
       </li>
