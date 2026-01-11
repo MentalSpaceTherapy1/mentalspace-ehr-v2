@@ -36,7 +36,8 @@
 -- AI GENERATED NOTES TABLE
 -- ============================================================================
 
-CREATE TABLE "ai_generated_notes" (
+-- Table already created in 20260106_add_telehealth_phase2_ai_models
+CREATE TABLE IF NOT EXISTS "ai_generated_notes" (
     "id" TEXT NOT NULL,
     "sessionId" TEXT NOT NULL,
     "appointmentId" TEXT NOT NULL,
@@ -164,7 +165,7 @@ ADD COLUMN "aiEditCount" INTEGER NOT NULL DEFAULT 0;
 -- AI GENERATION AUDIT LOG
 -- ============================================================================
 
-CREATE TABLE "ai_generation_audit_log" (
+CREATE TABLE IF NOT EXISTS "ai_generation_audit_log" (
     "id" TEXT NOT NULL,
     "aiNoteId" TEXT NOT NULL,
     "eventType" TEXT NOT NULL,
@@ -184,7 +185,7 @@ CREATE TABLE "ai_generation_audit_log" (
 -- AI PROMPT TEMPLATES
 -- ============================================================================
 
-CREATE TABLE "ai_prompt_templates" (
+CREATE TABLE IF NOT EXISTS "ai_prompt_templates" (
     "id" TEXT NOT NULL,
     "templateName" TEXT NOT NULL,
     "templateType" TEXT NOT NULL,
@@ -207,67 +208,78 @@ CREATE TABLE "ai_prompt_templates" (
 -- INDEXES
 -- ============================================================================
 
--- AI Generated Notes indexes
-CREATE INDEX "ai_generated_notes_sessionId_idx" ON "ai_generated_notes"("sessionId");
-CREATE INDEX "ai_generated_notes_appointmentId_idx" ON "ai_generated_notes"("appointmentId");
-CREATE INDEX "ai_generated_notes_clientId_idx" ON "ai_generated_notes"("clientId");
-CREATE INDEX "ai_generated_notes_clinicianId_idx" ON "ai_generated_notes"("clinicianId");
-CREATE INDEX "ai_generated_notes_status_idx" ON "ai_generated_notes"("status");
-CREATE INDEX "ai_generated_notes_reviewedBy_idx" ON "ai_generated_notes"("reviewedBy");
-CREATE INDEX "ai_generated_notes_createdAt_idx" ON "ai_generated_notes"("createdAt");
-CREATE UNIQUE INDEX "ai_generated_notes_sessionId_key" ON "ai_generated_notes"("sessionId");
+-- AI Generated Notes indexes (many already exist from 20260106)
+CREATE INDEX IF NOT EXISTS "ai_generated_notes_sessionId_idx" ON "ai_generated_notes"("sessionId");
+CREATE INDEX IF NOT EXISTS "ai_generated_notes_appointmentId_idx" ON "ai_generated_notes"("appointmentId");
+CREATE INDEX IF NOT EXISTS "ai_generated_notes_clientId_idx" ON "ai_generated_notes"("clientId");
+CREATE INDEX IF NOT EXISTS "ai_generated_notes_clinicianId_idx" ON "ai_generated_notes"("clinicianId");
+CREATE INDEX IF NOT EXISTS "ai_generated_notes_status_idx" ON "ai_generated_notes"("status");
+CREATE INDEX IF NOT EXISTS "ai_generated_notes_reviewedBy_idx" ON "ai_generated_notes"("reviewedBy");
+CREATE INDEX IF NOT EXISTS "ai_generated_notes_createdAt_idx" ON "ai_generated_notes"("createdAt");
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_generated_notes_sessionId_key" ON "ai_generated_notes"("sessionId");
 
 -- Telehealth Session indexes for AI features
-CREATE INDEX "telehealth_sessions_aiNoteId_idx" ON "telehealth_sessions"("aiNoteId");
-CREATE INDEX "telehealth_sessions_transcriptionStatus_idx" ON "telehealth_sessions"("transcriptionStatus");
+CREATE INDEX IF NOT EXISTS "telehealth_sessions_aiNoteId_idx" ON "telehealth_sessions"("aiNoteId");
+CREATE INDEX IF NOT EXISTS "telehealth_sessions_transcriptionStatus_idx" ON "telehealth_sessions"("transcriptionStatus");
 
 -- Clinical Notes indexes for AI features
-CREATE INDEX "clinical_notes_aiGeneratedNoteId_idx" ON "clinical_notes"("aiGeneratedNoteId");
-CREATE INDEX "clinical_notes_aiGenerated_idx" ON "clinical_notes"("aiGenerated");
+CREATE INDEX IF NOT EXISTS "clinical_notes_aiGeneratedNoteId_idx" ON "clinical_notes"("aiGeneratedNoteId");
+CREATE INDEX IF NOT EXISTS "clinical_notes_aiGenerated_idx" ON "clinical_notes"("aiGenerated");
 
--- Audit Log indexes
-CREATE INDEX "ai_generation_audit_log_aiNoteId_idx" ON "ai_generation_audit_log"("aiNoteId");
-CREATE INDEX "ai_generation_audit_log_eventType_idx" ON "ai_generation_audit_log"("eventType");
-CREATE INDEX "ai_generation_audit_log_timestamp_idx" ON "ai_generation_audit_log"("timestamp");
+-- Audit Log indexes (already exist from 20260106)
+CREATE INDEX IF NOT EXISTS "ai_generation_audit_log_aiNoteId_idx" ON "ai_generation_audit_log"("aiNoteId");
+CREATE INDEX IF NOT EXISTS "ai_generation_audit_log_eventType_idx" ON "ai_generation_audit_log"("eventType");
+CREATE INDEX IF NOT EXISTS "ai_generation_audit_log_timestamp_idx" ON "ai_generation_audit_log"("timestamp");
 
--- Prompt Templates indexes
-CREATE INDEX "ai_prompt_templates_templateType_idx" ON "ai_prompt_templates"("templateType");
-CREATE INDEX "ai_prompt_templates_isActive_idx" ON "ai_prompt_templates"("isActive");
-CREATE UNIQUE INDEX "ai_prompt_templates_name_version_key" ON "ai_prompt_templates"("templateName", "version");
+-- Prompt Templates indexes (already exist from 20260106)
+CREATE INDEX IF NOT EXISTS "ai_prompt_templates_templateType_idx" ON "ai_prompt_templates"("templateType");
+CREATE INDEX IF NOT EXISTS "ai_prompt_templates_isActive_idx" ON "ai_prompt_templates"("isActive");
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_prompt_templates_name_version_key" ON "ai_prompt_templates"("templateName", "version");
 
 -- ============================================================================
--- FOREIGN KEY CONSTRAINTS
+-- FOREIGN KEY CONSTRAINTS (drop and recreate to be idempotent)
 -- ============================================================================
 
+ALTER TABLE "ai_generated_notes" DROP CONSTRAINT IF EXISTS "ai_generated_notes_sessionId_fkey";
 ALTER TABLE "ai_generated_notes" ADD CONSTRAINT "ai_generated_notes_sessionId_fkey"
     FOREIGN KEY ("sessionId") REFERENCES "telehealth_sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE "ai_generated_notes" DROP CONSTRAINT IF EXISTS "ai_generated_notes_appointmentId_fkey";
 ALTER TABLE "ai_generated_notes" ADD CONSTRAINT "ai_generated_notes_appointmentId_fkey"
     FOREIGN KEY ("appointmentId") REFERENCES "appointments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE "ai_generated_notes" DROP CONSTRAINT IF EXISTS "ai_generated_notes_clientId_fkey";
 ALTER TABLE "ai_generated_notes" ADD CONSTRAINT "ai_generated_notes_clientId_fkey"
     FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE "ai_generated_notes" DROP CONSTRAINT IF EXISTS "ai_generated_notes_clinicianId_fkey";
 ALTER TABLE "ai_generated_notes" ADD CONSTRAINT "ai_generated_notes_clinicianId_fkey"
     FOREIGN KEY ("clinicianId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE "ai_generated_notes" DROP CONSTRAINT IF EXISTS "ai_generated_notes_reviewedBy_fkey";
 ALTER TABLE "ai_generated_notes" ADD CONSTRAINT "ai_generated_notes_reviewedBy_fkey"
     FOREIGN KEY ("reviewedBy") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
+ALTER TABLE "telehealth_sessions" DROP CONSTRAINT IF EXISTS "telehealth_sessions_aiNoteId_fkey";
 ALTER TABLE "telehealth_sessions" ADD CONSTRAINT "telehealth_sessions_aiNoteId_fkey"
     FOREIGN KEY ("aiNoteId") REFERENCES "ai_generated_notes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
+ALTER TABLE "clinical_notes" DROP CONSTRAINT IF EXISTS "clinical_notes_aiGeneratedNoteId_fkey";
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_aiGeneratedNoteId_fkey"
     FOREIGN KEY ("aiGeneratedNoteId") REFERENCES "ai_generated_notes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
+ALTER TABLE "ai_generation_audit_log" DROP CONSTRAINT IF EXISTS "ai_generation_audit_log_aiNoteId_fkey";
 ALTER TABLE "ai_generation_audit_log" ADD CONSTRAINT "ai_generation_audit_log_aiNoteId_fkey"
     FOREIGN KEY ("aiNoteId") REFERENCES "ai_generated_notes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE "ai_generation_audit_log" DROP CONSTRAINT IF EXISTS "ai_generation_audit_log_userId_fkey";
 ALTER TABLE "ai_generation_audit_log" ADD CONSTRAINT "ai_generation_audit_log_userId_fkey"
     FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
+ALTER TABLE "ai_prompt_templates" DROP CONSTRAINT IF EXISTS "ai_prompt_templates_createdBy_fkey";
 ALTER TABLE "ai_prompt_templates" ADD CONSTRAINT "ai_prompt_templates_createdBy_fkey"
     FOREIGN KEY ("createdBy") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE "ai_prompt_templates" DROP CONSTRAINT IF EXISTS "ai_prompt_templates_updatedBy_fkey";
 ALTER TABLE "ai_prompt_templates" ADD CONSTRAINT "ai_prompt_templates_updatedBy_fkey"
     FOREIGN KEY ("updatedBy") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
