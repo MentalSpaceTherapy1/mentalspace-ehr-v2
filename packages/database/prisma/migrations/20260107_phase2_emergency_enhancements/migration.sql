@@ -3,36 +3,78 @@
 -- Date: 2025-01-07
 
 -- ============================================================================
--- 1. Add Location Tracking Fields to TelehealthSession
+-- 1. Add Location Tracking Fields to TelehealthSession (idempotent)
 -- ============================================================================
 
-ALTER TABLE "telehealth_sessions"
-ADD COLUMN "clientLocationPermission" BOOLEAN,
-ADD COLUMN "clientLocationCaptured" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "clientLatitude" DOUBLE PRECISION,
-ADD COLUMN "clientLongitude" DOUBLE PRECISION,
-ADD COLUMN "clientAddress" TEXT,
-ADD COLUMN "clientCity" TEXT,
-ADD COLUMN "clientState" TEXT,
-ADD COLUMN "clientZipCode" TEXT,
-ADD COLUMN "locationCapturedAt" TIMESTAMP(3),
-ADD COLUMN "locationCaptureMethod" TEXT;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'clientLocationPermission') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "clientLocationPermission" BOOLEAN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'clientLocationCaptured') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "clientLocationCaptured" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'clientLatitude') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "clientLatitude" DOUBLE PRECISION;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'clientLongitude') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "clientLongitude" DOUBLE PRECISION;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'clientAddress') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "clientAddress" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'clientCity') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "clientCity" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'clientState') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "clientState" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'clientZipCode') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "clientZipCode" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'locationCapturedAt') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "locationCapturedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'locationCaptureMethod') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "locationCaptureMethod" TEXT;
+  END IF;
+END $$;
 
 -- ============================================================================
--- 2. Add Enhanced Emergency Tracking Fields to TelehealthSession
+-- 2. Add Enhanced Emergency Tracking Fields to TelehealthSession (idempotent)
 -- ============================================================================
 
-ALTER TABLE "telehealth_sessions"
-ADD COLUMN "emergencyType" TEXT,
-ADD COLUMN "emergencySeverity" TEXT,
-ADD COLUMN "emergency911Called" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "emergency911CalledAt" TIMESTAMP(3),
-ADD COLUMN "emergency911CalledBy" TEXT,
-ADD COLUMN "emergencySupervisorNotified" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "emergencySupervisorId" TEXT,
-ADD COLUMN "emergencySupervisorNotifiedAt" TIMESTAMP(3),
-ADD COLUMN "emergencyProtocolFollowed" TEXT,
-ADD COLUMN "emergencyResourcesSentToClient" BOOLEAN NOT NULL DEFAULT false;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergencyType') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergencyType" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergencySeverity') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergencySeverity" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergency911Called') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergency911Called" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergency911CalledAt') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergency911CalledAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergency911CalledBy') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergency911CalledBy" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergencySupervisorNotified') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergencySupervisorNotified" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergencySupervisorId') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergencySupervisorId" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergencySupervisorNotifiedAt') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergencySupervisorNotifiedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergencyProtocolFollowed') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergencyProtocolFollowed" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'emergencyResourcesSentToClient') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "emergencyResourcesSentToClient" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+END $$;
 
 -- Add comments for documentation
 COMMENT ON COLUMN "telehealth_sessions"."emergencyType" IS 'Type of emergency: SUICIDAL, SELF_HARM, VIOLENCE_RISK, MEDICAL, OTHER';
@@ -40,10 +82,10 @@ COMMENT ON COLUMN "telehealth_sessions"."emergencySeverity" IS 'Severity level: 
 COMMENT ON COLUMN "telehealth_sessions"."locationCaptureMethod" IS 'Method used to capture location: BROWSER, IP, MANUAL';
 
 -- ============================================================================
--- 3. Create Crisis Resources Table
+-- 3. Create Crisis Resources Table (idempotent)
 -- ============================================================================
 
-CREATE TABLE "crisis_resources" (
+CREATE TABLE IF NOT EXISTS "crisis_resources" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
@@ -66,10 +108,10 @@ CREATE TABLE "crisis_resources" (
     "lastModifiedBy" TEXT
 );
 
--- Create indexes for efficient querying
-CREATE INDEX "crisis_resources_category_idx" ON "crisis_resources"("category");
-CREATE INDEX "crisis_resources_geographic_idx" ON "crisis_resources"("geographicScope", "stateSpecific");
-CREATE INDEX "crisis_resources_active_idx" ON "crisis_resources"("isActive");
+-- Create indexes for efficient querying (idempotent)
+CREATE INDEX IF NOT EXISTS "crisis_resources_category_idx" ON "crisis_resources"("category");
+CREATE INDEX IF NOT EXISTS "crisis_resources_geographic_idx" ON "crisis_resources"("geographicScope", "stateSpecific");
+CREATE INDEX IF NOT EXISTS "crisis_resources_active_idx" ON "crisis_resources"("isActive");
 
 -- Add comments
 COMMENT ON TABLE "crisis_resources" IS 'Comprehensive database of crisis hotlines and resources for emergency situations';
@@ -79,10 +121,10 @@ COMMENT ON COLUMN "crisis_resources"."serviceType" IS 'Service Type: HOTLINE, TE
 COMMENT ON COLUMN "crisis_resources"."geographicScope" IS 'Geographic Scope: NATIONAL, STATE, LOCAL';
 
 -- ============================================================================
--- 4. Create Emergency Protocols Table
+-- 4. Create Emergency Protocols Table (idempotent)
 -- ============================================================================
 
-CREATE TABLE "emergency_protocols" (
+CREATE TABLE IF NOT EXISTS "emergency_protocols" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
@@ -99,8 +141,8 @@ CREATE TABLE "emergency_protocols" (
     "lastModifiedBy" TEXT
 );
 
--- Create index for active protocols
-CREATE INDEX "emergency_protocols_active_idx" ON "emergency_protocols"("isActive");
+-- Create index for active protocols (idempotent)
+CREATE INDEX IF NOT EXISTS "emergency_protocols_active_idx" ON "emergency_protocols"("isActive");
 
 -- Add comments
 COMMENT ON TABLE "emergency_protocols" IS 'Standardized emergency response protocols for various crisis situations';
@@ -154,12 +196,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS crisis_resources_audit ON "crisis_resources";
 CREATE TRIGGER crisis_resources_audit
     BEFORE UPDATE ON "crisis_resources"
     FOR EACH ROW
     EXECUTE FUNCTION audit_crisis_resources();
 
--- Add audit trigger for emergency protocols
+-- Add audit trigger for emergency protocols (idempotent)
+DROP TRIGGER IF EXISTS emergency_protocols_audit ON "emergency_protocols";
 CREATE TRIGGER emergency_protocols_audit
     BEFORE UPDATE ON "emergency_protocols"
     FOR EACH ROW
