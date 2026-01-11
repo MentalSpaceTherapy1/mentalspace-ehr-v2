@@ -5,32 +5,32 @@
 -- ENUMS
 -- ============================================================================
 
--- AI Note Status
-CREATE TYPE "AIGeneratedNoteStatus" AS ENUM (
-  'GENERATING',
-  'GENERATED',
-  'REVIEWED',
-  'APPROVED',
-  'REJECTED',
-  'REGENERATING',
-  'FAILED'
-);
+-- AI Note Status (already created in 20260106_add_telehealth_phase2_ai_models)
+-- CREATE TYPE "AIGeneratedNoteStatus" AS ENUM (
+--   'GENERATING',
+--   'GENERATED',
+--   'REVIEWED',
+--   'APPROVED',
+--   'REJECTED',
+--   'REGENERATING',
+--   'FAILED'
+-- );
 
--- Risk Level
-CREATE TYPE "AIRiskLevel" AS ENUM (
-  'LOW',
-  'MODERATE',
-  'HIGH',
-  'CRITICAL'
-);
+-- Risk Level (already created in 20260106_add_telehealth_phase2_ai_models)
+-- CREATE TYPE "AIRiskLevel" AS ENUM (
+--   'LOW',
+--   'MODERATE',
+--   'HIGH',
+--   'CRITICAL'
+-- );
 
--- Note Type
-CREATE TYPE "AIGeneratedNoteType" AS ENUM (
-  'PROGRESS_NOTE',
-  'INTAKE_NOTE',
-  'CRISIS_NOTE',
-  'TERMINATION_NOTE'
-);
+-- Note Type (already created in 20260106_add_telehealth_phase2_ai_models)
+-- CREATE TYPE "AIGeneratedNoteType" AS ENUM (
+--   'PROGRESS_NOTE',
+--   'INTAKE_NOTE',
+--   'CRISIS_NOTE',
+--   'TERMINATION_NOTE'
+-- );
 
 -- ============================================================================
 -- AI GENERATED NOTES TABLE
