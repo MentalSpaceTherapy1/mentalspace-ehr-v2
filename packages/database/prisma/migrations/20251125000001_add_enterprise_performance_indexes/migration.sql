@@ -162,7 +162,7 @@ CREATE INDEX IF NOT EXISTS "idx_medications_client_status" ON "medications"("cli
 -- ==============================================================================
 
 CREATE INDEX IF NOT EXISTS "idx_claims_client" ON "claims"("clientId");
-CREATE INDEX IF NOT EXISTS "idx_claims_status" ON "claims"("status");
+CREATE INDEX IF NOT EXISTS "idx_claims_status" ON "claims"("claimStatus");
 CREATE INDEX IF NOT EXISTS "idx_claims_submission_date" ON "claims"("submissionDate");
 CREATE INDEX IF NOT EXISTS "idx_claims_amd_id" ON "claims"("advancedMDClaimId") WHERE "advancedMDClaimId" IS NOT NULL;
 
