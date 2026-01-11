@@ -90,6 +90,6 @@ CREATE INDEX IF NOT EXISTS "session_recordings_twilioRecordingSid_idx" ON "sessi
 
 -- Add comments for documentation
 COMMENT ON TABLE "session_recordings" IS 'Stores HIPAA-compliant telehealth session recordings with encryption, access logging, and retention policies';
-COMMENT ON COLUMN "session_recordings"."retentionPolicy" IS 'Georgia law requires 7 years retention for medical records';
+COMMENT ON COLUMN "session_recordings"."retentionDays" IS 'Georgia law requires 7 years (2555 days) retention for medical records';
 COMMENT ON COLUMN "session_recordings"."accessLog" IS 'JSON array tracking all access: [{timestamp, userId, action, ipAddress, userAgent}]';
-COMMENT ON COLUMN "session_recordings"."encryptionType" IS 'Server-side encryption type (AES256 or AWS-KMS)';
+COMMENT ON COLUMN "session_recordings"."encryptionMethod" IS 'Server-side encryption type (AES256 or AWS-KMS)';
