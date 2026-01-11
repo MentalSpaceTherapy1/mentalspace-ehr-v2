@@ -1,14 +1,30 @@
--- AlterTable
-ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionEnabled" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "transcriptionConsent" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "transcriptionStartedAt" TIMESTAMP(3),
-ADD COLUMN "transcriptionStoppedAt" TIMESTAMP(3),
-ADD COLUMN "transcriptionStatus" TEXT,
-ADD COLUMN "transcriptionJobId" TEXT,
-ADD COLUMN "transcriptionError" TEXT;
+-- AlterTable (idempotent - skip if columns exist)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionEnabled') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionEnabled" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionConsent') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionConsent" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionStartedAt') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionStartedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionStoppedAt') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionStoppedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionStatus') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionStatus" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionJobId') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionJobId" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionError') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionError" TEXT;
+  END IF;
+END $$;
 
--- CreateTable
-CREATE TABLE "session_transcripts" (
+-- CreateTable (idempotent)
+CREATE TABLE IF NOT EXISTS "session_transcripts" (
     "id" TEXT NOT NULL,
     "sessionId" TEXT NOT NULL,
     "speakerLabel" TEXT NOT NULL,
@@ -25,11 +41,12 @@ CREATE TABLE "session_transcripts" (
     CONSTRAINT "session_transcripts_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE INDEX "session_transcripts_sessionId_idx" ON "session_transcripts"("sessionId");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "session_transcripts_sessionId_idx" ON "session_transcripts"("sessionId");
 
--- CreateIndex
-CREATE INDEX "session_transcripts_sessionId_startTime_idx" ON "session_transcripts"("sessionId", "startTime");
+-- CreateIndex (idempotent)
+CREATE INDEX IF NOT EXISTS "session_transcripts_sessionId_startTime_idx" ON "session_transcripts"("sessionId", "startTime");
 
--- AddForeignKey
+-- AddForeignKey (idempotent)
+ALTER TABLE "session_transcripts" DROP CONSTRAINT IF EXISTS "session_transcripts_sessionId_fkey";
 ALTER TABLE "session_transcripts" ADD CONSTRAINT "session_transcripts_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "telehealth_sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
