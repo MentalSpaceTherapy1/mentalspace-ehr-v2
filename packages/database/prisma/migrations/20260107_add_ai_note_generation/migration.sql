@@ -133,33 +133,65 @@ CREATE TABLE IF NOT EXISTS "ai_generated_notes" (
 );
 
 -- ============================================================================
--- EXTEND TELEHEALTH SESSION TABLE
+-- EXTEND TELEHEALTH SESSION TABLE (idempotent - skip if columns exist)
 -- ============================================================================
 
 -- Add AI transcription and note generation tracking to TelehealthSession
-ALTER TABLE "telehealth_sessions"
-ADD COLUMN "transcriptionEnabled" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "transcriptionStatus" TEXT,
-ADD COLUMN "transcriptionStartedAt" TIMESTAMP(3),
-ADD COLUMN "transcriptionCompletedAt" TIMESTAMP(3),
-ADD COLUMN "transcriptionS3Key" TEXT,
-ADD COLUMN "transcriptText" TEXT,
-ADD COLUMN "aiNoteGenerated" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "aiNoteGeneratedAt" TIMESTAMP(3),
-ADD COLUMN "aiNoteId" TEXT;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionEnabled') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionEnabled" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionStatus') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionStatus" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionStartedAt') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionStartedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionCompletedAt') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionCompletedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptionS3Key') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptionS3Key" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'transcriptText') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "transcriptText" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'aiNoteGenerated') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "aiNoteGenerated" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'aiNoteGeneratedAt') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "aiNoteGeneratedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'aiNoteId') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "aiNoteId" TEXT;
+  END IF;
+END $$;
 
 -- ============================================================================
--- EXTEND CLINICAL NOTE TABLE
+-- EXTEND CLINICAL NOTE TABLE (idempotent - skip if columns exist)
 -- ============================================================================
 
 -- Add AI generation tracking to existing ClinicalNote table
-ALTER TABLE "clinical_notes"
-ADD COLUMN "aiGenerated" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "generatedFrom" TEXT,
-ADD COLUMN "aiGeneratedNoteId" TEXT,
-ADD COLUMN "generationConfidence" DOUBLE PRECISION,
-ADD COLUMN "clinicianReviewedAI" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "aiEditCount" INTEGER NOT NULL DEFAULT 0;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clinical_notes' AND column_name = 'aiGenerated') THEN
+    ALTER TABLE "clinical_notes" ADD COLUMN "aiGenerated" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clinical_notes' AND column_name = 'generatedFrom') THEN
+    ALTER TABLE "clinical_notes" ADD COLUMN "generatedFrom" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clinical_notes' AND column_name = 'aiGeneratedNoteId') THEN
+    ALTER TABLE "clinical_notes" ADD COLUMN "aiGeneratedNoteId" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clinical_notes' AND column_name = 'generationConfidence') THEN
+    ALTER TABLE "clinical_notes" ADD COLUMN "generationConfidence" DOUBLE PRECISION;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clinical_notes' AND column_name = 'clinicianReviewedAI') THEN
+    ALTER TABLE "clinical_notes" ADD COLUMN "clinicianReviewedAI" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clinical_notes' AND column_name = 'aiEditCount') THEN
+    ALTER TABLE "clinical_notes" ADD COLUMN "aiEditCount" INTEGER NOT NULL DEFAULT 0;
+  END IF;
+END $$;
 
 -- ============================================================================
 -- AI GENERATION AUDIT LOG
