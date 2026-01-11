@@ -38,6 +38,17 @@ BEGIN
   END IF;
 END $$;
 
+-- Add employeeId column to users (Module 9: Staff Management)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'employeeId') THEN
+    ALTER TABLE "users" ADD COLUMN "employeeId" TEXT;
+  END IF;
+END $$;
+
+-- Create unique index on employeeId (only if column exists)
+CREATE UNIQUE INDEX IF NOT EXISTS "users_employeeId_key" ON "users"("employeeId") WHERE "employeeId" IS NOT NULL;
+
 -- ========================================
 -- 2. APPOINTMENTS TABLE - Confirmation and Risk Prediction fields
 -- ========================================
@@ -80,6 +91,20 @@ BEGIN
     ALTER TABLE "appointments" ADD COLUMN "appointmentTypeId" TEXT;
   END IF;
 END $$;
+
+-- Add group session fields (Module 3 Phase 2: Group Appointments)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'groupSessionId') THEN
+    ALTER TABLE "appointments" ADD COLUMN "groupSessionId" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'appointments' AND column_name = 'isGroupSession') THEN
+    ALTER TABLE "appointments" ADD COLUMN "isGroupSession" BOOLEAN NOT NULL DEFAULT false;
+  END IF;
+END $$;
+
+-- Create index on groupSessionId
+CREATE INDEX IF NOT EXISTS "appointments_groupSessionId_idx" ON "appointments"("groupSessionId");
 
 -- ========================================
 -- 3. CLIENTS TABLE - Employment status field
