@@ -124,7 +124,7 @@ describe('HIPAA Audit Logging Middleware', () => {
         expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              userId: null,
+              userId: undefined, // null is converted to undefined in createAuditLog
             }),
           })
         );
@@ -180,7 +180,7 @@ describe('HIPAA Audit Logging Middleware', () => {
         expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              entityId: null,
+              entityId: 'unknown', // null is converted to 'unknown' in createAuditLog
             }),
           })
         );
@@ -308,7 +308,7 @@ describe('HIPAA Audit Logging Middleware', () => {
         expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              userAgent: null,
+              userAgent: undefined, // null is converted to undefined in createAuditLog
             }),
           })
         );
@@ -660,7 +660,7 @@ describe('HIPAA Audit Logging Middleware', () => {
       expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            userId: null,
+            userId: undefined, // null is converted to undefined in createAuditRecord
           }),
         })
       );
@@ -679,7 +679,7 @@ describe('HIPAA Audit Logging Middleware', () => {
       expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            entityId: null,
+            entityId: 'unknown', // null is converted to 'unknown' in createAuditRecord
           }),
         })
       );
@@ -691,7 +691,7 @@ describe('HIPAA Audit Logging Middleware', () => {
   // ============================================================================
   describe('Edge Cases', () => {
     describe('Missing req.user handled gracefully', () => {
-      it('should set userId to null when req.user is undefined', async () => {
+      it('should set userId to undefined when req.user is undefined', async () => {
         mockRequest.user = undefined;
         const middleware = auditLog({ entityType: 'Client', action: 'VIEW' });
 
@@ -703,13 +703,13 @@ describe('HIPAA Audit Logging Middleware', () => {
         expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              userId: null,
+              userId: undefined, // null is converted to undefined in createAuditLog
             }),
           })
         );
       });
 
-      it('should set userId to null when req.user.userId is undefined', async () => {
+      it('should set userId to undefined when req.user.userId is undefined', async () => {
         mockRequest.user = { email: 'test@example.com' } as any;
         const middleware = auditLog({ entityType: 'Client', action: 'VIEW' });
 
@@ -721,7 +721,7 @@ describe('HIPAA Audit Logging Middleware', () => {
         expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              userId: null,
+              userId: undefined, // null is converted to undefined in createAuditLog
             }),
           })
         );
@@ -729,7 +729,7 @@ describe('HIPAA Audit Logging Middleware', () => {
     });
 
     describe('Missing params handled', () => {
-      it('should set entityId to null when params is empty', async () => {
+      it('should set entityId to unknown when params is empty', async () => {
         mockRequest.params = {};
         const middleware = auditLog({ entityType: 'Client', action: 'VIEW' });
 
@@ -741,7 +741,7 @@ describe('HIPAA Audit Logging Middleware', () => {
         expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              entityId: null,
+              entityId: 'unknown', // null is converted to 'unknown' in createAuditLog
             }),
           })
         );

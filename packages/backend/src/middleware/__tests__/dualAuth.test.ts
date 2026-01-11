@@ -207,10 +207,10 @@ describe('verifyClinicianClientAccess', () => {
     jest.clearAllMocks();
   });
 
-  it('should allow access when clinician is primary clinician', async () => {
+  it('should allow access when clinician is primary therapist', async () => {
     (prisma.client.findFirst as jest.Mock).mockResolvedValue({
       id: 'client-123',
-      primaryClinicianId: 'clinician-456',
+      primaryTherapistId: 'clinician-456',
     });
 
     const result = await verifyClinicianClientAccess('clinician-456', 'client-123');
@@ -220,16 +220,18 @@ describe('verifyClinicianClientAccess', () => {
       where: expect.objectContaining({
         id: 'client-123',
         OR: expect.arrayContaining([
-          { primaryClinicianId: 'clinician-456' },
+          { primaryTherapistId: 'clinician-456' },
+          { secondaryTherapistId: 'clinician-456' },
+          { appointments: { some: { clinicianId: 'clinician-456' } } },
         ]),
       }),
     });
   });
 
-  it('should allow access when clinician is secondary clinician', async () => {
+  it('should allow access when clinician is secondary therapist', async () => {
     (prisma.client.findFirst as jest.Mock).mockResolvedValue({
       id: 'client-123',
-      secondaryClinicianId: 'clinician-789',
+      secondaryTherapistId: 'clinician-789',
     });
 
     const result = await verifyClinicianClientAccess('clinician-789', 'client-123');
@@ -250,22 +252,22 @@ describe('verifyClinicianClientAccess', () => {
 
   it('should allow supervisor access through supervisee assignments', async () => {
     // First call returns null (clinician not directly assigned)
-    (prisma.client.findFirst as jest.Mock).mockResolvedValue(null);
-    // Second call checks supervisee assignments
-    (prisma.user.findFirst as jest.Mock).mockResolvedValue({
-      id: 'supervisee-123',
-      supervisorId: 'supervisor-456',
-    });
+    // Second call checks supervisee assignments via client's primaryTherapist.supervisorId
+    (prisma.client.findFirst as jest.Mock)
+      .mockResolvedValueOnce(null) // First call: direct assignment check
+      .mockResolvedValueOnce({ id: 'client-789' }); // Second call: supervisee check
 
     const result = await verifyClinicianClientAccess('supervisor-456', 'client-789');
 
     expect(result).toBe(true);
-    expect(prisma.user.findFirst).toHaveBeenCalled();
+    expect(prisma.client.findFirst).toHaveBeenCalledTimes(2);
   });
 
   it('should deny access when clinician has no relationship with client', async () => {
-    (prisma.client.findFirst as jest.Mock).mockResolvedValue(null);
-    (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
+    // Both calls return null (no direct assignment and no supervisee assignment)
+    (prisma.client.findFirst as jest.Mock)
+      .mockResolvedValueOnce(null) // First call: direct assignment check
+      .mockResolvedValueOnce(null); // Second call: supervisee check
 
     const result = await verifyClinicianClientAccess('unrelated-clinician', 'client-xyz');
 

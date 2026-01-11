@@ -309,9 +309,11 @@ describe('Signature Service', () => {
         id: 'note-123',
         noteType: 'Progress Note',
         clinicianId: 'user-456',
-        cosignerId: null,
+        cosignedBy: null,
+        requiresCosign: false,
         status: 'DRAFT',
-        isSigned: false,
+        signedBy: null,
+        signedDate: null,
       });
 
       mockUserFindUnique.mockResolvedValue({
@@ -332,8 +334,8 @@ describe('Signature Service', () => {
 
       mockClinicalNoteUpdate.mockResolvedValue({
         id: 'note-123',
-        isSigned: true,
-        status: 'FINAL',
+        signedBy: 'user-456',
+        status: 'SIGNED',
       });
 
       const result = await signNote(signRequest);
@@ -341,9 +343,9 @@ describe('Signature Service', () => {
       expect(mockClinicalNoteUpdate).toHaveBeenCalledWith({
         where: { id: 'note-123' },
         data: {
-          isSigned: true,
-          signedAt: expect.any(Date),
-          status: 'FINAL',
+          signedBy: 'user-456',
+          signedDate: expect.any(Date),
+          status: 'SIGNED',
         },
       });
       expect(result.signatureType).toBe('AUTHOR');
@@ -354,9 +356,11 @@ describe('Signature Service', () => {
         id: 'note-123',
         noteType: 'Progress Note',
         clinicianId: 'user-456',
-        cosignerId: 'supervisor-789',
+        cosignedBy: null,
+        requiresCosign: true,
         status: 'DRAFT',
-        isSigned: false,
+        signedBy: null,
+        signedDate: null,
       });
 
       mockUserFindUnique.mockResolvedValue({
@@ -380,17 +384,24 @@ describe('Signature Service', () => {
 
       expect(mockClinicalNoteUpdate).toHaveBeenCalledWith({
         where: { id: 'note-123' },
-        data: expect.objectContaining({
+        data: {
+          signedBy: 'user-456',
+          signedDate: expect.any(Date),
           status: 'PENDING_COSIGN',
-        }),
+        },
       });
     });
 
     it('should throw error when note already signed', async () => {
       mockClinicalNoteFindUnique.mockResolvedValue({
         id: 'note-123',
+        noteType: 'Progress Note',
         clinicianId: 'user-456',
-        isSigned: true,
+        cosignedBy: null,
+        requiresCosign: false,
+        status: 'SIGNED',
+        signedBy: 'user-456', // Note already signed
+        signedDate: new Date(),
       });
 
       await expect(signNote(signRequest)).rejects.toThrow(/already signed/i);
@@ -399,8 +410,13 @@ describe('Signature Service', () => {
     it('should throw error when non-author tries to sign', async () => {
       mockClinicalNoteFindUnique.mockResolvedValue({
         id: 'note-123',
-        clinicianId: 'different-user',
-        isSigned: false,
+        noteType: 'Progress Note',
+        clinicianId: 'different-user', // Different from request userId
+        cosignedBy: null,
+        requiresCosign: false,
+        status: 'DRAFT',
+        signedBy: null,
+        signedDate: null,
       });
 
       await expect(signNote(signRequest)).rejects.toThrow(/Only the note author/i);
@@ -417,9 +433,11 @@ describe('Signature Service', () => {
         id: 'note-123',
         noteType: 'Progress Note',
         clinicianId: 'user-456',
-        cosignerId: 'supervisor-789',
+        cosignedBy: 'supervisor-789', // Must match userId in cosignRequest
+        requiresCosign: true,
         status: 'PENDING_COSIGN',
-        isSigned: true,
+        signedBy: 'user-456',
+        signedDate: new Date(),
       });
 
       mockUserFindUnique.mockResolvedValue({
@@ -445,9 +463,9 @@ describe('Signature Service', () => {
       expect(mockClinicalNoteUpdate).toHaveBeenCalledWith({
         where: { id: 'note-123' },
         data: {
-          isCosigned: true,
-          cosignedAt: expect.any(Date),
-          status: 'FINAL',
+          cosignedBy: 'supervisor-789',
+          cosignedDate: expect.any(Date),
+          status: 'COSIGNED',
         },
       });
     });
@@ -460,9 +478,13 @@ describe('Signature Service', () => {
 
       mockClinicalNoteFindUnique.mockResolvedValue({
         id: 'note-123',
+        noteType: 'Progress Note',
         clinicianId: 'user-456',
-        cosignerId: 'other-supervisor',
-        isSigned: true,
+        cosignedBy: 'other-supervisor', // Different from request userId
+        requiresCosign: true,
+        status: 'PENDING_COSIGN',
+        signedBy: 'user-456',
+        signedDate: new Date(),
       });
 
       await expect(signNote(cosignRequest)).rejects.toThrow(/Only the assigned supervisor/i);
