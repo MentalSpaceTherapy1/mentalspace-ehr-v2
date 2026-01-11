@@ -144,6 +144,21 @@ export class PasswordPolicyService {
   }
 
   /**
+   * Alias for getDaysUntilPasswordExpiration (for backwards compatibility)
+   */
+  getDaysUntilExpiration(passwordChangedAt: Date, passwordExpiresAt?: Date | null): number {
+    return this.getDaysUntilPasswordExpiration(passwordChangedAt, passwordExpiresAt);
+  }
+
+  /**
+   * Check if password is expiring soon (within 7 days)
+   */
+  isPasswordExpiringSoon(passwordChangedAt: Date, passwordExpiresAt?: Date | null): boolean {
+    const daysRemaining = this.getDaysUntilPasswordExpiration(passwordChangedAt, passwordExpiresAt);
+    return daysRemaining > 0 && daysRemaining <= 7;
+  }
+
+  /**
    * Validate password change request
    * Checks strength and history
    */

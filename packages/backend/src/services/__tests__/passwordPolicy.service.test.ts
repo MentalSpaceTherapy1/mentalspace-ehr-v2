@@ -31,9 +31,9 @@ describe('PasswordPolicyService', () => {
 
       const result = passwordPolicyService.validatePasswordStrength(strongPassword);
 
-      expect(result.valid).toBe(true);
-      expect(result.score).toBeGreaterThanOrEqual(4);
-      expect(result.feedback).toHaveLength(0);
+      expect(result.isValid).toBe(true);
+      expect(result.score).toBeGreaterThanOrEqual(40);
+      expect(result.errors).toHaveLength(0);
     });
 
     it('should reject password with less than 12 characters', () => {
@@ -41,8 +41,8 @@ describe('PasswordPolicyService', () => {
 
       const result = passwordPolicyService.validatePasswordStrength(shortPassword);
 
-      expect(result.valid).toBe(false);
-      expect(result.feedback).toContain('Password must be at least 12 characters long');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Password must be at least 12 characters long');
     });
 
     it('should reject password without uppercase letter', () => {
@@ -50,8 +50,8 @@ describe('PasswordPolicyService', () => {
 
       const result = passwordPolicyService.validatePasswordStrength(noUppercase);
 
-      expect(result.valid).toBe(false);
-      expect(result.feedback).toContain('Password must contain at least one uppercase letter');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Password must contain at least one uppercase letter');
     });
 
     it('should reject password without lowercase letter', () => {
@@ -59,8 +59,8 @@ describe('PasswordPolicyService', () => {
 
       const result = passwordPolicyService.validatePasswordStrength(noLowercase);
 
-      expect(result.valid).toBe(false);
-      expect(result.feedback).toContain('Password must contain at least one lowercase letter');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Password must contain at least one lowercase letter');
     });
 
     it('should reject password without number', () => {
@@ -68,8 +68,8 @@ describe('PasswordPolicyService', () => {
 
       const result = passwordPolicyService.validatePasswordStrength(noNumber);
 
-      expect(result.valid).toBe(false);
-      expect(result.feedback).toContain('Password must contain at least one number');
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Password must contain at least one number');
     });
 
     it('should reject password without special character', () => {
@@ -77,9 +77,9 @@ describe('PasswordPolicyService', () => {
 
       const result = passwordPolicyService.validatePasswordStrength(noSpecial);
 
-      expect(result.valid).toBe(false);
-      expect(result.feedback).toContain(
-        'Password must contain at least one special character (!@#$%^&*)'
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        'Password must contain at least one special character (!@#$%^&* etc.)'
       );
     });
 
@@ -88,32 +88,32 @@ describe('PasswordPolicyService', () => {
 
       const result = passwordPolicyService.validatePasswordStrength(weakPassword);
 
-      expect(result.valid).toBe(false);
-      expect(result.feedback.length).toBeGreaterThan(1);
-      expect(result.score).toBeLessThan(2);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(1);
+      expect(result.score).toBeLessThan(50);
     });
 
-    it('should provide detailed feedback for all violations', () => {
+    it('should provide detailed errors for all violations', () => {
       const weakPassword = 'weak';
 
       const result = passwordPolicyService.validatePasswordStrength(weakPassword);
 
-      expect(result.feedback).toEqual(
+      expect(result.errors).toEqual(
         expect.arrayContaining([
           'Password must be at least 12 characters long',
           'Password must contain at least one uppercase letter',
           'Password must contain at least one number',
-          'Password must contain at least one special character (!@#$%^&*)',
+          'Password must contain at least one special character (!@#$%^&* etc.)',
         ])
       );
     });
 
     it('should calculate password strength score', () => {
       const testCases = [
-        { password: 'weak', expectedMaxScore: 1 },
-        { password: 'WeakPass1!', expectedMaxScore: 2 },
-        { password: 'MediumP@ss1', expectedMaxScore: 3 },
-        { password: 'StrongP@ssw0rd123!', expectedMinScore: 4 },
+        { password: 'weak', expectedMaxScore: 30 },
+        { password: 'WeakPass1!', expectedMaxScore: 50 },
+        { password: 'MediumP@ss1', expectedMaxScore: 60 },
+        { password: 'StrongP@ssw0rd123!', expectedMinScore: 60 },
       ];
 
       testCases.forEach(({ password, expectedMaxScore, expectedMinScore }) => {
@@ -129,14 +129,10 @@ describe('PasswordPolicyService', () => {
   });
 
   describe('checkPasswordHistory', () => {
-    it('should allow password not in history', async () => {
+    it('should return false when password is not in history (allowed)', async () => {
       const mockUser = {
         id: mockUserId,
-        passwordHistory: [
-          await bcrypt.hash('OldPass1!', 10),
-          await bcrypt.hash('OldPass2!', 10),
-          await bcrypt.hash('OldPass3!', 10),
-        ],
+        passwordHistory: ['hash1', 'hash2', 'hash3'],
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
@@ -147,20 +143,16 @@ describe('PasswordPolicyService', () => {
         'NewPassword123!'
       );
 
-      expect(result).toBe(true);
+      // Returns false when password is NOT in history (allowed to use)
+      expect(result).toBe(false);
     });
 
-    it('should reject password that matches any of last 10 passwords', async () => {
+    it('should return true when password matches any of last 10 passwords (violation)', async () => {
       const reusedPassword = 'OldPassword1!';
-      const hashedOldPassword = await bcrypt.hash(reusedPassword, 10);
 
       const mockUser = {
         id: mockUserId,
-        passwordHistory: [
-          hashedOldPassword,
-          await bcrypt.hash('OldPass2!', 10),
-          await bcrypt.hash('OldPass3!', 10),
-        ],
+        passwordHistory: ['hash1', 'hash2', 'hash3'],
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
@@ -170,10 +162,11 @@ describe('PasswordPolicyService', () => {
 
       const result = await passwordPolicyService.checkPasswordHistory(mockUserId, reusedPassword);
 
-      expect(result).toBe(false);
+      // Returns true when password IS in history (violation)
+      expect(result).toBe(true);
     });
 
-    it('should handle user with no password history', async () => {
+    it('should return false when user has no password history', async () => {
       const mockUser = {
         id: mockUserId,
         passwordHistory: [],
@@ -186,21 +179,14 @@ describe('PasswordPolicyService', () => {
         'NewPassword123!'
       );
 
-      expect(result).toBe(true);
+      // No history means password is not in history (allowed)
+      expect(result).toBe(false);
     });
 
     it('should check all passwords in history', async () => {
-      const passwordHistory = await Promise.all([
-        bcrypt.hash('Pass1!', 10),
-        bcrypt.hash('Pass2!', 10),
-        bcrypt.hash('Pass3!', 10),
-        bcrypt.hash('Pass4!', 10),
-        bcrypt.hash('Pass5!', 10),
-      ]);
-
       const mockUser = {
         id: mockUserId,
-        passwordHistory,
+        passwordHistory: ['hash1', 'hash2', 'hash3', 'hash4', 'hash5'],
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);

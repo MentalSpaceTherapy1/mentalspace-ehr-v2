@@ -17,6 +17,8 @@ describe('Password Policy Integration Tests', () => {
   let authService: AuthService;
   let passwordPolicyService: PasswordPolicyService;
   const testUserId = 'password-test-user-id';
+  // Track passwords used across tests for proper state management
+  let currentPassword = 'InitialPassword123!';
 
   beforeAll(async () => {
     authService = new AuthService();
@@ -53,12 +55,13 @@ describe('Password Policy Integration Tests', () => {
       // Execute: Change password
       const result = await authService.changePassword(
         testUserId,
-        'InitialPassword123!',
+        currentPassword,
         newPassword
       );
 
       // Verify: Password changed successfully
       expect(result.message).toContain('successfully');
+      currentPassword = newPassword; // Track new password
 
       // Verify: Can login with new password
       const loginResult = await authService.login({
@@ -80,7 +83,8 @@ describe('Password Policy Integration Tests', () => {
     it('should add new password to password history', async () => {
       const newPassword = 'AnotherStrongPass456!@';
 
-      await authService.changePassword(testUserId, 'NewStrongPassword123!@', newPassword);
+      await authService.changePassword(testUserId, currentPassword, newPassword);
+      currentPassword = newPassword; // Track new password
 
       // Verify: Password history updated
       const user = await prisma.user.findUnique({
@@ -104,11 +108,9 @@ describe('Password Policy Integration Tests', () => {
       // Wait a moment
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      await authService.changePassword(
-        testUserId,
-        'AnotherStrongPass456!@',
-        'YetAnotherPass789!@'
-      );
+      const newPassword = 'YetAnotherPass789!@';
+      await authService.changePassword(testUserId, currentPassword, newPassword);
+      currentPassword = newPassword; // Track new password
 
       const updatedUser = await prisma.user.findUnique({
         where: { id: testUserId },
@@ -124,7 +126,7 @@ describe('Password Policy Integration Tests', () => {
       const weakPassword = 'Short1!';
 
       await expect(
-        authService.changePassword(testUserId, 'YetAnotherPass789!@', weakPassword)
+        authService.changePassword(testUserId, currentPassword, weakPassword)
       ).rejects.toThrow(/Password does not meet security requirements/);
     });
 
@@ -132,7 +134,7 @@ describe('Password Policy Integration Tests', () => {
       const weakPassword = 'alllowercase123!';
 
       await expect(
-        authService.changePassword(testUserId, 'YetAnotherPass789!@', weakPassword)
+        authService.changePassword(testUserId, currentPassword, weakPassword)
       ).rejects.toThrow(/Password does not meet security requirements/);
     });
 
@@ -140,7 +142,7 @@ describe('Password Policy Integration Tests', () => {
       const weakPassword = 'ALLUPPERCASE123!';
 
       await expect(
-        authService.changePassword(testUserId, 'YetAnotherPass789!@', weakPassword)
+        authService.changePassword(testUserId, currentPassword, weakPassword)
       ).rejects.toThrow(/Password does not meet security requirements/);
     });
 
@@ -148,7 +150,7 @@ describe('Password Policy Integration Tests', () => {
       const weakPassword = 'NoNumbersHere!@';
 
       await expect(
-        authService.changePassword(testUserId, 'YetAnotherPass789!@', weakPassword)
+        authService.changePassword(testUserId, currentPassword, weakPassword)
       ).rejects.toThrow(/Password does not meet security requirements/);
     });
 
@@ -156,7 +158,7 @@ describe('Password Policy Integration Tests', () => {
       const weakPassword = 'NoSpecialChars123';
 
       await expect(
-        authService.changePassword(testUserId, 'YetAnotherPass789!@', weakPassword)
+        authService.changePassword(testUserId, currentPassword, weakPassword)
       ).rejects.toThrow(/Password does not meet security requirements/);
     });
 
@@ -164,7 +166,7 @@ describe('Password Policy Integration Tests', () => {
       const weakPassword = 'weak';
 
       try {
-        await authService.changePassword(testUserId, 'YetAnotherPass789!@', weakPassword);
+        await authService.changePassword(testUserId, currentPassword, weakPassword);
         fail('Should have thrown error');
       } catch (error) {
         // Error should provide helpful feedback
@@ -175,8 +177,6 @@ describe('Password Policy Integration Tests', () => {
 
   describe('Scenario 3: Reject reused password (last 10)', () => {
     it('should prevent reusing the current password', async () => {
-      const currentPassword = 'YetAnotherPass789!@';
-
       await expect(
         authService.changePassword(testUserId, currentPassword, currentPassword)
       ).rejects.toThrow(/Cannot reuse/);
@@ -184,7 +184,7 @@ describe('Password Policy Integration Tests', () => {
 
     it('should prevent reusing any of last 10 passwords', async () => {
       // Setup: Change password 5 times
-      const passwords = [
+      const historyPasswords = [
         'HistoryPass001!@',
         'HistoryPass002!@',
         'HistoryPass003!@',
@@ -192,38 +192,37 @@ describe('Password Policy Integration Tests', () => {
         'HistoryPass005!@',
       ];
 
-      for (let i = 0; i < passwords.length; i++) {
-        const currentPw = i === 0 ? 'YetAnotherPass789!@' : passwords[i - 1];
-        await authService.changePassword(testUserId, currentPw, passwords[i]);
+      for (let i = 0; i < historyPasswords.length; i++) {
+        const oldPw = i === 0 ? currentPassword : historyPasswords[i - 1];
+        await authService.changePassword(testUserId, oldPw, historyPasswords[i]);
       }
+      currentPassword = historyPasswords[4]; // Track the latest password
 
       // Execute & Verify: Try to reuse first password from history
       await expect(
-        authService.changePassword(testUserId, passwords[4], passwords[0])
+        authService.changePassword(testUserId, currentPassword, historyPasswords[0])
       ).rejects.toThrow(/Cannot reuse/);
 
       // Execute & Verify: Try to reuse middle password from history
       await expect(
-        authService.changePassword(testUserId, passwords[4], passwords[2])
+        authService.changePassword(testUserId, currentPassword, historyPasswords[2])
       ).rejects.toThrow(/Cannot reuse/);
     });
 
     it('should allow reusing password after 10 newer passwords', async () => {
       // Setup: Change password 12 times
-      const passwords = [];
+      const morePasswords = [];
       for (let i = 1; i <= 12; i++) {
-        passwords.push(`UniquePassword${String(i).padStart(3, '0')}!@`);
+        morePasswords.push(`UniquePassword${String(i).padStart(3, '0')}!@`);
       }
 
-      let currentPassword = 'HistoryPass005!@';
-      for (const password of passwords) {
+      for (const password of morePasswords) {
         await authService.changePassword(testUserId, currentPassword, password);
         currentPassword = password;
       }
 
-      // The first password (HistoryPass001!@) should now be out of history
-      // Execute: Try to use a password that's now out of history (if system allows 10+)
-      // This test verifies the history is limited to 10 entries
+      // The first passwords should now be out of history
+      // Execute: Verify the history is limited to 10 entries
       const user = await prisma.user.findUnique({
         where: { id: testUserId },
         select: { passwordHistory: true },
@@ -251,7 +250,7 @@ describe('Password Policy Integration Tests', () => {
       // Execute: Login should succeed but with expiration warning
       const loginResult = await authService.login({
         email: 'password-policy-test@example.com',
-        password: passwords[passwords.length - 1],
+        password: currentPassword,
       });
 
       expect(loginResult.passwordExpired).toBe(true);
@@ -276,16 +275,16 @@ describe('Password Policy Integration Tests', () => {
 
     it('should not warn if password has more than 7 days until expiration', async () => {
       // Setup: Password changed 30 days ago (60 days left)
-      const recentPassword = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const recentPasswordDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
       // Execute: Check warning
-      const isExpiringSoon = passwordPolicyService.isPasswordExpiringSoon(recentPassword);
+      const isExpiringSoon = passwordPolicyService.isPasswordExpiringSoon(recentPasswordDate);
 
       // Verify: No warning
       expect(isExpiringSoon).toBe(false);
 
       // Get days remaining
-      const daysRemaining = passwordPolicyService.getDaysUntilExpiration(recentPassword);
+      const daysRemaining = passwordPolicyService.getDaysUntilExpiration(recentPasswordDate);
       expect(daysRemaining).toBe(60);
     });
 
@@ -300,11 +299,8 @@ describe('Password Policy Integration Tests', () => {
 
       // Execute: Change password
       const newPassword = 'FreshNewPassword123!@';
-      await authService.changePassword(
-        testUserId,
-        passwords[passwords.length - 1],
-        newPassword
-      );
+      await authService.changePassword(testUserId, currentPassword, newPassword);
+      currentPassword = newPassword; // Track new password
 
       // Verify: passwordChangedAt updated to now
       const user = await prisma.user.findUnique({
@@ -324,17 +320,20 @@ describe('Password Policy Integration Tests', () => {
   describe('Password Strength Scoring', () => {
     it('should score passwords based on complexity', () => {
       const testCases = [
-        { password: 'weak', expectedScore: 0 },
-        { password: 'WeakPass1!', expectedScore: 1 },
-        { password: 'MediumP@ss123', expectedScore: 2 },
-        { password: 'StrongPassword123!@', expectedScore: 4 },
-        { password: 'VeryStr0ng!P@ssw0rd#2024', expectedScore: 5 },
+        { password: 'weak', expectedMaxScore: 30 },
+        { password: 'WeakPass1!', expectedMaxScore: 50 },
+        { password: 'MediumP@ss123', expectedMaxScore: 70 },
+        { password: 'StrongPassword123!@', expectedMinScore: 60 },
+        { password: 'VeryStr0ng!P@ssw0rd#2024', expectedMinScore: 70 },
       ];
 
-      testCases.forEach(({ password, expectedScore }) => {
+      testCases.forEach(({ password, expectedMaxScore, expectedMinScore }) => {
         const result = passwordPolicyService.validatePasswordStrength(password);
-        if (result.valid) {
-          expect(result.score).toBeGreaterThanOrEqual(expectedScore - 1);
+        if (expectedMaxScore !== undefined) {
+          expect(result.score).toBeLessThanOrEqual(expectedMaxScore);
+        }
+        if (expectedMinScore !== undefined) {
+          expect(result.score).toBeGreaterThanOrEqual(expectedMinScore);
         }
       });
     });
@@ -343,11 +342,11 @@ describe('Password Policy Integration Tests', () => {
       const password = 'TestPass';
       const result = passwordPolicyService.validatePasswordStrength(password);
 
-      expect(result.feedback).toBeDefined();
-      expect(Array.isArray(result.feedback)).toBe(true);
+      expect(result.errors).toBeDefined();
+      expect(Array.isArray(result.errors)).toBe(true);
 
-      if (!result.valid) {
-        expect(result.feedback.length).toBeGreaterThan(0);
+      if (!result.isValid) {
+        expect(result.errors.length).toBeGreaterThan(0);
       }
     });
   });
@@ -384,6 +383,3 @@ describe('Password Policy Integration Tests', () => {
     });
   });
 });
-
-// Helper to generate test passwords
-let passwords: string[];
