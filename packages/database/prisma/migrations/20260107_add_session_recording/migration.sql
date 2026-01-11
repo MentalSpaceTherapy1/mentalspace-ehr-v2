@@ -2,66 +2,85 @@
 -- This migration adds the SessionRecording model for storing telehealth session recordings
 -- with HIPAA-compliant storage, access logging, and retention policies.
 
--- Update TelehealthSession model with new recording fields
-ALTER TABLE "telehealth_sessions"
-ADD COLUMN IF NOT EXISTS "recordingDuration" INTEGER,
-ADD COLUMN IF NOT EXISTS "recordingStatus" TEXT;
+-- Update TelehealthSession model with new recording fields (idempotent)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'recordingDuration') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "recordingDuration" INTEGER;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telehealth_sessions' AND column_name = 'recordingStatus') THEN
+    ALTER TABLE "telehealth_sessions" ADD COLUMN "recordingStatus" TEXT;
+  END IF;
+END $$;
 
--- Create session_recordings table
-CREATE TABLE IF NOT EXISTS "session_recordings" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "sessionId" TEXT NOT NULL,
+-- Note: session_recordings table is created in 20260106_add_telehealth_phase2_ai_models
+-- This migration may add additional columns if they don't exist
 
-    -- Twilio Recording Info
-    "twilioRecordingSid" TEXT NOT NULL UNIQUE,
-    "twilioCompositionSid" TEXT UNIQUE,
-    "twilioRoomSid" TEXT NOT NULL,
-    "recordingDuration" INTEGER NOT NULL DEFAULT 0,
-    "recordingSize" BIGINT NOT NULL DEFAULT 0,
-    "recordingFormat" TEXT NOT NULL DEFAULT 'mp4',
-    "twilioRecordingUrl" TEXT,
-    "twilioMediaUrl" TEXT,
-
-    -- Storage Info
-    "storageProvider" TEXT NOT NULL DEFAULT 'S3',
-    "storageBucket" TEXT NOT NULL,
-    "storageKey" TEXT NOT NULL,
-    "storageRegion" TEXT NOT NULL DEFAULT 'us-east-1',
-    "encryptionType" TEXT NOT NULL DEFAULT 'AES256',
-
-    -- Status & Metadata
-    "status" TEXT NOT NULL DEFAULT 'RECORDING',
-    "recordingStartedAt" TIMESTAMP(3) NOT NULL,
-    "recordingEndedAt" TIMESTAMP(3),
-    "uploadedAt" TIMESTAMP(3),
-    "lastAccessedAt" TIMESTAMP(3),
-    "processingError" TEXT,
-
-    -- Consent & Compliance
-    "clientConsentGiven" BOOLEAN NOT NULL DEFAULT false,
-    "consentTimestamp" TIMESTAMP(3) NOT NULL,
-    "consentIpAddress" TEXT,
-    "retentionPolicy" TEXT NOT NULL DEFAULT '7_YEARS',
-    "scheduledDeletionAt" TIMESTAMP(3),
-    "deletedAt" TIMESTAMP(3),
-    "deletedBy" TEXT,
-    "deletionReason" TEXT,
-
-    -- Access Control & Audit
-    "viewCount" INTEGER NOT NULL DEFAULT 0,
-    "downloadCount" INTEGER NOT NULL DEFAULT 0,
-    "accessLog" JSONB,
-
-    -- Timestamps
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "createdBy" TEXT NOT NULL,
-    "lastModifiedBy" TEXT NOT NULL,
-
-    -- Foreign key constraint
-    CONSTRAINT "session_recordings_sessionId_fkey" FOREIGN KEY ("sessionId")
-        REFERENCES "telehealth_sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
+-- Add any additional columns that may not exist from the earlier migration
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'twilioRoomSid') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "twilioRoomSid" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'recordingFormat') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "recordingFormat" TEXT DEFAULT 'mp4';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'twilioRecordingUrl') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "twilioRecordingUrl" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'twilioMediaUrl') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "twilioMediaUrl" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'storageProvider') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "storageProvider" TEXT DEFAULT 'S3';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'storageBucket') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "storageBucket" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'storageKey') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "storageKey" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'storageRegion') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "storageRegion" TEXT DEFAULT 'us-east-1';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'recordingSize') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "recordingSize" BIGINT DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'recordingStartedAt') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "recordingStartedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'recordingEndedAt') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "recordingEndedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'uploadedAt') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "uploadedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'lastAccessedAt') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "lastAccessedAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'processingError') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "processingError" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'clientConsentGiven') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "clientConsentGiven" BOOLEAN DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'consentIpAddress') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "consentIpAddress" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'scheduledDeletionAt') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "scheduledDeletionAt" TIMESTAMP(3);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'viewCount') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "viewCount" INTEGER DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'accessLog') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "accessLog" JSONB;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'createdBy') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "createdBy" TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'lastModifiedBy') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "lastModifiedBy" TEXT;
+  END IF;
+END $$;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS "session_recordings_sessionId_idx" ON "session_recordings"("sessionId");
