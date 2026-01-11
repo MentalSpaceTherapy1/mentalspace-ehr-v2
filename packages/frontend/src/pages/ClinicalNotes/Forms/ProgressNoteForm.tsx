@@ -514,6 +514,9 @@ export default function ProgressNoteForm() {
   // AI Handler Functions
   const handleGenerateFromTranscription = async (sessionNotes: string) => {
     setIsGenerating(true);
+    // Clear any previous warnings
+    setAiWarnings([]);
+
     try {
       const response = await api.post('/ai/generate-note', {
         noteType: 'Progress Note',
@@ -525,15 +528,25 @@ export default function ProgressNoteForm() {
           diagnoses: diagnosisCodes || [],
           presentingProblems: [],
         },
+      }, {
+        // Set a reasonable timeout for AI generation (60 seconds)
+        timeout: 60000,
       });
+
+      // Validate response structure
+      if (!response.data?.generatedContent) {
+        throw new Error('Invalid response from AI service');
+      }
 
       setGeneratedData(response.data.generatedContent);
       setAiWarnings(response.data.warnings || []);
       setAiConfidence(response.data.confidence || 0);
       setShowReviewModal(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI generation error:', error);
-      setAiWarnings(['Failed to generate note. Please try again.']);
+      // Re-throw the error so SessionInputBox can handle it with proper UI
+      // The error will be caught by SessionInputBox's handleGenerate
+      throw error;
     } finally {
       setIsGenerating(false);
     }

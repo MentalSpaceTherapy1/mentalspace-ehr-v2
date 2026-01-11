@@ -166,7 +166,13 @@ export default function ICD10Autocomplete({ selectedCodes, onCodesChange, disabl
         <input
           type="text"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            // Show dropdown when user types (handles programmatic input that bypasses focus)
+            if (e.target.value.length > 0) {
+              setShowDropdown(true);
+            }
+          }}
           onFocus={() => setShowDropdown(true)}
           disabled={disabled}
           placeholder="Search ICD-10 codes (e.g., F41.1 or 'anxiety')"

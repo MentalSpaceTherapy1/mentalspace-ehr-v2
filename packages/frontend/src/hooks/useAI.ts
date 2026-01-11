@@ -6,6 +6,9 @@ import api from '../lib/api';
  * Handles all AI API calls and state management
  */
 
+// AI request timeout in milliseconds (60 seconds)
+const AI_REQUEST_TIMEOUT = 60000;
+
 export interface UseAIOptions {
   noteType: string;
   clientInfo?: {
@@ -30,13 +33,86 @@ export interface AIGenerationResult {
   warnings: string[];
 }
 
+export type AIErrorType = 'network' | 'timeout' | 'rate_limit' | 'server_error' | 'invalid_response' | 'unknown';
+
+export interface AIError {
+  type: AIErrorType;
+  message: string;
+  retryable: boolean;
+  originalError?: any;
+}
+
+/**
+ * Categorize errors for better user feedback
+ */
+const categorizeError = (err: any): AIError => {
+  // Network errors
+  if (!navigator.onLine || err.message === 'Network Error' || err.code === 'ERR_NETWORK') {
+    return {
+      type: 'network',
+      message: 'No internet connection. Please check your network and try again.',
+      retryable: true,
+      originalError: err,
+    };
+  }
+
+  // Timeout errors
+  if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+    return {
+      type: 'timeout',
+      message: 'The AI is taking longer than expected. This may be due to high demand.',
+      retryable: true,
+      originalError: err,
+    };
+  }
+
+  // Rate limit errors (429)
+  if (err.response?.status === 429) {
+    return {
+      type: 'rate_limit',
+      message: 'AI service is rate limited. Please wait a moment before trying again.',
+      retryable: true,
+      originalError: err,
+    };
+  }
+
+  // Server errors (5xx)
+  if (err.response?.status >= 500) {
+    return {
+      type: 'server_error',
+      message: 'The AI service is temporarily unavailable. Please try again in a few moments.',
+      retryable: true,
+      originalError: err,
+    };
+  }
+
+  // Bad request / Invalid input
+  if (err.response?.status === 400) {
+    return {
+      type: 'invalid_response',
+      message: err.response?.data?.error || 'The AI could not process your input. Try providing more detailed notes.',
+      retryable: true,
+      originalError: err,
+    };
+  }
+
+  // Generic/unknown errors
+  return {
+    type: 'unknown',
+    message: err.response?.data?.error || err.message || 'An unexpected error occurred.',
+    retryable: true,
+    originalError: err,
+  };
+};
+
 export function useAI(options: UseAIOptions) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<Record<string, any> | null>(null);
   const [confidence, setConfidence] = useState<number | undefined>();
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AIError | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   /**
    * Generate complete clinical note
@@ -53,7 +129,14 @@ export function useAI(options: UseAIOptions) {
           sessionData: options.sessionData,
           formData,
           transcript,
+        }, {
+          timeout: AI_REQUEST_TIMEOUT,
         });
+
+        // Validate response structure
+        if (!response.data?.generatedContent) {
+          throw new Error('Invalid response from AI service');
+        }
 
         const result: AIGenerationResult = response.data;
 
@@ -61,13 +144,14 @@ export function useAI(options: UseAIOptions) {
         setConfidence(result.confidence);
         setSuggestions(result.suggestions || []);
         setWarnings(result.warnings || []);
+        setRetryCount(0); // Reset retry count on success
 
         return result;
       } catch (err: any) {
-        const errorMessage = err.response?.data?.error || 'Failed to generate note with AI';
-        setError(errorMessage);
-        console.error('AI generation error:', err);
-        throw new Error(errorMessage);
+        const categorizedError = categorizeError(err);
+        setError(categorizedError);
+        console.error('AI generation error:', categorizedError.type, err);
+        throw categorizedError;
       } finally {
         setIsGenerating(false);
       }
@@ -195,6 +279,21 @@ export function useAI(options: UseAIOptions) {
     setSuggestions([]);
     setWarnings([]);
     setError(null);
+    setRetryCount(0);
+  }, []);
+
+  /**
+   * Reset error state only
+   */
+  const resetError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  /**
+   * Increment retry count (for tracking retry attempts)
+   */
+  const incrementRetryCount = useCallback(() => {
+    setRetryCount(prev => prev + 1);
   }, []);
 
   return {
@@ -205,6 +304,7 @@ export function useAI(options: UseAIOptions) {
     suggestions,
     warnings,
     error,
+    retryCount,
 
     // Actions
     generateNote,
@@ -214,6 +314,8 @@ export function useAI(options: UseAIOptions) {
     getBillingAnalysis,
     suggestCPTCode,
     clearAIState,
+    resetError,
+    incrementRetryCount,
   };
 }
 

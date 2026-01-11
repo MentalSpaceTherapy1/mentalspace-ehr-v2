@@ -43,6 +43,14 @@ interface AvailableSlot {
   appointmentType: string;
 }
 
+interface ServiceCode {
+  id: string;
+  code: string;
+  description: string;
+  defaultRate: number;
+  isActive: boolean;
+}
+
 export default function Waitlist() {
   const navigate = useNavigate();
   const [selectedEntry, setSelectedEntry] = useState<WaitlistEntry | null>(null);
@@ -58,6 +66,7 @@ export default function Waitlist() {
     entryId: null,
   });
   const [removalReason, setRemovalReason] = useState('');
+  const [selectedServiceCode, setSelectedServiceCode] = useState<string>('');
 
   const queryClient = useQueryClient();
 
@@ -92,6 +101,15 @@ export default function Waitlist() {
     },
   });
 
+  // Fetch service codes for booking
+  const { data: serviceCodes } = useQuery({
+    queryKey: ['serviceCodes'],
+    queryFn: async () => {
+      const response = await api.get('/service-codes?isActive=true');
+      return response.data.data as ServiceCode[];
+    },
+  });
+
   // Find available slots mutation
   const findSlotsMutation = useMutation({
     mutationFn: async (entryId: string) => {
@@ -109,7 +127,7 @@ export default function Waitlist() {
 
   // Book appointment mutation
   const bookMutation = useMutation({
-    mutationFn: async ({ entryId, slot }: { entryId: string; slot: AvailableSlot }) => {
+    mutationFn: async ({ entryId, slot, serviceCodeId }: { entryId: string; slot: AvailableSlot; serviceCodeId: string }) => {
       const response = await api.post(
         `/waitlist/${entryId}/book`,
         {
@@ -119,7 +137,7 @@ export default function Waitlist() {
           endTime: slot.endTime,
           duration: 60,
           serviceLocation: 'Office',
-          serviceCodeId: 'placeholder-uuid', // TODO: Select from service codes
+          serviceCodeId,
           timezone: 'America/New_York',
         }
       );
@@ -130,6 +148,7 @@ export default function Waitlist() {
       queryClient.invalidateQueries({ queryKey: ['waitlist'] });
       setShowSlotsModal(false);
       setSelectedEntry(null);
+      setSelectedServiceCode('');
     },
     onError: () => {
       toast.error('Failed to book appointment');
@@ -516,6 +535,30 @@ export default function Waitlist() {
               </p>
             </div>
 
+            {/* Service Code Selection */}
+            <div className="px-6 pt-6 pb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Service Code <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedServiceCode}
+                onChange={(e) => setSelectedServiceCode(e.target.value)}
+                className="w-full px-4 py-2 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="">Select a service code...</option>
+                {serviceCodes?.map((code) => (
+                  <option key={code.id} value={code.id}>
+                    {code.code} - {code.description} (${code.defaultRate})
+                  </option>
+                ))}
+              </select>
+              {!selectedServiceCode && availableSlots.length > 0 && (
+                <p className="text-amber-600 text-sm mt-1">
+                  Please select a service code before booking
+                </p>
+              )}
+            </div>
+
             <div className="p-6">
               {availableSlots.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">No available slots found</p>
@@ -544,11 +587,13 @@ export default function Waitlist() {
                       <button
                         onClick={() =>
                           selectedEntry &&
-                          bookMutation.mutate({ entryId: selectedEntry.id, slot })
+                          selectedServiceCode &&
+                          bookMutation.mutate({ entryId: selectedEntry.id, slot, serviceCodeId: selectedServiceCode })
                         }
-                        className="mt-4 w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all"
+                        disabled={!selectedServiceCode || bookMutation.isPending}
+                        className="mt-4 w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Book Slot
+                        {bookMutation.isPending ? 'Booking...' : 'Book Slot'}
                       </button>
                     </div>
                   ))}
@@ -562,6 +607,7 @@ export default function Waitlist() {
                   setShowSlotsModal(false);
                   setSelectedEntry(null);
                   setAvailableSlots([]);
+                  setSelectedServiceCode('');
                 }}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
               >

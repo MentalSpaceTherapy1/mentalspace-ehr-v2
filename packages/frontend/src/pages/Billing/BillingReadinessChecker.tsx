@@ -40,6 +40,24 @@ interface Note {
   };
 }
 
+// Helper function to format hold reason codes into readable names
+const formatCheckName = (reason: string): string => {
+  const names: Record<string, string> = {
+    INVALID_STATUS: 'Note Status',
+    MISSING_DIAGNOSIS: 'Diagnosis Required',
+    SUPERVISION_REQUIRED: 'Supervision Requirement',
+    COSIGN_REQUIRED: 'Co-Signature Required',
+    COSIGN_OVERDUE: 'Co-Signature Overdue',
+    NOTE_COMPLETION_OVERDUE: 'Note Completion Deadline',
+    MISSING_TREATMENT_PLAN: 'Treatment Plan Required',
+    MISSING_MEDICAL_NECESSITY: 'Medical Necessity Documentation',
+    PRIOR_AUTH_REQUIRED: 'Prior Authorization',
+    SERVICE_PROHIBITED: 'Service Prohibition',
+    NO_MATCHING_RULE: 'Payer Rule Match',
+  };
+  return names[reason] || reason.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
 const BillingReadinessChecker: React.FC = () => {
   const navigate = useNavigate();
   const [notes, setNotes] = useState<Note[]>([]);
@@ -57,8 +75,13 @@ const BillingReadinessChecker: React.FC = () => {
   const fetchRecentNotes = async () => {
     try {
       setLoading(true);
-      // Fetch recently signed notes
-      const response = await api.get('/notes?status=SIGNED&limit=50');
+      // Fetch recently signed and cosigned notes
+      const response = await api.get('/clinical-notes', {
+        params: {
+          status: 'SIGNED,COSIGNED',
+          limit: 50,
+        },
+      });
       setNotes(response.data.data || []);
     } catch (err) {
       console.error('Failed to fetch notes:', err);
@@ -80,11 +103,60 @@ const BillingReadinessChecker: React.FC = () => {
     setResult(null);
 
     try {
-      const response = await api.post(
-        `/billing-readiness/validate/${selectedNoteId}`,
-        { createHolds }
+      const response = await api.get(
+        `/clinical-notes/${selectedNoteId}/billing-readiness`,
+        { params: { createHolds } }
       );
-      setResult(response.data.data);
+
+      // Transform backend response to match frontend expected format
+      const backendData = response.data.data;
+      const transformedResult: ValidationResult = {
+        passed: backendData.canBill,
+        note: {
+          id: selectedNoteId,
+          serviceDate: new Date().toISOString(), // Will be populated from note data
+          status: backendData.noteStatus,
+          client: { firstName: '', lastName: '' },
+          clinician: { firstName: '', lastName: '', credential: '' },
+        },
+        checks: backendData.holds.map((hold: any) => ({
+          name: formatCheckName(hold.reason),
+          passed: false,
+          message: hold.details,
+        })),
+        holdsCreated: createHolds ? backendData.holds.length : 0,
+      };
+
+      // Add passed checks for context
+      if (backendData.canBill) {
+        transformedResult.checks = [
+          { name: 'Note Status', passed: true, message: 'Note is signed and ready for billing' },
+          { name: 'Validation Complete', passed: true, message: 'All billing requirements met' },
+        ];
+      } else if (transformedResult.checks.length === 0) {
+        transformedResult.checks = backendData.warnings.map((warning: string) => ({
+          name: 'Warning',
+          passed: true,
+          message: warning,
+        }));
+      }
+
+      // Fetch note details for display
+      try {
+        const noteResponse = await api.get(`/clinical-notes/${selectedNoteId}`);
+        const noteData = noteResponse.data.data;
+        transformedResult.note = {
+          id: selectedNoteId,
+          serviceDate: noteData.sessionDate,
+          status: noteData.status,
+          client: noteData.client || { firstName: '', lastName: '' },
+          clinician: noteData.clinician || { firstName: '', lastName: '', credential: '' },
+        };
+      } catch {
+        // Note details fetch failed, use default values
+      }
+
+      setResult(transformedResult);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to validate note');
     } finally {

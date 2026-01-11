@@ -1,146 +1,356 @@
-# MentalSpace EHR - Comprehensive End-to-End Test Plan
+# MentalSpace EHR V2 - Comprehensive End-to-End Test Plan
 
-## Test Environment
-- **URL**: https://mentalspaceehr.com
-- **Test User**: Elize Joseph (ejoseph@chctherapy.com)
-- **Password**: Bing@@0912
-- **Test Client**: John Doe
-- **Date**: January 2026
+**Version:** 2.0  
+**Last Updated:** January 2026  
+**Test Environment:** Production (https://mentalspaceehr.com)  
+**Test User:** ejoseph@chctherapy.com  
+**Password:** Bing@@0912
 
 ---
 
-# PART 1: AUTHENTICATION & LOGIN
+## TABLE OF CONTENTS
 
-## 1.1 Staff Login
+1. [Test Environment Setup](#1-test-environment-setup)
+2. [Authentication & Security](#2-authentication--security)
+3. [Dashboard & Navigation](#3-dashboard--navigation)
+4. [Client Management](#4-client-management)
+5. [Scheduling & Appointments](#5-scheduling--appointments)
+6. [Clinical Documentation](#6-clinical-documentation)
+7. [Telehealth](#7-telehealth)
+8. [Billing & Claims](#8-billing--claims)
+9. [Reports & Analytics](#9-reports--analytics)
+10. [Staff & HR Management](#10-staff--hr-management)
+11. [Compliance & Training](#11-compliance--training)
+12. [Client Portal](#12-client-portal)
+13. [Guardian Portal](#13-guardian-portal)
+14. [Communication & Messaging](#14-communication--messaging)
+15. [Supervision](#15-supervision)
+16. [Productivity Dashboards](#16-productivity-dashboards)
+17. [Progress Tracking](#17-progress-tracking)
+18. [Group Therapy](#18-group-therapy)
+19. [Self-Scheduling](#19-self-scheduling)
+20. [AI Features](#20-ai-features)
+21. [Admin Tools](#21-admin-tools)
+22. [Settings & Configuration](#22-settings--configuration)
+23. [Vendor & Finance](#23-vendor--finance)
+24. [Error Handling & Edge Cases](#24-error-handling--edge-cases)
+25. [Performance & Usability](#25-performance--usability)
+26. [Security & Compliance](#26-security--compliance)
+27. [API Endpoint Testing](#27-api-endpoint-testing)
+
+---
+
+## 1. TEST ENVIRONMENT SETUP
+
+### 1.1 Pre-Test Checklist
+- [ ] Browser: Chrome (latest), Firefox, Safari, Edge
+- [ ] Clear browser cache and cookies
+- [ ] Disable browser extensions that might interfere
+- [ ] Enable browser console (F12)
+- [ ] Enable network monitoring (F12 > Network tab)
+- [ ] Test credentials verified and active
+- [ ] Test client data available (John Doe or equivalent)
+- [ ] Backup test data if needed
+
+### 1.2 Test Data Requirements
+- [ ] Test Client: John Doe (or equivalent)
+- [ ] Test Staff Member: ejoseph@chctherapy.com
+- [ ] Test Appointments: At least 3 (past, present, future)
+- [ ] Test Notes: At least 2 signed, 1 unsigned
+- [ ] Test Insurance: Primary and secondary (if applicable)
+- [ ] Test Billing: At least 1 charge, 1 claim, 1 payment
+
+---
+
+## 2. AUTHENTICATION & SECURITY
+
+### 2.1 Staff Login
 - [ ] Navigate to https://mentalspaceehr.com/login
+- [ ] Verify login page loads correctly
 - [ ] Enter email: `ejoseph@chctherapy.com`
 - [ ] Enter password: `Bing@@0912`
 - [ ] Click "Sign In"
 - [ ] Verify successful login - redirected to Dashboard
 - [ ] Verify user name appears in top-right corner
 - [ ] Verify no console errors (F12 > Console)
+- [ ] Verify no network errors (F12 > Network)
 
-## 1.2 Session Persistence
-- [ ] Refresh the page (F5)
-- [ ] Verify still logged in
-- [ ] Open new tab, navigate to https://mentalspaceehr.com
-- [ ] Verify automatically logged in
+### 2.2 MFA (Multi-Factor Authentication)
+- [ ] If MFA is enabled, verify MFA prompt appears
+- [ ] Enter MFA code from authenticator app
+- [ ] Verify successful authentication
+- [ ] Test "Remember this device" option (if available)
+- [ ] Test MFA recovery codes (if available)
 
-## 1.3 Navigation Access
-- [ ] Verify all sidebar menu items are visible and clickable:
-  - [ ] Dashboard
-  - [ ] Calendar/Scheduling
-  - [ ] Clients
-  - [ ] Clinical Notes
-  - [ ] Telehealth
-  - [ ] Messaging
-  - [ ] Billing
-  - [ ] Reports
-  - [ ] Staff/HR
-  - [ ] Settings
+### 2.3 Session Management
+- [ ] Refresh the page (F5) - verify still logged in
+- [ ] Open new tab, navigate to https://mentalspaceehr.com - verify auto-login
+- [ ] Verify session cookie is httpOnly and secure
+- [ ] Test session timeout warning (wait 13 minutes)
+- [ ] Test session extension option
+- [ ] Test automatic logout after 15 minutes of inactivity
+- [ ] Verify redirect to login page after logout
+
+### 2.4 Password Security
+- [ ] Navigate to Settings > Security (or User Profile)
+- [ ] Test password change functionality
+- [ ] Verify password requirements enforced:
+  - [ ] Minimum length (8+ characters)
+  - [ ] Requires uppercase letter
+  - [ ] Requires lowercase letter
+  - [ ] Requires number
+  - [ ] Requires special character
+- [ ] Test weak password rejection
+- [ ] Test password history (cannot reuse recent passwords)
+
+### 2.5 Authorization & Access Control
+- [ ] Verify only authorized menu items visible based on role
+- [ ] Try accessing unauthorized URL directly (e.g., `/admin` if not admin)
+- [ ] Verify appropriate denial/redirect
+- [ ] Test role-based data access (only see assigned clients)
+- [ ] Verify proper data isolation between users
+
+### 2.6 Logout
+- [ ] Click user menu > Logout
+- [ ] Verify successful logout
+- [ ] Verify redirect to login page
+- [ ] Verify session cleared
+- [ ] Try accessing protected route - verify redirect to login
 
 ---
 
-# PART 2: DASHBOARD VERIFICATION
+## 3. DASHBOARD & NAVIGATION
 
-## 2.1 Dashboard Widgets
+### 3.1 Dashboard Widgets
 - [ ] Verify "Today's Appointments" widget loads with data
 - [ ] Verify "Unsigned Notes" widget displays count
 - [ ] Verify "Messages" widget shows unread count
 - [ ] Verify "Quick Actions" buttons are functional
 - [ ] Verify any charts/graphs render without errors
 - [ ] Verify revenue/productivity metrics display (if applicable)
+- [ ] Verify widget refresh functionality
+- [ ] Test widget customization (if available)
 
-## 2.2 Quick Actions
-- [ ] Click "New Appointment" - verify modal opens
+### 3.2 Quick Actions
+- [ ] Click "New Appointment" - verify modal/form opens
 - [ ] Click "New Client" - verify form opens
 - [ ] Click "New Note" - verify note selector opens
-- [ ] Close all modals
+- [ ] Click "New Message" - verify composer opens
+- [ ] Close all modals/forms
+- [ ] Verify quick action shortcuts work (keyboard shortcuts if available)
+
+### 3.3 Navigation Menu
+- [ ] Verify all sidebar menu items are visible and clickable:
+  - [ ] Dashboard
+  - [ ] Clients
+  - [ ] Appointments
+  - [ ] Clinical Notes
+  - [ ] Telehealth
+  - [ ] Billing
+  - [ ] Reports & Analytics
+  - [ ] Progress Tracking
+  - [ ] Staff & HR
+  - [ ] Compliance & Training
+  - [ ] Portals
+  - [ ] Admin Tools
+  - [ ] Clinician Tools
+  - [ ] Communication
+  - [ ] Settings
+- [ ] Test menu expansion/collapse
+- [ ] Test submenu navigation
+- [ ] Verify active menu item highlighting
+- [ ] Test mobile menu (responsive design)
+
+### 3.4 Breadcrumbs & Navigation History
+- [ ] Verify breadcrumbs display correctly
+- [ ] Test browser back button functionality
+- [ ] Test browser forward button functionality
+- [ ] Verify deep linking works (direct URL access)
 
 ---
 
-# PART 3: CLIENT MANAGEMENT
+## 4. CLIENT MANAGEMENT
 
-## 3.1 Find Test Client
+### 4.1 Client List & Search
 - [ ] Navigate to Clients section
-- [ ] Use search to find "John Doe"
+- [ ] Verify client list loads
+- [ ] Test search by name: "John Doe"
+- [ ] Test search by MRN
+- [ ] Test search by DOB
+- [ ] Test search by phone number
+- [ ] Test search by email
+- [ ] Test filters:
+  - [ ] Active/Inactive status
+  - [ ] Primary clinician
+  - [ ] Insurance type
+  - [ ] Date range
+- [ ] Test sorting (name, DOB, last visit)
+- [ ] Test pagination (if applicable)
+
+### 4.2 Client Profile - Demographics Tab
 - [ ] Click on John Doe to open client profile
 - [ ] Verify client profile loads completely
-
-## 3.2 Client Demographics Tab
 - [ ] Verify all demographic fields display:
   - [ ] Full name
   - [ ] Date of Birth
   - [ ] Gender
   - [ ] Email
   - [ ] Phone number(s)
-  - [ ] Address
+  - [ ] Address (street, city, state, zip)
   - [ ] Emergency contact
   - [ ] Preferred contact method
+  - [ ] Preferred name/nickname
 - [ ] Click "Edit" button
 - [ ] Modify a non-critical field (e.g., preferred name)
 - [ ] Save changes
 - [ ] Verify changes persist after page refresh
+- [ ] Verify audit trail logged (if accessible)
 
-## 3.3 Client Insurance Tab
+### 4.3 Client Profile - Insurance Tab
 - [ ] Navigate to Insurance tab
-- [ ] Verify primary insurance information displays
+- [ ] Verify primary insurance information displays:
+  - [ ] Insurance name
+  - [ ] Policy number
+  - [ ] Group number
+  - [ ] Subscriber name
+  - [ ] Effective dates
 - [ ] Verify secondary insurance (if applicable)
+- [ ] Test "Add Insurance" functionality
+- [ ] Test "Edit Insurance" functionality
+- [ ] Test "Remove Insurance" functionality
 - [ ] Check eligibility verification status
 - [ ] Click "Verify Eligibility" button (if available)
 - [ ] Verify prior authorizations display
+- [ ] Test adding prior authorization
 
-## 3.4 Client Documents Tab
+### 4.4 Client Profile - Documents Tab
 - [ ] Navigate to Documents tab
 - [ ] Verify document list loads
-- [ ] Upload a test document (PDF or image)
-- [ ] Verify upload succeeds
-- [ ] Click to view/download uploaded document
-- [ ] Delete test document
+- [ ] Test document upload:
+  - [ ] Upload PDF document
+  - [ ] Upload image file
+  - [ ] Verify upload succeeds
+  - [ ] Verify file appears in list
+- [ ] Test document viewing:
+  - [ ] Click to view/download uploaded document
+  - [ ] Verify document opens correctly
+- [ ] Test document deletion:
+  - [ ] Delete test document
+  - [ ] Verify deletion confirmation
+  - [ ] Verify document removed from list
+- [ ] Test document categorization/tagging (if available)
 
-## 3.5 Client Appointments Tab
+### 4.5 Client Profile - Appointments Tab
 - [ ] Navigate to Appointments tab
 - [ ] Verify appointment history displays
 - [ ] Verify upcoming appointments display
 - [ ] Verify past appointments show correct status
+- [ ] Test filtering by date range
+- [ ] Test filtering by appointment type
+- [ ] Click on appointment - verify details modal opens
 
-## 3.6 Client Notes Tab
+### 4.6 Client Profile - Notes Tab
 - [ ] Navigate to Notes tab
 - [ ] Verify clinical notes list displays
 - [ ] Verify notes are sorted by date (newest first)
+- [ ] Test filtering by note type
+- [ ] Test filtering by signed/unsigned status
 - [ ] Click on an existing note to view
 - [ ] Verify note content renders correctly
+- [ ] Test note search functionality
 
-## 3.7 Client Billing Tab
+### 4.7 Client Profile - Billing Tab
 - [ ] Navigate to Billing tab
 - [ ] Verify charges/claims display
 - [ ] Verify account balance shows
 - [ ] Verify payment history displays
+- [ ] Test filtering by date range
+- [ ] Test filtering by status
+- [ ] Click on charge/claim - verify details
 
-## 3.8 Client Portal Tab
+### 4.8 Client Profile - Portal Tab
 - [ ] Navigate to Portal tab
 - [ ] Verify portal account status shows
 - [ ] If not invited, test "Send Portal Invitation"
-- [ ] Verify invitation email is sent
+- [ ] Verify invitation email is sent (check logs)
+- [ ] Test "Resend Invitation" (if available)
+- [ ] Verify portal access status updates
 
-## 3.9 Client Consents Tab
+### 4.9 Client Profile - Consents Tab
 - [ ] Navigate to Consents tab
 - [ ] Verify consent forms list displays
-- [ ] Check status of each consent (signed/pending)
+- [ ] Check status of each consent (signed/pending/expired)
 - [ ] View a signed consent document
+- [ ] Test sending consent form to client
+- [ ] Test marking consent as received
+
+### 4.10 Client Profile - Diagnoses Tab
+- [ ] Navigate to Diagnoses tab
+- [ ] Verify diagnoses list displays
+- [ ] Test adding new diagnosis:
+  - [ ] Select ICD-10 code
+  - [ ] Enter diagnosis name
+  - [ ] Set as primary/secondary
+  - [ ] Enter onset date
+  - [ ] Save diagnosis
+- [ ] Test editing diagnosis
+- [ ] Test removing diagnosis
+- [ ] Verify diagnosis appears in billing/notes
+
+### 4.11 Client Profile - Relationships Tab
+- [ ] Navigate to Relationships tab
+- [ ] Verify relationships list displays
+- [ ] Test adding relationship:
+  - [ ] Select relationship type (parent, guardian, etc.)
+  - [ ] Enter related person's information
+  - [ ] Save relationship
+- [ ] Test editing relationship
+- [ ] Test removing relationship
+
+### 4.12 Create New Client
+- [ ] Navigate to Clients > New Client
+- [ ] Fill in required fields:
+  - [ ] First Name
+  - [ ] Last Name
+  - [ ] Date of Birth
+  - [ ] Gender
+  - [ ] Email
+  - [ ] Phone
+  - [ ] Address
+- [ ] Test form validation:
+  - [ ] Try submitting with missing required fields
+  - [ ] Verify error messages display
+- [ ] Save new client
+- [ ] Verify client appears in client list
+- [ ] Verify MRN assigned automatically
+
+### 4.13 Duplicate Detection
+- [ ] Navigate to Clients > Duplicate Detection
+- [ ] Verify duplicate detection list displays
+- [ ] Test merging duplicates:
+  - [ ] Select two duplicate records
+  - [ ] Review merge preview
+  - [ ] Confirm merge
+  - [ ] Verify merge completed
+- [ ] Test marking as "Not a Duplicate"
 
 ---
 
-# PART 4: SCHEDULING & APPOINTMENTS
+## 5. SCHEDULING & APPOINTMENTS
 
-## 4.1 Calendar View
-- [ ] Navigate to Calendar/Scheduling
+### 5.1 Calendar View
+- [ ] Navigate to Calendar/Appointments
 - [ ] Verify calendar loads without errors
 - [ ] Toggle between Day, Week, Month views
 - [ ] Verify existing appointments display correctly
 - [ ] Verify color-coding by appointment type
+- [ ] Verify color-coding by status
+- [ ] Test date navigation (previous/next)
+- [ ] Test "Today" button
+- [ ] Test provider filter (if multiple providers)
+- [ ] Test room/location filter (if applicable)
 
-## 4.2 Create New Appointment
+### 5.2 Create New Appointment
 - [ ] Click on empty time slot OR click "New Appointment" button
 - [ ] Fill in appointment form:
   - [ ] Client: Select "John Doe"
@@ -151,73 +361,323 @@
   - [ ] Service Location: Telehealth
   - [ ] CPT Code: 90837 (60-min psychotherapy)
   - [ ] Diagnosis Code: Add appropriate ICD-10
+  - [ ] Provider: Select provider
   - [ ] Room/Location: (if in-person)
   - [ ] Notes: "Test appointment for QA"
-  - [ ] Recurring: Test setting up weekly recurrence
+- [ ] Test recurring appointment:
+  - [ ] Enable "Recurring" option
+  - [ ] Select frequency (weekly)
+  - [ ] Select end date or number of occurrences
+  - [ ] Verify recurrence preview
 - [ ] Save appointment
 - [ ] Verify appointment appears on calendar
 - [ ] Verify confirmation email sent to client (check logs)
+- [ ] Verify appointment reminder scheduled (if applicable)
 
-## 4.3 Modify Appointment
+### 5.3 Modify Appointment
 - [ ] Click on the created appointment
-- [ ] Change time by 30 minutes
-- [ ] Save changes
+- [ ] Test editing appointment:
+  - [ ] Change time by 30 minutes
+  - [ ] Change duration
+  - [ ] Change location
+  - [ ] Add notes
+  - [ ] Save changes
 - [ ] Verify appointment moved on calendar
 - [ ] Verify modification logged in audit trail
+- [ ] Verify notification sent to client (if applicable)
 
-## 4.4 Appointment Actions
+### 5.4 Appointment Actions
 - [ ] Open appointment details
-- [ ] Test "Check In" button - verify status changes
-- [ ] Test "Start Session" button - verify telehealth link
+- [ ] Test "Check In" button:
+  - [ ] Click Check In
+  - [ ] Verify status changes to "Checked In"
+  - [ ] Verify check-in time recorded
+- [ ] Test "Start Session" button:
+  - [ ] Click Start Session
+  - [ ] Verify telehealth link opens (if telehealth)
+  - [ ] Verify status changes to "In Progress"
 - [ ] Test "Cancel" button:
+  - [ ] Click Cancel
   - [ ] Select cancellation reason
   - [ ] Add cancellation notes
   - [ ] Confirm cancellation
   - [ ] Verify status changes to "Cancelled"
+  - [ ] Verify cancellation notification sent
+- [ ] Test "Reschedule" button:
+  - [ ] Click Reschedule
+  - [ ] Select new date/time
+  - [ ] Confirm reschedule
+  - [ ] Verify appointment moved
+- [ ] Test "No-Show" button:
+  - [ ] Mark as No-Show
+  - [ ] Verify status changes
+  - [ ] Verify no-show logged
 
-## 4.5 Waitlist Management
+### 5.5 Waitlist Management
 - [ ] Navigate to Waitlist section
+- [ ] Verify waitlist displays
 - [ ] Add John Doe to waitlist:
+  - [ ] Click "Add to Waitlist"
+  - [ ] Select client
   - [ ] Preferred days: Monday, Wednesday, Friday
   - [ ] Preferred times: Morning (9am-12pm)
   - [ ] Priority: High
   - [ ] Notes: "Prefers early morning"
-- [ ] Save waitlist entry
+  - [ ] Save waitlist entry
 - [ ] Verify entry appears in waitlist
-- [ ] Test "Match" functionality if available
+- [ ] Test "Match" functionality:
+  - [ ] Click Match on waitlist entry
+  - [ ] Review available appointments
+  - [ ] Select appointment
+  - [ ] Confirm match
+  - [ ] Verify appointment created
+- [ ] Test editing waitlist entry
+- [ ] Test removing from waitlist
 
-## 4.6 Provider Availability
-- [ ] Navigate to My Schedule/Availability
+### 5.6 Provider Availability
+- [ ] Navigate to Settings > Provider Availability
 - [ ] View current availability settings
-- [ ] Modify availability for one day
-- [ ] Add a time-off/blocked time
-- [ ] Save changes
+- [ ] Test modifying availability:
+  - [ ] Select day of week
+  - [ ] Set available hours
+  - [ ] Add break times
+  - [ ] Save changes
+- [ ] Test adding time-off/blocked time:
+  - [ ] Select date range
+  - [ ] Select reason (vacation, meeting, etc.)
+  - [ ] Save blocked time
 - [ ] Verify calendar reflects changes
+- [ ] Test recurring availability pattern
+
+### 5.7 Appointment Types
+- [ ] Navigate to Settings > Appointment Types
+- [ ] Verify appointment types list displays
+- [ ] Test creating new appointment type:
+  - [ ] Name: "Intake Session"
+  - [ ] Duration: 90 minutes
+  - [ ] Default CPT Code: 90791
+  - [ ] Default location
+  - [ ] Save appointment type
+- [ ] Test editing appointment type
+- [ ] Test deleting appointment type
+- [ ] Verify appointment type available in appointment form
+
+### 5.8 AI Scheduling Assistant
+- [ ] Navigate to Appointments > AI Scheduling Assistant
+- [ ] Test AI assistant features:
+  - [ ] Ask: "Find available slots for John Doe next week"
+  - [ ] Verify AI suggests appointments
+  - [ ] Test natural language scheduling
+  - [ ] Test conflict detection
+  - [ ] Test optimization suggestions
+
+### 5.9 Clinician Schedules
+- [ ] Navigate to Appointments > Clinician Schedules
+- [ ] Verify schedule view displays
+- [ ] Test filtering by clinician
+- [ ] Test viewing multiple clinicians
+- [ ] Test schedule export (if available)
 
 ---
 
-# PART 5: TELEHEALTH VIDEO SESSION
+## 6. CLINICAL DOCUMENTATION
 
-## 5.1 Pre-Session Setup
+### 6.1 Notes Dashboard
+- [ ] Navigate to Clinical Notes > Compliance Dashboard
+- [ ] Verify dashboard displays:
+  - [ ] Unsigned notes count
+  - [ ] Notes due for signature
+  - [ ] Overdue notes
+  - [ ] Notes requiring co-signature
+- [ ] Test filtering by date range
+- [ ] Test filtering by note type
+- [ ] Test filtering by status
+
+### 6.2 My Notes
+- [ ] Navigate to Clinical Notes > My Notes
+- [ ] Verify notes list displays
+- [ ] Test filtering:
+  - [ ] By note type
+  - [ ] By signed/unsigned status
+  - [ ] By date range
+  - [ ] By client
+- [ ] Test sorting
+- [ ] Click on note to view details
+- [ ] Test bulk actions (if available)
+
+### 6.3 Create New Note - Note Type Selection
+- [ ] Navigate to Clinical Notes > Create New Note
+- [ ] Verify note type selector displays
+- [ ] Test all note types available:
+  - [ ] Intake Assessment
+  - [ ] Progress Note
+  - [ ] Treatment Plan
+  - [ ] Cancellation Note
+  - [ ] No-Show Note
+  - [ ] Consultation Note
+  - [ ] Contact Note
+  - [ ] Termination Note
+  - [ ] Group Note
+  - [ ] Miscellaneous Note
+- [ ] Select note type and proceed
+
+### 6.4 Intake Assessment Note
+- [ ] Create new Intake Assessment note
+- [ ] Select Client: John Doe
+- [ ] Select associated appointment (if any)
+- [ ] Complete all sections:
+  - [ ] Identifying Information
+  - [ ] Presenting Problem
+  - [ ] Psychiatric History
+  - [ ] Medical History
+  - [ ] Family History
+  - [ ] Social History
+  - [ ] Substance Use
+  - [ ] Developmental History
+  - [ ] Trauma History
+  - [ ] Mental Status Examination
+  - [ ] Risk Assessment
+  - [ ] Diagnostic Impressions
+  - [ ] Treatment Recommendations
+  - [ ] Clinician Summary
+- [ ] Test AI-assisted note generation (if available)
+- [ ] Save draft
+- [ ] Review note
+- [ ] Sign note with PIN/password
+- [ ] Verify signature timestamp
+- [ ] Verify note status changes to "Signed"
+- [ ] Verify note locked after signing
+
+### 6.5 Progress Note
+- [ ] Create new Progress Note
+- [ ] Select Client: John Doe
+- [ ] Select associated appointment
+- [ ] Complete all sections:
+  - [ ] Session Information
+  - [ ] Subjective
+  - [ ] Objective
+  - [ ] Assessment
+  - [ ] Plan
+  - [ ] Risk Assessment
+- [ ] Test AI transcription integration (if available)
+- [ ] Test template usage
+- [ ] Save and sign note
+- [ ] Verify note appears in client's notes list
+
+### 6.6 Treatment Plan
+- [ ] Create new Treatment Plan
+- [ ] Select Client: John Doe
+- [ ] Complete all sections:
+  - [ ] Diagnoses
+  - [ ] Presenting Problems
+  - [ ] Strengths & Resources
+  - [ ] Treatment Goals (with objectives)
+  - [ ] Treatment Modalities
+  - [ ] Estimated Duration
+  - [ ] Crisis Plan
+  - [ ] Client Participation
+- [ ] Test goal tracking integration
+- [ ] Save and sign note
+- [ ] Verify treatment plan review date set
+
+### 6.7 Group Therapy Note
+- [ ] Create new Group Note
+- [ ] Select all group participants including John Doe
+- [ ] Complete group information:
+  - [ ] Group name/type
+  - [ ] Session number
+  - [ ] Attendance
+  - [ ] Session content
+  - [ ] Group process
+  - [ ] Individual member notes
+- [ ] Save and sign note
+- [ ] Verify note linked to all participants
+
+### 6.8 Note Editing & Amendments
+- [ ] Open an unsigned note
+- [ ] Test editing functionality
+- [ ] Save changes
+- [ ] Open a signed note
+- [ ] Verify note is locked
+- [ ] Test amendment functionality:
+  - [ ] Click "Add Amendment"
+  - [ ] Enter amendment text
+  - [ ] Sign amendment
+  - [ ] Verify amendment appears in note history
+
+### 6.9 Note Co-Signature
+- [ ] Create note requiring co-signature
+- [ ] Sign note as primary author
+- [ ] Verify note status: "Pending Co-Signature"
+- [ ] Log in as supervisor
+- [ ] Navigate to Co-Sign Queue
+- [ ] Review note
+- [ ] Co-sign note
+- [ ] Verify both signatures recorded
+
+### 6.10 Smart Note Creator (AI)
+- [ ] Navigate to Smart Note Creator
+- [ ] Test AI note generation:
+  - [ ] Select appointment
+  - [ ] Select note type
+  - [ ] Review AI-generated content
+  - [ ] Edit as needed
+  - [ ] Save note
+- [ ] Test transcription integration
+- [ ] Test clinical suggestions
+
+### 6.11 Note Templates
+- [ ] Test using note templates
+- [ ] Test creating custom template
+- [ ] Test template variables/placeholders
+- [ ] Test template library
+
+### 6.12 Note Search & Filtering
+- [ ] Test searching notes by:
+  - [ ] Client name
+  - [ ] Note type
+  - [ ] Date range
+  - [ ] Keywords in content
+  - [ ] Provider
+- [ ] Test advanced filters
+- [ ] Test note export (if available)
+
+---
+
+## 7. TELEHEALTH
+
+### 7.1 Telehealth Dashboard
+- [ ] Navigate to Telehealth
+- [ ] Verify dashboard displays:
+  - [ ] Upcoming sessions
+  - [ ] Active sessions
+  - [ ] Recent sessions
+- [ ] Test filtering options
+
+### 7.2 Pre-Session Setup
 - [ ] Create a new telehealth appointment for "now" or join existing
 - [ ] Verify telehealth link is generated
 - [ ] Copy client join link
+- [ ] Verify consent status checked
+- [ ] Test sending join link to client
 
-## 5.2 Start Video Session
+### 7.3 Start Video Session
 - [ ] Click "Start Session" or "Join" button
 - [ ] Grant camera/microphone permissions
 - [ ] Verify video preview shows
 - [ ] Verify audio levels indicator works
 - [ ] Enter the session/waiting room
+- [ ] Verify waiting room functionality (if applicable)
 
-## 5.3 In-Session Features - Video Controls
+### 7.4 In-Session Features - Video Controls
 - [ ] Toggle camera on/off - verify video stops/starts
 - [ ] Toggle microphone on/off - verify mute works
 - [ ] Test speaker/audio output selection
 - [ ] Test camera selection (if multiple cameras)
 - [ ] Test virtual background (if available)
+- [ ] Test video quality settings
 
-## 5.4 In-Session Features - Session Controls
+### 7.5 In-Session Features - Session Controls
 - [ ] Test screen sharing:
   - [ ] Share entire screen
   - [ ] Share specific window
@@ -225,34 +685,40 @@
   - [ ] Stop sharing
 - [ ] Test chat/messaging within session
 - [ ] Test "Raise Hand" feature (if available)
+- [ ] Test participant management (if group session)
 
-## 5.5 In-Session Features - Recording
+### 7.6 In-Session Features - Recording
 - [ ] Start session recording
 - [ ] Verify recording indicator appears
+- [ ] Verify consent obtained (if required)
 - [ ] Record for at least 30 seconds
 - [ ] Stop recording
 - [ ] Verify recording saved notification
+- [ ] Verify recording accessible post-session
 
-## 5.6 In-Session Features - Transcription
+### 7.7 In-Session Features - Transcription
 - [ ] Enable live transcription
 - [ ] Speak several sentences
 - [ ] Verify transcription appears in real-time
 - [ ] Verify transcription accuracy
 - [ ] Test transcription panel toggle (show/hide)
+- [ ] Verify transcription saved post-session
 
-## 5.7 In-Session Features - Clinical Tools
+### 7.8 In-Session Features - Clinical Tools
 - [ ] Open session notes panel
 - [ ] Type session observations
 - [ ] Test risk assessment quick buttons
 - [ ] Test mood/affect selectors
 - [ ] Save in-session notes
+- [ ] Test assessment tools (if available)
 
-## 5.8 In-Session Features - Emergency
+### 7.9 In-Session Features - Emergency
 - [ ] Locate emergency button
 - [ ] Verify emergency protocols are accessible
-- [ ] DO NOT activate unless testing emergency flow
+- [ ] Test emergency contact display (DO NOT activate unless testing emergency flow)
+- [ ] Verify crisis resources available
 
-## 5.9 End Session
+### 7.10 End Session
 - [ ] Click "End Session" button
 - [ ] Confirm end session
 - [ ] Verify session summary modal appears
@@ -261,861 +727,708 @@
 - [ ] Rate session quality (if prompted)
 - [ ] Complete post-session workflow
 
-## 5.10 Post-Session
+### 7.11 Post-Session
 - [ ] Verify recording is accessible (if recorded)
 - [ ] Verify transcription is saved (if enabled)
 - [ ] Verify session appears in appointment history
 - [ ] Generate clinical note from session (AI-assisted)
+- [ ] Test session playback (if available)
+
+### 7.12 Telehealth Consent
+- [ ] Navigate to client's Telehealth Consent
+- [ ] Verify consent status
+- [ ] Test sending consent form
+- [ ] Test consent renewal (if expired)
 
 ---
 
-# PART 6: CLINICAL DOCUMENTATION - ALL NOTE TYPES
+## 8. BILLING & CLAIMS
 
-## 6.1 Intake Assessment Note
+### 8.1 Billing Dashboard
+- [ ] Navigate to Billing Dashboard
+- [ ] Verify dashboard displays:
+  - [ ] Accounts Receivable summary
+  - [ ] Aging buckets
+  - [ ] Recent charges
+  - [ ] Recent payments
+  - [ ] Claims status summary
+- [ ] Test date range filtering
+- [ ] Test provider filtering
 
-### Navigate and Create
-- [ ] Go to Clinical Notes > New Note
-- [ ] Select "Intake Assessment"
-- [ ] Select Client: John Doe
-- [ ] Select associated appointment (if any)
+### 8.2 View Client Billing
+- [ ] Navigate to John Doe's Billing tab
+- [ ] Review account balance
+- [ ] Review aging buckets (current, 30, 60, 90+ days)
+- [ ] Review recent charges
+- [ ] Review payment history
+- [ ] Review claims history
 
-### Identifying Information Section
-- [ ] Verify client info auto-populates
-- [ ] Referral Source: Select from dropdown
-- [ ] Referral Source Details: Enter "Dr. Smith, PCP"
-- [ ] Reason for Referral: Enter detailed text
+### 8.3 Create Charge
+- [ ] Navigate to Billing > Charges
+- [ ] Click "New Charge"
+- [ ] Manual Charge Entry:
+  - [ ] Select Date of Service
+  - [ ] Select Client: John Doe
+  - [ ] Select CPT Code: 90837
+  - [ ] Verify fee populates
+  - [ ] Select diagnosis code
+  - [ ] Select rendering provider
+  - [ ] Add units: 1
+  - [ ] Add modifiers if needed (e.g., 95 for telehealth)
+  - [ ] Select place of service
+  - [ ] Save charge
+- [ ] Verify charge appears in list
+- [ ] Charge from Appointment:
+  - [ ] Open a completed appointment
+  - [ ] Click "Create Charge" or "Bill"
+  - [ ] Verify information auto-populates
+  - [ ] Review and submit
 
-### Presenting Problem Section
-- [ ] Chief Complaint: Enter "Client reports persistent anxiety and depression affecting work performance"
-- [ ] History of Present Illness: Enter comprehensive narrative (min 200 words)
-- [ ] Onset: Select "Gradual"
-- [ ] Duration: Enter "6 months"
-- [ ] Severity: Select "Moderate"
-- [ ] Frequency: Select "Daily"
-- [ ] Precipitating Factors: Enter text
-- [ ] Alleviating Factors: Enter text
-- [ ] Associated Symptoms: Check multiple boxes:
-  - [ ] Sleep disturbance
-  - [ ] Appetite changes
-  - [ ] Fatigue
-  - [ ] Difficulty concentrating
-  - [ ] Irritability
+### 8.4 Claims Management
+- [ ] Navigate to Billing > Claims
+- [ ] Create Claim:
+  - [ ] Select unbilled charges
+  - [ ] Click "Create Claim"
+  - [ ] Review claim information:
+    - [ ] Patient demographics
+    - [ ] Insurance information
+    - [ ] Service lines
+    - [ ] Diagnosis codes
+    - [ ] Referring provider
+  - [ ] Validate claim
+  - [ ] Submit claim (or queue for submission)
+- [ ] View Claim Status:
+  - [ ] Navigate to Claims list
+  - [ ] Filter by status (Pending, Submitted, Paid, Denied)
+  - [ ] View claim details
+  - [ ] Track claim status changes
+- [ ] Work Denied Claims:
+  - [ ] Find denied claim (or simulate)
+  - [ ] View denial reason
+  - [ ] Document appeal notes
+  - [ ] Resubmit if applicable
 
-### Psychiatric History Section
-- [ ] Previous Treatment: Select "Yes"
-- [ ] Previous Providers: Enter names and dates
-- [ ] Previous Hospitalizations: Enter details or "None"
-- [ ] Previous Medications: List with dosages
-- [ ] Medication Response: Enter text
-- [ ] Current Medications: List all current psychiatric meds
-- [ ] Current Prescriber: Enter name
-- [ ] ECT History: Select "No"
-- [ ] Substance Use Treatment History: Enter details
+### 8.5 Payments
+- [ ] Navigate to Billing > Payments
+- [ ] Post Payment:
+  - [ ] Click "Post Payment"
+  - [ ] Select payment type (Insurance/Patient)
+  - [ ] Enter payment amount
+  - [ ] Apply to charges
+  - [ ] Enter payment method
+  - [ ] Enter reference/check number
+  - [ ] Save payment
+- [ ] Verify account balance updates
+- [ ] Payment Plan:
+  - [ ] If available, set up payment plan
+  - [ ] Define payment schedule
+  - [ ] Save and verify
 
-### Medical History Section
-- [ ] Current Medical Conditions: Check applicable:
-  - [ ] Hypertension
-  - [ ] Diabetes
-  - [ ] Thyroid disorder
-  - [ ] Chronic pain
-  - [ ] Other (specify)
-- [ ] Allergies: Enter "NKDA" or list allergies
-- [ ] Current Non-Psychiatric Medications: List all
-- [ ] Primary Care Physician: Enter name and contact
-- [ ] Recent Hospitalizations: Enter or "None"
-- [ ] Head Injuries/LOC: Enter history
-- [ ] Seizure History: Select "No"
-- [ ] Sleep Patterns: Describe in detail
-- [ ] Appetite/Weight Changes: Describe
-- [ ] Exercise Habits: Enter text
+### 8.6 Statements
+- [ ] Navigate to Statements
+- [ ] Generate Statement:
+  - [ ] Select John Doe
+  - [ ] Generate statement
+  - [ ] Preview statement
+  - [ ] Send statement (email or print)
+- [ ] Test statement templates
+- [ ] Test batch statement generation
 
-### Family History Section
-- [ ] Psychiatric Family History: Check all applicable:
-  - [ ] Depression
-  - [ ] Anxiety
-  - [ ] Bipolar Disorder
-  - [ ] Schizophrenia
-  - [ ] Substance Abuse
-  - [ ] Suicide attempts/completions
-- [ ] Family Members Affected: Specify relationships
-- [ ] Medical Family History: Enter significant conditions
-- [ ] Family Dynamics: Describe family relationships
+### 8.7 Payer Management
+- [ ] Navigate to Billing > Payers
+- [ ] View payer list
+- [ ] Test creating new payer:
+  - [ ] Enter payer information
+  - [ ] Configure payer rules
+  - [ ] Save payer
+- [ ] Test editing payer
+- [ ] Test payer rules configuration
+- [ ] Test payer rule import
 
-### Social History Section
-- [ ] Marital Status: Select from dropdown
-- [ ] Living Situation: Describe
-- [ ] Children: Number and ages
-- [ ] Employment Status: Select from dropdown
-- [ ] Occupation: Enter job title
-- [ ] Education Level: Select highest completed
-- [ ] Military History: Enter or "N/A"
-- [ ] Legal History: Enter or "None"
-- [ ] Financial Stressors: Describe
-- [ ] Support System: Describe
-- [ ] Cultural/Religious Factors: Enter relevant info
-- [ ] Hobbies/Interests: List
+### 8.8 Billing Holds
+- [ ] Navigate to Billing > Billing Holds
+- [ ] View holds list
+- [ ] Test creating hold:
+  - [ ] Select client
+  - [ ] Select reason
+  - [ ] Add notes
+  - [ ] Save hold
+- [ ] Test releasing hold
+- [ ] Verify charges not created while on hold
 
-### Substance Use Section
-- [ ] Alcohol Use:
-  - [ ] Current Use: Select frequency
-  - [ ] Type: Enter preferred drinks
-  - [ ] Amount: Enter quantity
-  - [ ] Last Use: Enter date
-  - [ ] History of problematic use: Describe
-- [ ] Tobacco Use:
-  - [ ] Current Use: Select Yes/No
-  - [ ] Type: Cigarettes/Vape/Other
-  - [ ] Amount: Packs per day
-  - [ ] Quit attempts: Describe
-- [ ] Cannabis Use:
-  - [ ] Current Use: Select frequency
-  - [ ] Method: Smoke/Edible/Other
-  - [ ] Last Use: Enter date
-- [ ] Other Substances:
-  - [ ] Cocaine: Enter use history
-  - [ ] Opioids: Enter use history
-  - [ ] Benzodiazepines: Enter use history
-  - [ ] Stimulants: Enter use history
-  - [ ] Hallucinogens: Enter use history
-  - [ ] Other: Specify
-- [ ] CAGE/AUDIT Score: Enter if administered
+### 8.9 Billing Readiness Checker
+- [ ] Navigate to Billing > Readiness Checker
+- [ ] Select client or appointment
+- [ ] Run readiness check
+- [ ] Review readiness report:
+  - [ ] Insurance verified
+  - [ ] Authorizations obtained
+  - [ ] Diagnosis codes present
+  - [ ] Provider credentials verified
+- [ ] Address any issues found
 
-### Developmental History Section
-- [ ] Birth/Pregnancy Complications: Enter or "None reported"
-- [ ] Developmental Milestones: Enter "Met on time" or describe delays
-- [ ] Childhood Abuse/Trauma: Select and describe if applicable
-- [ ] Attachment History: Describe
-- [ ] School Performance: Describe
-- [ ] Behavioral Problems in Childhood: Enter
-
-### Trauma History Section
-- [ ] Physical Abuse: Select Yes/No, describe if yes
-- [ ] Sexual Abuse: Select Yes/No, describe if yes
-- [ ] Emotional Abuse: Select Yes/No, describe if yes
-- [ ] Neglect: Select Yes/No, describe if yes
-- [ ] Domestic Violence: Select Yes/No, describe if yes
-- [ ] Witness to Violence: Select Yes/No, describe if yes
-- [ ] Accidents/Injuries: Describe
-- [ ] Natural Disasters: Describe
-- [ ] Combat/War: Describe
-- [ ] Other Trauma: Describe
-- [ ] PTSD Symptoms: Check applicable symptoms
-
-### Mental Status Examination
-- [ ] Appearance:
-  - [ ] Grooming: Select (Well-groomed/Disheveled/etc.)
-  - [ ] Dress: Select (Appropriate/Inappropriate/etc.)
-  - [ ] Build: Select
-  - [ ] Eye Contact: Select (Good/Poor/Avoidant)
-  - [ ] Distinguishing Features: Enter
-- [ ] Behavior:
-  - [ ] Psychomotor Activity: Select (Normal/Agitated/Retarded)
-  - [ ] Cooperation: Select (Cooperative/Uncooperative)
-  - [ ] Attitude: Select (Friendly/Hostile/Guarded)
-  - [ ] Abnormal Movements: Enter if any
-- [ ] Speech:
-  - [ ] Rate: Select (Normal/Rapid/Slow)
-  - [ ] Volume: Select (Normal/Loud/Soft)
-  - [ ] Tone: Select (Normal/Monotone)
-  - [ ] Articulation: Select (Clear/Slurred)
-  - [ ] Spontaneity: Select
-- [ ] Mood: Enter client's stated mood
-- [ ] Affect:
-  - [ ] Quality: Select (Euthymic/Depressed/Anxious/etc.)
-  - [ ] Range: Select (Full/Restricted/Blunted/Flat)
-  - [ ] Congruence: Select (Congruent/Incongruent)
-  - [ ] Stability: Select (Stable/Labile)
-- [ ] Thought Process:
-  - [ ] Organization: Select (Logical/Tangential/Circumstantial)
-  - [ ] Goal-directedness: Select
-  - [ ] Associations: Select (Intact/Loose)
-- [ ] Thought Content:
-  - [ ] Suicidal Ideation: Select and describe
-  - [ ] Homicidal Ideation: Select and describe
-  - [ ] Delusions: Select type if present
-  - [ ] Obsessions: Describe if present
-  - [ ] Phobias: List if present
-  - [ ] Preoccupations: Describe
-- [ ] Perceptions:
-  - [ ] Hallucinations: Select type if present (Auditory/Visual/etc.)
-  - [ ] Illusions: Describe if present
-  - [ ] Depersonalization: Select Yes/No
-  - [ ] Derealization: Select Yes/No
-- [ ] Cognition:
-  - [ ] Orientation: Check all that apply (Person/Place/Time/Situation)
-  - [ ] Attention: Select (Intact/Impaired)
-  - [ ] Concentration: Select
-  - [ ] Memory: Select (Intact/Impaired - specify type)
-  - [ ] Fund of Knowledge: Select (Average/Above/Below)
-  - [ ] Abstraction: Select (Intact/Concrete)
-- [ ] Insight: Select (Good/Fair/Poor/None)
-- [ ] Judgment: Select (Good/Fair/Poor)
-
-### Risk Assessment Section
-- [ ] Suicidal Ideation: Select level
-- [ ] Suicide Plan: Select Yes/No, describe
-- [ ] Suicide Intent: Select level
-- [ ] Access to Means: Select Yes/No, describe
-- [ ] Previous Attempts: Enter number and describe
-- [ ] Protective Factors: Check all that apply
-- [ ] Risk Level: Select (None/Low/Moderate/High/Imminent)
-- [ ] Homicidal Ideation: Select level
-- [ ] Homicidal Plan: Describe if yes
-- [ ] Identified Target: Describe if yes
-- [ ] Self-Harm Behaviors: Describe
-- [ ] Reckless Behaviors: Describe
-- [ ] Safety Plan: Document or create
-
-### Diagnostic Impressions Section
-- [ ] Primary Diagnosis:
-  - [ ] ICD-10 Code: Enter (e.g., F32.1)
-  - [ ] Diagnosis Name: Major Depressive Disorder, Moderate
-- [ ] Secondary Diagnoses: Add all applicable
-- [ ] Rule Out Diagnoses: List considerations
-- [ ] Differential Diagnosis Discussion: Enter clinical reasoning
-
-### Treatment Recommendations Section
-- [ ] Recommended Level of Care: Select
-- [ ] Treatment Modality: Check all recommended:
-  - [ ] Individual Therapy
-  - [ ] Group Therapy
-  - [ ] Family Therapy
-  - [ ] Medication Management
-  - [ ] Case Management
-- [ ] Recommended Frequency: Select
-- [ ] Estimated Duration: Enter
-- [ ] Referrals Needed: List
-- [ ] Additional Assessments Needed: List
-
-### Clinician Summary Section
-- [ ] Clinical Summary: Enter comprehensive paragraph
-- [ ] Prognosis: Select (Good/Fair/Guarded/Poor)
-- [ ] Prognosis Rationale: Enter text
-
-### Signature Section
-- [ ] Review all sections for completion
-- [ ] Click "Sign Note"
-- [ ] Enter signature PIN/password
-- [ ] Verify signature timestamp
-- [ ] Verify note status changes to "Signed"
+### 8.10 AdvancedMD Integration
+- [ ] Navigate to Admin > AdvancedMD Settings
+- [ ] Verify AdvancedMD connection status
+- [ ] Test AdvancedMD Sync:
+  - [ ] Run manual sync
+  - [ ] Verify sync status
+  - [ ] Review sync logs
+- [ ] Test claim submission to AdvancedMD
+- [ ] Test ERA (Electronic Remittance Advice) processing
 
 ---
 
-## 6.2 Progress Note
+## 9. REPORTS & ANALYTICS
 
-### Navigate and Create
-- [ ] Go to Clinical Notes > New Note
-- [ ] Select "Progress Note"
-- [ ] Select Client: John Doe
-- [ ] Select associated appointment
+### 9.1 Reports Dashboard
+- [ ] Navigate to Reports & Analytics
+- [ ] Verify dashboard displays:
+  - [ ] Available reports
+  - [ ] Recent reports
+  - [ ] Report subscriptions
+  - [ ] Custom reports
+- [ ] Test report categories/filtering
 
-### Session Information
-- [ ] Session Date: Verify auto-populated
-- [ ] Session Type: Select "Individual"
-- [ ] Session Duration: Select "60 minutes"
-- [ ] Service Location: Select "Telehealth"
-- [ ] CPT Code: Select "90837"
-- [ ] Diagnosis Codes: Add relevant codes
+### 9.2 Clinical Reports
+- [ ] Caseload Report:
+  - [ ] Select "Caseload Report"
+  - [ ] Set parameters (date range, clinician)
+  - [ ] Generate report
+  - [ ] Review client list with status
+  - [ ] Export if needed
+- [ ] Productivity Report:
+  - [ ] Select "Productivity Report"
+  - [ ] Select clinician: Self
+  - [ ] Select date range
+  - [ ] Generate report
+  - [ ] Review:
+    - [ ] Sessions completed
+    - [ ] Hours billed
+    - [ ] Revenue generated
+    - [ ] No-show rate
+    - [ ] Cancellation rate
+- [ ] Unsigned Notes Report:
+  - [ ] Select "Unsigned Notes"
+  - [ ] Review list of pending signatures
+  - [ ] Sign notes directly from report
+- [ ] Treatment Plan Due Report:
+  - [ ] Select "Treatment Plan Review Due"
+  - [ ] Review clients needing plan updates
+  - [ ] Click to navigate to client
 
-### Subjective Section
-- [ ] Chief Complaint: Enter client's main concern
-- [ ] Client's Report: Enter detailed narrative of client's statements
-- [ ] Mood Rating (Client-Reported): Enter 1-10 scale
-- [ ] Sleep: Describe quality and duration
-- [ ] Appetite: Describe changes
-- [ ] Energy Level: Select from dropdown
-- [ ] Medication Compliance: Select Yes/Partial/No
-- [ ] Side Effects Reported: Enter if any
-- [ ] Homework Compliance: Select Completed/Partial/Not Completed
-- [ ] Homework Review: Describe client's experience
-- [ ] Stressors Since Last Session: Enter text
-- [ ] Positive Events Since Last Session: Enter text
-- [ ] Symptoms Reported: Check all present:
-  - [ ] Depression
-  - [ ] Anxiety
-  - [ ] Panic attacks
-  - [ ] Irritability
-  - [ ] Sleep problems
-  - [ ] Appetite changes
-  - [ ] Concentration difficulties
-  - [ ] Fatigue
-  - [ ] Hopelessness
-  - [ ] Worthlessness
-  - [ ] Anhedonia
-  - [ ] Guilt
-  - [ ] Social withdrawal
-  - [ ] Other (specify)
-- [ ] Symptom Severity: Rate each checked symptom
+### 9.3 Administrative Reports
+- [ ] Appointment Reports:
+  - [ ] Run daily schedule report
+  - [ ] Run no-show report
+  - [ ] Run cancellation report
+  - [ ] Run utilization report
+- [ ] Staff Reports:
+  - [ ] Run credential expiration report
+  - [ ] Run training compliance report
+  - [ ] Run performance review report
 
-### Objective Section
-- [ ] Appearance: Select from options
-- [ ] Behavior: Select from options
-- [ ] Psychomotor Activity: Select
-- [ ] Speech: Describe characteristics
-- [ ] Mood (Observed): Enter clinician observation
-- [ ] Affect: Select quality, range, congruence
-- [ ] Thought Process: Select
-- [ ] Thought Content: Describe
-- [ ] Cognition: Note any concerns
-- [ ] Insight: Select level
-- [ ] Judgment: Select level
-- [ ] Engagement Level: Select (Highly engaged/Moderately/Minimally/Resistant)
+### 9.4 Financial Reports
+- [ ] Revenue Reports:
+  - [ ] Run monthly revenue report
+  - [ ] Run revenue by payer report
+  - [ ] Run revenue by service type report
+- [ ] AR Reports:
+  - [ ] Run aging summary
+  - [ ] Run aging by payer
+  - [ ] Run collections forecast
+- [ ] Claims Reports:
+  - [ ] Run claims status report
+  - [ ] Run denial analysis report
 
-### Risk Assessment
-- [ ] Suicidal Ideation: Select current level
-- [ ] If present, complete Columbia Protocol questions
-- [ ] Homicidal Ideation: Select current level
-- [ ] Self-Harm Urges: Select present/absent
-- [ ] Risk Level: Select overall risk
-- [ ] Changes from Last Session: Document
-- [ ] Safety Plan: Review/update if needed
+### 9.5 Custom Reports
+- [ ] Navigate to Report Builder
+- [ ] Build Custom Report:
+  - [ ] Select data fields
+  - [ ] Add filters
+  - [ ] Set grouping
+  - [ ] Set sorting
+  - [ ] Preview report
+  - [ ] Save report template
+  - [ ] Export results
+- [ ] Test saved report templates
+- [ ] Test report scheduling
 
-### Assessment Section
-- [ ] Clinical Impressions: Enter detailed clinical reasoning
-- [ ] Progress Toward Goals: Select for each treatment goal:
-  - [ ] Goal 1: Select (Progressing/Stable/Regressing/Achieved)
-  - [ ] Goal 2: Select status
-  - [ ] Goal 3: Select status
-- [ ] Treatment Response: Describe overall response
-- [ ] Barriers to Treatment: Identify any
-- [ ] Diagnostic Considerations: Note any changes
+### 9.6 Report Subscriptions
+- [ ] Navigate to Report Subscriptions
+- [ ] View existing subscriptions
+- [ ] Test creating subscription:
+  - [ ] Select report
+  - [ ] Set frequency (daily, weekly, monthly)
+  - [ ] Set recipients
+  - [ ] Save subscription
+- [ ] Test editing subscription
+- [ ] Test deleting subscription
 
-### Plan Section
-- [ ] Interventions Used This Session: Check all applied:
-  - [ ] Supportive listening
-  - [ ] Psychoeducation
-  - [ ] Cognitive restructuring
-  - [ ] Behavioral activation
-  - [ ] Exposure techniques
-  - [ ] Relaxation training
-  - [ ] Mindfulness
-  - [ ] Skills training
-  - [ ] Role-playing
-  - [ ] Homework review
-  - [ ] Crisis intervention
-  - [ ] Other (specify)
-- [ ] Intervention Details: Describe specific techniques
-- [ ] Client Response to Interventions: Describe
-- [ ] Homework Assigned: Enter specific assignments
-- [ ] Next Session Focus: Enter planned topics
-- [ ] Next Appointment: Enter date/time
-- [ ] Referrals Made: List any
-- [ ] Coordination of Care: Document communications
-- [ ] Medication Recommendations: If applicable
+### 9.7 Analytics Dashboard
+- [ ] Navigate to Analytics Dashboard
+- [ ] Review KPI widgets
+- [ ] Review trend charts
+- [ ] Test filtering:
+  - [ ] By date range
+  - [ ] By clinician/department
+  - [ ] By client type
+- [ ] Test chart interactions
+- [ ] Export dashboard data
 
-### Signature
-- [ ] Review note for completeness
-- [ ] Sign note with PIN/password
-- [ ] Verify signature and timestamp
+### 9.8 Provider Comparison
+- [ ] Navigate to Provider Comparison
+- [ ] Select multiple providers
+- [ ] Compare metrics:
+  - [ ] Productivity
+  - [ ] Revenue
+  - [ ] No-show rates
+  - [ ] Client satisfaction
+- [ ] Review comparison charts
 
----
+### 9.9 AI Predictions
+- [ ] Navigate to AI Predictions
+- [ ] Review prediction models:
+  - [ ] No-show predictions
+  - [ ] Revenue forecasts
+  - [ ] Capacity planning
+- [ ] Test prediction accuracy
+- [ ] Review prediction insights
 
-## 6.3 Treatment Plan
-
-### Navigate and Create
-- [ ] Go to Clinical Notes > New Note
-- [ ] Select "Treatment Plan"
-- [ ] Select Client: John Doe
-
-### Client Information
-- [ ] Verify demographics auto-populate
-- [ ] Plan Start Date: Enter date
-- [ ] Plan Review Date: Enter 90-day future date
-- [ ] Plan Type: Select Initial/Update/Discharge
-
-### Diagnoses
-- [ ] Primary Diagnosis: Enter with ICD-10 code
-- [ ] Secondary Diagnoses: Add all relevant
-- [ ] Medical Diagnoses: Add relevant medical conditions
-- [ ] Diagnosis Justification: Enter clinical reasoning
-
-### Presenting Problems
-- [ ] Problem 1:
-  - [ ] Problem Statement: Enter specific, measurable problem
-  - [ ] Duration: How long present
-  - [ ] Severity: Rate current severity
-  - [ ] Functional Impact: Describe impact on functioning
-- [ ] Problem 2: Complete all fields
-- [ ] Problem 3: Complete all fields
-- [ ] Add additional problems as needed
-
-### Strengths & Resources
-- [ ] Client Strengths: List personal strengths
-- [ ] Support System: Describe available support
-- [ ] Resources: List community/financial resources
-- [ ] Protective Factors: List all identified
-
-### Treatment Goals (Complete for each problem)
-
-#### Goal 1
-- [ ] Long-Term Goal: Enter SMART goal
-- [ ] Target Date: Enter date
-- [ ] Baseline: Describe current functioning
-- [ ] Short-Term Objective 1:
-  - [ ] Objective Statement: Enter specific, measurable objective
-  - [ ] Target Date: Enter date
-  - [ ] Measurement Method: How progress will be measured
-  - [ ] Intervention: What clinician will do
-  - [ ] Responsible Party: Clinician/Client/Both
-  - [ ] Frequency: How often intervention applied
-- [ ] Short-Term Objective 2: Complete all fields
-- [ ] Short-Term Objective 3: Complete all fields
-
-#### Goal 2
-- [ ] Complete same structure as Goal 1
-
-#### Goal 3
-- [ ] Complete same structure as Goal 1
-
-### Treatment Modalities
-- [ ] Modality 1:
-  - [ ] Type: Select (Individual Therapy/Group/Family/etc.)
-  - [ ] Frequency: Select (Weekly/Bi-weekly/Monthly)
-  - [ ] Duration: Enter session length
-  - [ ] Theoretical Orientation: Select (CBT/DBT/Psychodynamic/etc.)
-- [ ] Modality 2: Complete if applicable
-- [ ] Modality 3: Complete if applicable
-
-### Treatment Setting
-- [ ] Primary Setting: Select (Outpatient/IOP/PHP/etc.)
-- [ ] Service Location: Select (Office/Telehealth/Home)
-
-### Estimated Duration
-- [ ] Estimated Length of Treatment: Enter
-- [ ] Estimated Number of Sessions: Enter
-- [ ] Discharge Criteria: Enter specific criteria
-
-### Medications (if applicable)
-- [ ] Current Medications: List all psychiatric meds
-- [ ] Medication Goals: Enter
-- [ ] Prescriber: Enter name
-- [ ] Coordination Plan: Describe
-
-### Crisis Plan
-- [ ] Warning Signs: List client-specific signs
-- [ ] Coping Strategies: List techniques to try first
-- [ ] Support Contacts: List names and numbers
-- [ ] Professional Contacts: List providers to contact
-- [ ] Emergency Contacts: List 911, crisis line, ER
-- [ ] Safety Plan Location: Note where plan is kept
-
-### Client Participation
-- [ ] Client Input: Document client's involvement in planning
-- [ ] Client Preferences: Note treatment preferences
-- [ ] Barriers Identified: List potential barriers
-- [ ] Barrier Mitigation: Plan to address barriers
-
-### Signatures
-- [ ] Clinician Signature: Sign with PIN
-- [ ] Client Signature: Mark as pending/obtained
-- [ ] Guardian Signature (if minor): Mark status
-- [ ] Plan Agreement Date: Enter
+### 9.10 Custom Dashboards
+- [ ] Navigate to Custom Dashboards
+- [ ] View existing dashboards
+- [ ] Test creating dashboard:
+  - [ ] Add widgets
+  - [ ] Configure widgets
+  - [ ] Set filters
+  - [ ] Save dashboard
+- [ ] Test dashboard sharing
+- [ ] Test dashboard export
 
 ---
 
-## 6.4 Cancellation/No-Show Note
+## 10. STAFF & HR MANAGEMENT
 
-### Navigate and Create
-- [ ] Go to Clinical Notes > New Note
-- [ ] Select "Cancellation Note" or "No-Show Note"
-- [ ] Select Client: John Doe
-- [ ] Select the cancelled/missed appointment
+### 10.1 Staff Directory
+- [ ] Navigate to Staff & HR > Staff Directory
+- [ ] Verify staff directory loads
+- [ ] Test search functionality
+- [ ] Test filtering by:
+  - [ ] Department
+  - [ ] Role
+  - [ ] Status (active/inactive)
+- [ ] Click on staff member to view profile
+- [ ] Verify contact information displays
 
-### Cancellation Details
-- [ ] Date of Scheduled Appointment: Verify
-- [ ] Time of Scheduled Appointment: Verify
-- [ ] Appointment Type: Verify
-- [ ] Cancellation Type: Select:
-  - [ ] Client Cancelled
-  - [ ] Clinician Cancelled
-  - [ ] No-Show
-  - [ ] Late Cancellation
-- [ ] Cancellation Date/Time: When cancellation occurred
-- [ ] Cancellation Method: Select (Phone/Email/Portal/Other)
-- [ ] Cancelled By: Select (Client/Clinician/Other)
+### 10.2 Staff Profile
+- [ ] View own profile
+- [ ] Update profile information:
+  - [ ] Edit contact information
+  - [ ] Update profile photo
+  - [ ] Update bio
+  - [ ] Save changes
+- [ ] Review credentials listed
+- [ ] Review employment information
 
-### Reason for Cancellation
-- [ ] Reason Category: Select from dropdown:
-  - [ ] Illness
-  - [ ] Transportation
-  - [ ] Work conflict
-  - [ ] Family emergency
-  - [ ] Forgot appointment
-  - [ ] Financial
-  - [ ] No longer needs services
-  - [ ] Unknown/No reason given
-  - [ ] Other
-- [ ] Reason Details: Enter specific information
-- [ ] Notice Given: Select timeframe
-- [ ] Within 24-hour Policy: Select Yes/No
+### 10.3 Organizational Chart
+- [ ] Navigate to Staff > Org Chart
+- [ ] Verify org chart displays
+- [ ] Test navigation/interaction
+- [ ] Verify reporting relationships
+- [ ] Test filtering by department
 
-### Follow-Up Actions
-- [ ] Rescheduled: Select Yes/No
-- [ ] New Appointment Date: Enter if rescheduled
-- [ ] Outreach Attempted: Select Yes/No
-- [ ] Outreach Method: Select (Phone/Email/Letter)
-- [ ] Outreach Date: Enter date
-- [ ] Outreach Outcome: Describe response
-- [ ] Additional Outreach Planned: Describe
+### 10.4 Onboarding Dashboard
+- [ ] Navigate to Onboarding Dashboard
+- [ ] View onboarding tasks
+- [ ] Test creating onboarding checklist
+- [ ] Test assigning tasks
+- [ ] Test tracking progress
+- [ ] Test milestone tracking
 
-### Clinical Considerations
-- [ ] Pattern of Cancellations: Note if recurring issue
-- [ ] Treatment Implications: Describe impact on treatment
-- [ ] Risk Considerations: Note any safety concerns
-- [ ] Discharge Consideration: Select if applicable
+### 10.5 Performance Reviews
+- [ ] Navigate to HR > Performance Reviews
+- [ ] View review list
+- [ ] Test creating performance review:
+  - [ ] Select employee
+  - [ ] Select review period
+  - [ ] Complete review form
+  - [ ] Set goals
+  - [ ] Save review
+- [ ] Test review approval workflow
+- [ ] Test review history
 
-### Billing
-- [ ] Late Cancellation Fee: Select if applicable
-- [ ] Fee Amount: Enter if charged
-- [ ] Fee Waived: Select Yes/No
-- [ ] Waiver Reason: Enter if waived
+### 10.6 Time & Attendance
+- [ ] Navigate to HR > Time Clock
+- [ ] Clock In:
+  - [ ] Click "Clock In"
+  - [ ] Verify timestamp recorded
+  - [ ] Verify location (if GPS enabled)
+- [ ] Clock Out:
+  - [ ] Complete work period
+  - [ ] Click "Clock Out"
+  - [ ] Verify hours recorded
+- [ ] View Timesheet:
+  - [ ] Navigate to Timesheet
+  - [ ] Review recorded hours
+  - [ ] Test editing time entries
+  - [ ] Submit timesheet (if required)
+- [ ] Attendance Calendar:
+  - [ ] Navigate to Attendance Calendar
+  - [ ] View attendance records
+  - [ ] Test attendance reports
 
-### Signature
-- [ ] Sign note
-- [ ] Verify timestamp
+### 10.7 PTO Management
+- [ ] Navigate to HR > PTO Requests
+- [ ] View PTO balance
+- [ ] Request PTO:
+  - [ ] Click "Request Time Off"
+  - [ ] Select dates
+  - [ ] Select PTO type
+  - [ ] Enter reason/notes
+  - [ ] Submit request
+- [ ] Verify request appears as pending
+- [ ] PTO Calendar:
+  - [ ] Navigate to PTO Calendar
+  - [ ] View all PTO requests
+  - [ ] Test filtering
+- [ ] PTO Approvals (if supervisor):
+  - [ ] Navigate to PTO Approvals
+  - [ ] Review pending requests
+  - [ ] Approve/deny requests
+  - [ ] Add comments
 
----
-
-## 6.5 Consultation Note
-
-### Navigate and Create
-- [ ] Go to Clinical Notes > New Note
-- [ ] Select "Consultation Note"
-- [ ] Select Client: John Doe
-
-### Consultation Information
-- [ ] Consultation Date: Enter
-- [ ] Consultation Type: Select:
-  - [ ] Peer Consultation
-  - [ ] Supervisor Consultation
-  - [ ] Medical Consultation
-  - [ ] Specialist Consultation
-  - [ ] Case Conference
-- [ ] Consultation Method: Select (In-person/Phone/Video)
-- [ ] Consultant Name: Enter
-- [ ] Consultant Credentials: Enter
-- [ ] Consultant Organization: Enter if applicable
-
-### Reason for Consultation
-- [ ] Primary Reason: Enter detailed reason
-- [ ] Specific Questions: List questions asked
-- [ ] Clinical Concerns: Describe concerns prompting consultation
-
-### Information Shared
-- [ ] Client History Summary: What was shared
-- [ ] Current Symptoms: Describe presentation
-- [ ] Treatment History: What was discussed
-- [ ] Current Treatment Plan: Summary shared
-- [ ] Diagnostic Questions: Enter if applicable
-
-### Consultant Recommendations
-- [ ] Diagnostic Recommendations: Enter
-- [ ] Treatment Recommendations: Enter detailed recommendations
-- [ ] Medication Recommendations: Enter if applicable
-- [ ] Referral Recommendations: Enter if applicable
-- [ ] Safety Recommendations: Enter if applicable
-- [ ] Follow-up Recommendations: Enter
-
-### Action Plan
-- [ ] Recommendations Accepted: Select which
-- [ ] Recommendations Declined: Note any declined with reasoning
-- [ ] Implementation Plan: Describe how recommendations will be implemented
-- [ ] Timeline: When actions will be taken
-- [ ] Follow-up Consultation: Schedule if needed
-
-### Signature
-- [ ] Sign note
-- [ ] Verify timestamp
+### 10.8 User Management
+- [ ] Navigate to Users
+- [ ] View user list
+- [ ] Test creating new user:
+  - [ ] Enter user information
+  - [ ] Assign role
+  - [ ] Set permissions
+  - [ ] Send invitation
+- [ ] Test editing user
+- [ ] Test deactivating user
+- [ ] Test password reset
 
 ---
 
-## 6.6 Contact Note (Phone/Email/Other)
+## 11. COMPLIANCE & TRAINING
 
-### Navigate and Create
-- [ ] Go to Clinical Notes > New Note
-- [ ] Select "Contact Note"
-- [ ] Select Client: John Doe
+### 11.1 Credentialing Dashboard
+- [ ] Navigate to Compliance & Training > Credentialing
+- [ ] Verify dashboard displays:
+  - [ ] Credentials overview
+  - [ ] Expiration alerts
+  - [ ] Compliance status
+- [ ] Test filtering options
 
-### Contact Information
-- [ ] Contact Date: Enter
-- [ ] Contact Time: Enter
-- [ ] Contact Duration: Enter minutes
-- [ ] Contact Type: Select:
-  - [ ] Phone call - incoming
-  - [ ] Phone call - outgoing
-  - [ ] Email received
-  - [ ] Email sent
-  - [ ] Text message
-  - [ ] Video call (non-session)
-  - [ ] In-person (non-session)
-  - [ ] Letter/mail
-  - [ ] Fax
-  - [ ] Other
-- [ ] Contact With: Select:
-  - [ ] Client
-  - [ ] Family member (specify)
-  - [ ] Other provider (specify)
-  - [ ] Insurance company
-  - [ ] School personnel
-  - [ ] Attorney/Legal
-  - [ ] Other (specify)
-- [ ] Person's Name: Enter
-- [ ] Person's Role/Relationship: Enter
+### 11.2 Credential Management
+- [ ] Navigate to Credential List
+- [ ] View credentials
+- [ ] Test adding credential:
+  - [ ] Select credential type (License, NPI, DEA, etc.)
+  - [ ] Enter credential number
+  - [ ] Enter issue date
+  - [ ] Enter expiration date
+  - [ ] Upload credential document
+  - [ ] Save credential
+- [ ] Test editing credential
+- [ ] Test credential verification
+- [ ] Test expiration alerts
 
-### Contact Purpose
-- [ ] Purpose Category: Select:
-  - [ ] Scheduling
-  - [ ] Clinical update
-  - [ ] Crisis/Emergency
-  - [ ] Coordination of care
-  - [ ] Insurance/Billing
-  - [ ] Records request
-  - [ ] Referral
-  - [ ] Other
-- [ ] Purpose Details: Enter specific reason
+### 11.3 Credential Verification
+- [ ] Navigate to Credential Verification
+- [ ] Test verification workflow:
+  - [ ] Select credential
+  - [ ] Run verification check
+  - [ ] Review verification results
+  - [ ] Update verification status
+- [ ] Test bulk verification
 
-### Contact Content
-- [ ] Summary of Discussion: Enter detailed summary
-- [ ] Client Status (if discussed): Enter
-- [ ] Concerns Raised: Enter any concerns
-- [ ] Questions Asked: List questions
-- [ ] Information Provided: What information shared
-- [ ] Information Received: What information obtained
+### 11.4 Expiration Alerts
+- [ ] Navigate to Expiration Alerts
+- [ ] View expiring credentials
+- [ ] Test alert configuration
+- [ ] Test notification settings
 
-### Clinical Relevance
-- [ ] Risk Assessment: Note if any risk factors discussed
-- [ ] Treatment Implications: How this affects treatment
-- [ ] Urgent Matters: Note any urgent issues
+### 11.5 Compliance Reports
+- [ ] Navigate to Compliance Report
+- [ ] Generate compliance report:
+  - [ ] Select date range
+  - [ ] Select credential types
+  - [ ] Generate report
+  - [ ] Review compliance status
+- [ ] Test report export
 
-### Follow-Up
-- [ ] Action Items: List needed actions
-- [ ] Follow-up Needed: Select Yes/No
-- [ ] Follow-up Plan: Describe
-- [ ] Documentation Needed: Note any forms to complete
+### 11.6 Background Screening
+- [ ] Navigate to Background Screening
+- [ ] View screening status
+- [ ] Test initiating screening
+- [ ] Test updating screening status
+- [ ] Test screening reports
 
-### Billable Contact
-- [ ] Billable: Select Yes/No
-- [ ] CPT Code: Enter if billable
-- [ ] Time: Enter billable time
+### 11.7 Training Catalog
+- [ ] Navigate to Training > Course Catalog
+- [ ] View available courses
+- [ ] Test course search
+- [ ] Test course filtering
+- [ ] View course details
+- [ ] Test course enrollment
 
-### Signature
-- [ ] Sign note
-- [ ] Verify timestamp
+### 11.8 Training Progress
+- [ ] Navigate to Training Progress
+- [ ] View assigned trainings
+- [ ] Test completing training module
+- [ ] Test tracking progress
+- [ ] Test certificate generation
 
----
+### 11.9 CEU Tracker
+- [ ] Navigate to CEU Tracker
+- [ ] View CEU credits
+- [ ] Test adding CEU credit:
+  - [ ] Enter course information
+  - [ ] Enter CEU hours
+  - [ ] Upload certificate
+  - [ ] Save credit
+- [ ] Test CEU reporting
 
-## 6.7 Termination/Discharge Note
+### 11.10 Training Calendar
+- [ ] Navigate to Training Calendar
+- [ ] View scheduled trainings
+- [ ] Test filtering by type
+- [ ] Test registration
 
-### Navigate and Create
-- [ ] Go to Clinical Notes > New Note
-- [ ] Select "Termination Note" or "Discharge Summary"
-- [ ] Select Client: John Doe
+### 11.11 Policy Library
+- [ ] Navigate to Compliance > Policy Library
+- [ ] View policies
+- [ ] Test policy search
+- [ ] View policy details
+- [ ] Test policy acknowledgment
+- [ ] Test policy distribution
 
-### Discharge Information
-- [ ] Discharge Date: Enter
-- [ ] Date of First Session: Enter
-- [ ] Total Sessions Attended: Enter number
-- [ ] Total Sessions Cancelled/No-show: Enter number
-- [ ] Length of Treatment: Enter duration
-
-### Reason for Termination
-- [ ] Termination Type: Select:
-  - [ ] Treatment goals achieved
-  - [ ] Client request
-  - [ ] Mutual decision
-  - [ ] Client non-compliance
-  - [ ] Client relocated
-  - [ ] Client deceased
-  - [ ] Referred to higher level of care
-  - [ ] Referred to different provider
-  - [ ] Lost to follow-up
-  - [ ] Insurance/financial
-  - [ ] Other
-- [ ] Termination Initiated By: Select (Client/Clinician/Mutual)
-- [ ] Detailed Reason: Enter comprehensive explanation
-
-### Treatment Summary
-- [ ] Presenting Problems at Intake: Summarize
-- [ ] Diagnoses at Intake: List
-- [ ] Diagnoses at Discharge: List (note any changes)
-- [ ] Treatment Provided: Summarize interventions
-- [ ] Theoretical Approach: Note modalities used
-- [ ] Medications (if applicable): List current meds
-
-### Progress Summary
-- [ ] Goal 1 Status:
-  - [ ] Goal Statement: Enter
-  - [ ] Status: Select (Achieved/Partially Achieved/Not Achieved/Ongoing)
-  - [ ] Progress Description: Detail progress made
-- [ ] Goal 2 Status: Complete same
-- [ ] Goal 3 Status: Complete same
-- [ ] Overall Progress: Select (Significant/Moderate/Minimal/None/Declined)
-- [ ] Functional Improvement: Describe areas of improvement
-- [ ] Remaining Concerns: List ongoing issues
-
-### Final Mental Status
-- [ ] Complete abbreviated MSE
-- [ ] Current Symptoms: List remaining symptoms
-- [ ] Current Severity: Rate overall severity
-- [ ] Current Risk Level: Select
-
-### Discharge Plan
-- [ ] Aftercare Recommendations: List all recommendations
-- [ ] Referrals Made: List providers/services
-- [ ] Referral Contact Info: Include details
-- [ ] Medications at Discharge: List with prescriber
-- [ ] Follow-up Appointments: List scheduled appointments
-- [ ] Self-Help Resources: List resources provided
-- [ ] Crisis Resources: Include hotline numbers
-
-### Relapse Prevention
-- [ ] Warning Signs: List client-specific signs
-- [ ] Coping Strategies: List effective strategies
-- [ ] Support System: List contacts
-- [ ] When to Seek Help: Criteria for returning to treatment
-
-### Prognosis
-- [ ] Prognosis: Select (Excellent/Good/Fair/Guarded/Poor)
-- [ ] Prognosis Rationale: Enter clinical reasoning
-
-### Final Session Summary
-- [ ] Termination Session Content: Describe final session
-- [ ] Client Reaction: Note client's response
-- [ ] Open Door Policy: Note if client can return
-
-### Signature
-- [ ] Sign note
-- [ ] Verify timestamp
+### 11.12 Incident Reporting
+- [ ] Navigate to Compliance > Incident Reports
+- [ ] View incident list
+- [ ] Test creating incident report:
+  - [ ] Enter incident details
+  - [ ] Select incident type
+  - [ ] Add involved parties
+  - [ ] Upload documentation
+  - [ ] Submit report
+- [ ] Test incident investigation workflow
+- [ ] Test incident trends
 
 ---
 
-## 6.8 Group Note
+## 12. CLIENT PORTAL
 
-### Navigate and Create
-- [ ] Go to Clinical Notes > New Note
-- [ ] Select "Group Note"
-- [ ] Select all group participants including John Doe
+### 12.1 Portal Login
+- [ ] Navigate to portal login page
+- [ ] Test client login with credentials
+- [ ] Test "Forgot Password" functionality
+- [ ] Test password reset flow
+- [ ] Verify successful login
 
-### Group Information
-- [ ] Group Name: Enter
-- [ ] Group Type: Select (Process/Psychoeducation/Skills/Support)
-- [ ] Session Number: Enter
-- [ ] Session Date: Enter
-- [ ] Session Duration: Enter
-- [ ] Location: Select
+### 12.2 Portal Dashboard
+- [ ] Verify dashboard displays:
+  - [ ] Upcoming appointments
+  - [ ] Messages
+  - [ ] Pending forms
+  - [ ] Recent activity
+- [ ] Test dashboard widgets
 
-### Attendance
-- [ ] List all members present
-- [ ] List all members absent
-- [ ] Note any new members
-- [ ] Note any terminating members
+### 12.3 Portal Appointments
+- [ ] View upcoming appointments
+- [ ] View appointment history
+- [ ] Test requesting appointment:
+  - [ ] Select preferred date/time
+  - [ ] Select appointment type
+  - [ ] Add notes
+  - [ ] Submit request
+- [ ] Test rescheduling appointment
+- [ ] Test cancelling appointment
 
-### Session Content
-- [ ] Session Topic: Enter
-- [ ] Session Goals: List
-- [ ] Activities/Exercises: Describe
-- [ ] Materials Used: List
-- [ ] Discussion Summary: Enter group themes
+### 12.4 Portal Self-Scheduling
+- [ ] Navigate to Self-Scheduling
+- [ ] View available time slots
+- [ ] Test filtering by provider
+- [ ] Test filtering by appointment type
+- [ ] Select time slot
+- [ ] Confirm appointment
+- [ ] Verify confirmation email
 
-### Group Process
-- [ ] Group Cohesion: Rate and describe
-- [ ] Group Dynamics: Describe interactions
-- [ ] Significant Interactions: Note important exchanges
-- [ ] Conflicts/Tensions: Note if any
+### 12.5 Portal Forms
+- [ ] View pending forms
+- [ ] Test completing form:
+  - [ ] Open form
+  - [ ] Fill in all fields
+  - [ ] Sign form (if required)
+  - [ ] Submit form
+- [ ] View completed forms
+- [ ] Test form history
 
-### Individual Member Notes (for John Doe)
-- [ ] Attendance: Present/Absent
-- [ ] Participation Level: Select (Active/Moderate/Minimal/None)
-- [ ] Mood/Affect: Describe
-- [ ] Interactions with Others: Describe
-- [ ] Themes Addressed: Enter personal themes
-- [ ] Progress Observed: Note any progress
-- [ ] Concerns: Note any concerns
-- [ ] Individual Follow-up Needed: Select Yes/No
+### 12.6 Portal Documents
+- [ ] View available documents
+- [ ] Test downloading document
+- [ ] Test uploading document (if allowed)
+- [ ] Test document categories
 
-### Facilitator Observations
-- [ ] Session Effectiveness: Rate
-- [ ] Challenges: Note any difficulties
-- [ ] Adjustments Needed: Note for future
+### 12.7 Portal Assessments
+- [ ] View assigned assessments
+- [ ] Test taking assessment:
+  - [ ] Open assessment
+  - [ ] Answer all questions
+  - [ ] Submit assessment
+- [ ] View assessment results
+- [ ] View assessment history
 
-### Next Session
-- [ ] Planned Topic: Enter
-- [ ] Goals for Next Session: List
-- [ ] Homework/Tasks: Enter if assigned
+### 12.8 Portal Messaging
+- [ ] View messages
+- [ ] Test sending message:
+  - [ ] Compose message
+  - [ ] Attach file (if allowed)
+  - [ ] Send message
+- [ ] Test replying to message
+- [ ] Test message search
 
-### Signature
-- [ ] Sign note
-- [ ] Verify timestamp
+### 12.9 Portal Billing
+- [ ] View account balance
+- [ ] View charges
+- [ ] View payment history
+- [ ] Test making payment:
+  - [ ] Select payment method
+  - [ ] Enter payment amount
+  - [ ] Process payment
+- [ ] View statements
+- [ ] Download statement
+
+### 12.10 Portal Profile
+- [ ] View profile information
+- [ ] Test updating profile:
+  - [ ] Update contact information
+  - [ ] Update preferences
+  - [ ] Save changes
+- [ ] Test password change
+- [ ] Test notification preferences
+
+### 12.11 Portal Tracking Features
+- [ ] Mood Tracking:
+  - [ ] Navigate to Mood Tracking
+  - [ ] Log mood entry
+  - [ ] View mood history/charts
+- [ ] Symptom Diary:
+  - [ ] Navigate to Symptom Diary
+  - [ ] Log symptoms
+  - [ ] View symptom trends
+- [ ] Sleep Diary:
+  - [ ] Navigate to Sleep Diary
+  - [ ] Log sleep data
+  - [ ] View sleep patterns
+- [ ] Exercise Log:
+  - [ ] Navigate to Exercise Log
+  - [ ] Log exercise
+  - [ ] View exercise history
+
+### 12.12 Portal Telehealth
+- [ ] View upcoming telehealth sessions
+- [ ] Test joining session:
+  - [ ] Click join link
+  - [ ] Grant permissions
+  - [ ] Enter session
+- [ ] Test session features (same as staff telehealth)
 
 ---
 
-## 6.9 Miscellaneous/Other Note
+## 13. GUARDIAN PORTAL
 
-### Navigate and Create
-- [ ] Go to Clinical Notes > New Note
-- [ ] Select "Miscellaneous" or "Other"
-- [ ] Select Client: John Doe
+### 13.1 Guardian Portal Access
+- [ ] Navigate to Guardian Portal
+- [ ] Test guardian login
+- [ ] Verify access to dependents
 
-### Note Information
-- [ ] Note Date: Enter
-- [ ] Note Type/Category: Select or enter:
-  - [ ] Administrative
-  - [ ] Coordination of Care
-  - [ ] Letter/Document
-  - [ ] Clinical observation
-  - [ ] Incident report
-  - [ ] Other
-- [ ] Related Appointment: Link if applicable
+### 13.2 Guardian Dashboard
+- [ ] Verify dashboard displays:
+  - [ ] Dependents list
+  - [ ] Upcoming appointments
+  - [ ] Pending forms
+  - [ ] Messages
+- [ ] Test dashboard navigation
 
-### Note Content
-- [ ] Purpose: Enter reason for note
-- [ ] Detailed Content: Enter comprehensive information
-- [ ] Clinical Relevance: Explain how this relates to treatment
-- [ ] Actions Taken: List any actions
-- [ ] Follow-up Required: Note any needed follow-up
+### 13.3 Dependent Management
+- [ ] View dependents list
+- [ ] Select dependent
+- [ ] View dependent information:
+  - [ ] Appointments
+  - [ ] Forms
+  - [ ] Documents
+  - [ ] Billing
+- [ ] Test requesting access (if not already granted)
 
-### Attachments
-- [ ] Attach any relevant documents
-- [ ] Describe attachments
+### 13.4 Guardian Forms
+- [ ] View pending forms for dependents
+- [ ] Test completing forms on behalf of dependent
+- [ ] Test form signing
+- [ ] Verify forms submitted
 
-### Signature
-- [ ] Sign note
-- [ ] Verify timestamp
+### 13.5 Guardian Appointments
+- [ ] View dependent appointments
+- [ ] Test scheduling appointment for dependent
+- [ ] Test rescheduling appointment
+- [ ] Test cancelling appointment
+
+### 13.6 Guardian Verification (Admin)
+- [ ] Navigate to Admin > Guardian Verification
+- [ ] View pending verification requests
+- [ ] Test verification workflow:
+  - [ ] Review request
+  - [ ] Verify documentation
+  - [ ] Approve/deny request
+- [ ] Test verification history
 
 ---
 
-# PART 7: MESSAGING & COMMUNICATION
+## 14. COMMUNICATION & MESSAGING
 
-## 7.1 Internal Staff Messaging
+### 14.1 Messaging Hub
+- [ ] Navigate to Communication > Messaging Hub
+- [ ] Verify messaging interface loads
+- [ ] View message list
+- [ ] Test message search
+- [ ] Test message filtering
 
-### Direct Messages
-- [ ] Navigate to Messaging/Communication
+### 14.2 Direct Messages
 - [ ] Click "New Message" or "Compose"
-- [ ] Select a colleague as recipient
+- [ ] Select colleague as recipient
 - [ ] Enter subject: "Test Message - QA"
 - [ ] Enter body: "This is a test message for QA purposes."
+- [ ] Attach file (if available)
 - [ ] Click Send
 - [ ] Verify message appears in Sent folder
 - [ ] Ask colleague to confirm receipt
 
-### Channels
+### 14.3 Channels
 - [ ] Navigate to Channels list
+- [ ] View available channels
 - [ ] Join an existing channel (or create new)
 - [ ] Post a message in the channel
 - [ ] Verify message appears
 - [ ] React to a message (if emoji reactions available)
 - [ ] Reply to a thread (if threading available)
+- [ ] Test channel notifications
 
-### Message Features
+### 14.4 Message Features
 - [ ] Test message search
-- [ ] Test message filtering
+- [ ] Test message filtering:
+  - [ ] By sender
+  - [ ] By date
+  - [ ] By keywords
 - [ ] Test marking as read/unread
 - [ ] Test archiving messages
-- [ ] Test attaching files to messages
+- [ ] Test deleting messages
+- [ ] Test message attachments
+- [ ] Test message forwarding
 
-## 7.2 Client Messaging (Secure Portal Messages)
-
-### Send Message to Client
+### 14.5 Client Messaging (Secure Portal Messages)
 - [ ] Navigate to John Doe's profile
 - [ ] Go to Messages/Communication tab
 - [ ] Click "New Message to Client"
@@ -1123,601 +1436,821 @@
 - [ ] Enter message body with appointment details
 - [ ] Click Send
 - [ ] Verify message logged in client record
+- [ ] View Client Messages:
+  - [ ] Check for any incoming client messages
+  - [ ] Reply to client message (if any exist)
+  - [ ] Mark messages as read
 
-### View Client Messages
-- [ ] Check for any incoming client messages
-- [ ] Reply to client message (if any exist)
-- [ ] Mark messages as read
-
----
-
-# PART 8: FORMS & ASSESSMENTS
-
-## 8.1 Send Intake Forms
-
-### Select Forms to Send
-- [ ] Navigate to John Doe's profile
-- [ ] Go to Forms tab
-- [ ] Click "Send Forms" or "Assign Forms"
-- [ ] Select forms to send:
-  - [ ] New Client Intake Form
-  - [ ] Personal History Questionnaire
-  - [ ] Consent for Treatment
-  - [ ] HIPAA Acknowledgment
-  - [ ] Telehealth Consent
-  - [ ] Release of Information (if needed)
-  - [ ] Financial Agreement
-  - [ ] Emergency Contact Form
-- [ ] Review selected forms
-- [ ] Click "Send to Client"
-- [ ] Verify confirmation message
-- [ ] Check that forms appear as "Pending" in client record
-
-### Monitor Form Status
-- [ ] View form completion status
-- [ ] Resend forms if needed
-- [ ] View completed forms
-- [ ] Download/print completed forms
-
-## 8.2 Clinical Assessments
-
-### PHQ-9 (Depression)
-- [ ] Navigate to Assessments tab
-- [ ] Click "New Assessment"
-- [ ] Select "PHQ-9"
-- [ ] Complete on behalf of client OR send to client
-- [ ] If completing:
-  - [ ] Enter scores for all 9 items (0-3 each)
-  - [ ] Calculate total score
-  - [ ] Note severity level
-- [ ] Save assessment
-- [ ] Review score interpretation
-- [ ] Track historical scores if previous administrations exist
-
-### GAD-7 (Anxiety)
-- [ ] Select "GAD-7"
-- [ ] Complete all 7 items
-- [ ] Calculate total
-- [ ] Save and review interpretation
-
-### PCL-5 (PTSD)
-- [ ] Select "PCL-5"
-- [ ] Complete all 20 items
-- [ ] Calculate cluster scores and total
-- [ ] Save and review
-
-### Columbia Suicide Severity Rating Scale
-- [ ] Select "C-SSRS"
-- [ ] Complete all screening questions
-- [ ] If positive, complete full assessment
-- [ ] Document risk level
-- [ ] Save and review
-
-### Other Assessments
-- [ ] Test any other available assessments:
-  - [ ] AUDIT (Alcohol)
-  - [ ] DAST (Drug)
-  - [ ] MDQ (Bipolar)
-  - [ ] ASRS (ADHD)
-  - [ ] Outcome measures
-- [ ] Verify scoring accuracy
-- [ ] Verify historical tracking
-
-## 8.3 Custom Forms
-
-### Create Custom Form (if admin)
-- [ ] Navigate to Form Builder
-- [ ] Create simple test form
-- [ ] Add various field types
-- [ ] Save form
-- [ ] Assign to client
-- [ ] Complete form
-- [ ] View results
+### 14.6 Document Library
+- [ ] Navigate to Communication > Document Library
+- [ ] View document folders
+- [ ] Test folder navigation
+- [ ] Test uploading document:
+  - [ ] Select folder
+  - [ ] Upload file
+  - [ ] Add metadata/tags
+  - [ ] Save document
+- [ ] Test downloading document
+- [ ] Test document search
+- [ ] Test document sharing
 
 ---
 
-# PART 9: BILLING & CLAIMS
+## 15. SUPERVISION
 
-## 9.1 View Client Billing
+### 15.1 Supervision Dashboard
+- [ ] Navigate to Supervision
+- [ ] View supervision dashboard
+- [ ] Verify supervisees list displays
+- [ ] Review supervisee activity
 
-### Billing Overview
-- [ ] Navigate to John Doe's Billing tab
-- [ ] Review account balance
-- [ ] Review aging buckets (current, 30, 60, 90+ days)
-- [ ] Review recent charges
-- [ ] Review payment history
+### 15.2 Review Notes
+- [ ] View supervisee's unsigned notes
+- [ ] Click on note to review
+- [ ] Review note content
+- [ ] Test providing feedback
+- [ ] Test co-signing notes
+- [ ] Verify co-signature recorded
 
-## 9.2 Create Charge
+### 15.3 Supervision Sessions
+- [ ] Navigate to Supervision Sessions
+- [ ] View session list
+- [ ] Log Supervision:
+  - [ ] Create supervision note
+  - [ ] Document:
+    - [ ] Supervision date
+    - [ ] Duration
+    - [ ] Topics discussed
+    - [ ] Cases reviewed
+    - [ ] Feedback provided
+    - [ ] Goals set
+  - [ ] Sign supervision note
+- [ ] Test editing supervision session
+- [ ] Test session history
 
-### Manual Charge Entry
-- [ ] Click "New Charge"
-- [ ] Select Date of Service
-- [ ] Select CPT Code: 90837
-- [ ] Verify fee populates
-- [ ] Select diagnosis code
-- [ ] Select rendering provider
-- [ ] Add units: 1
-- [ ] Add modifiers if needed (e.g., 95 for telehealth)
-- [ ] Select place of service
-- [ ] Save charge
-- [ ] Verify charge appears in list
+### 15.4 Track Hours
+- [ ] Navigate to Supervision Hours
+- [ ] Review supervision hours logged
+- [ ] Test logging hours:
+  - [ ] Select supervisee
+  - [ ] Enter hours
+  - [ ] Enter date
+  - [ ] Add notes
+  - [ ] Save hours
+- [ ] Verify toward licensure requirements
+- [ ] Test hours reporting
 
-### Charge from Appointment
-- [ ] Open a completed appointment
-- [ ] Click "Create Charge" or "Bill"
-- [ ] Verify information auto-populates
-- [ ] Review and submit
-
-## 9.3 Claims Management
-
-### Create Claim
-- [ ] Select unbilled charges
-- [ ] Click "Create Claim"
-- [ ] Review claim information:
-  - [ ] Patient demographics
-  - [ ] Insurance information
-  - [ ] Service lines
-  - [ ] Diagnosis codes
-  - [ ] Referring provider
-- [ ] Validate claim
-- [ ] Submit claim (or queue for submission)
-
-### View Claim Status
-- [ ] Navigate to Claims list
-- [ ] Filter by status (Pending, Submitted, Paid, Denied)
-- [ ] View claim details
-- [ ] Track claim status changes
-
-### Work Denied Claims
-- [ ] Find denied claim (or simulate)
-- [ ] View denial reason
-- [ ] Document appeal notes
-- [ ] Resubmit if applicable
-
-## 9.4 Payments
-
-### Post Payment
-- [ ] Navigate to Payments
-- [ ] Click "Post Payment"
-- [ ] Select payment type (Insurance/Patient)
-- [ ] Enter payment amount
-- [ ] Apply to charges
-- [ ] Enter payment method
-- [ ] Enter reference/check number
-- [ ] Save payment
-- [ ] Verify account balance updates
-
-### Payment Plan
-- [ ] If available, set up payment plan
-- [ ] Define payment schedule
-- [ ] Save and verify
-
-## 9.5 Statements
-
-### Generate Statement
-- [ ] Navigate to Statements
-- [ ] Select John Doe
-- [ ] Generate statement
-- [ ] Preview statement
-- [ ] Send statement (email or print)
-
-## 9.6 Reports
-
-### Billing Reports
-- [ ] Run Accounts Receivable Aging report
-- [ ] Run Collections report
-- [ ] Run Payment report
-- [ ] Export report to Excel/PDF
+### 15.5 Supervision Reports
+- [ ] Test generating supervision reports:
+  - [ ] Hours by supervisee
+  - [ ] Hours by date range
+  - [ ] Compliance reports
+- [ ] Test report export
 
 ---
 
-# PART 10: REPORTS & ANALYTICS
+## 16. PRODUCTIVITY DASHBOARDS
 
-## 10.1 Clinical Reports
-
-### Caseload Report
-- [ ] Navigate to Reports
-- [ ] Select "Caseload Report"
-- [ ] Set parameters (date range, clinician)
-- [ ] Generate report
-- [ ] Review client list with status
-- [ ] Export if needed
-
-### Productivity Report
-- [ ] Select "Productivity Report"
-- [ ] Select clinician: Self
-- [ ] Select date range
-- [ ] Generate report
-- [ ] Review:
+### 16.1 Clinician Productivity Dashboard
+- [ ] Navigate to Productivity (as clinician)
+- [ ] Verify clinician dashboard displays:
   - [ ] Sessions completed
   - [ ] Hours billed
   - [ ] Revenue generated
+  - [ ] Unsigned notes
   - [ ] No-show rate
-  - [ ] Cancellation rate
+- [ ] Test date range filtering
+- [ ] Test metric comparisons
 
-### Unsigned Notes Report
-- [ ] Select "Unsigned Notes"
-- [ ] Review list of pending signatures
-- [ ] Sign notes directly from report
+### 16.2 Supervisor Productivity Dashboard
+- [ ] Navigate to Productivity (as supervisor)
+- [ ] Verify supervisor dashboard displays:
+  - [ ] Team productivity
+  - [ ] Supervisee metrics
+  - [ ] Co-signature queue
+- [ ] Test filtering by supervisee
+- [ ] Test team comparisons
 
-### Treatment Plan Due Report
-- [ ] Select "Treatment Plan Review Due"
-- [ ] Review clients needing plan updates
-- [ ] Click to navigate to client
+### 16.3 Administrator Productivity Dashboard
+- [ ] Navigate to Productivity (as admin)
+- [ ] Verify administrator dashboard displays:
+  - [ ] Practice-wide metrics
+  - [ ] Provider comparisons
+  - [ ] Revenue trends
+  - [ ] Utilization rates
+- [ ] Test filtering options
+- [ ] Test export functionality
 
-## 10.2 Administrative Reports
-
-### Appointment Reports
-- [ ] Run daily schedule report
-- [ ] Run no-show report
-- [ ] Run cancellation report
-
-### Staff Reports
-- [ ] Run credential expiration report
-- [ ] Run training compliance report
-
-## 10.3 Financial Reports
-
-### Revenue Reports
-- [ ] Run monthly revenue report
-- [ ] Run revenue by payer report
-- [ ] Run revenue by service type report
-
-### AR Reports
-- [ ] Run aging summary
-- [ ] Run aging by payer
-- [ ] Run collections forecast
-
-## 10.4 Custom Reports
-
-### Build Custom Report
-- [ ] Navigate to Report Builder
-- [ ] Select data fields
-- [ ] Add filters
-- [ ] Set grouping
-- [ ] Preview report
-- [ ] Save report template
-- [ ] Export results
-
-## 10.5 Dashboard Analytics
-
-### Review Dashboards
-- [ ] Navigate to Analytics Dashboard
-- [ ] Review KPI widgets
-- [ ] Review trend charts
-- [ ] Filter by date range
-- [ ] Filter by clinician/department
-- [ ] Export dashboard data
+### 16.4 Productivity Reports
+- [ ] Test generating productivity reports
+- [ ] Test report customization
+- [ ] Test report scheduling
 
 ---
 
-# PART 11: STAFF & HR FUNCTIONS
+## 17. PROGRESS TRACKING
 
-## 11.1 Staff Directory
+### 17.1 Progress Tracking Dashboard
+- [ ] Navigate to Progress Tracking
+- [ ] Verify dashboard displays:
+  - [ ] Client progress overview
+  - [ ] Outcome measures
+  - [ ] Progress trends
+- [ ] Test filtering by client
+- [ ] Test filtering by measure
 
-### View Directory
-- [ ] Navigate to Staff/HR
-- [ ] View staff directory
-- [ ] Search for specific staff member
-- [ ] View staff profile
-- [ ] Verify contact information
+### 17.2 Assign Outcome Measures
+- [ ] Navigate to Assign Measures
+- [ ] Select client: John Doe
+- [ ] Test assigning measure:
+  - [ ] Select measure type (PHQ-9, GAD-7, etc.)
+  - [ ] Set frequency
+  - [ ] Set start date
+  - [ ] Save assignment
+- [ ] Verify assignment appears
 
-### Staff Profile
-- [ ] View own profile
-- [ ] Update profile information
-- [ ] Update profile photo
-- [ ] Review credentials listed
+### 17.3 Progress Reports
+- [ ] Navigate to Progress Reports
+- [ ] Select client
+- [ ] Generate progress report:
+  - [ ] Select date range
+  - [ ] Select measures
+  - [ ] Generate report
+- [ ] Review progress charts
+- [ ] Test report export
 
-## 11.2 Credentials Management
-
-### View Credentials
-- [ ] Navigate to Credentials section
-- [ ] View own credentials:
-  - [ ] License
-  - [ ] NPI
-  - [ ] DEA (if applicable)
-  - [ ] Certifications
-  - [ ] Insurance panels
-- [ ] Verify expiration dates
-- [ ] Upload updated credential documents
-
-### Credential Alerts
-- [ ] Review any expiration alerts
-- [ ] Update expiring credentials
-
-## 11.3 Time & Attendance
-
-### Clock In/Out
-- [ ] Clock in (if time tracking enabled)
-- [ ] Complete work period
-- [ ] Clock out
-- [ ] Verify hours recorded
-
-### View Timesheet
-- [ ] Navigate to Timesheet
-- [ ] Review recorded hours
-- [ ] Submit timesheet (if required)
-
-## 11.4 PTO Management
-
-### Request PTO
-- [ ] Navigate to PTO section
-- [ ] Click "Request Time Off"
-- [ ] Select dates
-- [ ] Select PTO type
-- [ ] Enter reason/notes
-- [ ] Submit request
-- [ ] Verify request appears as pending
-
-### View PTO Balance
-- [ ] Review available PTO balance
-- [ ] Review PTO history
-
-## 11.5 Training & Compliance
-
-### View Training
-- [ ] Navigate to Training section
-- [ ] Review assigned trainings
-- [ ] Complete a training module (if available)
-- [ ] Review completion certificates
-
-### Policy Acknowledgments
-- [ ] Review required policy acknowledgments
-- [ ] Acknowledge any pending policies
+### 17.4 Client Progress View
+- [ ] Navigate to Clinician > Client Progress
+- [ ] View client progress dashboard
+- [ ] Test measure tracking
+- [ ] Test progress visualization
 
 ---
 
-# PART 12: ADMINISTRATIVE FUNCTIONS
+## 18. GROUP THERAPY
 
-## 12.1 Client Search & Management
+### 18.1 Group Sessions
+- [ ] Navigate to Group Sessions
+- [ ] View group list
+- [ ] Test creating new group:
+  - [ ] Enter group name
+  - [ ] Select group type
+  - [ ] Set schedule
+  - [ ] Add members
+  - [ ] Save group
+- [ ] Test editing group
+- [ ] Test group details view
 
-### Advanced Search
-- [ ] Navigate to Client Search
-- [ ] Test search by:
-  - [ ] Name
-  - [ ] DOB
-  - [ ] MRN
-  - [ ] Phone
-  - [ ] Email
-  - [ ] Insurance ID
-- [ ] Test filters:
-  - [ ] Active/Inactive
-  - [ ] Primary clinician
-  - [ ] Insurance type
+### 18.2 Group Session Management
+- [ ] Select group
+- [ ] View session history
+- [ ] Test creating session:
+  - [ ] Select date/time
+  - [ ] Mark attendance
+  - [ ] Add session notes
+  - [ ] Save session
+- [ ] Test session notes (see Clinical Documentation section)
+
+### 18.3 Group Member Management
+- [ ] Test adding member to group
+- [ ] Test removing member from group
+- [ ] Test member attendance tracking
+- [ ] Test member progress tracking
+
+---
+
+## 19. SELF-SCHEDULING
+
+### 19.1 Self-Scheduling Dashboard
+- [ ] Navigate to Self-Schedule
+- [ ] Verify dashboard displays
+- [ ] View self-scheduling configuration
+- [ ] Test availability settings
+
+### 19.2 Self-Scheduling Rules
+- [ ] Navigate to Admin > Scheduling Rules
+- [ ] View scheduling rules
+- [ ] Test creating rule:
+  - [ ] Set rule type
+  - [ ] Configure parameters
+  - [ ] Set effective dates
+  - [ ] Save rule
+- [ ] Test rule priority
+- [ ] Test rule conflicts
+
+### 19.3 Client Self-Scheduling (Portal)
+- [ ] Test client self-scheduling from portal (see Client Portal section)
+- [ ] Verify rules enforced
+- [ ] Verify notifications sent
+
+---
+
+## 20. AI FEATURES
+
+### 20.1 AI Scheduling Assistant
+- [ ] Navigate to Appointments > AI Scheduling Assistant
+- [ ] Test natural language scheduling:
+  - [ ] Ask: "Find available slots for John Doe next week"
+  - [ ] Verify AI suggests appointments
+  - [ ] Test conflict detection
+  - [ ] Test optimization suggestions
+- [ ] Test AI recommendations
+
+### 20.2 AI Note Generation
+- [ ] Test AI note generation (see Clinical Documentation section)
+- [ ] Test transcription integration
+- [ ] Test clinical suggestions
+
+### 20.3 AI Predictions
+- [ ] Navigate to AI Predictions
+- [ ] Review prediction models:
+  - [ ] No-show predictions
+  - [ ] Revenue forecasts
+  - [ ] Capacity planning
+- [ ] Test prediction accuracy
+- [ ] Review prediction insights
+
+### 20.4 AI Personal Assistant
+- [ ] Navigate to AI Assistant (if available)
+- [ ] Test chat functionality:
+  - [ ] Ask clinical questions
+  - [ ] Request information
+  - [ ] Test conversation history
+- [ ] Test AI report generation
+
+---
+
+## 21. ADMIN TOOLS
+
+### 21.1 Admin Dashboard
+- [ ] Navigate to Admin Tools
+- [ ] Verify admin dashboard displays:
+  - [ ] System overview
+  - [ ] Key metrics
+  - [ ] Recent activity
+- [ ] Test admin widgets
+
+### 21.2 Crisis Detections
+- [ ] Navigate to Admin > Crisis Detections
+- [ ] View crisis detection list
+- [ ] Test filtering by:
   - [ ] Date range
-
-### Batch Operations
-- [ ] Select multiple clients
-- [ ] Test batch actions (if available):
-  - [ ] Send forms
+  - [ ] Severity
+  - [ ] Status
+- [ ] Test reviewing detection:
+  - [ ] View details
+  - [ ] Review risk assessment
   - [ ] Update status
-  - [ ] Assign to clinician
+  - [ ] Add notes
+- [ ] Test crisis response workflow
 
-## 12.2 Schedule Management
+### 21.3 Session Ratings
+- [ ] Navigate to Admin > Session Ratings
+- [ ] View session ratings
+- [ ] Test filtering options
+- [ ] Test rating analytics
+- [ ] Test rating reports
 
-### Provider Schedule
-- [ ] Navigate to Schedule Management
-- [ ] View provider calendars
-- [ ] Block time for meeting
-- [ ] Unblock time
+### 21.4 Waitlist Management
+- [ ] Navigate to Admin > Waitlist Management
+- [ ] View waitlist overview
+- [ ] Test waitlist analytics
+- [ ] Test waitlist matching
+- [ ] Test waitlist reports
 
-### Room Management
-- [ ] View room availability (if applicable)
-- [ ] Reserve room for appointment
+### 21.5 Scheduling Rules
+- [ ] Navigate to Admin > Scheduling Rules
+- [ ] View scheduling rules
+- [ ] Test rule management (see Self-Scheduling section)
 
-## 12.3 System Settings
+### 21.6 AdvancedMD Integration
+- [ ] Navigate to Admin > AdvancedMD Settings
+- [ ] Verify AdvancedMD connection
+- [ ] Test AdvancedMD Sync (see Billing section)
+- [ ] Test AdvancedMD configuration
 
-### View Settings
+### 21.7 Audit Log Viewer
+- [ ] Navigate to Audit Log Viewer
+- [ ] View audit logs
+- [ ] Test filtering by:
+  - [ ] User
+  - [ ] Action type
+  - [ ] Date range
+  - [ ] Entity type
+- [ ] Test log export
+- [ ] Test log search
+
+### 21.8 Guardian Verification
+- [ ] Navigate to Admin > Guardian Verification
+- [ ] Test guardian verification (see Guardian Portal section)
+
+---
+
+## 22. SETTINGS & CONFIGURATION
+
+### 22.1 Practice Settings
 - [ ] Navigate to Settings
-- [ ] Review practice settings
-- [ ] Review user preferences
-- [ ] Update notification preferences
+- [ ] View practice settings
+- [ ] Test updating settings:
+  - [ ] Practice information
+  - [ ] Contact information
+  - [ ] Business hours
+  - [ ] Time zone
+  - [ ] Save changes
+- [ ] Verify changes applied
 
-### Templates
-- [ ] View note templates
-- [ ] View email templates
-- [ ] Edit template (if permitted)
+### 22.2 Reminder Settings
+- [ ] Navigate to Settings > Reminder Settings
+- [ ] View reminder configuration
+- [ ] Test configuring reminders:
+  - [ ] Appointment reminders
+  - [ ] Form reminders
+  - [ ] Note reminders
+  - [ ] Save settings
+- [ ] Test reminder templates
 
----
+### 22.3 Clinical Note Reminder Settings
+- [ ] Navigate to Settings > Clinical Note Reminders
+- [ ] Configure note reminder rules:
+  - [ ] Set reminder timing
+  - [ ] Set reminder frequency
+  - [ ] Set reminder recipients
+  - [ ] Save settings
+- [ ] Test reminder triggers
 
-# PART 13: SUPERVISION (If Applicable)
+### 22.4 Appointment Types
+- [ ] Navigate to Settings > Appointment Types
+- [ ] Test appointment type management (see Scheduling section)
 
-## 13.1 Supervision Dashboard
+### 22.5 Provider Availability
+- [ ] Navigate to Settings > Provider Availability
+- [ ] Test availability management (see Scheduling section)
 
-### View Supervisees
-- [ ] Navigate to Supervision section
-- [ ] View list of supervisees
-- [ ] Review supervisee activity
+### 22.6 MFA Management
+- [ ] Navigate to Settings > MFA Management
+- [ ] View MFA settings
+- [ ] Test MFA configuration
+- [ ] Test MFA enforcement
 
-### Review Notes
-- [ ] View supervisee's unsigned notes
-- [ ] Review and co-sign notes
-- [ ] Provide feedback
+### 22.7 Session Management
+- [ ] Navigate to Settings > Session Management
+- [ ] View session settings:
+  - [ ] Session timeout
+  - [ ] Maximum session duration
+  - [ ] Session warning time
+- [ ] Test updating settings
+- [ ] Verify settings applied
 
-## 13.2 Supervision Sessions
-
-### Log Supervision
-- [ ] Create supervision note
-- [ ] Document:
-  - [ ] Supervision date
-  - [ ] Duration
-  - [ ] Topics discussed
-  - [ ] Cases reviewed
-  - [ ] Feedback provided
-  - [ ] Goals set
-- [ ] Sign supervision note
-
-### Track Hours
-- [ ] Review supervision hours logged
-- [ ] Verify toward licensure requirements
-
----
-
-# PART 14: ERROR HANDLING & EDGE CASES
-
-## 14.1 Form Validation
-
-### Required Fields
-- [ ] Try to save note without required fields
-- [ ] Verify appropriate error messages
-- [ ] Verify form doesn't submit
-
-### Data Validation
-- [ ] Enter invalid date format
-- [ ] Enter invalid phone number
-- [ ] Enter invalid email
-- [ ] Verify validation messages
-
-## 14.2 Concurrent Access
-
-### Simultaneous Editing
-- [ ] Open same record in two tabs
-- [ ] Edit in both
-- [ ] Save in first tab
-- [ ] Try to save in second tab
-- [ ] Verify conflict handling
-
-## 14.3 Session Timeout
-
-### Test Timeout
-- [ ] Stay idle for extended period
-- [ ] Verify session timeout warning
-- [ ] Test session extension
-- [ ] Test redirect to login
-
-## 14.4 Error States
-
-### Network Errors
-- [ ] Disable network briefly
-- [ ] Try to save
-- [ ] Verify error handling
-- [ ] Re-enable network
-- [ ] Verify recovery
-
-### API Errors
-- [ ] Monitor console for 500 errors
-- [ ] Document any encountered
-- [ ] Verify user-friendly error messages
+### 22.8 User Preferences
+- [ ] Navigate to User Profile
+- [ ] Test updating preferences:
+  - [ ] Notification preferences
+  - [ ] Display preferences
+  - [ ] Language preferences
+- [ ] Save preferences
+- [ ] Verify preferences applied
 
 ---
 
-# PART 15: PERFORMANCE & USABILITY
+## 23. VENDOR & FINANCE
 
-## 15.1 Page Load Times
+### 23.1 Vendor Management
+- [ ] Navigate to Vendors & Finance > Vendor Management
+- [ ] View vendor list
+- [ ] Test creating vendor:
+  - [ ] Enter vendor information
+  - [ ] Add contact details
+  - [ ] Add payment terms
+  - [ ] Save vendor
+- [ ] Test editing vendor
+- [ ] Test vendor profile
 
-### Measure Performance
-- [ ] Dashboard load time: ___ seconds
-- [ ] Client profile load time: ___ seconds
-- [ ] Calendar load time: ___ seconds
-- [ ] Report generation time: ___ seconds
-- [ ] Note save time: ___ seconds
+### 23.2 Budget Dashboard
+- [ ] Navigate to Finance > Budget Dashboard
+- [ ] View budget overview
+- [ ] Test budget allocation
+- [ ] Test budget tracking
+- [ ] Test budget reports
 
-## 15.2 Mobile Responsiveness
+### 23.3 Expense Management
+- [ ] Navigate to Finance > Expense Management
+- [ ] View expense list
+- [ ] Test creating expense:
+  - [ ] Enter expense details
+  - [ ] Attach receipt
+  - [ ] Select category
+  - [ ] Submit expense
+- [ ] Test expense approval workflow
+- [ ] Test expense reports
 
-### Test Mobile Views
-- [ ] Open on mobile device or resize browser
-- [ ] Verify navigation works
-- [ ] Verify forms are usable
-- [ ] Verify calendar is accessible
-
-## 15.3 Browser Compatibility
-
-### Test Browsers
-- [ ] Chrome: All features work
-- [ ] Firefox: All features work
-- [ ] Safari: All features work
-- [ ] Edge: All features work
-
-## 15.4 Accessibility
-
-### Basic Accessibility
-- [ ] Tab navigation works
-- [ ] Forms have proper labels
-- [ ] Images have alt text
-- [ ] Color contrast is adequate
-
----
-
-# PART 16: SECURITY VERIFICATION
-
-## 16.1 Authentication Security
-
-### Password Policy
-- [ ] Try weak password - verify rejection
-- [ ] Verify password requirements displayed
-
-### Session Security
-- [ ] Verify secure cookies (check in DevTools)
-- [ ] Verify HTTPS everywhere
-
-## 16.2 Authorization
-
-### Role-Based Access
-- [ ] Verify only authorized features visible
-- [ ] Try accessing unauthorized URL directly
-- [ ] Verify appropriate denial
-
-### Client Data Access
-- [ ] Verify can only see assigned clients
-- [ ] Verify proper data isolation
-
-## 16.3 Audit Trail
-
-### Review Audit Log
-- [ ] Navigate to Audit Log (if accessible)
-- [ ] Verify actions are logged
-- [ ] Verify PHI access is logged
+### 23.4 Purchase Orders
+- [ ] Navigate to Finance > Purchase Orders
+- [ ] View PO list
+- [ ] Test creating PO:
+  - [ ] Select vendor
+  - [ ] Add line items
+  - [ ] Set approval workflow
+  - [ ] Submit PO
+- [ ] Test PO approval
+- [ ] Test PO tracking
 
 ---
 
-# TEST COMPLETION CHECKLIST
+## 24. ERROR HANDLING & EDGE CASES
 
-## Summary
+### 24.1 Form Validation
+- [ ] Required Fields:
+  - [ ] Try to save note without required fields
+  - [ ] Verify appropriate error messages
+  - [ ] Verify form doesn't submit
+- [ ] Data Validation:
+  - [ ] Enter invalid date format
+  - [ ] Enter invalid phone number
+  - [ ] Enter invalid email
+  - [ ] Enter invalid MRN
+  - [ ] Verify validation messages
+- [ ] Field Length Limits:
+  - [ ] Test maximum character limits
+  - [ ] Test minimum character requirements
+
+### 24.2 Concurrent Access
+- [ ] Simultaneous Editing:
+  - [ ] Open same record in two tabs
+  - [ ] Edit in both tabs
+  - [ ] Save in first tab
+  - [ ] Try to save in second tab
+  - [ ] Verify conflict handling
+  - [ ] Verify appropriate error message
+- [ ] Data Consistency:
+  - [ ] Verify data updates reflect across tabs
+  - [ ] Verify real-time updates (if applicable)
+
+### 24.3 Session Timeout
+- [ ] Test Timeout:
+  - [ ] Stay idle for extended period
+  - [ ] Verify session timeout warning appears at 13 minutes
+  - [ ] Test session extension option
+  - [ ] Test redirect to login after 15 minutes
+- [ ] Session Recovery:
+  - [ ] Test unsaved work warning
+  - [ ] Test session restoration
+
+### 24.4 Network Errors
+- [ ] Network Disconnection:
+  - [ ] Disable network briefly
+  - [ ] Try to save data
+  - [ ] Verify error handling
+  - [ ] Verify user-friendly error message
+  - [ ] Re-enable network
+  - [ ] Verify recovery/retry functionality
+- [ ] Slow Network:
+  - [ ] Test with throttled network
+  - [ ] Verify loading indicators
+  - [ ] Verify timeout handling
+
+### 24.5 API Errors
+- [ ] Monitor Console:
+  - [ ] Monitor console for 500 errors
+  - [ ] Monitor console for 400 errors
+  - [ ] Monitor console for 401/403 errors
+  - [ ] Document any encountered
+- [ ] Error Messages:
+  - [ ] Verify user-friendly error messages
+  - [ ] Verify error details logged (not exposed to user)
+- [ ] Error Recovery:
+  - [ ] Test retry functionality
+  - [ ] Test error reporting
+
+### 24.6 Data Edge Cases
+- [ ] Empty Data:
+  - [ ] Test with no clients
+  - [ ] Test with no appointments
+  - [ ] Test with no notes
+  - [ ] Verify appropriate empty states
+- [ ] Large Data:
+  - [ ] Test with large number of records
+  - [ ] Test pagination
+  - [ ] Test performance
+- [ ] Special Characters:
+  - [ ] Test with special characters in names
+  - [ ] Test with unicode characters
+  - [ ] Test with SQL injection attempts
+  - [ ] Test with XSS attempts
+
+### 24.7 Browser Compatibility
+- [ ] Test in Chrome (latest)
+- [ ] Test in Firefox (latest)
+- [ ] Test in Safari (latest)
+- [ ] Test in Edge (latest)
+- [ ] Verify all features work in all browsers
+- [ ] Document any browser-specific issues
+
+---
+
+## 25. PERFORMANCE & USABILITY
+
+### 25.1 Page Load Times
+- [ ] Measure Performance:
+  - [ ] Dashboard load time: ___ seconds (target: < 2s)
+  - [ ] Client profile load time: ___ seconds (target: < 2s)
+  - [ ] Calendar load time: ___ seconds (target: < 3s)
+  - [ ] Report generation time: ___ seconds (target: < 5s)
+  - [ ] Note save time: ___ seconds (target: < 1s)
+  - [ ] Search response time: ___ seconds (target: < 1s)
+- [ ] Performance Monitoring:
+  - [ ] Use browser DevTools Performance tab
+  - [ ] Identify performance bottlenecks
+  - [ ] Document findings
+
+### 25.2 Mobile Responsiveness
+- [ ] Test Mobile Views:
+  - [ ] Open on mobile device or resize browser to mobile size
+  - [ ] Verify navigation works
+  - [ ] Verify forms are usable
+  - [ ] Verify calendar is accessible
+  - [ ] Verify tables are scrollable
+  - [ ] Verify modals work correctly
+- [ ] Touch Interactions:
+  - [ ] Test touch gestures
+  - [ ] Test swipe actions
+  - [ ] Test mobile menu
+
+### 25.3 Accessibility
+- [ ] Basic Accessibility:
+  - [ ] Tab navigation works
+  - [ ] Forms have proper labels
+  - [ ] Images have alt text
+  - [ ] Color contrast is adequate (WCAG AA)
+  - [ ] Focus indicators visible
+- [ ] Screen Reader:
+  - [ ] Test with screen reader (if available)
+  - [ ] Verify content is readable
+- [ ] Keyboard Navigation:
+  - [ ] Test all features with keyboard only
+  - [ ] Verify keyboard shortcuts work
+
+### 25.4 Usability
+- [ ] User Flow:
+  - [ ] Test common user workflows
+  - [ ] Verify intuitive navigation
+  - [ ] Verify clear call-to-actions
+- [ ] Error Messages:
+  - [ ] Verify error messages are clear
+  - [ ] Verify error messages are actionable
+- [ ] Help & Documentation:
+  - [ ] Test help tooltips
+  - [ ] Test documentation links
+  - [ ] Test onboarding flow
+
+---
+
+## 26. SECURITY & COMPLIANCE
+
+### 26.1 Authentication Security
+- [ ] Password Policy:
+  - [ ] Try weak password - verify rejection
+  - [ ] Verify password requirements displayed
+  - [ ] Test password complexity requirements
+- [ ] Session Security:
+  - [ ] Verify secure cookies (check in DevTools)
+  - [ ] Verify HTTPS everywhere
+  - [ ] Verify httpOnly cookies
+  - [ ] Verify SameSite cookie attributes
+- [ ] MFA Security:
+  - [ ] Verify MFA enforcement
+  - [ ] Test MFA bypass attempts
+  - [ ] Verify MFA recovery process
+
+### 26.2 Authorization
+- [ ] Role-Based Access:
+  - [ ] Verify only authorized features visible
+  - [ ] Try accessing unauthorized URL directly
+  - [ ] Verify appropriate denial
+  - [ ] Test all user roles
+- [ ] Client Data Access:
+  - [ ] Verify can only see assigned clients
+  - [ ] Verify proper data isolation
+  - [ ] Test cross-user data access attempts
+- [ ] API Authorization:
+  - [ ] Test API endpoints with invalid tokens
+  - [ ] Test API endpoints with expired sessions
+  - [ ] Verify proper error responses
+
+### 26.3 Data Protection
+- [ ] PHI Encryption:
+  - [ ] Verify PHI encrypted at rest
+  - [ ] Verify PHI encrypted in transit
+  - [ ] Test PHI encryption middleware
+- [ ] Data Masking:
+  - [ ] Verify sensitive data masked in logs
+  - [ ] Verify sensitive data masked in UI (if applicable)
+- [ ] Data Backup:
+  - [ ] Verify backup procedures documented
+  - [ ] Test data recovery (if possible)
+
+### 26.4 Audit Trail
+- [ ] Review Audit Log:
+  - [ ] Navigate to Audit Log (if accessible)
+  - [ ] Verify actions are logged
+  - [ ] Verify PHI access is logged
+  - [ ] Verify login/logout logged
+  - [ ] Verify data modifications logged
+- [ ] Audit Log Integrity:
+  - [ ] Verify audit logs cannot be modified
+  - [ ] Verify audit log retention
+
+### 26.5 HIPAA Compliance
+- [ ] Technical Safeguards:
+  - [ ] Verify encryption at rest
+  - [ ] Verify encryption in transit
+  - [ ] Verify access controls
+  - [ ] Verify audit controls
+- [ ] Administrative Safeguards:
+  - [ ] Verify user access management
+  - [ ] Verify training requirements
+  - [ ] Verify incident response procedures
+- [ ] Physical Safeguards:
+  - [ ] Verify cloud infrastructure security
+  - [ ] Verify data center security
+
+---
+
+## 27. API ENDPOINT TESTING
+
+### 27.1 Authentication Endpoints
+- [ ] POST /api/v1/auth/login
+  - [ ] Test successful login
+  - [ ] Test invalid credentials
+  - [ ] Test missing fields
+- [ ] POST /api/v1/auth/logout
+  - [ ] Test logout
+  - [ ] Verify session cleared
+- [ ] POST /api/v1/auth/register
+  - [ ] Test user registration
+  - [ ] Test validation
+- [ ] GET /api/v1/auth/me
+  - [ ] Test current user info
+  - [ ] Test unauthorized access
+
+### 27.2 Client Endpoints
+- [ ] GET /api/v1/clients
+  - [ ] Test client list retrieval
+  - [ ] Test pagination
+  - [ ] Test filtering
+  - [ ] Test sorting
+- [ ] GET /api/v1/clients/:id
+  - [ ] Test client detail retrieval
+  - [ ] Test unauthorized access
+- [ ] POST /api/v1/clients
+  - [ ] Test client creation
+  - [ ] Test validation
+- [ ] PUT /api/v1/clients/:id
+  - [ ] Test client update
+  - [ ] Test validation
+- [ ] DELETE /api/v1/clients/:id
+  - [ ] Test client deletion (if allowed)
+  - [ ] Test soft delete
+
+### 27.3 Appointment Endpoints
+- [ ] GET /api/v1/appointments
+  - [ ] Test appointment list retrieval
+  - [ ] Test date filtering
+  - [ ] Test provider filtering
+- [ ] POST /api/v1/appointments
+  - [ ] Test appointment creation
+  - [ ] Test validation
+  - [ ] Test conflict detection
+- [ ] PUT /api/v1/appointments/:id
+  - [ ] Test appointment update
+  - [ ] Test status changes
+- [ ] DELETE /api/v1/appointments/:id
+  - [ ] Test appointment cancellation
+  - [ ] Test deletion
+
+### 27.4 Clinical Note Endpoints
+- [ ] GET /api/v1/clinical-notes
+  - [ ] Test note list retrieval
+  - [ ] Test filtering
+  - [ ] Test pagination
+- [ ] GET /api/v1/clinical-notes/:id
+  - [ ] Test note detail retrieval
+  - [ ] Test access control
+- [ ] POST /api/v1/clinical-notes
+  - [ ] Test note creation
+  - [ ] Test validation
+- [ ] PUT /api/v1/clinical-notes/:id
+  - [ ] Test note update
+  - [ ] Test signed note protection
+- [ ] POST /api/v1/clinical-notes/:id/sign
+  - [ ] Test note signing
+  - [ ] Test signature validation
+
+### 27.5 Billing Endpoints
+- [ ] GET /api/v1/billing/charges
+  - [ ] Test charge list retrieval
+  - [ ] Test filtering
+- [ ] POST /api/v1/billing/charges
+  - [ ] Test charge creation
+  - [ ] Test validation
+- [ ] GET /api/v1/billing/claims
+  - [ ] Test claim list retrieval
+- [ ] POST /api/v1/billing/claims
+  - [ ] Test claim creation
+  - [ ] Test validation
+- [ ] POST /api/v1/billing/payments
+  - [ ] Test payment posting
+  - [ ] Test validation
+
+### 27.6 Telehealth Endpoints
+- [ ] POST /api/v1/telehealth/sessions
+  - [ ] Test session creation
+  - [ ] Test token generation
+- [ ] GET /api/v1/telehealth/sessions/:id
+  - [ ] Test session retrieval
+- [ ] POST /api/v1/telehealth/sessions/:id/end
+  - [ ] Test session ending
+  - [ ] Test recording save
+
+### 27.7 Error Handling
+- [ ] Test 400 Bad Request responses
+- [ ] Test 401 Unauthorized responses
+- [ ] Test 403 Forbidden responses
+- [ ] Test 404 Not Found responses
+- [ ] Test 500 Internal Server Error handling
+- [ ] Verify error response format
+- [ ] Verify error messages don't expose sensitive info
+
+---
+
+## TEST COMPLETION CHECKLIST
+
+### Summary
 - [ ] Total features tested: ___
 - [ ] Features passing: ___
 - [ ] Features failing: ___
 - [ ] Bugs found: ___
+- [ ] Critical bugs: ___
+- [ ] Medium bugs: ___
+- [ ] Minor bugs: ___
 
-## Critical Issues Found
-List any critical issues:
-1.
-2.
-3.
+### Critical Issues Found
+List any critical issues (blocking production):
+1. 
+2. 
+3. 
 
-## Medium Issues Found
+### Medium Issues Found
 List medium priority issues:
-1.
-2.
-3.
+1. 
+2. 
+3. 
 
-## Minor Issues Found
+### Minor Issues Found
 List minor issues:
-1.
-2.
-3.
+1. 
+2. 
+3. 
 
-## Recommendations
+### Recommendations
 List improvement recommendations:
-1.
-2.
-3.
+1. 
+2. 
+3. 
 
-## Sign-Off
+### Performance Metrics
+- [ ] Average page load time: ___ seconds
+- [ ] Average API response time: ___ milliseconds
+- [ ] Largest page size: ___ KB
+- [ ] Total API calls tested: ___
+
+### Security Findings
+- [ ] Authentication vulnerabilities: ___
+- [ ] Authorization vulnerabilities: ___
+- [ ] Data protection issues: ___
+- [ ] Compliance gaps: ___
+
+### Sign-Off
 - [ ] Tester Name: _______________
 - [ ] Date: _______________
 - [ ] Test Environment: Production / Staging
 - [ ] Overall Status: PASS / FAIL / CONDITIONAL PASS
+- [ ] Ready for Production: YES / NO
 
 ---
 
-# APPENDIX A: TEST DATA
+## APPENDIX A: TEST DATA
 
-## Client: John Doe
+### Test Client: John Doe
 - MRN: [Lookup in system]
 - DOB: [Lookup in system]
 - Insurance: [Lookup in system]
+- Primary Clinician: [Lookup in system]
 
-## CPT Codes for Testing
+### Test Staff: ejoseph@chctherapy.com
+- Role: [Lookup in system]
+- Permissions: [Lookup in system]
+
+### CPT Codes for Testing
 - 90791 - Psychiatric Diagnostic Evaluation
 - 90832 - Individual Psychotherapy, 30 min
 - 90834 - Individual Psychotherapy, 45 min
@@ -1728,7 +2261,7 @@ List improvement recommendations:
 - 99213 - Office Visit, Level 3
 - 99214 - Office Visit, Level 4
 
-## ICD-10 Codes for Testing
+### ICD-10 Codes for Testing
 - F32.1 - Major Depressive Disorder, single episode, moderate
 - F33.1 - Major Depressive Disorder, recurrent, moderate
 - F41.1 - Generalized Anxiety Disorder
@@ -1737,23 +2270,59 @@ List improvement recommendations:
 
 ---
 
-# APPENDIX B: EXPECTED BEHAVIORS
+## APPENDIX B: EXPECTED BEHAVIORS
 
-## Note Signing
+### Note Signing
 - Notes should lock after signing
 - Amendments should be available post-signing
 - Co-signatures should be trackable
+- Signature timestamps should be accurate
 
-## Appointment States
+### Appointment States
 - Scheduled → Checked In → In Progress → Completed
 - Cancellation should prompt for reason
 - No-show should be marked after appointment time
+- Status changes should be logged
 
-## Billing Flow
+### Billing Flow
 - Charges created from completed appointments
 - Claims generated from charges
-- Payments applied to claims
+- Payments applied to charges/claims
+- Account balance updates automatically
+
+### Session Management
+- Session timeout warning at 13 minutes
+- Automatic logout at 15 minutes
+- Session extension available
+- Unsaved work warning
+
+### Data Access
+- Users only see assigned clients
+- Role-based feature access
+- Proper data isolation
+- Audit trail for all access
 
 ---
 
-**END OF TEST PLAN**
+## APPENDIX C: TESTING TOOLS
+
+### Browser DevTools
+- Console (F12) - Error monitoring
+- Network tab - API call monitoring
+- Performance tab - Performance analysis
+- Application tab - Storage inspection
+
+### Testing Tools
+- Postman/Insomnia - API testing
+- BrowserStack - Cross-browser testing
+- Lighthouse - Performance auditing
+- WAVE - Accessibility testing
+
+---
+
+**END OF COMPREHENSIVE TEST PLAN**
+
+**Version:** 2.0  
+**Last Updated:** January 2026  
+**Total Test Cases:** 500+  
+**Estimated Testing Time:** 40-60 hours

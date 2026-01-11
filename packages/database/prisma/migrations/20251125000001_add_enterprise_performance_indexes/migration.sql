@@ -172,7 +172,8 @@ CREATE INDEX IF NOT EXISTS "idx_claims_amd_id" ON "claims"("advancedMDClaimId") 
 
 CREATE INDEX IF NOT EXISTS "idx_eligibility_client" ON "eligibility_checks"("clientId");
 CREATE INDEX IF NOT EXISTS "idx_eligibility_check_date" ON "eligibility_checks"("checkDate");
-CREATE INDEX IF NOT EXISTS "idx_eligibility_status" ON "eligibility_checks"("status");
+-- Skipped: EligibilityCheck table does not have a status column
+-- CREATE INDEX IF NOT EXISTS "idx_eligibility_status" ON "eligibility_checks"("status");
 
 -- ==============================================================================
 -- PARTIAL INDEXES FOR COMMON FILTERS

@@ -96,12 +96,14 @@ export const FormSubmissionViewer: React.FC<FormSubmissionViewerProps> = ({
 
     try {
       setIsReviewing(true);
-      // TODO: Implement mark as reviewed API endpoint
+      await api.patch(`/clients/${clientId}/forms/${assignmentId}/review`, {
+        notes: reviewNotes || null,
+      });
       toast.success('Form marked as reviewed');
       await loadSubmission(); // Reload to get updated data
     } catch (err: any) {
       console.error('Error marking as reviewed:', err);
-      toast.error('Failed to mark as reviewed');
+      toast.error(err.response?.data?.message || 'Failed to mark as reviewed');
     } finally {
       setIsReviewing(false);
     }

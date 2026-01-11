@@ -453,24 +453,34 @@ export default function ClientProgress() {
     strength: c.strength as 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE',
   })) || [];
 
-  // Clinician notes - placeholder (no backend endpoint yet)
-  // TODO: Implement /tracking/notes endpoint on backend
-  const clinicianNotes: ClinicianNote[] = [];
+  // Fetch clinician notes from backend
+  const { data: clinicianNotesData } = useQuery({
+    queryKey: ['clinicianNotes', selectedClient?.id, dateRange],
+    queryFn: async () => {
+      const { startDate, endDate } = getDateRange();
+      const response = await api.get(
+        `/tracking/notes/${selectedClient!.id}?startDate=${startDate}&endDate=${endDate}`
+      );
+      return response.data.data;
+    },
+    enabled: !!selectedClient?.id,
+  });
 
-  // Save clinician note mutation - disabled until backend endpoint is added
+  const clinicianNotes: ClinicianNote[] = clinicianNotesData || [];
+
+  // Save clinician note mutation
   const saveNoteMutation = useMutation({
     mutationFn: async (content: string) => {
-      // Backend endpoint not yet implemented
-      console.warn('Clinician notes endpoint not yet implemented');
-      throw new Error('Feature not yet available');
+      const response = await api.post(`/tracking/notes/${selectedClient!.id}`, { content });
+      return response.data;
     },
     onSuccess: () => {
       toast.success('Note saved successfully');
       setNoteContent('');
       queryClient.invalidateQueries({ queryKey: ['clinicianNotes', selectedClient?.id] });
     },
-    onError: () => {
-      toast.error('Notes feature coming soon');
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to save note');
     },
   });
 

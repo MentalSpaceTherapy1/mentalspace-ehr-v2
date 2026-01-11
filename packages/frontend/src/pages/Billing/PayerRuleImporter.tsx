@@ -1,9 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 
+interface CSVPayerRule {
+  payerName: string;
+  clinicianCredential: string;
+  placeOfService: string;
+  serviceType: string;
+  supervisionRequired: string;
+  cosignRequired: string;
+  cosignTimeframeDays?: string;
+  noteCompletionDays?: string;
+  incidentToBillingAllowed: string;
+  renderingClinicianOverride: string;
+  diagnosisRequired: string;
+  treatmentPlanRequired: string;
+  medicalNecessityRequired: string;
+  priorAuthRequired: string;
+  isProhibited: string;
+  prohibitionReason?: string;
+  effectiveDate: string;
+  terminationDate?: string;
+}
+
 interface ImportResult {
+  success: number;
+  failed: number;
+  errors: Array<{
+    row: number;
+    error: string;
+    data?: any;
+  }>;
+  createdRules: any[];
+}
+
+interface DisplayResult {
   success: boolean;
   imported: number;
   failed: number;
@@ -20,15 +52,102 @@ const PayerRuleImporter: React.FC = () => {
 
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<ImportResult | null>(null);
+  const [result, setResult] = useState<DisplayResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dryRun, setDryRun] = useState(true);
+  const [parsedData, setParsedData] = useState<CSVPayerRule[]>([]);
+  const [parseErrors, setParseErrors] = useState<string[]>([]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Parse CSV text into rows
+  const parseCSV = useCallback((text: string): { data: CSVPayerRule[]; errors: string[] } => {
+    const lines = text.split(/\r?\n/).filter(line => line.trim());
+    if (lines.length < 2) {
+      return { data: [], errors: ['CSV file must have a header row and at least one data row'] };
+    }
+
+    const headers = lines[0].split(',').map(h => h.trim());
+    const requiredHeaders = ['clinicianCredential', 'placeOfService', 'serviceType', 'effectiveDate'];
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+
+    if (missingHeaders.length > 0) {
+      return { data: [], errors: [`Missing required columns: ${missingHeaders.join(', ')}`] };
+    }
+
+    const data: CSVPayerRule[] = [];
+    const errors: string[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
+      if (values.length !== headers.length) {
+        errors.push(`Row ${i + 1}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
+        continue;
+      }
+
+      const row: any = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+
+      // Validate required fields
+      if (!row.clinicianCredential) {
+        errors.push(`Row ${i + 1}: Missing clinicianCredential`);
+        continue;
+      }
+      if (!row.placeOfService) {
+        errors.push(`Row ${i + 1}: Missing placeOfService`);
+        continue;
+      }
+      if (!row.serviceType) {
+        errors.push(`Row ${i + 1}: Missing serviceType`);
+        continue;
+      }
+      if (!row.effectiveDate) {
+        errors.push(`Row ${i + 1}: Missing effectiveDate`);
+        continue;
+      }
+
+      // Validate date format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(row.effectiveDate)) {
+        errors.push(`Row ${i + 1}: Invalid effectiveDate format (use YYYY-MM-DD)`);
+        continue;
+      }
+
+      // Add payerName from payerId lookup if not provided
+      if (!row.payerName) {
+        row.payerName = ''; // Will be set from payer lookup
+      }
+
+      data.push(row as CSVPayerRule);
+    }
+
+    return { data, errors };
+  }, []);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
       setResult(null);
       setError(null);
+      setParseErrors([]);
+
+      // Parse CSV immediately
+      try {
+        const text = await selectedFile.text();
+        const { data, errors } = parseCSV(text);
+        setParsedData(data);
+        setParseErrors(errors);
+
+        if (errors.length > 0) {
+          toast.error(`Found ${errors.length} parsing error(s)`);
+        } else if (data.length > 0) {
+          toast.success(`Parsed ${data.length} rule(s) from CSV`);
+        }
+      } catch (err) {
+        setParseErrors(['Failed to read CSV file']);
+        toast.error('Failed to read CSV file');
+      }
     }
   };
 
@@ -40,25 +159,93 @@ const PayerRuleImporter: React.FC = () => {
       return;
     }
 
+    if (parseErrors.length > 0) {
+      toast.error('Please fix CSV parsing errors first');
+      return;
+    }
+
+    if (parsedData.length === 0) {
+      toast.error('No valid rules found in CSV');
+      return;
+    }
+
     setImporting(true);
     setError(null);
     setResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('payerId', payerId || '');
-      formData.append('dryRun', dryRun.toString());
+      // Fetch payer name for the rules
+      let payerName = '';
+      if (payerId) {
+        try {
+          const payerResponse = await api.get(`/payers/${payerId}`);
+          payerName = payerResponse.data.data?.name || '';
+        } catch {
+          // Payer fetch failed, will use empty name
+        }
+      }
 
-      const response = await api.post('/payer-rules/import', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // Add payer name to all rules
+      const rulesWithPayer = parsedData.map(rule => ({
+        ...rule,
+        payerName: rule.payerName || payerName,
+      }));
 
-      setResult(response.data.data);
+      if (dryRun) {
+        // Client-side validation only
+        const validationErrors: Array<{ row: number; field: string; message: string }> = [];
+
+        rulesWithPayer.forEach((rule, index) => {
+          const rowNum = index + 2; // +2 for header and 0-indexing
+
+          if (!rule.payerName) {
+            validationErrors.push({
+              row: rowNum,
+              field: 'payerName',
+              message: 'Payer name is required',
+            });
+          }
+        });
+
+        setResult({
+          success: validationErrors.length === 0,
+          imported: validationErrors.length === 0 ? rulesWithPayer.length : 0,
+          failed: validationErrors.length,
+          errors: validationErrors,
+        });
+
+        if (validationErrors.length === 0) {
+          toast.success(`Validation passed for ${rulesWithPayer.length} rules`);
+        }
+      } else {
+        // Actual import
+        const response = await api.post('/payer-rules/bulk-import', {
+          rules: rulesWithPayer,
+        });
+
+        const importResult: ImportResult = response.data.data;
+
+        // Transform to display format
+        setResult({
+          success: importResult.failed === 0,
+          imported: importResult.success,
+          failed: importResult.failed,
+          errors: importResult.errors.map(err => ({
+            row: err.row,
+            field: 'import',
+            message: err.error,
+          })),
+        });
+
+        if (importResult.failed === 0) {
+          toast.success(`Successfully imported ${importResult.success} rules`);
+        } else {
+          toast.error(`Import completed with ${importResult.failed} errors`);
+        }
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to import rules');
+      toast.error('Import failed');
     } finally {
       setImporting(false);
     }
@@ -169,13 +356,64 @@ LAPC,OFFICE,EVALUATION,true,true,14,30,true,true,true,false,false,,2024-01-01,tr
           </button>
           <button
             type="submit"
-            disabled={importing || !file}
+            disabled={importing || !file || parseErrors.length > 0}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
             {importing ? 'Processing...' : dryRun ? 'Validate CSV' : 'Import Rules'}
           </button>
         </div>
       </form>
+
+      {/* CSV Parse Errors */}
+      {parseErrors.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="font-medium text-red-900 mb-2">CSV Parsing Errors</h3>
+          <p className="text-sm text-red-700 mb-3">
+            Please fix these errors in your CSV file and upload again:
+          </p>
+          <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+            {parseErrors.map((err, index) => (
+              <li key={index}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Parsed Data Preview */}
+      {parsedData.length > 0 && parseErrors.length === 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h3 className="font-medium text-green-900 mb-2">
+            ✓ CSV Parsed Successfully
+          </h3>
+          <p className="text-sm text-green-700">
+            Found {parsedData.length} valid rule(s). Click "{dryRun ? 'Validate CSV' : 'Import Rules'}" to proceed.
+          </p>
+          {parsedData.length <= 5 && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="min-w-full text-xs">
+                <thead>
+                  <tr className="border-b border-green-200">
+                    <th className="text-left py-1 pr-2 text-green-800">Credential</th>
+                    <th className="text-left py-1 pr-2 text-green-800">Place</th>
+                    <th className="text-left py-1 pr-2 text-green-800">Service</th>
+                    <th className="text-left py-1 text-green-800">Effective Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsedData.map((rule, index) => (
+                    <tr key={index} className="border-b border-green-100">
+                      <td className="py-1 pr-2 text-green-700">{rule.clinicianCredential}</td>
+                      <td className="py-1 pr-2 text-green-700">{rule.placeOfService}</td>
+                      <td className="py-1 pr-2 text-green-700">{rule.serviceType}</td>
+                      <td className="py-1 text-green-700">{rule.effectiveDate}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (

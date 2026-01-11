@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,17 +8,43 @@ import {
   AlertTriangle,
   CheckCircle2,
   Filter,
+  BookOpen,
+  Users,
 } from 'lucide-react';
+import { useUpcomingTrainings, useCourses, useEnrollments, useEnrollUser, Enrollment } from '../../hooks/useTraining';
+import toast from 'react-hot-toast';
+
+interface CalendarEvent {
+  id: string;
+  date: number;
+  fullDate: Date;
+  title: string;
+  type: 'due' | 'expiring' | 'completed' | 'scheduled';
+  color: 'red' | 'amber' | 'green' | 'blue';
+  courseId?: string;
+  enrollmentId?: string;
+}
 
 export default function TrainingCalendar() {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedType, setSelectedType] = useState<'all' | 'due' | 'expiring'>('all');
+  const [selectedType, setSelectedType] = useState<'all' | 'due' | 'expiring' | 'scheduled'>('all');
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+
+  // Fetch data from backend
+  const { data: upcomingTrainings = [], isLoading: loadingUpcoming } = useUpcomingTrainings();
+  const { data: courses = [], isLoading: loadingCourses } = useCourses();
+  const { data: enrollments = [], isLoading: loadingEnrollments } = useEnrollments();
+  const enrollMutation = useEnrollUser();
 
   const types = [
     { value: 'all', label: 'All Events', color: 'indigo' },
     { value: 'due', label: 'Due Dates', color: 'red' },
     { value: 'expiring', label: 'Expiring', color: 'amber' },
+    { value: 'scheduled', label: 'Scheduled', color: 'blue' },
   ];
+
+  const isLoading = loadingUpcoming || loadingCourses || loadingEnrollments;
 
   // Get calendar info
   const year = currentDate.getFullYear();
@@ -29,23 +56,133 @@ export default function TrainingCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-  // Mock training events
-  const trainingEvents = [
-    { date: 5, title: 'Ethics Training', type: 'due', color: 'red' },
-    { date: 12, title: 'HIPAA Compliance', type: 'expiring', color: 'amber' },
-    { date: 18, title: 'Crisis Intervention', type: 'due', color: 'red' },
-    { date: 22, title: 'Cultural Competency', type: 'expiring', color: 'amber' },
-    { date: 28, title: 'Documentation Standards', type: 'due', color: 'red' },
-  ];
+  // Transform backend data into calendar events
+  const trainingEvents = useMemo((): CalendarEvent[] => {
+    const events: CalendarEvent[] = [];
+
+    // Add upcoming trainings (required courses that are due)
+    if (Array.isArray(upcomingTrainings)) {
+      upcomingTrainings.forEach((training: any) => {
+        if (training.dueDate) {
+          const dueDate = new Date(training.dueDate);
+          if (dueDate.getMonth() === month && dueDate.getFullYear() === year) {
+            const daysUntilDue = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+            events.push({
+              id: training.id || `upcoming-${training.courseId}`,
+              date: dueDate.getDate(),
+              fullDate: dueDate,
+              title: training.title || training.courseName || 'Training Due',
+              type: daysUntilDue <= 7 ? 'due' : 'expiring',
+              color: daysUntilDue <= 7 ? 'red' : 'amber',
+              courseId: training.courseId,
+            });
+          }
+        }
+      });
+    }
+
+    // Add enrollments with scheduled dates
+    if (Array.isArray(enrollments)) {
+      enrollments.forEach((enrollment: Enrollment) => {
+        if (enrollment.enrolledAt) {
+          const enrollDate = new Date(enrollment.enrolledAt);
+          if (enrollDate.getMonth() === month && enrollDate.getFullYear() === year) {
+            events.push({
+              id: enrollment.id,
+              date: enrollDate.getDate(),
+              fullDate: enrollDate,
+              title: enrollment.courseName || 'Training Enrolled',
+              type: enrollment.status === 'COMPLETED' ? 'completed' : 'scheduled',
+              color: enrollment.status === 'COMPLETED' ? 'green' : 'blue',
+              courseId: enrollment.courseId,
+              enrollmentId: enrollment.id,
+            });
+          }
+        }
+        // Add completion date events
+        if (enrollment.completedAt) {
+          const completedDate = new Date(enrollment.completedAt);
+          if (completedDate.getMonth() === month && completedDate.getFullYear() === year) {
+            events.push({
+              id: `completed-${enrollment.id}`,
+              date: completedDate.getDate(),
+              fullDate: completedDate,
+              title: `${enrollment.courseName || 'Training'} Completed`,
+              type: 'completed',
+              color: 'green',
+              courseId: enrollment.courseId,
+              enrollmentId: enrollment.id,
+            });
+          }
+        }
+      });
+    }
+
+    // Add required courses that are expiring (mock CEU expiration)
+    if (Array.isArray(courses)) {
+      courses.filter((course: any) => course.required).forEach((course: any) => {
+        // Add a mock expiration check (30 days from enrollment if not completed)
+        const mockExpirationDate = new Date();
+        mockExpirationDate.setDate(mockExpirationDate.getDate() + 14); // 2 weeks from now
+        if (mockExpirationDate.getMonth() === month && mockExpirationDate.getFullYear() === year) {
+          const isEnrolled = enrollments.some((e: Enrollment) => e.courseId === course.id);
+          if (!isEnrolled) {
+            events.push({
+              id: `required-${course.id}`,
+              date: mockExpirationDate.getDate(),
+              fullDate: mockExpirationDate,
+              title: `${course.title} - Required`,
+              type: 'due',
+              color: 'red',
+              courseId: course.id,
+            });
+          }
+        }
+      });
+    }
+
+    return events;
+  }, [upcomingTrainings, enrollments, courses, month, year]);
 
   // Filter events
   const filteredEvents = trainingEvents.filter((event) => {
     if (selectedType === 'all') return true;
+    if (selectedType === 'scheduled') return event.type === 'scheduled' || event.type === 'completed';
     return event.type === selectedType;
   });
 
+  // Handle enrollment
+  const handleEnroll = async (courseId: string) => {
+    try {
+      // Get current user ID from localStorage or context
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
+      if (!userId) {
+        toast.error('Please log in to enroll in courses');
+        return;
+      }
+
+      await enrollMutation.mutateAsync({ userId, courseId });
+      toast.success('Successfully enrolled in course!');
+      setSelectedEvent(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to enroll in course');
+    }
+  };
+
+  // Handle navigation to course details
+  const handleViewCourse = (courseId: string) => {
+    navigate(`/training/courses/${courseId}`);
+  };
+
   // Generate calendar days
-  const calendarDays = [];
+  const calendarDays: Array<{
+    day: number;
+    isCurrentMonth: boolean;
+    events: CalendarEvent[];
+    isToday?: boolean;
+  }> = [];
 
   // Previous month days
   for (let i = firstDayOfMonth - 1; i >= 0; i--) {
@@ -79,6 +216,11 @@ export default function TrainingCalendar() {
       events: [],
     });
   }
+
+  // Handle event click
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+  };
 
   const goToPreviousMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
@@ -155,7 +297,7 @@ export default function TrainingCalendar() {
 
       {/* Legend */}
       <div className="bg-white rounded-2xl shadow-xl border-2 border-indigo-100 p-6 mb-8">
-        <div className="flex items-center justify-center gap-8">
+        <div className="flex items-center justify-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-red-500 rounded"></div>
             <span className="text-sm font-semibold text-gray-700">Training Due</span>
@@ -163,6 +305,10 @@ export default function TrainingCalendar() {
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-amber-500 rounded"></div>
             <span className="text-sm font-semibold text-gray-700">Expiring Soon</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-500 rounded"></div>
+            <span className="text-sm font-semibold text-gray-700">Scheduled</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-500 rounded"></div>
@@ -174,6 +320,16 @@ export default function TrainingCalendar() {
           </div>
         </div>
       </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-40">
+          <div className="bg-white rounded-xl p-8 shadow-2xl flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+            <p className="text-gray-700 font-semibold">Loading training events...</p>
+          </div>
+        </div>
+      )}
 
       {/* Calendar Grid */}
       <div className="bg-white rounded-2xl shadow-xl border-2 border-indigo-100 overflow-hidden">
@@ -223,13 +379,16 @@ export default function TrainingCalendar() {
                 {dayData.events && dayData.events.length > 0 ? (
                   dayData.events.map((event, eventIndex) => (
                     <div
-                      key={eventIndex}
+                      key={event.id || eventIndex}
+                      onClick={() => handleEventClick(event)}
                       className={`p-2 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 hover:shadow-md ${
                         event.color === 'red'
                           ? 'bg-red-100 text-red-700 hover:bg-red-200'
                           : event.color === 'amber'
                           ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                          : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : event.color === 'green'
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                       }`}
                     >
                       <div className="flex items-center gap-1 mb-1">
@@ -237,8 +396,10 @@ export default function TrainingCalendar() {
                           <AlertTriangle className="w-3 h-3" />
                         ) : event.color === 'amber' ? (
                           <Clock className="w-3 h-3" />
-                        ) : (
+                        ) : event.color === 'green' ? (
                           <CheckCircle2 className="w-3 h-3" />
+                        ) : (
+                          <BookOpen className="w-3 h-3" />
                         )}
                         <span className="font-bold truncate">{event.title}</span>
                       </div>
@@ -303,10 +464,15 @@ export default function TrainingCalendar() {
                     </div>
                   </div>
                   <button
+                    onClick={() => handleEventClick(event)}
                     className={`px-6 py-3 rounded-xl font-bold text-white transition-all duration-200 hover:shadow-lg ${
                       event.color === 'red'
                         ? 'bg-red-600 hover:bg-red-700'
-                        : 'bg-amber-600 hover:bg-amber-700'
+                        : event.color === 'amber'
+                        ? 'bg-amber-600 hover:bg-amber-700'
+                        : event.color === 'green'
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
                     View Details
@@ -321,6 +487,139 @@ export default function TrainingCalendar() {
           )}
         </div>
       </div>
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-6 z-50"
+          onClick={() => setSelectedEvent(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                    selectedEvent.color === 'red'
+                      ? 'bg-red-100'
+                      : selectedEvent.color === 'amber'
+                      ? 'bg-amber-100'
+                      : selectedEvent.color === 'green'
+                      ? 'bg-green-100'
+                      : 'bg-blue-100'
+                  }`}
+                >
+                  {selectedEvent.color === 'red' ? (
+                    <AlertTriangle className="w-7 h-7 text-red-600" />
+                  ) : selectedEvent.color === 'amber' ? (
+                    <Clock className="w-7 h-7 text-amber-600" />
+                  ) : selectedEvent.color === 'green' ? (
+                    <CheckCircle2 className="w-7 h-7 text-green-600" />
+                  ) : (
+                    <BookOpen className="w-7 h-7 text-blue-600" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{selectedEvent.title}</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedEvent.type === 'due'
+                      ? 'Training Due'
+                      : selectedEvent.type === 'expiring'
+                      ? 'Expiring Soon'
+                      : selectedEvent.type === 'completed'
+                      ? 'Completed'
+                      : 'Scheduled'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <CalendarIcon className="w-5 h-5 text-gray-500" />
+                <div>
+                  <p className="text-sm text-gray-500">Date</p>
+                  <p className="font-semibold text-gray-900">
+                    {selectedEvent.fullDate.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {selectedEvent.type !== 'completed' && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <Clock className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Status</p>
+                    <p
+                      className={`font-semibold ${
+                        selectedEvent.type === 'due'
+                          ? 'text-red-600'
+                          : selectedEvent.type === 'expiring'
+                          ? 'text-amber-600'
+                          : 'text-blue-600'
+                      }`}
+                    >
+                      {selectedEvent.type === 'due'
+                        ? 'Action Required'
+                        : selectedEvent.type === 'expiring'
+                        ? 'Expires Soon'
+                        : 'In Progress'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              {selectedEvent.courseId && (
+                <button
+                  onClick={() => {
+                    handleViewCourse(selectedEvent.courseId!);
+                    setSelectedEvent(null);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-bold"
+                >
+                  <BookOpen className="w-5 h-5" />
+                  View Course
+                </button>
+              )}
+
+              {selectedEvent.courseId &&
+                selectedEvent.type !== 'completed' &&
+                !selectedEvent.enrollmentId && (
+                  <button
+                    onClick={() => handleEnroll(selectedEvent.courseId!)}
+                    disabled={enrollMutation.isPending}
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-bold disabled:opacity-50"
+                  >
+                    <Users className="w-5 h-5" />
+                    {enrollMutation.isPending ? 'Enrolling...' : 'Enroll Now'}
+                  </button>
+                )}
+
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-bold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
