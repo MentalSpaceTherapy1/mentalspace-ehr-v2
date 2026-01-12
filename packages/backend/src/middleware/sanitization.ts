@@ -107,22 +107,22 @@ export function containsSqlInjection(str: string): boolean {
  */
 export function containsNoSqlInjection(str: string): boolean {
   const noSqlPatterns = [
-    // MongoDB operators
-    /\$where\s*:/i,
-    /\$gt\s*:/i,
-    /\$lt\s*:/i,
-    /\$ne\s*:/i,
-    /\$regex\s*:/i,
-    /\$or\s*:/i,
-    /\$and\s*:/i,
-    /\$not\s*:/i,
-    /\$nor\s*:/i,
-    /\$exists\s*:/i,
-    /\$type\s*:/i,
-    /\$expr\s*:/i,
+    // MongoDB operators (both unquoted and JSON-quoted forms)
+    /["']?\$where["']?\s*:/i,
+    /["']?\$gt["']?\s*:/i,
+    /["']?\$lt["']?\s*:/i,
+    /["']?\$ne["']?\s*:/i,
+    /["']?\$regex["']?\s*:/i,
+    /["']?\$or["']?\s*:/i,
+    /["']?\$and["']?\s*:/i,
+    /["']?\$not["']?\s*:/i,
+    /["']?\$nor["']?\s*:/i,
+    /["']?\$exists["']?\s*:/i,
+    /["']?\$type["']?\s*:/i,
+    /["']?\$expr["']?\s*:/i,
     // JavaScript injection in MongoDB
-    /\$function\s*:/i,
-    /\$accumulator\s*:/i,
+    /["']?\$function["']?\s*:/i,
+    /["']?\$accumulator["']?\s*:/i,
   ];
 
   return noSqlPatterns.some(pattern => pattern.test(str));
@@ -200,10 +200,9 @@ export function sanitizeString(value: string, options: SanitizeOptions = {}): st
     sanitized = sanitized.substring(0, maxLength);
   }
 
-  // Strip dangerous HTML
-  if (stripHtml) {
-    sanitized = stripDangerousHtml(sanitized);
-  }
+  // SECURITY: Always strip dangerous HTML (script tags, event handlers, etc.)
+  // This is applied regardless of stripHtml setting for security
+  sanitized = stripDangerousHtml(sanitized);
 
   // Escape HTML entities if requested
   if (shouldEscapeHtml) {

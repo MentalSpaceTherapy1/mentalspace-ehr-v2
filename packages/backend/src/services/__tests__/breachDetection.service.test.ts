@@ -36,6 +36,10 @@ describe('BreachDetectionService', () => {
   beforeEach(() => {
     service = new BreachDetectionService();
     jest.clearAllMocks();
+    // Default mock for findMany to return empty array (prevents "not iterable" errors)
+    (prisma.auditLog.findMany as jest.Mock).mockResolvedValue([]);
+    (prisma.auditLog.groupBy as jest.Mock).mockResolvedValue([]);
+    (prisma.auditLog.count as jest.Mock).mockResolvedValue(0);
   });
 
   describe('detectExcessivePHIAccess', () => {
