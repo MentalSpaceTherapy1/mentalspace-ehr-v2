@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import AddressAutocomplete from '../../components/AddressAutocomplete';
+import DuplicateWarningModal from '../../components/Clients/DuplicateWarningModal';
 import {
   PRONOUNS_OPTIONS,
   GENDER_IDENTITY_OPTIONS,
@@ -20,6 +21,12 @@ export default function ClientForm() {
 
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Duplicate detection state
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [detectedDuplicates, setDetectedDuplicates] = useState<any[]>([]);
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
+  const [bypassDuplicateCheck, setBypassDuplicateCheck] = useState(false);
 
   // Fetch client data for editing
   const { data: clientData, isLoading: clientLoading } = useQuery({
@@ -333,7 +340,61 @@ export default function ClientForm() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Check for duplicates before creating
+  const checkForDuplicates = async (): Promise<boolean> => {
+    // Skip duplicate check for edit mode
+    if (isEditMode) return false;
+
+    // Skip if user already chose to create anyway
+    if (bypassDuplicateCheck) return false;
+
+    setIsCheckingDuplicates(true);
+    try {
+      const response = await api.post('/clients/check-duplicates', {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        dateOfBirth: new Date(formData.dateOfBirth).toISOString(),
+        primaryPhone: formData.primaryPhone.trim(),
+        email: formData.email.trim(),
+        addressStreet1: formData.addressStreet1?.trim() || undefined,
+        addressZipCode: formData.addressZipCode?.trim() || undefined,
+      });
+
+      const matches = response.data?.data?.matches || [];
+      console.log('[ClientForm] Duplicate check result:', matches);
+
+      if (matches.length > 0) {
+        setDetectedDuplicates(matches);
+        setShowDuplicateModal(true);
+        return true; // Found duplicates
+      }
+
+      return false; // No duplicates
+    } catch (error: any) {
+      console.error('[ClientForm] Duplicate check error:', error);
+      // If duplicate check fails, allow creation to proceed
+      // The backend may also have duplicate detection as a fallback
+      return false;
+    } finally {
+      setIsCheckingDuplicates(false);
+    }
+  };
+
+  // Handle "Create Anyway" from duplicate modal
+  const handleCreateAnyway = () => {
+    setBypassDuplicateCheck(true);
+    setShowDuplicateModal(false);
+    // Trigger the actual save
+    saveMutation.mutate(formData);
+  };
+
+  // Close duplicate modal
+  const handleCloseDuplicateModal = () => {
+    setShowDuplicateModal(false);
+    setDetectedDuplicates([]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('[ClientForm] handleSubmit called');
     console.log('[ClientForm] formData:', formData);
@@ -341,6 +402,15 @@ export default function ClientForm() {
     // Clear previous messages
     setErrorMessage('');
     setSuccessMessage('');
+
+    // For new clients, check for duplicates first
+    if (!isEditMode && !bypassDuplicateCheck) {
+      const hasDuplicates = await checkForDuplicates();
+      if (hasDuplicates) {
+        // Modal is now shown, don't proceed with save
+        return;
+      }
+    }
 
     // Trigger the mutation
     saveMutation.mutate(formData);
@@ -1095,10 +1165,15 @@ export default function ClientForm() {
             </button>
             <button
               type="submit"
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || isCheckingDuplicates}
               className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              {saveMutation.isPending ? (
+              {isCheckingDuplicates ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Checking for duplicates...
+                </>
+              ) : saveMutation.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                   Saving...
@@ -1113,6 +1188,15 @@ export default function ClientForm() {
           </div>
         </div>
       </form>
+
+      {/* Duplicate Warning Modal */}
+      <DuplicateWarningModal
+        isOpen={showDuplicateModal}
+        onClose={handleCloseDuplicateModal}
+        onCreateAnyway={handleCreateAnyway}
+        duplicates={detectedDuplicates}
+        isCreating={saveMutation.isPending}
+      />
     </div>
   );
 }
