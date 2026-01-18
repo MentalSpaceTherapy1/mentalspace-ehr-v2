@@ -603,11 +603,15 @@ export default function ProgressNoteForm() {
       selectedInterventions.push(`Other: ${otherIntervention}`);
     }
 
+    // BUG-005 FIX: Always use a valid session date - default to today if not set
+    // This prevents null/undefined dates from being stored as Unix epoch
+    const effectiveSessionDate = sessionDate || new Date().toISOString().split('T')[0];
+
     const data = {
       clientId,
       noteType: 'Progress Note',
       appointmentId: appointmentId || null, // Allow null for drafts without appointment
-      sessionDate: sessionDate ? new Date(sessionDate).toISOString() : undefined,
+      sessionDate: new Date(effectiveSessionDate).toISOString(),
       sessionDuration: sessionDuration ? parseInt(sessionDuration) : undefined, // Convert to number
       sessionType: sessionType || undefined,
       location: location || undefined,
@@ -672,11 +676,20 @@ export default function ProgressNoteForm() {
       selectedInterventions.push(`Other: ${otherIntervention}`);
     }
 
+    // BUG-005 FIX: Always use a valid session date - default to today if not set
+    const effectiveSessionDate = sessionDate || new Date().toISOString().split('T')[0];
+    // Also ensure dueDate has a fallback (7 days from session date)
+    const effectiveDueDate = dueDate || (() => {
+      const d = new Date(effectiveSessionDate);
+      d.setDate(d.getDate() + 7);
+      return d.toISOString().split('T')[0];
+    })();
+
     const data = {
       clientId,
       noteType: 'Progress Note',
       appointmentId,
-      sessionDate: new Date(sessionDate).toISOString(),
+      sessionDate: new Date(effectiveSessionDate).toISOString(),
       sessionDuration,
       sessionType,
       location,
@@ -704,7 +717,7 @@ export default function ProgressNoteForm() {
       cptCode,
       sessionDurationMinutes: sessionDurationMinutes ? parseInt(sessionDurationMinutes) : undefined,
       billable,
-      dueDate: new Date(dueDate).toISOString(),
+      dueDate: new Date(effectiveDueDate).toISOString(),
     };
 
     saveMutation.mutate(data);
@@ -739,11 +752,20 @@ export default function ProgressNoteForm() {
       selectedInterventions.push(`Other: ${otherIntervention}`);
     }
 
+    // BUG-005 FIX: Always use a valid session date - default to today if not set
+    const effectiveSessionDate = sessionDate || new Date().toISOString().split('T')[0];
+    // Also ensure dueDate has a fallback (7 days from session date)
+    const effectiveDueDate = dueDate || (() => {
+      const d = new Date(effectiveSessionDate);
+      d.setDate(d.getDate() + 7);
+      return d.toISOString().split('T')[0];
+    })();
+
     const data = {
       clientId,
       noteType: 'Progress Note',
       appointmentId,
-      sessionDate: new Date(sessionDate).toISOString(),
+      sessionDate: new Date(effectiveSessionDate).toISOString(),
       sessionDuration,
       sessionType,
       location,
@@ -771,7 +793,7 @@ export default function ProgressNoteForm() {
       cptCode,
       sessionDurationMinutes: sessionDurationMinutes ? parseInt(sessionDurationMinutes) : undefined,
       billable,
-      dueDate: new Date(dueDate).toISOString(),
+      dueDate: new Date(effectiveDueDate).toISOString(),
     };
 
     // Initiate sign and submit - will save as DRAFT first, then open signature modal
@@ -895,6 +917,11 @@ export default function ProgressNoteForm() {
                 onClick={() => {
                   setShowAppointmentPicker(false);
                   setSelectedAppointmentId('');
+                  // Set default session date to today when continuing without appointment
+                  if (!sessionDate) {
+                    const today = new Date().toISOString().split('T')[0];
+                    setSessionDate(today);
+                  }
                 }}
                 className="w-full text-purple-600 hover:text-purple-700 font-medium py-2 px-4 rounded-lg border border-purple-300 hover:border-purple-400 transition-colors"
               >

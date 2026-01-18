@@ -130,15 +130,11 @@ export const AmendmentModal: React.FC<AmendmentModalProps> = ({
     }
   };
 
-  const handleSign = async (authData: { pin?: string; password?: string }) => {
+  const handleSign = async () => {
     if (!amendmentId) return;
 
-    const method = authData.pin ? 'PIN' : 'PASSWORD';
-    const credential = authData.pin || authData.password;
-
     await axios.post(`/amendments/${amendmentId}/sign`, {
-      method,
-      credential,
+      signatureType: 'AMENDMENT',
     });
 
     // Success
@@ -187,8 +183,7 @@ export const AmendmentModal: React.FC<AmendmentModalProps> = ({
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
               <strong>Important:</strong> Amendments to signed clinical notes create a permanent
-              audit trail. You will need to sign the amendment with your PIN or password after
-              creation.
+              audit trail. You will need to sign the amendment after creation.
             </Typography>
           </Alert>
 

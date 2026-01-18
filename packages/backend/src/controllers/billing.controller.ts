@@ -165,24 +165,27 @@ export const createCharge = async (req: Request, res: Response) => {
       diagnosisCodes = [{ code: validatedData.diagnosis, isPrimary: true }];
     }
 
+    // Build charge data, only including optional fields if they have values
+    // Prisma doesn't handle undefined properly for optional fields - must omit them entirely
     const chargeData: Prisma.ChargeEntryUncheckedCreateInput = {
       clientId: validatedData.clientId,
-      appointmentId: validatedData.appointmentId,
       serviceDate,
       providerId: validatedData.providerId || userId, // Default to current user
-      supervisingProviderId: validatedData.supervisingProviderId,
       cptCode: validatedData.cptCode || '',
       cptDescription: validatedData.cptDescription || '',
       modifiers: validatedData.modifiers || [],
       units: validatedData.units,
       diagnosisCodesJson: diagnosisCodes,
       placeOfService: validatedData.placeOfService || 'OFFICE',
-      locationId: validatedData.locationId,
       chargeAmount: validatedData.chargeAmount,
       chargeStatus: validatedData.chargeStatus || 'Pending',
-      primaryInsuranceId: validatedData.primaryInsuranceId,
-      secondaryInsuranceId: validatedData.secondaryInsuranceId,
       createdBy: userId,
+      // Conditionally include optional UUID fields only if they have values
+      ...(validatedData.appointmentId && { appointmentId: validatedData.appointmentId }),
+      ...(validatedData.supervisingProviderId && { supervisingProviderId: validatedData.supervisingProviderId }),
+      ...(validatedData.locationId && { locationId: validatedData.locationId }),
+      ...(validatedData.primaryInsuranceId && { primaryInsuranceId: validatedData.primaryInsuranceId }),
+      ...(validatedData.secondaryInsuranceId && { secondaryInsuranceId: validatedData.secondaryInsuranceId }),
     };
 
     const charge = await prisma.chargeEntry.create({

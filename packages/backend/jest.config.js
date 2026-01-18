@@ -6,6 +6,13 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '_templates',  // Cross-platform: matches any path containing _templates
+    'integration',  // Integration tests require live DB
+    'cloudwatch',  // CloudWatch metrics require AWS
+    // Database-dependent tests (require live DB connection)
+    'security/security\\.test\\.ts',
+    'rowLevelSecurity\\.test\\.ts',
+    'appointment-enforcement\\.test\\.ts',
+    'appointment-requirement\\.test\\.ts',
   ],
   collectCoverageFrom: [
     'src/**/*.ts',

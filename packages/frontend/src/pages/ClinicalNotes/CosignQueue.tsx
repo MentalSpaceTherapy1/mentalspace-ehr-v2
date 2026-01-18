@@ -62,12 +62,17 @@ export default function CosignQueue() {
     if (!date) return 'Not specified';
     const parsed = new Date(date);
     if (isNaN(parsed.getTime()) || parsed.getTime() === 0) return 'Not specified';
+
+    // Explicitly use the user's detected timezone to ensure proper UTC to local conversion
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     return parsed.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: userTimezone,
     });
   };
 

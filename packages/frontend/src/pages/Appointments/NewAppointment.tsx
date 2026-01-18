@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import TimePicker from '../../components/TimePicker';
+import useSessionSafeSave, { SessionExpiredAlert, RecoveredDraftAlert } from '../../hooks/useSessionSafeSave';
 
 interface AppointmentFormData {
   clientId: string;
@@ -89,6 +90,22 @@ export default function NewAppointment() {
   const [clientSearch, setClientSearch] = useState('');
   const [selectedClientData, setSelectedClientData] = useState<any>(null);
   const [selectedClientsData, setSelectedClientsData] = useState<any[]>([]); // For group appointments
+
+  // Session-safe saving (handles session timeout with local storage backup)
+  const {
+    sessionError,
+    clearSessionError,
+    backupToLocalStorage,
+    clearBackup,
+    handleSaveError,
+    hasRecoveredDraft,
+    applyRecoveredDraft,
+    discardRecoveredDraft,
+  } = useSessionSafeSave({
+    noteType: 'Appointment',
+    clientId: preselectedClientId || 'new',
+    noteId: appointmentId,
+  });
 
   // Fetch preselected client if clientId is in URL
   const { data: preselectedClient } = useQuery({
@@ -218,9 +235,59 @@ export default function NewAppointment() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.startTime, formData.duration]);
 
+  // Handle recovering draft data
+  const handleRecoverDraft = useCallback(() => {
+    const recovered = applyRecoveredDraft();
+    if (recovered) {
+      // Restore form data
+      setFormData(prev => ({
+        ...prev,
+        ...recovered.formData,
+      }));
+      // Restore client data if available
+      if (recovered.selectedClientData) {
+        setSelectedClientData(recovered.selectedClientData);
+        setClientSearch(recovered.clientSearch || '');
+      }
+      // Restore group clients if available
+      if (recovered.selectedClientsData) {
+        setSelectedClientsData(recovered.selectedClientsData);
+      }
+    }
+  }, [applyRecoveredDraft]);
+
+  // Get current form state for backup
+  const getCurrentFormState = useCallback(() => ({
+    formData,
+    selectedClientData,
+    selectedClientsData,
+    clientSearch,
+  }), [formData, selectedClientData, selectedClientsData, clientSearch]);
+
+  // Auto-save draft to localStorage as user types (debounced)
+  useEffect(() => {
+    // Don't auto-save if we just recovered a draft (avoid overwriting with empty data)
+    if (hasRecoveredDraft) return;
+
+    // Only auto-save if user has started filling out the form
+    const hasData = formData.clientId || formData.clinicianId || formData.notes ||
+                    selectedClientData || selectedClientsData.length > 0;
+    if (!hasData) return;
+
+    const timeoutId = setTimeout(() => {
+      backupToLocalStorage(getCurrentFormState());
+      console.log('[AutoDraft] Form data auto-saved to localStorage');
+    }, 1000); // Debounce: save 1 second after last change
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, selectedClientData, selectedClientsData, clientSearch, hasRecoveredDraft, backupToLocalStorage, getCurrentFormState]);
+
   // Create/Update appointment mutation
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(getCurrentFormState());
+
       if (appointmentId) {
         // Update existing appointment
         const response = await api.put(`/appointments/${appointmentId}`, data);
@@ -232,11 +299,16 @@ export default function NewAppointment() {
       }
     },
     onSuccess: () => {
+      // Clear backup on successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
       navigate('/appointments');
     },
-    onError: (error: any) => {
+    onError: (error: any, variables: any) => {
+      // Handle session expiration with draft preservation
+      handleSaveError(error, getCurrentFormState());
+
       if (error.response?.data?.errors) {
         const newErrors: Record<string, string> = {};
         error.response.data.errors.forEach((err: any) => {
@@ -250,14 +322,22 @@ export default function NewAppointment() {
   // Create recurring appointment mutation
   const createRecurringMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Backup to localStorage before API call
+      backupToLocalStorage(getCurrentFormState());
+
       const response = await api.post('/appointments/recurring', data);
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
+      // Clear backup on successful save
+      clearBackup();
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       navigate('/appointments');
     },
     onError: (error: any) => {
+      // Handle session expiration with draft preservation
+      handleSaveError(error, getCurrentFormState());
+
       if (error.response?.data?.errors) {
         const newErrors: Record<string, string> = {};
         error.response.data.errors.forEach((err: any) => {
@@ -367,6 +447,19 @@ export default function NewAppointment() {
             {appointmentId ? 'Update the appointment details' : 'Create a new appointment for a client'}
           </p>
         </div>
+
+        {/* Session Expired Alert */}
+        {sessionError && (
+          <SessionExpiredAlert message={sessionError} onDismiss={clearSessionError} />
+        )}
+
+        {/* Recovered Draft Alert */}
+        {hasRecoveredDraft && (
+          <RecoveredDraftAlert
+            onRecover={handleRecoverDraft}
+            onDiscard={discardRecoveredDraft}
+          />
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8 space-y-6">

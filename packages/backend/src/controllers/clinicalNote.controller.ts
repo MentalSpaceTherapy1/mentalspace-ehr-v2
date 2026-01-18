@@ -301,21 +301,29 @@ export const createClinicalNote = async (req: Request, res: Response) => {
       isDraft: validatedData.status === 'DRAFT'
     });
 
+    // BUG-005 FIX: Extract sessionDate from validatedData and handle separately
+    // to ensure we default to today's date when not provided
+    const { sessionDate: rawSessionDate, dueDate: rawDueDate, nextSessionDate: rawNextSessionDate, ...restValidatedData } = validatedData as any;
+
+    // Determine the effective session date - default to today if not provided
+    const effectiveSessionDate = rawSessionDate ? new Date(rawSessionDate) : new Date();
+
+    logger.info('🟡 BUG-005 FIX - Session Date Processing:', {
+      rawSessionDate,
+      rawSessionDateType: typeof rawSessionDate,
+      effectiveSessionDate: effectiveSessionDate.toISOString(),
+    });
+
     const note = await prisma.clinicalNote.create({
       data: {
-        ...(validatedData as any),
+        ...restValidatedData,
         clinicianId: userId,
         requiresCosign,
         lastModifiedBy: userId,
-        sessionDate: validatedData.sessionDate
-          ? new Date(validatedData.sessionDate)
-          : undefined,
-        dueDate: validatedData.dueDate
-          ? new Date(validatedData.dueDate)
-          : null,
-        nextSessionDate: validatedData.nextSessionDate
-          ? new Date(validatedData.nextSessionDate)
-          : null,
+        // BUG-005 FIX: Use the pre-computed effective session date
+        sessionDate: effectiveSessionDate,
+        dueDate: rawDueDate ? new Date(rawDueDate) : null,
+        nextSessionDate: rawNextSessionDate ? new Date(rawNextSessionDate) : null,
       },
       include: {
         clinician: {
@@ -1754,6 +1762,91 @@ export const getValidationSummaryForNoteType = async (req: Request, res: Respons
     res.status(500).json({
       success: false,
       message: 'Failed to fetch validation summary',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get clinical notes with filtering
+ * GET /api/v1/clinical-notes
+ * Query params: status (comma-separated), limit, noteType, clientId
+ * Used by Billing Readiness Checker to load signed/cosigned notes
+ */
+export const getClinicalNotes = async (req: Request, res: Response) => {
+  try {
+    const { status, limit, noteType, clientId } = req.query;
+    const userId = (req as any).user.userId;
+    const userRole = (req as any).user.role;
+
+    // Build where clause
+    const where: any = {};
+
+    // Handle status filter (supports comma-separated values like "SIGNED,COSIGNED")
+    if (status) {
+      const statusArray = (status as string).split(',').map(s => s.trim());
+      if (statusArray.length === 1) {
+        where.status = statusArray[0];
+      } else {
+        where.status = { in: statusArray };
+      }
+    }
+
+    if (noteType) {
+      where.noteType = noteType;
+    }
+
+    if (clientId) {
+      where.clientId = clientId;
+    }
+
+    // Apply role-based access control
+    // Admins and supervisors can see all notes, clinicians only see their own
+    const adminRoles = ['SUPER_ADMIN', 'ADMINISTRATOR', 'CLINICAL_DIRECTOR'];
+    if (!adminRoles.includes(userRole)) {
+      // For non-admin roles, they can see their own notes or notes they're supervising
+      where.OR = [
+        { clinicianId: userId },
+        { cosignedBy: userId },
+      ];
+    }
+
+    // Parse limit with default
+    const takeLimit = limit ? Math.min(parseInt(limit as string, 10), 100) : 50;
+
+    const notes = await prisma.clinicalNote.findMany({
+      where,
+      take: takeLimit,
+      orderBy: { sessionDate: 'desc' },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      data: notes,
+      count: notes.length,
+    });
+  } catch (error: any) {
+    logControllerError('getClinicalNotes', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch clinical notes',
       error: error.message,
     });
   }

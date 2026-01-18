@@ -14,9 +14,10 @@ import {
 import { encryptValue, decryptValue, hashForLookup } from '../../utils/encryption';
 
 describe('PHI Encryption Middleware', () => {
-  // Set up test encryption key
+  // Set up test encryption key (must be exactly 32 bytes for AES-256)
   beforeAll(() => {
-    process.env.PHI_ENCRYPTION_KEY = 'dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcyE='; // 32 bytes base64
+    // 'test-encryption-key-32-bytes-abc' is exactly 32 bytes, base64 encoded
+    process.env.PHI_ENCRYPTION_KEY = 'dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcy1hYmM=';
     process.env.PHI_HASH_KEY = 'test-hash-key';
   });
 

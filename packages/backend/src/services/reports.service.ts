@@ -2181,3 +2181,163 @@ export async function generateAuditTrailReport(params: AuditTrailReportParams) {
     throw error;
   }
 }
+
+// ============================================================================
+// CLINICAL NOTES REPORT
+// ============================================================================
+
+export interface ClinicalNotesReportParams {
+  status?: string; // 'unsigned', 'signed', 'all'
+  noteType?: string;
+  clinicianId?: string;
+  clientId?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export async function generateClinicalNotesReport(params: ClinicalNotesReportParams) {
+  try {
+    logger.info('Generating clinical notes report', { params });
+
+    const { status, noteType, clinicianId, clientId, startDate, endDate } = params;
+
+    // Build where clause
+    const where: any = {};
+
+    // Handle status filter
+    if (status === 'unsigned' || status === 'draft' || status === 'pending') {
+      // Unsigned notes are DRAFT or PENDING_COSIGN
+      where.status = { in: ['DRAFT', 'PENDING_COSIGN', 'RETURNED_FOR_REVISION'] };
+    } else if (status === 'signed') {
+      where.status = { in: ['SIGNED', 'COSIGNED', 'LOCKED'] };
+    }
+    // If status is 'all' or not specified, don't filter by status
+
+    if (noteType) {
+      where.noteType = noteType;
+    }
+
+    if (clinicianId) {
+      where.clinicianId = clinicianId;
+    }
+
+    if (clientId) {
+      where.clientId = clientId;
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      where.sessionDate = {};
+      if (startDate) where.sessionDate.gte = startDate;
+      if (endDate) where.sessionDate.lte = endDate;
+    }
+
+    // Fetch notes
+    const notes = await prisma.clinicalNote.findMany({
+      where,
+      orderBy: { sessionDate: 'desc' },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    // Calculate statistics by status
+    const statusStats = notes.reduce((acc: Record<string, number>, note) => {
+      acc[note.status] = (acc[note.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Calculate statistics by note type
+    const typeStats = notes.reduce((acc: Record<string, number>, note) => {
+      acc[note.noteType] = (acc[note.noteType] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Calculate statistics by clinician
+    const clinicianStats = notes.reduce((acc: any, note) => {
+      const clinicianName = note.clinician
+        ? `${note.clinician.firstName} ${note.clinician.lastName}`
+        : 'Unknown';
+      if (!acc[clinicianName]) {
+        acc[clinicianName] = { total: 0, unsigned: 0, signed: 0 };
+      }
+      acc[clinicianName].total++;
+      if (['DRAFT', 'PENDING_COSIGN', 'RETURNED_FOR_REVISION'].includes(note.status)) {
+        acc[clinicianName].unsigned++;
+      } else {
+        acc[clinicianName].signed++;
+      }
+      return acc;
+    }, {});
+
+    // Count unsigned notes (for the primary metric)
+    const unsignedCount = notes.filter(n =>
+      ['DRAFT', 'PENDING_COSIGN', 'RETURNED_FOR_REVISION'].includes(n.status)
+    ).length;
+
+    const signedCount = notes.filter(n =>
+      ['SIGNED', 'COSIGNED', 'LOCKED'].includes(n.status)
+    ).length;
+
+    return {
+      success: true,
+      data: {
+        summary: {
+          totalNotes: notes.length,
+          unsignedNotes: unsignedCount,
+          signedNotes: signedCount,
+          statusStats,
+          typeStats,
+        },
+        notes: notes.map(note => ({
+          id: note.id,
+          noteType: note.noteType,
+          status: note.status,
+          sessionDate: note.sessionDate,
+          client: note.client
+            ? {
+                id: note.client.id,
+                name: `${note.client.firstName} ${note.client.lastName}`,
+              }
+            : null,
+          clinician: note.clinician
+            ? {
+                id: note.clinician.id,
+                name: `${note.clinician.firstName} ${note.clinician.lastName}`,
+                title: note.clinician.title,
+              }
+            : null,
+          requiresCosign: note.requiresCosign,
+          signedDate: note.signedDate,
+          cosignedDate: note.cosignedDate,
+        })),
+        clinicianStats: Object.entries(clinicianStats).map(([name, stats]: [string, any]) => ({
+          clinician: name,
+          ...stats,
+        })),
+        period: {
+          startDate: startDate || null,
+          endDate: endDate || null,
+          generatedAt: new Date(),
+        },
+      },
+    };
+  } catch (error) {
+    logger.error('Error generating clinical notes report:', error);
+    throw error;
+  }
+}

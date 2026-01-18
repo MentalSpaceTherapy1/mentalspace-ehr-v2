@@ -10,10 +10,7 @@ interface UseNoteSignatureOptions {
   onSignError?: (error: Error) => void;
 }
 
-interface SignatureAuthData {
-  pin?: string;
-  password?: string;
-}
+// PIN/password authentication removed - signing just requires clicking confirm
 
 interface SaveNoteData {
   [key: string]: unknown;
@@ -81,14 +78,12 @@ export function useNoteSignature(options: UseNoteSignatureOptions) {
     },
   });
 
-  // Mutation for signing the note
+  // Mutation for signing the note (no PIN/password required)
   const signMutation = useMutation({
-    mutationFn: async (data: { noteId: string; authData: SignatureAuthData }) => {
-      const { noteId, authData } = data;
+    mutationFn: async (data: { noteId: string }) => {
+      const { noteId } = data;
 
       const payload = {
-        method: authData.pin ? 'PIN' : 'PASSWORD',
-        credential: authData.pin || authData.password,
         signatureType: 'AUTHOR',
       };
 
@@ -169,16 +164,15 @@ export function useNoteSignature(options: UseNoteSignatureOptions) {
 
   /**
    * Handle the signature submission from the modal.
-   * Called when user enters PIN/password and clicks "Sign Document".
+   * Called when user clicks "Sign Document".
    */
-  const handleSign = useCallback(async (authData: SignatureAuthData): Promise<void> => {
+  const handleSign = useCallback(async (): Promise<void> => {
     if (!pendingNoteId) {
       throw new Error('No note ID available for signing');
     }
 
     await signMutation.mutateAsync({
       noteId: pendingNoteId,
-      authData,
     });
   }, [pendingNoteId, signMutation]);
 

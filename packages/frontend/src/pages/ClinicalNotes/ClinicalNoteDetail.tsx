@@ -105,8 +105,8 @@ export default function ClinicalNoteDetail() {
   });
 
   const signMutation = useMutation({
-    mutationFn: async (authData: { pin?: string; password?: string }) => {
-      return api.post(`/clinical-notes/${noteId}/sign`, authData);
+    mutationFn: async () => {
+      return api.post(`/clinical-notes/${noteId}/sign`, { signatureType: 'AUTHOR' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
@@ -117,8 +117,8 @@ export default function ClinicalNoteDetail() {
   });
 
   const cosignMutation = useMutation({
-    mutationFn: async (authData: { pin?: string; password?: string }) => {
-      return api.post(`/clinical-notes/${noteId}/cosign`, authData);
+    mutationFn: async () => {
+      return api.post(`/clinical-notes/${noteId}/cosign`, { signatureType: 'COSIGN' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinical-note', noteId] });
@@ -162,12 +162,17 @@ export default function ClinicalNoteDetail() {
     const parsed = new Date(date);
     // Check for invalid date or Unix epoch (null/undefined dates)
     if (isNaN(parsed.getTime()) || parsed.getTime() === 0) return 'Not specified';
+
+    // Explicitly use the user's detected timezone to ensure proper UTC to local conversion
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     return parsed.toLocaleString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: userTimezone,
     });
   };
 
@@ -182,12 +187,12 @@ export default function ClinicalNoteDetail() {
   const canDelete = note?.status === 'DRAFT';
   const canAmend = note?.status === 'SIGNED' || note?.status === 'COSIGNED' || note?.status === 'PENDING_COSIGN';
 
-  const handleSign = async (authData: { pin?: string; password?: string }) => {
-    await signMutation.mutateAsync(authData);
+  const handleSign = async () => {
+    await signMutation.mutateAsync();
   };
 
-  const handleCosign = async (authData: { pin?: string; password?: string }) => {
-    await cosignMutation.mutateAsync(authData);
+  const handleCosign = async () => {
+    await cosignMutation.mutateAsync();
   };
 
   const handleDelete = () => {

@@ -3,6 +3,7 @@ import { X, Calendar, Clock, MapPin, Users, Save } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
+import { useAuth } from '../../hooks/useAuth';
 
 interface CreateAppointmentModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export default function CreateAppointmentModal({
   onAppointmentCreated,
 }: CreateAppointmentModalProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Get today's date and current time in correct formats
   const getTodayDate = () => {
@@ -66,9 +68,15 @@ export default function CreateAppointmentModal({
     },
     onSuccess: (response) => {
       const appointmentId = response.data.data.id;
+      toast.success('Appointment created successfully');
       queryClient.invalidateQueries({ queryKey: ['appointments', clientId] });
       onAppointmentCreated(appointmentId);
       onClose();
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to create appointment';
+      toast.error(errorMessage);
+      console.error('Create appointment error:', error);
     },
   });
 
@@ -80,16 +88,22 @@ export default function CreateAppointmentModal({
       return;
     }
 
+    if (!user?.id) {
+      toast.error('Unable to determine current clinician. Please refresh and try again.');
+      return;
+    }
+
     const appointmentData = {
       clientId,
+      clinicianId: user.id,
       appointmentDate: new Date(appointmentDate).toISOString(),
       startTime,
       endTime,
       duration,
       appointmentType,
-      serviceCode,
-      location,
-      participants,
+      cptCode: serviceCode, // Map frontend serviceCode to backend cptCode
+      serviceLocation: location, // Map frontend location to backend serviceLocation
+      appointmentNotes: participants, // Store participants info in notes
       status: 'Scheduled',
     };
 

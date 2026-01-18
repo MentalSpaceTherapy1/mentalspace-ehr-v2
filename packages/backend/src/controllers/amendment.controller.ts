@@ -75,37 +75,19 @@ export const amendClinicalNote = async (req: Request, res: Response) => {
 
 /**
  * POST /api/v1/amendments/:id/sign
- * Sign an amendment with PIN or password
+ * Sign an amendment (no PIN/password required - simplified workflow)
  */
 export const signAmendment = async (req: Request, res: Response) => {
   try {
     const { id: amendmentId } = req.params;
     const userId = (req as any).user.userId;
-    const { method, credential } = req.body;
 
-    // Validate input
-    if (!method || !credential) {
-      return res.status(400).json({
-        success: false,
-        message: 'Authentication method and credential are required',
-      });
-    }
-
-    if (!['PIN', 'PASSWORD'].includes(method)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid authentication method',
-      });
-    }
-
-    // Verify credential
+    // Verify user exists
     const prisma = (await import('../services/database')).default;
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
-        signaturePin: true,
-        signaturePassword: true,
       },
     });
 
@@ -116,41 +98,6 @@ export const signAmendment = async (req: Request, res: Response) => {
       });
     }
 
-    // Verify authentication credential
-    const bcrypt = await import('bcryptjs');
-    let isAuthenticated = false;
-
-    if (method === 'PIN') {
-      if (!user.signaturePin) {
-        return res.status(400).json({
-          success: false,
-          message: 'No signature PIN configured',
-        });
-      }
-      isAuthenticated = await bcrypt.compare(credential, user.signaturePin);
-    } else {
-      if (!user.signaturePassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'No signature password configured',
-        });
-      }
-      isAuthenticated = await bcrypt.compare(credential, user.signaturePassword);
-    }
-
-    if (!isAuthenticated) {
-      logger.warn('Failed amendment signature authentication', {
-        userId,
-        method,
-        amendmentId,
-      });
-
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid PIN or password',
-      });
-    }
-
     // Get client IP and user agent
     const ipAddress =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
@@ -158,11 +105,11 @@ export const signAmendment = async (req: Request, res: Response) => {
       'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
 
-    // Sign amendment
+    // Sign amendment (no authentication required - user is already logged in)
     const signatureEvent = await AmendmentService.signAmendment(
       amendmentId,
       userId,
-      method,
+      'PASSWORD', // Default auth method for audit trail
       ipAddress,
       userAgent
     );

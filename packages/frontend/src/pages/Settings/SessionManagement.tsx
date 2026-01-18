@@ -147,6 +147,8 @@ export default function SessionManagement() {
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
+    // Explicitly use the user's detected timezone to ensure proper UTC to local conversion
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return date.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -154,6 +156,7 @@ export default function SessionManagement() {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
+      timeZone: userTimezone,
     });
   };
 

@@ -11,6 +11,7 @@ import {
   generateVendorReport,
   generatePracticeManagementDashboard,
   generateAuditTrailReport,
+  generateClinicalNotesReport,
 } from './reports.service';
 
 /**
@@ -73,6 +74,18 @@ const REPORT_TYPE_MAP: Record<string, string> = {
   'dashboard': 'dashboard',
   'overview': 'dashboard',
   'summary': 'dashboard',
+  // Clinical notes report keywords
+  'notes': 'notes',
+  'note': 'notes',
+  'unsigned': 'notes',
+  'clinical': 'notes',
+  'documentation': 'notes',
+  'pending signature': 'notes',
+  'pending signatures': 'notes',
+  'needs signature': 'notes',
+  'not signed': 'notes',
+  'draft': 'notes',
+  'drafts': 'notes',
 };
 
 // System prompt for query parsing
@@ -90,6 +103,7 @@ Available report types:
 - vendor: Vendor contracts, spend (params: category, isActive, includePerformance)
 - audit: Audit trail, user activity (params: startDate, endDate, userId, entityType, action, ipAddress)
 - dashboard: Practice management overview (params: startDate, endDate)
+- notes: Clinical notes status and documentation (params: status, noteType, clinicianId, clientId, startDate, endDate). Use status="unsigned" for draft/pending notes, status="signed" for completed notes
 
 Date parsing rules:
 - "last month" = previous calendar month
@@ -156,7 +170,7 @@ function isValidReportType(reportType: string): boolean {
   const validTypes = [
     'financial', 'credentialing', 'training', 'policy',
     'incident', 'performance', 'attendance', 'vendor',
-    'audit', 'dashboard'
+    'audit', 'dashboard', 'notes'
   ];
   return validTypes.includes(reportType);
 }
@@ -217,6 +231,9 @@ async function executeReport(parsedQuery: ParsedQuery): Promise<any> {
 
     case 'dashboard':
       return generatePracticeManagementDashboard(reportParams);
+
+    case 'notes':
+      return generateClinicalNotesReport(reportParams);
 
     default:
       throw new Error(`Unknown report type: ${reportType}`);

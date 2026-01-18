@@ -4,6 +4,7 @@ import { requireClientAccess, requireNoteAccess } from '../middleware/clientAcce
 import {
   getClientNotes,
   getClinicalNoteById,
+  getClinicalNotes,
   createClinicalNote,
   updateClinicalNote,
   cosignClinicalNote,
@@ -62,6 +63,14 @@ router.get(
   '/cosigning',
   authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
   getNotesForCosigning
+);
+
+// Get clinical notes with filtering (for Billing Readiness Checker and other views)
+// Query params: status (comma-separated), limit, noteType, clientId
+router.get(
+  '/',
+  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'BILLING_STAFF', 'SUPER_ADMIN'),
+  getClinicalNotes
 );
 
 // RLS: Client-specific routes require client access
