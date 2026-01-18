@@ -360,8 +360,24 @@ export default function ClientForm() {
         addressZipCode: formData.addressZipCode?.trim() || undefined,
       });
 
-      const matches = response.data?.data?.matches || [];
-      console.log('[ClientForm] Duplicate check result:', matches);
+      // Backend returns: { foundDuplicates, count, matches }
+      // Transform matches to the format expected by DuplicateWarningModal
+      const rawMatches = response.data?.matches || [];
+      console.log('[ClientForm] Duplicate check raw result:', rawMatches);
+
+      const matches = rawMatches.map((match: any) => ({
+        clientId: match.clientId || match.client?.id,
+        firstName: match.client?.firstName || '',
+        lastName: match.client?.lastName || '',
+        dateOfBirth: match.client?.dateOfBirth || '',
+        primaryPhone: match.client?.primaryPhone || '',
+        email: match.client?.email,
+        mrn: match.client?.medicalRecordNumber,
+        matchType: match.matchType,
+        confidence: match.confidenceScore || 0,
+        matchingFields: match.matchFields || [],
+      }));
+      console.log('[ClientForm] Duplicate check transformed result:', matches);
 
       if (matches.length > 0) {
         setDetectedDuplicates(matches);
