@@ -708,14 +708,19 @@ export const updateAppointment = async (req: Request, res: Response) => {
       }
     }
 
+    // Strip out fields that don't exist in the Prisma Appointment model
+    // isGroupAppointment and clientIds are in the schema for validation but not DB columns
+    // (clientId and clinicianId are already omitted by updateAppointmentSchema)
+    const { isGroupAppointment, clientIds, ...dbFields } = validatedData;
+
     const updateData: any = {
-      ...validatedData,
+      ...dbFields,
       lastModifiedBy: userId,
       updatedAt: new Date(),
     };
 
-    if (validatedData.appointmentDate) {
-      updateData.appointmentDate = new Date(validatedData.appointmentDate);
+    if (dbFields.appointmentDate) {
+      updateData.appointmentDate = new Date(dbFields.appointmentDate);
     }
 
     const appointment = await prisma.appointment.update({
