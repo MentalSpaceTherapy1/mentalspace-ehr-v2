@@ -2,6 +2,7 @@
  * DuplicatePreview Component
  * Shows real-time potential duplicate matches as user types in the client form
  * Displays inline below the name/DOB fields with clickable links to existing clients
+ * @version 1.0.1
  */
 
 import { useNavigate } from 'react-router-dom';

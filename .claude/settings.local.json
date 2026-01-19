@@ -210,7 +210,15 @@
       "Bash(DATABASE_URL=\"postgresql://mentalspace_admin:MentalSpace2024!SecurePwd@mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432/mentalspace_ehr\" node -e \"\nconst { PrismaClient } = require\\(''@prisma/client''\\);\nconst prisma = new PrismaClient\\(\\);\nasync function main\\(\\) {\n  const result = await prisma.$queryRaw\\\\`\n    SELECT id, email, \"\"failedLoginAttempts\"\", \"\"accountLockedUntil\"\", \"\"accountStatus\"\", \"\"lastLoginAt\"\"\n    FROM users \n    WHERE email = ''lelejoseli@yahoo.fr''\n  \\\\`;\n  console.log\\(JSON.stringify\\(result, null, 2\\)\\);\n  await prisma.$disconnect\\(\\);\n}\nmain\\(\\).catch\\(e => { console.error\\(e\\); process.exit\\(1\\); }\\);\n\")",
       "Bash(DATABASE_URL=\"postgresql://mentalspace_admin:MentalSpace2024!SecurePwd@mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com:5432/mentalspace_ehr\" node -e \"\nconst { PrismaClient } = require\\(''@prisma/client''\\);\nconst prisma = new PrismaClient\\(\\);\nasync function main\\(\\) {\n  const result = await prisma.$queryRaw\\\\`\n    SELECT id, email, \"\"failedLoginAttempts\"\", \"\"accountLockedUntil\"\", \"\"lastLoginDate\"\"\n    FROM users \n    WHERE email = ''lelejoseli@yahoo.fr''\n  \\\\`;\n  console.log\\(JSON.stringify\\(result, null, 2\\)\\);\n  await prisma.$disconnect\\(\\);\n}\nmain\\(\\).catch\\(e => { console.error\\(e\\); process.exit\\(1\\); }\\);\n\")",
       "Bash(aws wafv2 list-web-acls:*)",
-      "Bash(aws wafv2 get-web-acl:*)"
+      "Bash(aws wafv2 get-web-acl:*)",
+      "mcp__git__git_remote",
+      "Bash(dir:*)",
+      "Bash(git fetch:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "mcp__aws__call_aws",
+      "Bash(npx yaml-lint .github/workflows/deploy-frontend.yml)",
+      "Bash(gh workflow:*)"
     ],
     "deny": [],
     "ask": []

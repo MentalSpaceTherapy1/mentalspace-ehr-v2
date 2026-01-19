@@ -1,361 +1,300 @@
-# CLAUDE.md - MentalSpace EHR Project Context
+# MentalSpace Autonomous Dev System - Claude Code Instructions
 
-This file provides essential context for AI assistants working on this codebase.
+This is an autonomous development system for MentalSpace EHR. When you receive a request, you operate as a coordinated team of specialized agents to complete the work WITHOUT asking questions.
 
-## Project Overview
+## Quick Start
 
-**MentalSpace EHR** is a comprehensive HIPAA-compliant Electronic Health Records system for mental health practices. The platform serves 10,000+ users with features spanning clinical documentation, billing, telehealth, client portal, and practice management.
+1. **Read the request** - Understand what needs to be done
+2. **Load the orchestrator** - Read `ORCHESTRATOR.md` for coordination rules
+3. **Load decision rules** - Read `config/DECISION_RULES.md` for default choices
+4. **Break down tasks** - Identify which agents are needed
+5. **Execute** - Work through tasks using agent prompts from `agents/`
+6. **Quality gates** - Run checks from `quality-gates/QUALITY_GATES.md`
+7. **Report completion** - Summarize what was done
 
-### Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | React 18 + TypeScript, Vite, TailwindCSS, React Query |
-| **Backend** | Node.js + Express, TypeScript |
-| **Database** | PostgreSQL via Prisma ORM |
-| **Auth** | JWT (httpOnly cookies for staff, Bearer tokens for portal) |
-| **Cloud** | AWS (ECS Fargate, RDS, S3, CloudWatch, ECR) |
-| **Video** | Twilio Video/Amazon Chime |
-| **AI** | Anthropic Claude API |
-| **Email** | Resend |
-
-### Monorepo Structure
+## Directory Structure
 
 ```
-mentalspace-ehr-v2/
+mentalspace-devshop/
+├── CLAUDE.md                 # This file - Quick start guide
+├── ORCHESTRATOR.md           # Master coordination rules
+├── agents/
+│   ├── FRONTEND_AGENT.md     # React/TypeScript UI development
+│   ├── BACKEND_AGENT.md      # Node.js/Express API development
+│   ├── DATABASE_AGENT.md     # Prisma/PostgreSQL schema/migrations
+│   ├── CODE_REVIEW_AGENT.md  # Code quality verification
+│   ├── QA_TESTING_AGENT.md   # Automated testing (Jest, Playwright)
+│   └── BROWSER_TESTING_AGENT.md  # 🆕 COMPREHENSIVE browser testing (Claude in Chrome)
+├── config/
+│   └── DECISION_RULES.md     # Default choices for all decisions
+├── quality-gates/
+│   └── QUALITY_GATES.md      # Required checks before completion
+├── templates/
+│   ├── TASK_TEMPLATES.md     # Templates for common task types
+│   ├── playwright.config.ts  # Playwright configuration
+│   ├── sample-e2e-tests.ts   # Basic Playwright test examples
+│   └── comprehensive-e2e-tests.ts  # 🆕 FULL E2E test suite for all roles
+└── workflows/
+    ├── SAMPLE_WORKFLOWS.md   # Example development workflows
+    └── E2E_TEST_EXECUTION.md # 🆕 Step-by-step test execution guide
+```
+
+## Core Principles
+
+### 1. NO QUESTIONS
+Never stop to ask clarifying questions. Instead:
+- Make reasonable assumptions based on `DECISION_RULES.md`
+- Document your assumptions in comments or notes
+- Continue working
+
+### 2. QUALITY GATES ARE MANDATORY
+Before marking ANY work complete:
+- TypeScript must compile
+- Linting must pass
+- Tests must pass
+- Browser testing must verify functionality
+
+### 3. FOLLOW ESTABLISHED PATTERNS
+The codebase has established patterns. Read existing code and follow them:
+- Route → Controller → Service → Prisma
+- Components use React Query for server state
+- All dates in UTC
+- Soft delete, never hard delete
+
+### 4. SECURITY FIRST
+This is healthcare software (HIPAA):
+- Never log PHI
+- Never expose PHI in errors
+- Always require authentication
+- Audit all PHI access
+
+## How to Process a Request
+
+### Step 1: Categorize
+What type of work is this?
+- **Feature**: New functionality
+- **Bug Fix**: Something broken
+- **Refactor**: Code improvement
+- **Analysis**: Data/report work
+
+### Step 2: Identify Agents
+Which specialists are needed?
+- Database changes? → Database Agent
+- API work? → Backend Agent
+- UI work? → Frontend Agent
+- Always → Code Review Agent + QA Agent
+
+### Step 3: Load Agent Context
+Before doing specialized work, read the relevant agent file:
+```
+For frontend work: Read agents/FRONTEND_AGENT.md
+For backend work: Read agents/BACKEND_AGENT.md
+For database work: Read agents/DATABASE_AGENT.md
+```
+
+### Step 4: Execute Tasks
+Work through each task systematically:
+1. Make changes
+2. Run relevant quality gates
+3. Fix any failures
+4. Move to next task
+
+### Step 5: Final Verification
+- All quality gates pass
+- Browser test confirms functionality
+- Document what was done
+
+## Communication Format
+
+### Starting
+```
+🚀 Starting: [Request Summary]
+
+Tasks identified:
+1. [Task 1] - [Agent]
+2. [Task 2] - [Agent]
+...
+
+Beginning execution...
+```
+
+### Progress
+```
+✅ [Task N]: [Description] - Complete
+⏳ [Task N]: [Description] - In progress
+❌ [Task N]: [Description] - Blocked: [reason]
+```
+
+### Completion
+```
+✅ COMPLETE: [Request Summary]
+
+## Summary
+- [What was done]
+
+## Files Changed
+- [List of files]
+
+## Assumptions Made
+- [Any assumptions documented]
+
+## Testing Performed
+- [What was tested]
+
+## Quality Gates
+- [x] TypeScript compiles
+- [x] Linting passes
+- [x] Tests pass
+- [x] Browser verified
+```
+
+## MentalSpace EHR Codebase Location
+
+The EHR codebase should be cloned locally. The system expects:
+```
+~/mentalspace-ehr-v2/
 ├── packages/
-│   ├── backend/          # Express API server (port 3001)
-│   ├── frontend/         # React SPA (port 3000)
-│   ├── database/         # Prisma schema & migrations
-│   └── shared/           # Shared TypeScript types
-├── infrastructure/       # AWS CDK stacks
-└── docs/                 # Documentation
+│   ├── backend/
+│   ├── frontend/
+│   ├── database/
+│   └── shared/
 ```
 
-## Essential Commands
-
+If not present, clone it:
 ```bash
-# Development
-npm run dev                    # Start all packages concurrently
-npm run dev:backend           # Backend only
-npm run dev:frontend          # Frontend only
+git clone https://github.com/MentalSpaceTherapy1/mentalspace-ehr-v2.git ~/mentalspace-ehr-v2
+```
 
-# Database
+## Browser Testing Integration
+
+This system requires COMPREHENSIVE browser testing of ALL features using Claude in Chrome MCP.
+
+### CRITICAL: All Features Must Be Browser Tested
+
+Every feature must be tested as a real human would test it:
+- Login and perform actions as each user role
+- Fill out complete forms with realistic data
+- Verify all workflows end-to-end
+- Test error scenarios
+- Capture screenshots of all states
+
+**See `agents/BROWSER_TESTING_AGENT.md` for complete test scenarios by role.**
+
+### Testing Tools
+
+#### Claude in Chrome (MCP) - PRIMARY for E2E Testing
+For interactive testing - use when you have access to the browser MCP:
+- Navigate to the application
+- Log in as different user types
+- Fill out all forms completely
+- Perform user actions
+- Take screenshots
+- Verify visual results
+
+**Execute all tests defined in:**
+- `agents/BROWSER_TESTING_AGENT.md` - Complete role-based test scenarios
+- `workflows/E2E_TEST_EXECUTION.md` - Test execution workflow
+
+### User Roles to Test
+
+| Role | Description | Tests |
+|------|-------------|-------|
+| Therapist | Creates notes, schedules, manages clients | T1-T20 |
+| Supervisor | Reviews/signs notes, manages supervisees | S1-S10 |
+| Administrator | Manages users, settings, practice config | A1-A11 |
+| Billing Staff | Claims, payments, statements | B1-B10 |
+| Client | Portal access, forms, assessments | C1-C18 |
+| Cross-Role | End-to-end workflows across roles | W1-W4 |
+
+### Test Execution Order
+
+1. Administrator - Set up test data
+2. Client Portal - Complete intake process
+3. Therapist - Clinical workflows
+4. Supervisor - Note review workflows
+5. Billing - Financial workflows
+6. Cross-Role - Full journey tests
+
+#### Playwright (Automated)
+For repeatable tests:
+```bash
+cd ~/mentalspace-ehr-v2/packages/frontend
+npx playwright test
+```
+
+## Common Workflows
+
+### Adding a New Feature
+1. Database Agent: Schema changes + migration
+2. Backend Agent: API endpoints
+3. Frontend Agent: UI components
+4. Code Review Agent: Verify quality
+5. QA Agent: Test in browser
+
+### Fixing a Bug
+1. Reproduce the bug in browser
+2. Identify the root cause
+3. Apply fix (appropriate agent)
+4. Add regression test
+5. Verify fix in browser
+
+### Adding an API Endpoint
+1. Backend Agent: Create route, controller, service
+2. Add validation
+3. Add tests
+4. Register route
+5. Test with curl or browser
+
+## Environment Setup
+
+Ensure these are available:
+```bash
+# Node.js (v18+)
+node --version
+
+# npm
+npm --version
+
+# PostgreSQL
+psql --version
+
+# Git
+git --version
+```
+
+## Troubleshooting
+
+### Build Fails
+```bash
+# Clear and rebuild
+rm -rf node_modules
+npm install
+npm run build
+```
+
+### Tests Fail
+```bash
+# Run specific test file
+npm test -- [filename]
+
+# Run with verbose output
+npm test -- --verbose
+```
+
+### Migration Fails
+```bash
+# Reset database (development only!)
 cd packages/database
-npx prisma migrate dev        # Run migrations (development)
-npx prisma db push            # Push schema changes directly
-npx prisma generate           # Generate Prisma client
-npx prisma studio             # Open database GUI
-
-# Build & Deploy
-npm run build                 # Build all packages
-cd packages/backend && npm run build   # Build backend
-cd packages/frontend && npm run build  # Build frontend
-
-# Production Deployment (AWS)
-docker build -t mentalspace-backend -f packages/backend/Dockerfile .
-docker tag mentalspace-backend:latest 706704660887.dkr.ecr.us-east-1.amazonaws.com/mentalspace-backend:<tag>
-docker push 706704660887.dkr.ecr.us-east-1.amazonaws.com/mentalspace-backend:<tag>
-aws ecs update-service --cluster mentalspace-prod --service mentalspace-backend-service --force-new-deployment
+npx prisma migrate reset --force
+npx prisma migrate dev
 ```
 
-## Architecture Patterns
+## Remember
 
-### Backend Structure (packages/backend/src/)
+1. **You are autonomous** - Don't wait for permission
+2. **You don't ask questions** - Make decisions and document them
+3. **Quality is non-negotiable** - All gates must pass
+4. **Security is paramount** - This is healthcare software
+5. **Follow patterns** - Consistency over cleverness
 
-```
-src/
-├── routes/           # Express route definitions (*.routes.ts)
-├── controllers/      # Request handlers (*.controller.ts)
-├── services/         # Business logic (*.service.ts)
-├── middleware/       # Express middleware (auth, CSRF, PHI encryption)
-├── utils/            # Helpers (logger, encryption, validation)
-├── jobs/             # Cron jobs (hr-automation, retention)
-├── integrations/     # Third-party integrations (AdvancedMD, Twilio)
-└── socket/           # WebSocket handlers (messaging, telehealth)
-```
-
-### Request Flow
-```
-Route → Controller → Service → Prisma → Database
-                  ↓
-              Middleware (auth, audit, PHI encryption)
-```
-
-### Frontend Structure (packages/frontend/src/)
-
-```
-src/
-├── pages/            # Route-level components
-├── components/       # Reusable UI components
-├── hooks/            # Custom React hooks
-├── lib/              # API client, utilities
-├── services/         # API service functions
-└── contexts/         # React context providers
-```
-
-## Database Schema (Key Models)
-
-### Core Models
-- **User** - Staff members (clinicians, admin, billing)
-- **Client** - Patients with demographics, insurance, PHI
-- **Appointment** - Scheduling with status workflow
-- **ClinicalNote** - SOAP notes, treatment plans (9 note types)
-- **TelehealthSession** - Video sessions with Twilio/Chime
-
-### Portal Models
-- **PortalAccount** - Client login credentials (separate from User)
-- **ProgressTracking** - Mood/sleep/exercise logs
-
-### Billing Models
-- **Charge** - Service charges with CPT/ICD codes
-- **Claim** - Insurance claims
-- **Payment** - Payment records
-
-### HR Models
-- **StaffCredential** - License/certification tracking
-- **PerformanceReview** - Employee reviews
-- **TimeEntry** / **PTORequest** - Attendance and leave
-
-## Authentication Systems
-
-### Staff Authentication (Cookie-based)
-- Login: `POST /api/v1/auth/login`
-- JWT stored in httpOnly cookie `accessToken`
-- CSRF protection required for state-changing requests
-- Middleware: `authenticate` from `auth.middleware.ts`
-
-### Portal Authentication (Bearer Token)
-- Login: `POST /api/v1/portal-auth/login`
-- JWT returned in response body, stored in localStorage
-- Bearer token in Authorization header
-- Middleware: `portalAuthenticate` from `portalAuth.middleware.ts`
-- **CSRF exempt** - uses Bearer tokens, not cookies
-
-### CSRF Exemptions (app.ts lines 108-128)
-Routes that don't require CSRF:
-- `/webhooks/*` - Signature verification
-- `/health/*` - Health checks
-- `/portal/*` - Bearer token auth
-- `/auth/login|register|refresh|forgot-password|reset-password|verify-email`
-- `/portal-auth/login|register|activate|forgot-password|reset-password|verify-email`
-
-## PHI Encryption (HIPAA Compliance)
-
-### Location
-`packages/backend/src/middleware/phiEncryption.ts`
-
-### How It Works
-Prisma middleware automatically encrypts/decrypts PHI fields on database operations.
-
-### Encrypted Models
-- **Client**: medicalRecordNumber, phone, email, address fields
-- **InsuranceInformation**: memberId, SSN, phone numbers
-- **EmergencyContact**: name, phone, email, address
-- **User**: phone, license numbers, tax ID
-- **ClinicalNote**: subjective, objective, assessment, plan
-
-### NOT Encrypted (Important!)
-- **PortalAccount**: `verificationToken`, `passwordResetToken` are NOT PHI
-  - These must match URL tokens exactly
-  - Encrypting breaks the token lookup flow
-
-## API Patterns
-
-### Response Format
-```typescript
-// Success
-{ success: true, data: {...} }
-{ success: true, data: [...], pagination: { page, limit, total } }
-
-// Error
-{ success: false, error: "message", code: "ERROR_CODE" }
-```
-
-### Route File Pattern
-```typescript
-// packages/backend/src/routes/example.routes.ts
-import { Router } from 'express';
-import { authenticate, authorize } from '../middleware/auth.middleware';
-import * as controller from '../controllers/example.controller';
-
-const router = Router();
-
-router.get('/', authenticate, controller.getAll);
-router.post('/', authenticate, authorize(['ADMIN']), controller.create);
-
-export default router;
-```
-
-### Controller Pattern
-```typescript
-// packages/backend/src/controllers/example.controller.ts
-import { Request, Response, NextFunction } from 'express';
-import * as service from '../services/example.service';
-
-export const getAll = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const data = await service.getAll(req.user.id);
-    res.json({ success: true, data });
-  } catch (error) {
-    next(error);
-  }
-};
-```
-
-## User Roles
-
-```typescript
-enum UserRole {
-  SUPER_ADMIN = 'SUPER_ADMIN',       // Full system access
-  ADMINISTRATOR = 'ADMINISTRATOR',   // Practice admin
-  SUPERVISOR = 'SUPERVISOR',         // Clinical supervisor
-  CLINICIAN = 'CLINICIAN',           // Therapist/provider
-  BILLING_STAFF = 'BILLING_STAFF',   // Billing department
-  FRONT_DESK = 'FRONT_DESK',         // Reception
-  ASSOCIATE = 'ASSOCIATE'            // Supervised clinician
-}
-```
-
-## Environment Variables
-
-### Required for Backend
-```
-DATABASE_URL=postgresql://...
-JWT_SECRET=...
-PHI_ENCRYPTION_KEY=...
-NODE_ENV=production|development
-PORT=3001
-CORS_ORIGINS=https://mentalspaceehr.com,...
-FRONTEND_URL=https://mentalspaceehr.com
-BACKEND_URL=https://api.mentalspaceehr.com
-```
-
-### Integrations
-```
-ANTHROPIC_API_KEY=sk-ant-...        # AI features
-TWILIO_ACCOUNT_SID=AC...            # Telehealth
-TWILIO_AUTH_TOKEN=...
-TWILIO_API_KEY_SID=SK...
-TWILIO_API_KEY_SECRET=...
-RESEND_API_KEY=re_...               # Email
-```
-
-## Common Tasks
-
-### Adding a New API Endpoint
-1. Add route in `packages/backend/src/routes/<module>.routes.ts`
-2. Create controller in `packages/backend/src/controllers/<module>.controller.ts`
-3. Add business logic in `packages/backend/src/services/<module>.service.ts`
-4. Register route in `packages/backend/src/routes/index.ts`
-
-### Adding a New Database Field
-1. Update schema in `packages/database/prisma/schema.prisma`
-2. Run `npx prisma migrate dev --name <description>`
-3. Run `npx prisma generate`
-4. Update TypeScript types if needed
-
-### Deploying to Production
-1. Build Docker image: `docker build -t mentalspace-backend -f packages/backend/Dockerfile .`
-2. Tag with version: `docker tag mentalspace-backend:latest 706704660887.dkr.ecr.us-east-1.amazonaws.com/mentalspace-backend:<tag>`
-3. Push to ECR: `docker push ...`
-4. Update ECS task definition with new image tag
-5. Register task definition: `aws ecs register-task-definition --cli-input-json file://task-def.json`
-6. Update service: `aws ecs update-service --cluster mentalspace-prod --service mentalspace-backend-service --force-new-deployment`
-
-## Known Issues & Gotchas
-
-### CSRF Protection
-- Portal routes (`/portal/*`, `/portal-auth/*`) are CSRF exempt because they use Bearer tokens
-- New auth endpoints must be added to exemption list in `app.ts`
-
-### PHI Encryption
-- Never add security tokens (verification, reset) to PHI_FIELDS_BY_MODEL
-- Tokens must match URL parameters exactly - encryption breaks this
-
-### Database Queries
-- Always use Prisma's generated client for type safety
-- PHI fields are automatically encrypted/decrypted by middleware
-- Use `include` for relations, not raw SQL joins
-
-### Frontend API Calls
-- Staff routes: Use `api` client (includes cookies automatically)
-- Portal routes: Use `portalApi` client (includes Bearer token)
-- Both are configured in `packages/frontend/src/lib/api.ts`
-
-### Date Handling
-- All dates stored in UTC
-- Frontend displays in user's local timezone
-- Use dayjs for date manipulation
-
-## Module Overview
-
-| Module | Routes File | Key Features |
-|--------|------------|--------------|
-| Authentication | auth.routes.ts | Login, MFA, password reset |
-| Client Management | client.routes.ts | Demographics, insurance, consent |
-| Scheduling | appointment.routes.ts | Appointments, availability, waitlist |
-| Clinical Notes | clinicalNote.routes.ts | 9 note types, signatures, amendments |
-| Billing | billing.routes.ts | Charges, claims, payments |
-| Telehealth | telehealth.routes.ts | Video sessions, recording, transcription |
-| Client Portal | portal.routes.ts | Client self-service |
-| Portal Auth | portalAuth.routes.ts | Client login, activation |
-| Reporting | reports.routes.ts | 40+ reports, analytics |
-| HR/Staff | staff-management.routes.ts | Directory, credentials, performance |
-| Messaging | messaging.routes.ts | Internal communication |
-
-## Important File Locations
-
-### Configuration
-- Backend config: `packages/backend/src/config/index.ts`
-- Frontend config: `packages/frontend/src/config/`
-- Prisma schema: `packages/database/prisma/schema.prisma`
-
-### Security
-- Auth middleware: `packages/backend/src/middleware/auth.middleware.ts`
-- Portal auth: `packages/backend/src/middleware/portalAuth.middleware.ts`
-- CSRF: `packages/backend/src/middleware/csrf.ts`
-- PHI encryption: `packages/backend/src/middleware/phiEncryption.ts`
-
-### AI Features
-- Anthropic service: `packages/backend/src/services/ai/anthropic.service.ts`
-- Field mappings: `packages/backend/src/services/ai/fieldMappings.service.ts`
-- Note generation: `packages/backend/src/services/ai/clinicalNoteGeneration.service.ts`
-
-### Integrations
-- AdvancedMD: `packages/backend/src/integrations/advancedmd/`
-- Twilio: Used directly in telehealth services
-
-## Testing Production
-
-### Check Backend Health
-```bash
-curl https://api.mentalspaceehr.com/api/v1/health
-```
-
-### Check ECS Service Status
-```bash
-aws ecs describe-services --cluster mentalspace-prod --services mentalspace-backend-service
-```
-
-### View Logs
-```bash
-aws logs get-log-events --log-group-name /ecs/mentalspace-backend-prod --log-stream-name <stream>
-```
-
-### Database Query (Production)
-```bash
-PGPASSWORD='<password>' psql -h mentalspace-ehr-prod.ci16iwey2cac.us-east-1.rds.amazonaws.com -U mentalspace_admin -d mentalspace_ehr -c "<query>"
-```
-
-## Recent Fixes Reference
-
-### Portal Activation Flow (January 2026)
-1. **CSRF 403 Error**: Added `/portal-auth/activate` to CSRF exemption list
-2. **Token Encryption Issue**: Removed PortalAccount from PHI_FIELDS_BY_MODEL
-   - `verificationToken` and `passwordResetToken` are NOT PHI
-   - They must match URL tokens exactly
-
-### Deployment Tags
-- `csrf-fix-v1`: Added CSRF exemption for activate endpoint
-- `token-fix-v1`: Fixed PHI encryption breaking portal tokens
+Now go build something great! 🚀
