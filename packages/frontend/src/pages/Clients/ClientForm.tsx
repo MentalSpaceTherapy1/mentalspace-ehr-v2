@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import AddressAutocomplete from '../../components/AddressAutocomplete';
 import DuplicateWarningModal from '../../components/Clients/DuplicateWarningModal';
+import DuplicatePreview from '../../components/Clients/DuplicatePreview';
 import {
   PRONOUNS_OPTIONS,
   GENDER_IDENTITY_OPTIONS,
@@ -22,11 +23,16 @@ export default function ClientForm() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Duplicate detection state
+  // Duplicate detection state (on-submit modal)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [detectedDuplicates, setDetectedDuplicates] = useState<any[]>([]);
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   const [bypassDuplicateCheck, setBypassDuplicateCheck] = useState(false);
+
+  // Real-time duplicate detection state (inline preview)
+  const [realtimeMatches, setRealtimeMatches] = useState<any[]>([]);
+  const [isSearchingRealtime, setIsSearchingRealtime] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch client data for editing
   const { data: clientData, isLoading: clientLoading } = useQuery({
@@ -340,6 +346,95 @@ export default function ClientForm() {
     }));
   };
 
+  // Real-time duplicate detection as user types
+  const searchForDuplicatesRealtime = useCallback(async (firstName: string, lastName: string, dateOfBirth: string) => {
+    // Skip in edit mode or if minimum criteria not met
+    if (isEditMode) return;
+
+    // Need at least first name and last name with 2+ chars each
+    if (!firstName || firstName.trim().length < 2 || !lastName || lastName.trim().length < 2) {
+      setRealtimeMatches([]);
+      return;
+    }
+
+    setIsSearchingRealtime(true);
+    try {
+      const payload: any = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        // Use a placeholder phone number for the API since it's required
+        // The matching will still work based on name and DOB
+        primaryPhone: formData.primaryPhone?.trim() || '0000000000',
+      };
+
+      // Add DOB if provided
+      if (dateOfBirth) {
+        const dob = new Date(dateOfBirth);
+        if (!isNaN(dob.getTime())) {
+          payload.dateOfBirth = dob.toISOString();
+        }
+      } else {
+        // Use a placeholder date if not provided
+        payload.dateOfBirth = new Date('1900-01-01').toISOString();
+      }
+
+      const response = await api.post('/clients/check-duplicates', payload);
+
+      const rawMatches = response.data?.matches || [];
+      const matches = rawMatches.map((match: any) => ({
+        clientId: match.clientId || match.client?.id,
+        firstName: match.client?.firstName || '',
+        lastName: match.client?.lastName || '',
+        dateOfBirth: match.client?.dateOfBirth || '',
+        primaryPhone: match.client?.primaryPhone || '',
+        email: match.client?.email,
+        mrn: match.client?.medicalRecordNumber,
+        matchType: match.matchType,
+        confidence: match.confidenceScore || 0,
+        matchingFields: match.matchFields || [],
+      }));
+
+      setRealtimeMatches(matches);
+    } catch (error) {
+      console.error('[ClientForm] Real-time duplicate search error:', error);
+      setRealtimeMatches([]);
+    } finally {
+      setIsSearchingRealtime(false);
+    }
+  }, [isEditMode, formData.primaryPhone]);
+
+  // Debounced effect to trigger real-time search when name/DOB changes
+  useEffect(() => {
+    // Skip in edit mode
+    if (isEditMode) return;
+
+    // Clear any pending debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set a new debounce timer (500ms delay)
+    debounceTimerRef.current = setTimeout(() => {
+      searchForDuplicatesRealtime(
+        formData.firstName,
+        formData.lastName,
+        formData.dateOfBirth
+      );
+    }, 500);
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [formData.firstName, formData.lastName, formData.dateOfBirth, searchForDuplicatesRealtime, isEditMode]);
+
+  // Handle viewing a client from the real-time preview
+  const handleViewRealtimeClient = useCallback((clientId: string) => {
+    window.open(`/clients/${clientId}`, '_blank');
+  }, []);
+
   // Check for duplicates before creating
   const checkForDuplicates = async (): Promise<boolean> => {
     // Skip duplicate check for edit mode
@@ -578,6 +673,15 @@ export default function ClientForm() {
                 )}
               </div>
             </div>
+
+            {/* Real-time Duplicate Detection Preview */}
+            {!isEditMode && (
+              <DuplicatePreview
+                matches={realtimeMatches}
+                isSearching={isSearchingRealtime}
+                onViewClient={handleViewRealtimeClient}
+              />
+            )}
           </div>
 
           {/* Contact Information */}
