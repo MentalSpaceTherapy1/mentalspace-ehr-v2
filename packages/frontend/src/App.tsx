@@ -501,6 +501,14 @@ function App() {
           }
         />
         <Route
+          path="/appointments/:id"
+          element={
+            <PrivateRoute>
+              <NewAppointment />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/appointments/:id/edit"
           element={
             <PrivateRoute>
