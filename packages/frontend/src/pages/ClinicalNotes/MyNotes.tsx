@@ -151,10 +151,17 @@ export default function MyNotes() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl shadow-lg p-4 text-white">
+          <button
+            onClick={() => setStatusFilter('')}
+            className={`bg-gradient-to-br ${
+              statusFilter === ''
+                ? 'from-purple-600 to-pink-700 ring-4 ring-purple-300'
+                : 'from-purple-400 to-pink-500 hover:shadow-lg'
+            } rounded-xl shadow-lg p-4 text-white transition-all`}
+          >
             <p className="text-purple-100 text-xs font-semibold mb-1">Total</p>
             <p className="text-3xl font-bold">{stats?.total || 0}</p>
-          </div>
+          </button>
 
           <button
             onClick={() => setStatusFilter(statusFilter === 'DRAFT' ? '' : 'DRAFT')}
@@ -204,15 +211,29 @@ export default function MyNotes() {
             <p className="text-3xl font-bold">{stats?.cosigned || 0}</p>
           </button>
 
-          <div className="bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl shadow-lg p-4 text-white">
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'LOCKED' ? '' : 'LOCKED')}
+            className={`bg-gradient-to-br ${
+              statusFilter === 'LOCKED'
+                ? 'from-gray-600 to-gray-700 ring-4 ring-gray-300'
+                : 'from-gray-400 to-gray-500 hover:shadow-lg'
+            } rounded-xl shadow-lg p-4 text-white transition-all`}
+          >
             <p className="text-gray-100 text-xs font-semibold mb-1">Locked</p>
             <p className="text-3xl font-bold">{stats?.locked || 0}</p>
-          </div>
+          </button>
 
-          <div className="bg-gradient-to-br from-red-400 to-orange-500 rounded-xl shadow-lg p-4 text-white">
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'OVERDUE' ? '' : 'OVERDUE')}
+            className={`bg-gradient-to-br ${
+              statusFilter === 'OVERDUE'
+                ? 'from-red-600 to-orange-700 ring-4 ring-red-300'
+                : 'from-red-400 to-orange-500 hover:shadow-lg'
+            } rounded-xl shadow-lg p-4 text-white transition-all`}
+          >
             <p className="text-red-100 text-xs font-semibold mb-1">Overdue</p>
             <p className="text-3xl font-bold">{stats?.overdue || 0}</p>
-          </div>
+          </button>
         </div>
 
         {/* Search and Filters */}

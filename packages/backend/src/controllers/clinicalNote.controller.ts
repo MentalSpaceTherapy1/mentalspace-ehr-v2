@@ -17,6 +17,7 @@ export const NOTE_TYPES = {
   CONTACT_NOTE: 'Contact Note',
   TERMINATION_NOTE: 'Termination Note',
   MISCELLANEOUS_NOTE: 'Miscellaneous Note',
+  GROUP_THERAPY: 'Group Therapy Note',
 } as const;
 
 // Clinical Note validation schema
@@ -32,6 +33,7 @@ const clinicalNoteSchema = z.object({
     'Contact Note',
     'Termination Note',
     'Miscellaneous Note',
+    'Group Therapy Note',
   ]),
   sessionDate: z.string().datetime('Invalid session date').optional(), // Made optional for drafts
   sessionStartTime: z.string().optional(),
@@ -522,7 +524,7 @@ export const signClinicalNote = async (req: Request, res: Response) => {
     }
 
     // PHASE 1.3: Validate note before signing
-    const validationResult = await NoteValidationService.validateNote(note.noteType, note);
+    const validationResult = await ClinicalNotesValidationService.validateNote(note.noteType, note);
     if (!validationResult.isValid) {
       return res.status(400).json({
         success: false,

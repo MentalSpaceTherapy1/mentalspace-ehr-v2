@@ -106,8 +106,8 @@ export async function createGroupTherapyNote(params: CreateGroupTherapyNoteParam
 
       totalMembers = groupSession.members.length;
     } else {
-      // Ad-hoc group: Use appointment clients
-      totalMembers = appointment.appointmentClients?.length || 0;
+      // Ad-hoc group: Use attendance array length from params
+      totalMembers = params.attendance?.length || 1;
     }
 
     // Build group note content
