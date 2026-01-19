@@ -71,6 +71,20 @@ export default function AppointmentsCalendar() {
     appointmentType: '',
   });
   const [viewType, setViewType] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek'>('timeGridWeek');
+
+  // Track current visible date range for efficient API queries
+  // This fixes the bug where appointments weren't showing due to hitting the 50 record limit
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>(() => {
+    // Initialize with a reasonable default range (current month)
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 2, 0); // End of next month
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0],
+    };
+  });
+
   const [rescheduleConfirm, setRescheduleConfirm] = useState<{
     open: boolean;
     eventId: string | null;
@@ -125,14 +139,21 @@ export default function AppointmentsCalendar() {
     });
   };
 
-  // Fetch appointments
+  // Fetch appointments with date range filtering
+  // This fixes the bug where appointments weren't showing due to hitting the 50 record pagination limit
   const { data: appointments, isLoading } = useQuery({
-    queryKey: ['appointments', filters],
+    queryKey: ['appointments', filters, dateRange],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.clinicianId) params.append('clinicianId', filters.clinicianId);
       if (filters.status) params.append('status', filters.status);
       if (filters.appointmentType) params.append('appointmentType', filters.appointmentType);
+
+      // Always include date range to avoid hitting the 50 record limit
+      params.append('startDate', dateRange.start);
+      params.append('endDate', dateRange.end);
+      // Request more records to ensure we get all appointments in the visible range
+      params.append('limit', '500');
 
       const response = await api.get(`/appointments?${params.toString()}`);
       return response.data.data;
@@ -586,6 +607,13 @@ export default function AppointmentsCalendar() {
               eventResize={handleEventResize}
               eventDurationEditable={true}
               eventStartEditable={true}
+              datesSet={(dateInfo) => {
+                // Update the date range when the calendar view changes
+                // This ensures we fetch the right appointments for the visible range
+                const start = dateInfo.start.toISOString().split('T')[0];
+                const end = dateInfo.end.toISOString().split('T')[0];
+                setDateRange({ start, end });
+              }}
             />
           )}
         </div>

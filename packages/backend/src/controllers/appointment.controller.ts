@@ -35,6 +35,19 @@ const ensureAppointmentAccess = async (
 };
 
 
+// Helper function to normalize time strings to HH:MM format (with leading zero)
+// This fixes the bug where "8:30" > "09:00" in string comparison
+const normalizeTimeFormat = (time: string): string => {
+  const [hours, minutes] = time.split(':');
+  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+};
+
+// Helper function to convert time string to minutes for accurate comparison
+const timeToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
 // Appointment validation schemas
 const baseAppointmentSchema = z.object({
   // Group appointment support: either clientId (individual) or clientIds (group)
@@ -329,29 +342,38 @@ export const createAppointment = async (req: Request, res: Response) => {
       await assertCanAccessClient(req.user, { clientId: validatedData.clientId });
     }
 
-    // Check for scheduling conflicts
-    const conflicts = await prisma.appointment.findMany({
+    // Normalize time formats to HH:MM (with leading zeros) for proper comparison
+    const normalizedStartTime = normalizeTimeFormat(validatedData.startTime);
+    const normalizedEndTime = normalizeTimeFormat(validatedData.endTime);
+    const newStartMinutes = timeToMinutes(normalizedStartTime);
+    const newEndMinutes = timeToMinutes(normalizedEndTime);
+
+    // Check for scheduling conflicts - fetch all appointments for the clinician on that date
+    // then filter using proper time comparison (fixes bug where "8:30" > "09:00" in string comparison)
+    const existingAppointments = await prisma.appointment.findMany({
       where: {
         clinicianId: validatedData.clinicianId,
         appointmentDate: new Date(validatedData.appointmentDate),
         status: {
           in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
         },
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: validatedData.startTime } },
-              { endTime: { gt: validatedData.startTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { lt: validatedData.endTime } },
-              { endTime: { gte: validatedData.endTime } },
-            ],
-          },
-        ],
       },
+    });
+
+    // Filter conflicts using proper time comparison
+    const conflicts = existingAppointments.filter((apt) => {
+      const existingStart = timeToMinutes(apt.startTime);
+      const existingEnd = timeToMinutes(apt.endTime);
+
+      // Check for overlap: new appointment overlaps if:
+      // 1. New start is within existing appointment (existingStart <= newStart < existingEnd)
+      // 2. New end is within existing appointment (existingStart < newEnd <= existingEnd)
+      // 3. New appointment completely contains existing (newStart <= existingStart && newEnd >= existingEnd)
+      const startsWithinExisting = newStartMinutes >= existingStart && newStartMinutes < existingEnd;
+      const endsWithinExisting = newEndMinutes > existingStart && newEndMinutes <= existingEnd;
+      const containsExisting = newStartMinutes <= existingStart && newEndMinutes >= existingEnd;
+
+      return startsWithinExisting || endsWithinExisting || containsExisting;
     });
 
     if (conflicts.length > 0) {
@@ -644,14 +666,16 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
 
     // Check for scheduling conflicts if time/date is being changed
+    // Uses proper numerical time comparison to fix bug where "8:30" > "09:00" in string comparison
     if (validatedData.appointmentDate || validatedData.startTime || validatedData.endTime) {
       const appointmentDate = validatedData.appointmentDate
         ? new Date(validatedData.appointmentDate)
         : existingAppointment.appointmentDate;
-      const startTime = validatedData.startTime || existingAppointment.startTime;
-      const endTime = validatedData.endTime || existingAppointment.endTime;
+      const startTime = normalizeTimeFormat(validatedData.startTime || existingAppointment.startTime);
+      const endTime = normalizeTimeFormat(validatedData.endTime || existingAppointment.endTime);
 
-      const conflicts = await prisma.appointment.findMany({
+      // Fetch all appointments for the clinician on that date, then filter with proper time comparison
+      const existingAppointments = await prisma.appointment.findMany({
         where: {
           id: { not: id },
           clinicianId: existingAppointment.clinicianId,
@@ -659,21 +683,20 @@ export const updateAppointment = async (req: Request, res: Response) => {
           status: {
             in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
           },
-          OR: [
-            {
-              AND: [
-                { startTime: { lte: startTime } },
-                { endTime: { gt: startTime } },
-              ],
-            },
-            {
-              AND: [
-                { startTime: { lt: endTime } },
-                { endTime: { gte: endTime } },
-              ],
-            },
-          ],
         },
+      });
+
+      // Filter conflicts using proper numerical time comparison
+      const newStartMinutes = timeToMinutes(startTime);
+      const newEndMinutes = timeToMinutes(endTime);
+      const conflicts = existingAppointments.filter((apt) => {
+        const existingStart = timeToMinutes(apt.startTime);
+        const existingEnd = timeToMinutes(apt.endTime);
+        // Check for overlap
+        const startsWithinExisting = newStartMinutes >= existingStart && newStartMinutes < existingEnd;
+        const endsWithinExisting = newEndMinutes > existingStart && newEndMinutes <= existingEnd;
+        const containsExisting = newStartMinutes <= existingStart && newEndMinutes >= existingEnd;
+        return startsWithinExisting || endsWithinExisting || containsExisting;
       });
 
       if (conflicts.length > 0) {
@@ -970,8 +993,14 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
       });
     }
 
-    // Check for conflicts at new time
-    const conflicts = await prisma.appointment.findMany({
+    // Check for conflicts at new time using proper numerical time comparison
+    // This fixes the bug where "8:30" > "09:00" in string comparison
+    const normalizedStartTime = normalizeTimeFormat(validatedData.startTime);
+    const normalizedEndTime = normalizeTimeFormat(validatedData.endTime);
+    const newStartMinutes = timeToMinutes(normalizedStartTime);
+    const newEndMinutes = timeToMinutes(normalizedEndTime);
+
+    const existingAppointments = await prisma.appointment.findMany({
       where: {
         id: { not: id },
         clinicianId: existingAppointment.clinicianId,
@@ -979,21 +1008,17 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
         status: {
           in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
         },
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: validatedData.startTime } },
-              { endTime: { gt: validatedData.startTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { lt: validatedData.endTime } },
-              { endTime: { gte: validatedData.endTime } },
-            ],
-          },
-        ],
       },
+    });
+
+    // Filter conflicts using proper numerical time comparison
+    const conflicts = existingAppointments.filter((apt) => {
+      const existingStart = timeToMinutes(apt.startTime);
+      const existingEnd = timeToMinutes(apt.endTime);
+      const startsWithinExisting = newStartMinutes >= existingStart && newStartMinutes < existingEnd;
+      const endsWithinExisting = newEndMinutes > existingStart && newEndMinutes <= existingEnd;
+      const containsExisting = newStartMinutes <= existingStart && newEndMinutes >= existingEnd;
+      return startsWithinExisting || endsWithinExisting || containsExisting;
     });
 
     if (conflicts.length > 0) {
@@ -1230,29 +1255,31 @@ export const getOrCreateAppointment = async (req: Request, res: Response) => {
       });
     }
 
-    // Check for scheduling conflicts
-    const conflicts = await prisma.appointment.findMany({
+    // Check for scheduling conflicts using proper numerical time comparison
+    // This fixes the bug where "8:30" > "09:00" in string comparison
+    const normalizedStartTime = normalizeTimeFormat(startTime);
+    const normalizedEndTime = normalizeTimeFormat(endTime);
+    const newStartMinutes = timeToMinutes(normalizedStartTime);
+    const newEndMinutes = timeToMinutes(normalizedEndTime);
+
+    const existingAppointments = await prisma.appointment.findMany({
       where: {
         clinicianId: finalClinicianId,
         appointmentDate: parsedDate,
         status: {
           in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
         },
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: startTime } },
-              { endTime: { gt: startTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { lt: endTime } },
-              { endTime: { gte: endTime } },
-            ],
-          },
-        ],
       },
+    });
+
+    // Filter conflicts using proper numerical time comparison
+    const conflicts = existingAppointments.filter((apt) => {
+      const existingStart = timeToMinutes(apt.startTime);
+      const existingEnd = timeToMinutes(apt.endTime);
+      const startsWithinExisting = newStartMinutes >= existingStart && newStartMinutes < existingEnd;
+      const endsWithinExisting = newEndMinutes > existingStart && newEndMinutes <= existingEnd;
+      const containsExisting = newStartMinutes <= existingStart && newEndMinutes >= existingEnd;
+      return startsWithinExisting || endsWithinExisting || containsExisting;
     });
 
     if (conflicts.length > 0) {
@@ -1380,8 +1407,14 @@ export const quickReschedule = async (req: Request, res: Response) => {
       });
     }
 
-    // Check for conflicts at new time
-    const conflicts = await prisma.appointment.findMany({
+    // Check for conflicts at new time using proper numerical time comparison
+    // This fixes the bug where "8:30" > "09:00" in string comparison
+    const normalizedStartTime = normalizeTimeFormat(startTime);
+    const normalizedEndTime = normalizeTimeFormat(endTime);
+    const newStartMinutes = timeToMinutes(normalizedStartTime);
+    const newEndMinutes = timeToMinutes(normalizedEndTime);
+
+    const existingAppointments = await prisma.appointment.findMany({
       where: {
         id: { not: id },
         clinicianId: targetClinicianId,
@@ -1389,26 +1422,6 @@ export const quickReschedule = async (req: Request, res: Response) => {
         status: {
           in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
         },
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: startTime } },
-              { endTime: { gt: startTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { lt: endTime } },
-              { endTime: { gte: endTime } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { gte: startTime } },
-              { endTime: { lte: endTime } },
-            ],
-          },
-        ],
       },
       include: {
         client: {
@@ -1418,6 +1431,16 @@ export const quickReschedule = async (req: Request, res: Response) => {
           },
         },
       },
+    });
+
+    // Filter conflicts using proper numerical time comparison
+    const conflicts = existingAppointments.filter((apt) => {
+      const existingStart = timeToMinutes(apt.startTime);
+      const existingEnd = timeToMinutes(apt.endTime);
+      const startsWithinExisting = newStartMinutes >= existingStart && newStartMinutes < existingEnd;
+      const endsWithinExisting = newEndMinutes > existingStart && newEndMinutes <= existingEnd;
+      const containsExisting = newStartMinutes <= existingStart && newEndMinutes >= existingEnd;
+      return startsWithinExisting || endsWithinExisting || containsExisting;
     });
 
     if (conflicts.length > 0) {
@@ -1540,33 +1563,19 @@ export const validateTimeSlot = async (req: Request, res: Response) => {
       });
     }
 
-    // Check for conflicts
+    // Check for conflicts using proper numerical time comparison
+    // This fixes the bug where "8:30" > "09:00" in string comparison
+    const normalizedStartTime = normalizeTimeFormat(startTime);
+    const normalizedEndTime = normalizeTimeFormat(endTime);
+    const newStartMinutes = timeToMinutes(normalizedStartTime);
+    const newEndMinutes = timeToMinutes(normalizedEndTime);
+
     const whereClause: any = {
       clinicianId,
       appointmentDate: newDate,
       status: {
         in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN', 'IN_SESSION'],
       },
-      OR: [
-        {
-          AND: [
-            { startTime: { lte: startTime } },
-            { endTime: { gt: startTime } },
-          ],
-        },
-        {
-          AND: [
-            { startTime: { lt: endTime } },
-            { endTime: { gte: endTime } },
-          ],
-        },
-        {
-          AND: [
-            { startTime: { gte: startTime } },
-            { endTime: { lte: endTime } },
-          ],
-        },
-      ],
     };
 
     // Exclude the appointment being moved
@@ -1574,7 +1583,7 @@ export const validateTimeSlot = async (req: Request, res: Response) => {
       whereClause.id = { not: appointmentId };
     }
 
-    const conflicts = await prisma.appointment.findMany({
+    const existingAppointments = await prisma.appointment.findMany({
       where: whereClause,
       include: {
         client: {
@@ -1584,6 +1593,16 @@ export const validateTimeSlot = async (req: Request, res: Response) => {
           },
         },
       },
+    });
+
+    // Filter conflicts using proper numerical time comparison
+    const conflicts = existingAppointments.filter((apt) => {
+      const existingStart = timeToMinutes(apt.startTime);
+      const existingEnd = timeToMinutes(apt.endTime);
+      const startsWithinExisting = newStartMinutes >= existingStart && newStartMinutes < existingEnd;
+      const endsWithinExisting = newEndMinutes > existingStart && newEndMinutes <= existingEnd;
+      const containsExisting = newStartMinutes <= existingStart && newEndMinutes >= existingEnd;
+      return startsWithinExisting || endsWithinExisting || containsExisting;
     });
 
     const isAvailable = conflicts.length === 0;
