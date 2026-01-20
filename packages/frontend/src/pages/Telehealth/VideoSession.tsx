@@ -96,7 +96,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   const [showSessionSummary, setShowSessionSummary] = useState(false); // NEW: Show session summary modal
   const [isFullscreen, setIsFullscreen] = useState(false); // NEW: Fullscreen state
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false); // NEW: Speaker mute state
-  const [pipMode, setPipMode] = useState<PiPMode>('full'); // NEW: Picture-in-Picture mode
+  const [pipMode, setPipMode] = useState<PiPMode>('side-by-side'); // Default to side-by-side view
   const [showWhiteboard, setShowWhiteboard] = useState(false); // NEW: Whiteboard visibility
   const [showBackgroundEffects, setShowBackgroundEffects] = useState(false); // NEW: Background effects panel
   const [backgroundBlurIntensity, setBackgroundBlurIntensity] = useState(0); // NEW: Background blur intensity
