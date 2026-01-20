@@ -228,11 +228,29 @@ export default function WaitingRoom({ appointmentId, onSessionStart }: WaitingRo
     );
   };
 
-  // Cleanup stream on unmount
+  // Cleanup stream on unmount - MUST clear srcObject before stopping tracks to avoid removeChild errors
   useEffect(() => {
     return () => {
+      // First, clear srcObject from video element to prevent DOM conflicts
+      if (videoRef.current) {
+        try {
+          videoRef.current.srcObject = null;
+          console.log('✅ WaitingRoom: Cleared video srcObject');
+        } catch (e) {
+          console.warn('WaitingRoom: Could not clear video srcObject:', e);
+        }
+      }
+      // Then stop all tracks
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch (e) {
+            console.warn('WaitingRoom: Could not stop track:', e);
+          }
+        });
+        streamRef.current = null;
+        console.log('✅ WaitingRoom: Stopped all media tracks');
       }
     };
   }, []);
