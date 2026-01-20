@@ -386,8 +386,10 @@ export default function NewAppointment() {
       return;
     }
 
-    // Convert date + time to ISO datetime format for backend
-    const appointmentDateTime = new Date(`${formData.appointmentDate}T${formData.startTime}:00`).toISOString();
+    // Format date + time as ISO datetime WITHOUT timezone conversion
+    // We treat the local date/time as UTC to prevent date shifting
+    // This ensures "Jan 19 at 8:45pm" stays as "Jan 19 at 8:45pm" regardless of user's timezone
+    const appointmentDateTime = `${formData.appointmentDate}T${formData.startTime}:00.000Z`;
 
     // Prepare data for backend
     const submitData: any = {

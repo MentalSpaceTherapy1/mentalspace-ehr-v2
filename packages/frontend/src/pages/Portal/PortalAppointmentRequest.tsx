@@ -173,10 +173,16 @@ export default function PortalAppointmentRequest() {
       const selectedTypeObj = appointmentTypes.find((t) => t.value === selectedType);
       const duration = selectedTypeObj?.duration || 60;
 
+      // Format date using LOCAL time (not UTC) to prevent date shifting
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const localDateStr = `${year}-${month}-${day}`;
+
       const response = await api.post(
         '/portal/appointments/request',
         {
-          appointmentDate: selectedDate.toISOString().split('T')[0],
+          appointmentDate: localDateStr,
           startTime: selectedTime,
           duration,
           appointmentType: selectedType,

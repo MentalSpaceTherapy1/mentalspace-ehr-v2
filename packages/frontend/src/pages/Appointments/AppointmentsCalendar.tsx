@@ -307,8 +307,12 @@ export default function AppointmentsCalendar() {
       return;
     }
 
-    // Format date and times
-    const appointmentDate = newStart.toISOString().split('T')[0];
+    // Format date and times using LOCAL time (not UTC) to prevent date shifting
+    // Use getFullYear/Month/Date instead of toISOString() which converts to UTC
+    const year = newStart.getFullYear();
+    const month = String(newStart.getMonth() + 1).padStart(2, '0');
+    const day = String(newStart.getDate()).padStart(2, '0');
+    const appointmentDate = `${year}-${month}-${day}`;
     const startTime = `${newStart.getHours().toString().padStart(2, '0')}:${newStart.getMinutes().toString().padStart(2, '0')}`;
     const endTime = `${newEnd.getHours().toString().padStart(2, '0')}:${newEnd.getMinutes().toString().padStart(2, '0')}`;
 
@@ -336,8 +340,12 @@ export default function AppointmentsCalendar() {
       return;
     }
 
-    // Format date and times
-    const appointmentDate = newStart.toISOString().split('T')[0];
+    // Format date and times using LOCAL time (not UTC) to prevent date shifting
+    // Use getFullYear/Month/Date instead of toISOString() which converts to UTC
+    const year = newStart.getFullYear();
+    const month = String(newStart.getMonth() + 1).padStart(2, '0');
+    const day = String(newStart.getDate()).padStart(2, '0');
+    const appointmentDate = `${year}-${month}-${day}`;
     const startTime = `${newStart.getHours().toString().padStart(2, '0')}:${newStart.getMinutes().toString().padStart(2, '0')}`;
     const endTime = `${newEnd.getHours().toString().padStart(2, '0')}:${newEnd.getMinutes().toString().padStart(2, '0')}`;
 
