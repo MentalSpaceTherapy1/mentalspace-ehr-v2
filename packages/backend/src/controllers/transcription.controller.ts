@@ -23,10 +23,18 @@ const transcriptConsentSchema = z.object({
   consent: z.boolean(),
 });
 
+// Helper to parse boolean from query string
+const booleanFromString = z
+  .union([z.boolean(), z.string()])
+  .transform((val) => {
+    if (typeof val === 'boolean') return val;
+    return val === 'true' || val === '1';
+  });
+
 const getTranscriptsSchema = z.object({
-  includePartial: z.boolean().optional().default(false),
-  limit: z.number().min(1).max(5000).optional().default(1000),
-  offset: z.number().min(0).optional().default(0),
+  includePartial: booleanFromString.optional().default(false),
+  limit: z.coerce.number().min(1).max(5000).optional().default(1000),
+  offset: z.coerce.number().min(0).optional().default(0),
 });
 
 /**
