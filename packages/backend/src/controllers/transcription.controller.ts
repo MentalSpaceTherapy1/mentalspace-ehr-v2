@@ -71,8 +71,7 @@ export const startTranscription = async (req: Request, res: Response) => {
       sessionId: req.params.sessionId,
     });
 
-    const statusCode = error.message?.includes('consent') ? 403 : 400;
-    res.status(statusCode).json({
+    res.status(400).json({
       success: false,
       message: error.message || 'Failed to start transcription',
     });

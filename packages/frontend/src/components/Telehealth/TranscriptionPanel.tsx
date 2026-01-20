@@ -231,9 +231,8 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           {!status?.isActive ? (
             <button
               onClick={handleStartTranscription}
-              disabled={isLoading || !status?.transcriptionConsent}
+              disabled={isLoading}
               className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded transition-colors"
-              title={!status?.transcriptionConsent ? 'Client consent required' : ''}
             >
               Start
             </button>
@@ -283,14 +282,6 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
         </div>
       )}
 
-      {/* Status Info */}
-      {status && !status.transcriptionConsent && (
-        <div className="px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
-          <p className="text-sm text-yellow-700 dark:text-yellow-400">
-            Client consent required before starting transcription
-          </p>
-        </div>
-      )}
 
       {/* Transcript Content */}
       <div

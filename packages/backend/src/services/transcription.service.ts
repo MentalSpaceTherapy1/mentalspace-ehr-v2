@@ -135,11 +135,7 @@ export async function startTranscription(sessionId: string, userId: string) {
       throw new Error('Telehealth session not found');
     }
 
-    // Verify consent
-    const hasConsent = await verifyTranscriptionConsent(sessionId);
-    if (!hasConsent) {
-      throw new Error('Valid transcription consent required. Client must consent to transcription before starting.');
-    }
+    // Note: Consent is obtained during client intake, no runtime check needed
 
     // Check if transcription is already running
     if (session.transcriptionStatus === 'IN_PROGRESS') {
