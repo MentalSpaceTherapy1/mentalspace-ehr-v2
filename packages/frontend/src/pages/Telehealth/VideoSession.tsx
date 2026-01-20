@@ -793,28 +793,53 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
     // The room cleanup happens in cleanupTwilioSession
   }, [room]); // Run when room changes and refs are available
 
-  // Re-attach local video tracks when PiP mode changes
+  // Re-attach video tracks when PiP mode changes
   // This fixes the issue where video disappears when switching between modes
   useEffect(() => {
-    if (!room || !localVideoRef.current) {
+    if (!room || !localVideoRef.current || !remoteVideoRef.current) {
       return;
     }
 
-    console.log('🔄 Re-attaching local video tracks for PiP mode:', pipMode);
+    console.log('🔄 Re-attaching video tracks for PiP mode:', pipMode);
 
-    // Clear existing video elements from the container
-    const container = localVideoRef.current;
-    while (container.firstChild) {
-      container.removeChild(container.firstChild);
+    // Clear and re-attach local video
+    const localContainer = localVideoRef.current;
+    while (localContainer.firstChild) {
+      localContainer.removeChild(localContainer.firstChild);
     }
 
     // Re-attach all local video tracks to the new container
     room.localParticipant.videoTracks.forEach((publication: any) => {
       if (publication.track) {
         const element = publication.track.attach();
-        container.appendChild(element);
+        localContainer.appendChild(element);
         console.log('✅ Re-attached local video track to new container');
       }
+    });
+
+    // Clear and re-attach remote video
+    const remoteContainer = remoteVideoRef.current;
+    while (remoteContainer.firstChild) {
+      remoteContainer.removeChild(remoteContainer.firstChild);
+    }
+
+    // Re-attach all remote participant video tracks
+    room.participants.forEach((participant: any) => {
+      participant.videoTracks.forEach((publication: any) => {
+        if (publication.track) {
+          const element = publication.track.attach();
+          remoteContainer.appendChild(element);
+          console.log('✅ Re-attached remote video track to new container');
+        }
+      });
+      // Also re-attach audio tracks
+      participant.audioTracks.forEach((publication: any) => {
+        if (publication.track) {
+          const element = publication.track.attach();
+          remoteContainer.appendChild(element);
+          console.log('✅ Re-attached remote audio track to new container');
+        }
+      });
     });
   }, [pipMode, room]); // Run when PiP mode changes
 
@@ -1356,6 +1381,8 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
         sessionData={{
           id: sessionData.id,
           clientName: `${sessionData.appointment?.client?.firstName || ''} ${sessionData.appointment?.client?.lastName || ''}`.trim() || 'Client',
+          clientId: sessionData.appointment?.client?.id || sessionData.appointment?.clientId,
+          appointmentId: sessionData.appointmentId || sessionData.appointment?.id,
           startTime: sessionStartTime,
           endTime: new Date(),
           duration: Math.round((new Date().getTime() - sessionStartTime.getTime()) / 1000 / 60), // Duration in minutes

@@ -267,6 +267,17 @@ export async function getTranscripts(sessionId: string, options?: {
   offset?: number;
 }) {
   try {
+    // Validate session exists first
+    const session = await prisma.telehealthSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true },
+    });
+
+    if (!session) {
+      logger.warn('Attempted to get transcripts for non-existent session', { sessionId });
+      return []; // Return empty array for non-existent sessions
+    }
+
     const where: any = { sessionId };
     if (!options?.includePartial) {
       where.isPartial = false;
@@ -422,7 +433,7 @@ async function processTranscriptResult(sessionId: string, result: Result) {
       return;
     }
 
-    const isPartial = !result.IsPartial;
+    const isPartial = result.IsPartial;
     const speakerLabel = result.Alternatives[0].Items?.[0]?.Speaker || 'UNKNOWN';
     const startTime = result.StartTime || 0;
     const endTime = result.EndTime || 0;

@@ -9,6 +9,7 @@ import { setupProductivityHandlers } from './handlers/productivity';
 import { setupCollaborationHandlers } from './handlers/collaboration';
 import { setupNotificationHandlers } from './handlers/notifications';
 import { setupTranscriptionHandlers } from './handlers/transcription';
+import { setupChatHandlers } from './handlers/chat';
 
 let io: SocketIOServer | null = null;
 let pubClient: ReturnType<typeof createClient> | null = null;
@@ -81,6 +82,7 @@ export async function initializeSocketIO(server: HTTPServer): Promise<SocketIOSe
     setupCollaborationHandlers(ioInstance, socket);
     setupNotificationHandlers(ioInstance, socket);
     setupTranscriptionHandlers(ioInstance, socket);
+    setupChatHandlers(ioInstance, socket);
 
     // Handle disconnection
     socket.on('disconnect', (reason) => {

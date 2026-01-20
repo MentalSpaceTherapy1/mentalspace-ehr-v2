@@ -118,6 +118,24 @@ export const stopTranscription = async (req: Request, res: Response) => {
 export const getTranscripts = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
+
+    // Validate sessionId is present and is a valid UUID
+    if (!sessionId || sessionId.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID is required',
+      });
+    }
+
+    // Check UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(sessionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid session ID format',
+      });
+    }
+
     const query = getTranscriptsSchema.parse(req.query);
 
     const transcripts = await transcriptionService.getTranscripts(sessionId, {
@@ -152,6 +170,22 @@ export const getTranscripts = async (req: Request, res: Response) => {
 export const getTranscriptionStatus = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
+
+    // Validate sessionId is present and valid
+    if (!sessionId || sessionId.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID is required',
+      });
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(sessionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid session ID format',
+      });
+    }
 
     const status = await transcriptionService.getTranscriptionStatus(sessionId);
 

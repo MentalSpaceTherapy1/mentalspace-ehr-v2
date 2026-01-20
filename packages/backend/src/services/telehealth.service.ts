@@ -437,6 +437,30 @@ export async function endTelehealthSession(sessionId: string, userId: string, en
       },
     });
 
+    // Update associated appointment status to COMPLETED
+    if (session.appointmentId) {
+      try {
+        await prisma.appointment.update({
+          where: { id: session.appointmentId },
+          data: {
+            status: 'COMPLETED',
+            updatedAt: new Date(),
+          },
+        });
+        logger.info('Appointment status updated to COMPLETED', {
+          appointmentId: session.appointmentId,
+          sessionId,
+        });
+      } catch (appointmentError: any) {
+        // Log but don't fail - session end is more critical
+        logger.warn('Failed to update appointment status', {
+          appointmentId: session.appointmentId,
+          sessionId,
+          error: appointmentError.message,
+        });
+      }
+    }
+
     logger.info('Telehealth session ended', {
       sessionId,
       twilioRoomSid: roomSid,

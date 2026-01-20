@@ -32,6 +32,8 @@ interface SessionSummaryModalProps {
   sessionData: {
     id: string;
     clientName: string;
+    clientId?: string; // Client ID for navigation
+    appointmentId?: string; // Appointment ID for note creation
     startTime: Date;
     endTime: Date;
     duration: number; // in minutes
@@ -68,7 +70,15 @@ export default function SessionSummaryModal({
 
   const handleCreateNote = () => {
     onClose();
-    navigate(`/clinical-notes/new?sessionId=${sessionData.id}`);
+    // Navigate with clientId in path and appointmentId in query params for proper note creation
+    if (sessionData.clientId && sessionData.appointmentId) {
+      navigate(`/clients/${sessionData.clientId}/notes/create?appointmentId=${sessionData.appointmentId}&noteType=progress-note`);
+    } else if (sessionData.clientId) {
+      navigate(`/clients/${sessionData.clientId}/notes/create?noteType=progress-note`);
+    } else {
+      // Fallback to generic route with session ID
+      navigate(`/clinical-notes/new?sessionId=${sessionData.id}`);
+    }
   };
 
   const handleScheduleNext = () => {
@@ -99,8 +109,11 @@ export default function SessionSummaryModal({
 
       // Save clinician rating if provided (clinicians only)
       if (userRole === 'clinician' && rating) {
-        // TODO: Save clinician self-rating if needed
-        console.log('Clinician session rating:', rating);
+        await api.post(`/telehealth/sessions/${sessionData.id}/rating`, {
+          rating,
+          comments: comments.trim() || null,
+        });
+        console.log('✅ Clinician session rating saved:', { rating, comments });
       }
 
       // Small delay for UX

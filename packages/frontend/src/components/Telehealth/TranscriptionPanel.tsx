@@ -45,8 +45,11 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
     }
   }, [transcripts, autoScroll]);
 
-  // Load initial transcript history
+  // Load initial transcript history - only when sessionId is valid
   useEffect(() => {
+    if (!sessionId || sessionId.trim() === '') {
+      return; // Don't attempt API calls with empty sessionId
+    }
     loadTranscriptHistory();
     loadTranscriptionStatus();
   }, [sessionId]);
