@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import ICD10Autocomplete from '../../components/ClinicalNotes/ICD10Autocomplete';
@@ -41,8 +41,12 @@ export default function ClinicalNoteForm() {
   const { clientId, noteId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const isEdit = !!noteId;
 
+  // Get sessionId from URL query params (for transcript integration)
+  const sessionId = searchParams.get('sessionId');
+  const [showTranscript, setShowTranscript] = useState(false);
 
   // Form state
   const [noteType, setNoteType] = useState('Progress Note');
@@ -93,6 +97,16 @@ export default function ClinicalNoteForm() {
       return response.data.data;
     },
     enabled: !!clientId,
+  });
+
+  // Fetch session transcript if sessionId is provided
+  const { data: transcriptData, isLoading: transcriptLoading } = useQuery({
+    queryKey: ['session-transcript', sessionId],
+    queryFn: async () => {
+      const response = await api.get(`/telehealth/sessions/${sessionId}/transcription/formatted`);
+      return response.data.data;
+    },
+    enabled: !!sessionId,
   });
 
   // Populate form if editing
@@ -202,6 +216,92 @@ export default function ClinicalNoteForm() {
           </h1>
           <p className="text-gray-600 mt-2">Complete all required fields for clinical documentation</p>
         </div>
+
+        {/* Session Transcript Panel */}
+        {sessionId && (
+          <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl shadow-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowTranscript(!showTranscript)}
+              className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-blue-100 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <div>
+                  <h3 className="text-lg font-bold text-blue-800">Session Transcript Available</h3>
+                  <p className="text-sm text-blue-600">Click to {showTranscript ? 'hide' : 'view'} the transcript from the video session</p>
+                </div>
+              </div>
+              <svg
+                className={`w-5 h-5 text-blue-600 transform transition-transform ${showTranscript ? 'rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showTranscript && (
+              <div className="px-6 pb-6 border-t border-blue-200">
+                {transcriptLoading ? (
+                  <div className="py-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p className="text-blue-600">Loading transcript...</p>
+                  </div>
+                ) : transcriptData?.transcript ? (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-gray-800">Transcript Content</h4>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(transcriptData.transcript);
+                            alert('Transcript copied to clipboard!');
+                          }}
+                          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          </svg>
+                          Copy All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Pre-fill the subjective field with transcript
+                            setSubjective(prev => prev ? `${prev}\n\n--- Transcript ---\n${transcriptData.transcript}` : transcriptData.transcript);
+                          }}
+                          className="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Add to Subjective
+                        </button>
+                      </div>
+                    </div>
+                    <div className="bg-white border border-gray-200 rounded-xl p-4 max-h-96 overflow-y-auto">
+                      <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">{transcriptData.transcript}</pre>
+                    </div>
+                    <p className="mt-3 text-sm text-gray-500 italic">
+                      Tip: Use the transcript as reference while writing your SOAP notes. You can copy specific sections or add the full transcript to the Subjective field.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p>No transcript available for this session.</p>
+                    <p className="text-sm mt-1">The session may not have had transcription enabled.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Workflow Alerts */}
         {saveMutation.isError && (

@@ -22,6 +22,7 @@ import {
   Event,
   Schedule,
   Star,
+  Description,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
@@ -70,14 +71,34 @@ export default function SessionSummaryModal({
 
   const handleCreateNote = () => {
     onClose();
-    // Navigate with clientId in path and appointmentId in query params for proper note creation
+    // Navigate with clientId in path and include sessionId for transcript access
     if (sessionData.clientId && sessionData.appointmentId) {
-      navigate(`/clients/${sessionData.clientId}/notes/create?appointmentId=${sessionData.appointmentId}&noteType=progress-note`);
+      navigate(`/clients/${sessionData.clientId}/notes/create?appointmentId=${sessionData.appointmentId}&sessionId=${sessionData.id}&noteType=progress-note`);
     } else if (sessionData.clientId) {
-      navigate(`/clients/${sessionData.clientId}/notes/create?noteType=progress-note`);
+      navigate(`/clients/${sessionData.clientId}/notes/create?sessionId=${sessionData.id}&noteType=progress-note`);
     } else {
       // Fallback to generic route with session ID
       navigate(`/clinical-notes/new?sessionId=${sessionData.id}`);
+    }
+  };
+
+  const handleViewTranscript = async () => {
+    try {
+      const response = await api.get(`/telehealth/sessions/${sessionData.id}/transcription/export`, {
+        responseType: 'blob',
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `transcript-${sessionData.clientName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.txt`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: any) {
+      console.error('Failed to export transcript:', err);
+      setError('No transcript available for this session');
     }
   };
 
@@ -236,7 +257,17 @@ export default function SessionSummaryModal({
                   fullWidth
                   sx={{ justifyContent: 'flex-start', py: 1.5 }}
                 >
-                  Create Clinical Note
+                  Create Clinical Note (with Transcript)
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<Description />}
+                  onClick={handleViewTranscript}
+                  fullWidth
+                  sx={{ justifyContent: 'flex-start', py: 1.5 }}
+                >
+                  Export Session Transcript
                 </Button>
                 <Button
                   variant="outlined"
