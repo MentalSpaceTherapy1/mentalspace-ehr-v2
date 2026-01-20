@@ -438,23 +438,73 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
     }
   };
 
-  // Detach track
+  // Detach track - FIXED: Safe DOM manipulation to avoid React conflicts
   const detachTrack = (track: any) => {
-    track.detach().forEach((element: HTMLElement) => {
-      element.remove();
-    });
+    try {
+      const elements = track.detach();
+      elements.forEach((element: HTMLElement) => {
+        try {
+          // Clear srcObject first for video elements
+          if (element instanceof HTMLVideoElement && element.srcObject) {
+            const stream = element.srcObject as MediaStream;
+            stream.getTracks().forEach(t => t.stop());
+            element.srcObject = null;
+          }
+          // Safe removal - check parent relationship first
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+        } catch (e) {
+          console.warn('Could not remove track element:', e);
+        }
+      });
+    } catch (e) {
+      console.warn('Error detaching track:', e);
+    }
   };
 
-  // Clean up Twilio session - FIXED: Use refs to avoid dependency issues
+  // Clean up Twilio session - FIXED: Safe DOM cleanup to avoid React conflicts
   const cleanupTwilioSession = useCallback(() => {
     console.log('🧹 Cleaning up Twilio session...');
 
-    // Clean up local tracks (use current state)
+    // STEP 1: Clear video container srcObjects BEFORE stopping tracks
+    // This prevents the removeChild error
+    const clearVideoContainers = () => {
+      [localVideoRef.current, remoteVideoRef.current].forEach(container => {
+        if (container) {
+          const videos = container.querySelectorAll('video');
+          videos.forEach((video: HTMLVideoElement) => {
+            try {
+              if (video.srcObject) {
+                const stream = video.srcObject as MediaStream;
+                stream.getTracks().forEach(t => t.stop());
+                video.srcObject = null;
+              }
+            } catch (e) {
+              console.warn('Error clearing video srcObject:', e);
+            }
+          });
+        }
+      });
+    };
+    clearVideoContainers();
+
+    // STEP 2: Clean up local tracks (use current state)
     setLocalTracks(currentTracks => {
       currentTracks.forEach(track => {
         try {
           track.stop();
-          track.detach();
+          // Safely detach - elements are already cleaned up
+          const elements = track.detach();
+          elements.forEach((el: HTMLElement) => {
+            try {
+              if (el.parentNode) {
+                el.parentNode.removeChild(el);
+              }
+            } catch (e) {
+              // Ignore - element may already be removed
+            }
+          });
         } catch (e) {
           console.warn('Error cleaning up track:', e);
         }
@@ -462,7 +512,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
       return [];
     });
 
-    // Disconnect from room (use current state)
+    // STEP 3: Disconnect from room (use current state)
     setRoom((currentRoom: any) => {
       if (currentRoom) {
         try {
