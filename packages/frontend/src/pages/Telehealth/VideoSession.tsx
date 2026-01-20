@@ -800,47 +800,97 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
       return;
     }
 
+    // Skip if room is a mock (development mode)
+    if (room.isMock) {
+      console.log('⚠️ Mock room detected, skipping video track re-attachment');
+      return;
+    }
+
     console.log('🔄 Re-attaching video tracks for PiP mode:', pipMode);
 
-    // Clear and re-attach local video
+    // Clear and re-attach local video - use safe DOM manipulation
     const localContainer = localVideoRef.current;
-    while (localContainer.firstChild) {
-      localContainer.removeChild(localContainer.firstChild);
+    try {
+      // Safely remove all children - check parent relationship before removing
+      const localChildren = Array.from(localContainer.childNodes);
+      localChildren.forEach((child) => {
+        try {
+          if (child.parentNode === localContainer) {
+            localContainer.removeChild(child);
+          }
+        } catch (e) {
+          console.warn('Could not remove local video child:', e);
+        }
+      });
+    } catch (e) {
+      console.warn('Error clearing local container:', e);
     }
 
     // Re-attach all local video tracks to the new container
-    room.localParticipant.videoTracks.forEach((publication: any) => {
-      if (publication.track) {
-        const element = publication.track.attach();
-        localContainer.appendChild(element);
-        console.log('✅ Re-attached local video track to new container');
-      }
-    });
+    try {
+      room.localParticipant?.videoTracks?.forEach((publication: any) => {
+        if (publication.track) {
+          try {
+            const element = publication.track.attach();
+            localContainer.appendChild(element);
+            console.log('✅ Re-attached local video track to new container');
+          } catch (e) {
+            console.warn('Could not attach local video track:', e);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('Error re-attaching local tracks:', e);
+    }
 
-    // Clear and re-attach remote video
+    // Clear and re-attach remote video - use safe DOM manipulation
     const remoteContainer = remoteVideoRef.current;
-    while (remoteContainer.firstChild) {
-      remoteContainer.removeChild(remoteContainer.firstChild);
+    try {
+      // Safely remove all children - check parent relationship before removing
+      const remoteChildren = Array.from(remoteContainer.childNodes);
+      remoteChildren.forEach((child) => {
+        try {
+          if (child.parentNode === remoteContainer) {
+            remoteContainer.removeChild(child);
+          }
+        } catch (e) {
+          console.warn('Could not remove remote video child:', e);
+        }
+      });
+    } catch (e) {
+      console.warn('Error clearing remote container:', e);
     }
 
     // Re-attach all remote participant video tracks
-    room.participants.forEach((participant: any) => {
-      participant.videoTracks.forEach((publication: any) => {
-        if (publication.track) {
-          const element = publication.track.attach();
-          remoteContainer.appendChild(element);
-          console.log('✅ Re-attached remote video track to new container');
-        }
+    try {
+      room.participants?.forEach((participant: any) => {
+        participant.videoTracks?.forEach((publication: any) => {
+          if (publication.track) {
+            try {
+              const element = publication.track.attach();
+              remoteContainer.appendChild(element);
+              console.log('✅ Re-attached remote video track to new container');
+            } catch (e) {
+              console.warn('Could not attach remote video track:', e);
+            }
+          }
+        });
+        // Also re-attach audio tracks
+        participant.audioTracks?.forEach((publication: any) => {
+          if (publication.track) {
+            try {
+              const element = publication.track.attach();
+              remoteContainer.appendChild(element);
+              console.log('✅ Re-attached remote audio track to new container');
+            } catch (e) {
+              console.warn('Could not attach remote audio track:', e);
+            }
+          }
+        });
       });
-      // Also re-attach audio tracks
-      participant.audioTracks.forEach((publication: any) => {
-        if (publication.track) {
-          const element = publication.track.attach();
-          remoteContainer.appendChild(element);
-          console.log('✅ Re-attached remote audio track to new container');
-        }
-      });
-    });
+    } catch (e) {
+      console.warn('Error re-attaching remote tracks:', e);
+    }
   }, [pipMode, room]); // Run when PiP mode changes
 
   // Connect to socket for real-time features

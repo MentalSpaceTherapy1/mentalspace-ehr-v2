@@ -418,6 +418,15 @@ function App() {
             </PortalRoute>
           }
         />
+        {/* Alternative route with /session/ for consistency with staff routes */}
+        <Route
+          path="/portal/telehealth/session/:appointmentId"
+          element={
+            <PortalRoute>
+              <VideoSession />
+            </PortalRoute>
+          }
+        />
 
         {/* Staff Dashboard - requires authentication */}
         <Route
