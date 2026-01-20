@@ -150,40 +150,57 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
       setIsLoading(true);
       setError(null);
 
-      // Start backend transcription service
+      // STAFF ONLY: Audio stream is REQUIRED for transcription
+      // Check if we have the necessary audio stream before starting
+      if (!audioStream) {
+        console.error('[TranscriptionPanel] No audio stream available - cannot start transcription');
+        setError('Audio capture not available. Please ensure your microphone is connected and permissions are granted.');
+        return;
+      }
+
+      if (!socket) {
+        console.error('[TranscriptionPanel] No socket connection - cannot start transcription');
+        setError('Real-time connection not available. Please refresh the page and try again.');
+        return;
+      }
+
+      console.log('[TranscriptionPanel] Initializing audio capture for AI transcription...');
+
+      // Create new AudioCaptureService instance
+      audioCaptureRef.current = new AudioCaptureService();
+
+      // Initialize with the audio stream FIRST (before starting backend)
+      const initialized = await audioCaptureRef.current.initialize(
+        audioStream,
+        socket,
+        sessionId
+      );
+
+      if (!initialized) {
+        console.error('[TranscriptionPanel] Failed to initialize audio capture');
+        setError('Audio capture initialization failed. Please check your microphone settings.');
+        return;
+      }
+
+      // Now start backend transcription service (only after audio is ready)
       await api.post(`/telehealth/sessions/${sessionId}/transcription/start`);
       await loadTranscriptionStatus();
 
-      // STAFF ONLY: Initialize and start audio capture if audioStream is available
-      if (audioStream && socket) {
-        console.log('[TranscriptionPanel] Initializing audio capture for AI transcription...');
-
-        // Create new AudioCaptureService instance
-        audioCaptureRef.current = new AudioCaptureService();
-
-        // Initialize with the audio stream
-        const initialized = await audioCaptureRef.current.initialize(
-          audioStream,
-          socket,
-          sessionId
-        );
-
-        if (initialized) {
-          audioCaptureRef.current.start();
-          setIsCapturingAudio(true);
-          console.log('[TranscriptionPanel] Audio capture started successfully');
-        } else {
-          console.error('[TranscriptionPanel] Failed to initialize audio capture');
-          setError('Audio capture initialization failed');
-        }
-      } else {
-        console.log('[TranscriptionPanel] No audio stream available - transcription will rely on server-side capture');
-      }
+      // Start streaming audio to backend
+      audioCaptureRef.current.start();
+      setIsCapturingAudio(true);
+      console.log('[TranscriptionPanel] Audio capture started successfully');
 
       onTranscriptionToggle?.(true);
     } catch (err: any) {
       console.error('Failed to start transcription:', err);
       setError(err.response?.data?.message || 'Failed to start transcription');
+
+      // Clean up audio capture if we started it
+      if (audioCaptureRef.current) {
+        audioCaptureRef.current.destroy();
+        audioCaptureRef.current = null;
+      }
     } finally {
       setIsLoading(false);
     }
@@ -286,8 +303,9 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
           {!status?.isActive ? (
             <button
               onClick={handleStartTranscription}
-              disabled={isLoading}
+              disabled={isLoading || !audioStream}
               className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded transition-colors"
+              title={!audioStream ? 'Audio capture not available' : 'Start transcription'}
             >
               Start
             </button>
@@ -337,6 +355,14 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
         </div>
       )}
 
+      {/* Audio Capture Warning - Show when no audio stream available */}
+      {!audioStream && !status?.isActive && !error && (
+        <div className="px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
+          <p className="text-sm text-yellow-700 dark:text-yellow-400">
+            ⚠️ Audio capture not available. Ensure your microphone is connected and the video session is active before starting transcription.
+          </p>
+        </div>
+      )}
 
       {/* Transcript Content */}
       <div
