@@ -2,11 +2,61 @@
  * MentalSpace EHR - WebSocket Transcription Handler (Module 6 Phase 2)
  *
  * Real-time transcription streaming for telehealth sessions
+ * With audio capture and AWS Transcribe integration
  */
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import logger from '../../utils/logger';
 import * as transcriptionService from '../../services/transcription.service';
+
+// Audio streaming session tracking
+interface AudioStreamSession {
+  sessionId: string;
+  sampleRate: number;
+  encoding: string;
+  audioChunks: Buffer[];
+  isActive: boolean;
+  resolvers: Array<(chunk: Buffer | null) => void>;
+}
+
+// Active audio streaming sessions - maps sessionId to stream state
+const audioStreamSessions = new Map<string, AudioStreamSession>();
+
+/**
+ * Create an async generator that yields audio chunks from the session
+ */
+function createAudioChunkGenerator(sessionId: string): AsyncIterable<Buffer> {
+  return {
+    [Symbol.asyncIterator]() {
+      return {
+        async next(): Promise<IteratorResult<Buffer>> {
+          const session = audioStreamSessions.get(sessionId);
+
+          if (!session || !session.isActive) {
+            return { done: true, value: undefined as any };
+          }
+
+          // If there are buffered chunks, return one
+          if (session.audioChunks.length > 0) {
+            const chunk = session.audioChunks.shift()!;
+            return { done: false, value: chunk };
+          }
+
+          // Wait for next chunk
+          return new Promise<IteratorResult<Buffer>>((resolve) => {
+            session.resolvers.push((chunk) => {
+              if (chunk === null) {
+                resolve({ done: true, value: undefined as any });
+              } else {
+                resolve({ done: false, value: chunk });
+              }
+            });
+          });
+        },
+      };
+    },
+  };
+}
 
 /**
  * Setup transcription WebSocket handlers
@@ -95,17 +145,139 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
   });
 
   /**
+   * Start audio streaming for a session (STAFF ONLY)
+   * Initializes audio buffer and begins AWS Transcribe processing
+   */
+  socket.on('transcription:audio-start', async (data: {
+    sessionId: string;
+    sampleRate?: number;
+    encoding?: string;
+    channels?: number;
+  }) => {
+    try {
+      const { sessionId, sampleRate = 16000, encoding = 'pcm' } = data;
+
+      if (!sessionId) {
+        socket.emit('transcription:error', {
+          message: 'Session ID is required to start audio streaming',
+        });
+        return;
+      }
+
+      logger.info('Starting audio streaming for transcription', {
+        sessionId,
+        userId,
+        sampleRate,
+        encoding,
+      });
+
+      // Initialize audio stream session
+      const streamSession: AudioStreamSession = {
+        sessionId,
+        sampleRate,
+        encoding,
+        audioChunks: [],
+        isActive: true,
+        resolvers: [],
+      };
+      audioStreamSessions.set(sessionId, streamSession);
+
+      // Create async audio chunk generator
+      const audioGenerator = createAudioChunkGenerator(sessionId);
+
+      // Start processing audio stream in background
+      transcriptionService.processAudioStream(sessionId, audioGenerator, sampleRate)
+        .then(() => {
+          logger.info('Audio stream processing completed', { sessionId });
+        })
+        .catch((error: any) => {
+          logger.error('Audio stream processing failed', {
+            sessionId,
+            error: error.message,
+          });
+          socket.emit('transcription:error', {
+            sessionId,
+            message: 'Audio stream processing failed: ' + error.message,
+          });
+        });
+
+      socket.emit('transcription:audio-started', {
+        sessionId,
+        timestamp: new Date().toISOString(),
+      });
+
+    } catch (error: any) {
+      logger.error('Error starting audio streaming', {
+        error: error.message,
+        userId,
+      });
+      socket.emit('transcription:error', {
+        message: 'Failed to start audio streaming',
+      });
+    }
+  });
+
+  /**
+   * Stop audio streaming for a session
+   * Closes the audio buffer and finalizes transcription
+   */
+  socket.on('transcription:audio-stop', async (data: { sessionId: string }) => {
+    try {
+      const { sessionId } = data;
+
+      if (!sessionId) {
+        socket.emit('transcription:error', {
+          message: 'Session ID is required to stop audio streaming',
+        });
+        return;
+      }
+
+      const streamSession = audioStreamSessions.get(sessionId);
+      if (streamSession) {
+        streamSession.isActive = false;
+
+        // Resolve any pending promises with null to signal end
+        for (const resolver of streamSession.resolvers) {
+          resolver(null);
+        }
+
+        audioStreamSessions.delete(sessionId);
+
+        logger.info('Audio streaming stopped', {
+          sessionId,
+          userId,
+          totalChunksReceived: streamSession.audioChunks.length,
+        });
+      }
+
+      socket.emit('transcription:audio-stopped', {
+        sessionId,
+        timestamp: new Date().toISOString(),
+      });
+
+    } catch (error: any) {
+      logger.error('Error stopping audio streaming', {
+        error: error.message,
+        userId,
+      });
+      socket.emit('transcription:error', {
+        message: 'Failed to stop audio streaming',
+      });
+    }
+  });
+
+  /**
    * Stream audio chunks for transcription
-   * Note: This is a simplified implementation. In production, you may need
-   * to handle audio encoding, buffering, and proper streaming protocols.
+   * Buffers audio data and feeds it to AWS Transcribe
    */
   socket.on('transcription:audio-chunk', async (data: {
     sessionId: string;
-    audioData: Buffer;
+    audioData: Buffer | ArrayBuffer;
     sampleRate?: number;
+    timestamp?: number;
   }) => {
     try {
-      const { sessionId, audioData, sampleRate } = data;
+      const { sessionId, audioData, sampleRate, timestamp } = data;
 
       if (!sessionId || !audioData) {
         socket.emit('transcription:error', {
@@ -114,20 +286,36 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         return;
       }
 
-      // Note: In a real implementation, you would buffer audio chunks
-      // and process them in batches rather than one at a time
-      logger.debug('Received audio chunk for transcription', {
-        sessionId,
-        chunkSize: audioData.length,
-        sampleRate,
-      });
+      const streamSession = audioStreamSessions.get(sessionId);
+      if (!streamSession || !streamSession.isActive) {
+        // Silently ignore if session not active - may have been stopped
+        return;
+      }
 
-      // The actual transcription processing happens in the service
-      // This is just a placeholder for the WebSocket handler
-      socket.emit('transcription:chunk-received', {
-        sessionId,
-        timestamp: new Date().toISOString(),
-      });
+      // Convert ArrayBuffer to Buffer if needed
+      const audioBuffer = Buffer.isBuffer(audioData)
+        ? audioData
+        : Buffer.from(audioData);
+
+      // If there are pending resolvers, immediately deliver the chunk
+      if (streamSession.resolvers.length > 0) {
+        const resolver = streamSession.resolvers.shift()!;
+        resolver(audioBuffer);
+      } else {
+        // Buffer the chunk for later processing
+        streamSession.audioChunks.push(audioBuffer);
+      }
+
+      // Periodic logging (every 50 chunks)
+      const totalChunks = streamSession.audioChunks.length;
+      if (totalChunks % 50 === 0) {
+        logger.debug('Audio chunks received', {
+          sessionId,
+          totalChunks,
+          chunkSize: audioBuffer.length,
+        });
+      }
+
     } catch (error: any) {
       logger.error('Error processing audio chunk', {
         error: error.message,

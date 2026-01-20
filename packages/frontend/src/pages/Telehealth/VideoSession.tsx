@@ -100,6 +100,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   const [showWhiteboard, setShowWhiteboard] = useState(false); // NEW: Whiteboard visibility
   const [showBackgroundEffects, setShowBackgroundEffects] = useState(false); // NEW: Background effects panel
   const [backgroundBlurIntensity, setBackgroundBlurIntensity] = useState(0); // NEW: Background blur intensity
+  const [localAudioStream, setLocalAudioStream] = useState<MediaStream | null>(null); // AI Scribe: Audio stream for transcription (STAFF ONLY)
 
   // Socket for real-time features
   const socketRef = useRef<Socket | null>(null);
@@ -328,6 +329,16 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
           const element = track.attach();
           localVideoRef.current.appendChild(element);
           console.log('✅ Video track attached to preview');
+        }
+        // AI SCRIBE (STAFF ONLY): Extract audio MediaStream for transcription
+        if (track.kind === 'audio' && !isPortalContext) {
+          // Get the MediaStreamTrack from the Twilio LocalAudioTrack
+          const mediaStreamTrack = track.mediaStreamTrack;
+          if (mediaStreamTrack) {
+            const audioStream = new MediaStream([mediaStreamTrack]);
+            setLocalAudioStream(audioStream);
+            console.log('✅ Audio stream extracted for AI transcription (STAFF ONLY)');
+          }
         }
       });
 
@@ -1272,23 +1283,25 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
             </span>
           </button>
 
-          {/* Live Captions/Transcription Button */}
-          <button
-            onClick={() => setShowTranscription(!showTranscription)}
-            className={`fixed bottom-24 left-40 p-3 rounded-full shadow-lg transition-all duration-200 z-40 group ${
-              showTranscription
-                ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                : 'bg-gray-700 hover:bg-gray-600 text-white'
-            }`}
-            title="Toggle Live Captions"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-            </svg>
-            <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-              Live Captions
-            </span>
-          </button>
+          {/* Live Captions/Transcription Button - AI SCRIBE (STAFF/CLINICIAN ONLY) */}
+          {userRole === 'clinician' && (
+            <button
+              onClick={() => setShowTranscription(!showTranscription)}
+              className={`fixed bottom-24 left-40 p-3 rounded-full shadow-lg transition-all duration-200 z-40 group ${
+                showTranscription
+                  ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-white'
+              }`}
+              title="Toggle Live Captions"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                Live Captions
+              </span>
+            </button>
+          )}
 
           {/* Background Effects Button */}
           <button
@@ -1377,11 +1390,12 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
             onToggleFullscreen={toggleFullscreen}
           />
 
-          {/* Transcription panel */}
-          {showTranscription && (
+          {/* Transcription panel - AI Scribe feature (STAFF/CLINICIAN ONLY) */}
+          {userRole === 'clinician' && showTranscription && (
             <TranscriptionPanel
               sessionId={sessionData?.id || ''}
               onTranscriptionToggle={(enabled) => setShowTranscription(enabled)}
+              audioStream={!isPortalContext ? localAudioStream || undefined : undefined}
             />
           )}
 

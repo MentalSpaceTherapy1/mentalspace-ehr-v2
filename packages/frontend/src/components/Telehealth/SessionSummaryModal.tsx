@@ -23,6 +23,7 @@ import {
   Schedule,
   Star,
   Description,
+  AutoAwesome,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
@@ -55,6 +56,9 @@ export default function SessionSummaryModal({
   const [shareWithAdmin, setShareWithAdmin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generatingAINote, setGeneratingAINote] = useState(false);
+  const [aiNoteGenerated, setAiNoteGenerated] = useState(false);
+  const [aiNoteError, setAiNoteError] = useState<string | null>(null);
 
   // Detect if we're in portal context
   const isPortalContext = window.location.pathname.startsWith('/portal/');
@@ -99,6 +103,75 @@ export default function SessionSummaryModal({
     } catch (err: any) {
       console.error('Failed to export transcript:', err);
       setError('No transcript available for this session');
+    }
+  };
+
+  // Generate AI clinical note from session transcript (STAFF ONLY)
+  const handleGenerateAINote = async () => {
+    try {
+      setGeneratingAINote(true);
+      setAiNoteError(null);
+
+      // First, fetch the transcript
+      const transcriptResponse = await api.get(`/telehealth/sessions/${sessionData.id}/transcription`, {
+        params: {
+          includePartial: false,
+          limit: 1000,
+        },
+      });
+
+      const transcripts = transcriptResponse.data.data || [];
+
+      if (transcripts.length === 0) {
+        setAiNoteError('No transcript available. Please ensure transcription was enabled during the session.');
+        return;
+      }
+
+      // Format transcript text
+      const transcriptText = transcripts.map((t: any) =>
+        `[${t.speakerLabel}]: ${t.text}`
+      ).join('\n');
+
+      // Get session metadata
+      const sessionMetadata = {
+        sessionDate: sessionData.startTime,
+        sessionDuration: sessionData.duration,
+        clientName: sessionData.clientName,
+        sessionType: 'Individual Therapy',
+      };
+
+      // Generate AI note
+      const response = await api.post(`/telehealth/sessions/${sessionData.id}/generate-note`, {
+        transcriptText,
+        sessionMetadata,
+        noteType: 'Progress Note',
+        includeTreatmentPlanUpdates: true,
+      });
+
+      console.log('✅ AI note generated:', response.data);
+      setAiNoteGenerated(true);
+
+      // Navigate to clinical note creation with AI note prefilled
+      if (sessionData.clientId && sessionData.appointmentId) {
+        navigate(`/clients/${sessionData.clientId}/notes/create?appointmentId=${sessionData.appointmentId}&sessionId=${sessionData.id}&noteType=progress-note&aiGenerated=true`);
+      } else if (sessionData.clientId) {
+        navigate(`/clients/${sessionData.clientId}/notes/create?sessionId=${sessionData.id}&noteType=progress-note&aiGenerated=true`);
+      }
+
+      onClose();
+    } catch (err: any) {
+      console.error('Failed to generate AI note:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to generate AI note';
+
+      if (errorMessage.includes('already exists')) {
+        setAiNoteError('An AI note was already generated for this session. You can view it in the clinical notes.');
+      } else if (errorMessage.includes('Transcript too short')) {
+        setAiNoteError('The transcript is too short to generate a meaningful clinical note.');
+      } else {
+        setAiNoteError(errorMessage);
+      }
+    } finally {
+      setGeneratingAINote(false);
     }
   };
 
@@ -248,16 +321,48 @@ export default function SessionSummaryModal({
               <Typography variant="h6" gutterBottom>
                 Next Steps
               </Typography>
+              {/* AI Note Error Display */}
+              {aiNoteError && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {aiNoteError}
+                </Alert>
+              )}
+
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                {/* AI SCRIBE: Generate AI Clinical Note - PRIMARY ACTION */}
                 <Button
                   variant="contained"
+                  color="success"
+                  startIcon={generatingAINote ? <CircularProgress size={20} color="inherit" /> : <AutoAwesome />}
+                  onClick={handleGenerateAINote}
+                  disabled={generatingAINote || aiNoteGenerated}
+                  fullWidth
+                  sx={{
+                    justifyContent: 'flex-start',
+                    py: 1.5,
+                    background: 'linear-gradient(45deg, #059669 30%, #10b981 90%)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #047857 30%, #059669 90%)',
+                    },
+                  }}
+                >
+                  {generatingAINote ? 'Generating AI Note...' : aiNoteGenerated ? 'AI Note Generated!' : 'Generate AI Clinical Note'}
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: -1, ml: 1 }}>
+                  Uses AI to automatically generate a clinical note from the session transcript
+                </Typography>
+
+                <Divider sx={{ my: 1 }} />
+
+                <Button
+                  variant="outlined"
                   color="primary"
                   startIcon={<NoteAdd />}
                   onClick={handleCreateNote}
                   fullWidth
                   sx={{ justifyContent: 'flex-start', py: 1.5 }}
                 >
-                  Create Clinical Note (with Transcript)
+                  Create Manual Clinical Note
                 </Button>
                 <Button
                   variant="outlined"

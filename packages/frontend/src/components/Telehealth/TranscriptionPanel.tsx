@@ -8,9 +8,10 @@
  * - Confidence indicators
  * - Toggle visibility
  * - Export transcript
+ * - Audio capture for AI transcription (STAFF ONLY)
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { socket } from '../../lib/socket';
 import api from '../../lib/api';
 import {
@@ -18,15 +19,18 @@ import {
   TranscriptionStatus,
   TranscriptionUpdate,
 } from '../../types';
+import { AudioCaptureService } from '../../services/AudioCaptureService';
 
 interface TranscriptionPanelProps {
   sessionId: string;
   onTranscriptionToggle?: (enabled: boolean) => void;
+  audioStream?: MediaStream; // Audio stream from Twilio for capture (STAFF ONLY)
 }
 
 export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   sessionId,
   onTranscriptionToggle,
+  audioStream,
 }) => {
   const [transcripts, setTranscripts] = useState<SessionTranscript[]>([]);
   const [status, setStatus] = useState<TranscriptionStatus | null>(null);
@@ -34,9 +38,11 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [isCapturingAudio, setIsCapturingAudio] = useState(false);
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const audioCaptureRef = useRef<AudioCaptureService | null>(null);
 
   // Auto-scroll to bottom when new transcripts arrive
   useEffect(() => {
@@ -75,6 +81,17 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
       }
     };
   }, [sessionId]);
+
+  // Cleanup audio capture on unmount
+  useEffect(() => {
+    return () => {
+      if (audioCaptureRef.current) {
+        console.log('[TranscriptionPanel] Cleaning up audio capture on unmount');
+        audioCaptureRef.current.destroy();
+        audioCaptureRef.current = null;
+      }
+    };
+  }, []);
 
   const handleTranscriptUpdate = (data: TranscriptionUpdate) => {
     if (data.sessionId === sessionId) {
@@ -132,8 +149,37 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
     try {
       setIsLoading(true);
       setError(null);
+
+      // Start backend transcription service
       await api.post(`/telehealth/sessions/${sessionId}/transcription/start`);
       await loadTranscriptionStatus();
+
+      // STAFF ONLY: Initialize and start audio capture if audioStream is available
+      if (audioStream && socket) {
+        console.log('[TranscriptionPanel] Initializing audio capture for AI transcription...');
+
+        // Create new AudioCaptureService instance
+        audioCaptureRef.current = new AudioCaptureService();
+
+        // Initialize with the audio stream
+        const initialized = await audioCaptureRef.current.initialize(
+          audioStream,
+          socket,
+          sessionId
+        );
+
+        if (initialized) {
+          audioCaptureRef.current.start();
+          setIsCapturingAudio(true);
+          console.log('[TranscriptionPanel] Audio capture started successfully');
+        } else {
+          console.error('[TranscriptionPanel] Failed to initialize audio capture');
+          setError('Audio capture initialization failed');
+        }
+      } else {
+        console.log('[TranscriptionPanel] No audio stream available - transcription will rely on server-side capture');
+      }
+
       onTranscriptionToggle?.(true);
     } catch (err: any) {
       console.error('Failed to start transcription:', err);
@@ -147,6 +193,15 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
     try {
       setIsLoading(true);
       setError(null);
+
+      // Stop audio capture first (STAFF ONLY)
+      if (audioCaptureRef.current && isCapturingAudio) {
+        console.log('[TranscriptionPanel] Stopping audio capture...');
+        audioCaptureRef.current.stop();
+        setIsCapturingAudio(false);
+      }
+
+      // Stop backend transcription service
       await api.post(`/telehealth/sessions/${sessionId}/transcription/stop`);
       await loadTranscriptionStatus();
       onTranscriptionToggle?.(false);
