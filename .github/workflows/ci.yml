@@ -120,6 +120,11 @@ jobs:
           cd packages/database
           npx prisma generate
 
+      - name: Build shared package
+        run: |
+          cd packages/shared
+          npm run build
+
       - name: Build backend
         run: |
           cd packages/backend
