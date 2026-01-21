@@ -1166,9 +1166,10 @@ model TelehealthSession {
   transcriptionError     String? // Error message if transcription fails
 
   // Relations
-  transcripts SessionTranscript[] @relation("SessionTranscripts")
-  recordings  SessionRecording[]  @relation("SessionRecordings")
-  rating      SessionRating?      @relation("SessionRating")
+  transcripts     SessionTranscript[] @relation("SessionTranscripts")
+  recordings      SessionRecording[]  @relation("SessionRecordings")
+  rating          SessionRating?      @relation("SessionRating")
+  aiGeneratedNote AIGeneratedNote?    @relation("SessionAINotes")
 
   // Compliance & Security
   hipaaAuditLog Json? // Audit trail for HIPAA compliance
@@ -1326,6 +1327,7 @@ enum AIGeneratedNoteType {
 model AIGeneratedNote {
   id            String @id @default(uuid())
   sessionId     String @unique
+  session       TelehealthSession @relation("SessionAINotes", fields: [sessionId], references: [id], onDelete: Cascade)
   appointmentId String
   clientId      String
   clinicianId   String

@@ -47,13 +47,12 @@ const PROMPT_VERSION = '1.0';
 const MIN_TRANSCRIPT_LENGTH = 200;
 
 // ============================================================================
-// TODO: AI Generated Note Models Not Implemented
+// AI Generated Note Models - ENABLED
 // ============================================================================
-// The AIGeneratedNote and AIGenerationAuditLog models are not yet implemented
-// in the Prisma schema. All AI note generation functionality is disabled until
-// these models are added to packages/database/prisma/schema.prisma
+// The AIGeneratedNote and AIGenerationAuditLog models are now implemented
+// in the Prisma schema (packages/database/prisma/schema.prisma)
 
-const AI_NOTE_MODELS_NOT_IMPLEMENTED = true;
+const AI_NOTE_MODELS_NOT_IMPLEMENTED = false;
 
 function throwNotImplementedError(): never {
   throw new AIGenerationError(
