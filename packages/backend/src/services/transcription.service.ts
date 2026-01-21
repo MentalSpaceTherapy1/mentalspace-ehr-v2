@@ -343,7 +343,12 @@ export async function processAudioStream(
   audioStream: AsyncIterable<Buffer>,
   sampleRate: number = 16000
 ) {
+  let chunkCount = 0;
+  let totalBytes = 0;
+
   try {
+    logger.info('🎤 Starting processAudioStream', { sessionId, sampleRate });
+
     const session = await prisma.telehealthSession.findUnique({
       where: { id: sessionId },
     });
@@ -356,12 +361,31 @@ export async function processAudioStream(
       throw new Error('Transcription not enabled for this session');
     }
 
-    // Create audio stream generator for AWS
+    // Create audio stream generator for AWS with logging
     async function* audioGenerator() {
+      logger.info('🎤 Audio generator started, waiting for chunks...', { sessionId });
       for await (const chunk of audioStream) {
+        chunkCount++;
+        totalBytes += chunk.length;
+        if (chunkCount <= 5 || chunkCount % 100 === 0) {
+          logger.info('🎤 Yielding audio chunk to AWS', {
+            sessionId,
+            chunkNumber: chunkCount,
+            chunkSize: chunk.length,
+            totalBytes,
+          });
+        }
         yield { AudioEvent: { AudioChunk: chunk } };
       }
+      logger.info('🎤 Audio generator completed', { sessionId, totalChunks: chunkCount, totalBytes });
     }
+
+    logger.info('🎤 Creating StartMedicalStreamTranscriptionCommand', {
+      sessionId,
+      sampleRate,
+      specialty: MEDICAL_SPECIALTY,
+      type: MEDICAL_TYPE,
+    });
 
     // Start streaming transcription
     const command = new StartMedicalStreamTranscriptionCommand({
@@ -376,30 +400,56 @@ export async function processAudioStream(
       AudioStream: audioGenerator(),
     });
 
+    logger.info('🎤 Sending command to AWS Transcribe Medical...', { sessionId });
     const response = await transcribeStreamingClient.send(command);
+    logger.info('🎤 AWS Transcribe Medical response received', {
+      sessionId,
+      hasTranscriptStream: !!response.TranscriptResultStream,
+      requestId: response.$metadata?.requestId,
+    });
 
     // Store stream reference for cleanup
     activeStreams.set(sessionId, response);
 
     // Process transcription results
     if (response.TranscriptResultStream) {
+      let resultCount = 0;
+      logger.info('🎤 Starting to process TranscriptResultStream', { sessionId });
+
       for await (const event of response.TranscriptResultStream) {
         if (event.TranscriptEvent) {
           const results = event.TranscriptEvent.Transcript?.Results || [];
+          resultCount += results.length;
+
+          if (results.length > 0) {
+            logger.info('🎤 Received transcript results from AWS', {
+              sessionId,
+              resultCount: results.length,
+              totalResults: resultCount,
+              firstResultText: results[0]?.Alternatives?.[0]?.Transcript?.substring(0, 50),
+            });
+          }
 
           for (const result of results) {
             await processTranscriptResult(sessionId, result);
           }
         }
       }
+      logger.info('🎤 Finished processing TranscriptResultStream', { sessionId, totalResults: resultCount });
+    } else {
+      logger.warn('🎤 No TranscriptResultStream in response', { sessionId });
     }
 
-    logger.info('Audio stream processing completed', { sessionId });
+    logger.info('🎤 Audio stream processing completed', { sessionId, totalChunks: chunkCount, totalBytes });
   } catch (error: any) {
-    logger.error('Failed to process audio stream', {
+    logger.error('🎤 Failed to process audio stream', {
       error: error.message,
+      errorName: error.name,
+      errorCode: error.code || error.$metadata?.httpStatusCode,
       stack: error.stack,
       sessionId,
+      chunksProcessed: chunkCount,
+      bytesProcessed: totalBytes,
     });
 
     // Update session with error

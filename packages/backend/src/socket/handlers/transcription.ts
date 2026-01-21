@@ -164,11 +164,12 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         return;
       }
 
-      logger.info('Starting audio streaming for transcription', {
+      logger.info('🎤 [SOCKET] transcription:audio-start received', {
         sessionId,
         userId,
         sampleRate,
         encoding,
+        socketId: socket.id,
       });
 
       // Initialize audio stream session
@@ -288,7 +289,12 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
 
       const streamSession = audioStreamSessions.get(sessionId);
       if (!streamSession || !streamSession.isActive) {
-        // Silently ignore if session not active - may have been stopped
+        // Log first time we receive chunks without active session
+        logger.warn('🎤 [SOCKET] Received audio chunk but no active session', {
+          sessionId,
+          hasSession: !!streamSession,
+          isActive: streamSession?.isActive,
+        });
         return;
       }
 
@@ -296,6 +302,19 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
       const audioBuffer = Buffer.isBuffer(audioData)
         ? audioData
         : Buffer.from(audioData);
+
+      // Log first few chunks in detail
+      const totalReceived = streamSession.audioChunks.length + streamSession.resolvers.length + 1;
+      if (totalReceived <= 5) {
+        logger.info('🎤 [SOCKET] Audio chunk received (first 5)', {
+          sessionId,
+          chunkNumber: totalReceived,
+          chunkSize: audioBuffer.length,
+          isBuffer: Buffer.isBuffer(audioData),
+          dataType: typeof audioData,
+          pendingResolvers: streamSession.resolvers.length,
+        });
+      }
 
       // If there are pending resolvers, immediately deliver the chunk
       if (streamSession.resolvers.length > 0) {
@@ -309,10 +328,11 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
       // Periodic logging (every 50 chunks)
       const totalChunks = streamSession.audioChunks.length;
       if (totalChunks % 50 === 0) {
-        logger.debug('Audio chunks received', {
+        logger.info('🎤 [SOCKET] Audio chunks buffered', {
           sessionId,
-          totalChunks,
-          chunkSize: audioBuffer.length,
+          bufferedChunks: totalChunks,
+          pendingResolvers: streamSession.resolvers.length,
+          lastChunkSize: audioBuffer.length,
         });
       }
 
