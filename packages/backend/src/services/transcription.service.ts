@@ -37,6 +37,10 @@ const transcribeStreamingClient = new TranscribeStreamingClient({ region: AWS_RE
 // Active streaming sessions
 const activeStreams = new Map<string, any>();
 
+// Session-based speaker mapping: tracks which AWS speaker ID maps to which role
+// Key: sessionId, Value: Map of AWS speaker label -> role ('CLINICIAN' | 'CLIENT')
+const sessionSpeakerMaps = new Map<string, Map<string, string>>();
+
 /**
  * Check if client has valid consent for transcription
  */
@@ -220,6 +224,9 @@ export async function stopTranscription(sessionId: string, userId: string) {
       activeStreams.delete(sessionId);
     }
 
+    // Clear speaker mapping for this session
+    clearSessionSpeakerMapping(sessionId);
+
     // Update session
     const updatedSession = await prisma.telehealthSession.update({
       where: { id: sessionId },
@@ -348,6 +355,10 @@ export async function processAudioStream(
 
   try {
     logger.info('🎤 Starting processAudioStream', { sessionId, sampleRate });
+
+    // Clear any previous speaker mapping for fresh detection
+    // This ensures the first speaker in THIS session is mapped to CLINICIAN
+    clearSessionSpeakerMapping(sessionId);
 
     const session = await prisma.telehealthSession.findUnique({
       where: { id: sessionId },
@@ -516,7 +527,7 @@ async function processTranscriptResult(sessionId: string, result: Result) {
     const transcript = await prisma.sessionTranscript.create({
       data: {
         sessionId,
-        speakerLabel: mapSpeakerLabel(speakerLabel),
+        speakerLabel: mapSpeakerLabel(speakerLabel, sessionId),
         text: alternative.Transcript,
         startTime,
         endTime,
@@ -552,35 +563,72 @@ async function processTranscriptResult(sessionId: string, result: Result) {
 }
 
 /**
- * Map AWS speaker labels to human-readable labels
- * AWS Transcribe can return:
- * - Numeric: 0, 1 (as numbers or strings)
- * - String: 'spk_0', 'spk_1', 'speaker_0', 'speaker_1'
+ * Map AWS speaker labels to human-readable labels using dynamic session-based mapping
+ *
+ * IMPORTANT: AWS Transcribe assigns speaker IDs (0, 1, spk_0, spk_1, etc.) based on
+ * internal detection algorithms, NOT based on who speaks first or session roles.
+ *
+ * Our approach: Use dynamic mapping per session
+ * - First unique speaker detected = CLINICIAN (clinician always starts/joins first)
+ * - Second unique speaker detected = CLIENT
+ * - Any additional speakers = SPEAKER_3, SPEAKER_4, etc.
  */
-function mapSpeakerLabel(awsLabel: string): string {
+function mapSpeakerLabel(awsLabel: string, sessionId: string): string {
   // Normalize the label
   const normalized = String(awsLabel).toLowerCase().trim();
 
-  // Handle all variations of speaker 0 (first speaker - usually clinician)
-  if (normalized === '0' || normalized === 'spk_0' || normalized === 'speaker_0') {
-    return 'CLINICIAN';
-  }
-  // Handle all variations of speaker 1 (second speaker - usually client)
-  if (normalized === '1' || normalized === 'spk_1' || normalized === 'speaker_1') {
-    return 'CLIENT';
-  }
-  // Handle additional speakers if any
-  if (normalized === '2' || normalized === 'spk_2' || normalized === 'speaker_2') {
-    return 'SPEAKER_3';
+  // Handle undefined/null/empty labels
+  if (!normalized || normalized === 'undefined' || normalized === 'null') {
+    return 'UNKNOWN';
   }
 
-  // Return original if unknown format (but log it for debugging)
-  logger.warn('🎤 [SPEAKER MAPPING] Unknown speaker label format', {
-    originalLabel: awsLabel,
+  // Get or create the speaker map for this session
+  let speakerMap = sessionSpeakerMaps.get(sessionId);
+  if (!speakerMap) {
+    speakerMap = new Map<string, string>();
+    sessionSpeakerMaps.set(sessionId, speakerMap);
+  }
+
+  // Check if we've already mapped this AWS speaker
+  const existingMapping = speakerMap.get(normalized);
+  if (existingMapping) {
+    return existingMapping;
+  }
+
+  // Assign role based on order of detection
+  // First speaker = CLINICIAN (they start the session and are always first)
+  // Second speaker = CLIENT
+  const speakerCount = speakerMap.size;
+  let role: string;
+
+  if (speakerCount === 0) {
+    role = 'CLINICIAN';
+  } else if (speakerCount === 1) {
+    role = 'CLIENT';
+  } else {
+    role = `SPEAKER_${speakerCount + 1}`;
+  }
+
+  // Save the mapping
+  speakerMap.set(normalized, role);
+
+  logger.info('🎤 [SPEAKER MAPPING] New speaker detected and mapped', {
+    sessionId,
+    awsLabel,
     normalizedLabel: normalized,
+    assignedRole: role,
+    totalSpeakers: speakerCount + 1,
   });
 
-  return awsLabel || 'UNKNOWN';
+  return role;
+}
+
+/**
+ * Clear speaker mapping for a session (call when session ends or transcription restarts)
+ */
+function clearSessionSpeakerMapping(sessionId: string): void {
+  sessionSpeakerMaps.delete(sessionId);
+  logger.debug('🎤 [SPEAKER MAPPING] Cleared speaker mapping for session', { sessionId });
 }
 
 /**
