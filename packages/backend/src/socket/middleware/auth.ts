@@ -9,19 +9,30 @@ const ACCESS_TOKEN_COOKIE = 'access_token';
 
 /**
  * Socket.IO authentication middleware
- * Supports both:
- * 1. JWT token from handshake auth or query params (legacy/explicit)
- * 2. Session token from httpOnly cookies (preferred for browser clients)
+ * Supports multiple auth methods with proper fallback:
+ * 1. Session token from handshake auth (localStorage token)
+ * 2. JWT from httpOnly cookies (preferred for browser clients)
+ * 3. JWT from handshake auth (if session fails)
+ *
+ * CRITICAL: When session token validation fails, we must also try the
+ * httpOnly cookie JWT, not just retry JWT validation with the same token.
  */
 export async function authenticateSocket(
   socket: Socket,
   next: (err?: ExtendedError) => void
 ): Promise<void> {
   try {
-    // Detailed logging for debugging socket auth issues
+    // Extract all possible token sources upfront
     const authToken = socket.handshake.auth.token;
     const queryToken = socket.handshake.query.token;
     const cookieHeader = socket.handshake.headers.cookie;
+
+    // Parse cookies to get httpOnly JWT (if available)
+    let cookieJwt: string | undefined;
+    if (cookieHeader) {
+      const cookies = parseCookies(cookieHeader);
+      cookieJwt = cookies[ACCESS_TOKEN_COOKIE];
+    }
 
     logger.info('🔌 [SOCKET AUTH] Connection attempt', {
       socketId: socket.id,
@@ -30,33 +41,24 @@ export async function authenticateSocket(
       authTokenLength: authToken ? String(authToken).length : 0,
       hasQueryToken: !!queryToken,
       hasCookieHeader: !!cookieHeader,
-      cookieHeaderLength: cookieHeader ? cookieHeader.length : 0,
+      hasCookieJwt: !!cookieJwt,
+      cookieJwtLength: cookieJwt ? cookieJwt.length : 0,
       origin: socket.handshake.headers.origin,
     });
 
-    // Get token from handshake auth, query params, or cookies
+    // Get primary token from handshake auth or query params
     let token = authToken || queryToken;
     let tokenSource = authToken ? 'auth' : (queryToken ? 'query' : 'none');
 
-    // If no token in auth/query, try to extract from cookies
-    if (!token && cookieHeader) {
-      const cookies = parseCookies(cookieHeader);
-      token = cookies[ACCESS_TOKEN_COOKIE];
-      if (token) {
-        tokenSource = 'cookie';
-        logger.info('🔌 [SOCKET AUTH] Token found in cookie', {
-          socketId: socket.id,
-          tokenLength: token.length,
-          tokenPreview: token.substring(0, 10) + '...',
-          allCookieNames: Object.keys(cookies),
-        });
-      } else {
-        logger.warn('🔌 [SOCKET AUTH] Cookie header present but no access_token', {
-          socketId: socket.id,
-          cookieNames: Object.keys(cookies),
-          expectedCookie: ACCESS_TOKEN_COOKIE,
-        });
-      }
+    // If no token in auth/query, use cookie JWT as primary token
+    if (!token && cookieJwt) {
+      token = cookieJwt;
+      tokenSource = 'cookie';
+      logger.info('🔌 [SOCKET AUTH] Using cookie JWT as primary token', {
+        socketId: socket.id,
+        tokenLength: token.length,
+        tokenPreview: token.substring(0, 20) + '...',
+      });
     }
 
     if (!token || typeof token !== 'string') {
@@ -74,73 +76,90 @@ export async function authenticateSocket(
       socketId: socket.id,
       tokenSource,
       tokenLength: token.length,
-      tokenPreview: token.substring(0, 10) + '...',
+      tokenPreview: token.substring(0, 20) + '...',
     });
 
-    // Try session-based authentication first (for httpOnly cookie tokens)
-    logger.info('🔌 [SOCKET AUTH] Attempting session validation', {
-      socketId: socket.id,
-      tokenSource,
-    });
+    // Try session-based authentication first (if token looks like a session token)
+    // Session tokens are typically short base64 strings (43 chars), JWTs are much longer (100+)
+    const looksLikeSessionToken = token.length < 100 && !token.includes('.');
 
-    try {
-      const sessionService = (await import('../../services/session.service.js')).default;
-      const sessionData = await sessionService.validateSession(token);
-
-      logger.info('🔌 [SOCKET AUTH] Session validation result', {
+    if (looksLikeSessionToken) {
+      logger.info('🔌 [SOCKET AUTH] Token looks like session token, attempting session validation', {
         socketId: socket.id,
-        hasSessionData: !!sessionData,
-        userId: sessionData?.userId,
+        tokenSource,
+        tokenLength: token.length,
       });
 
-      if (sessionData && sessionData.userId) {
-        // Session auth successful - get user details
-        const prisma = (await import('../../services/database.js')).default;
-        const user = await prisma.user.findUnique({
-          where: { id: sessionData.userId },
-          select: {
-            id: true,
-            email: true,
-            roles: true,
-            firstName: true,
-            lastName: true,
-          },
+      try {
+        const sessionService = (await import('../../services/session.service.js')).default;
+        const sessionData = await sessionService.validateSession(token);
+
+        logger.info('🔌 [SOCKET AUTH] Session validation result', {
+          socketId: socket.id,
+          hasSessionData: !!sessionData,
+          userId: sessionData?.userId,
         });
 
-        if (user && user.id) {
-          socket.data.userId = user.id;
-          socket.data.email = user.email;
-          socket.data.roles = user.roles;
-          socket.data.authType = 'session';
-
-          logger.info('🔌 [SOCKET AUTH] ✅ Authenticated via session', {
-            socketId: socket.id,
-            userId: user.id,
-            email: user.email,
-            tokenSource,
+        if (sessionData && sessionData.userId) {
+          // Session auth successful - get user details
+          const prisma = (await import('../../services/database.js')).default;
+          const user = await prisma.user.findUnique({
+            where: { id: sessionData.userId },
+            select: {
+              id: true,
+              email: true,
+              roles: true,
+              firstName: true,
+              lastName: true,
+            },
           });
 
-          return next();
-        } else {
-          logger.warn('🔌 [SOCKET AUTH] Session valid but user not found', {
-            socketId: socket.id,
-            userId: sessionData.userId,
-          });
+          if (user && user.id) {
+            socket.data.userId = user.id;
+            socket.data.email = user.email;
+            socket.data.roles = user.roles;
+            socket.data.authType = 'session';
+
+            logger.info('🔌 [SOCKET AUTH] ✅ Authenticated via session', {
+              socketId: socket.id,
+              userId: user.id,
+              email: user.email,
+              tokenSource,
+            });
+
+            return next();
+          } else {
+            logger.warn('🔌 [SOCKET AUTH] Session valid but user not found', {
+              socketId: socket.id,
+              userId: sessionData.userId,
+            });
+          }
         }
+      } catch (sessionError) {
+        logger.warn('🔌 [SOCKET AUTH] Session validation failed', {
+          socketId: socket.id,
+          error: sessionError instanceof Error ? sessionError.message : 'Unknown',
+          tokenSource,
+        });
       }
-    } catch (sessionError) {
-      // Session auth failed, try JWT auth
-      logger.warn('🔌 [SOCKET AUTH] Session validation failed', {
-        socketId: socket.id,
-        error: sessionError instanceof Error ? sessionError.message : 'Unknown',
-        tokenSource,
-      });
+
+      // Session token failed - try cookie JWT as fallback (CRITICAL FIX)
+      if (cookieJwt && cookieJwt !== token) {
+        logger.info('🔌 [SOCKET AUTH] Session failed, trying cookie JWT as fallback', {
+          socketId: socket.id,
+          cookieJwtLength: cookieJwt.length,
+        });
+        token = cookieJwt;
+        tokenSource = 'cookie-fallback';
+      }
     }
 
-    // Fall back to JWT authentication
+    // Try JWT authentication (either primary JWT or fallback cookie JWT)
     logger.info('🔌 [SOCKET AUTH] Attempting JWT validation', {
       socketId: socket.id,
       tokenSource,
+      tokenLength: token.length,
+      tokenPreview: token.substring(0, 20) + '...',
     });
 
     const decoded = verifyToken(token);
@@ -152,11 +171,13 @@ export async function authenticateSocket(
     });
 
     if (!decoded || !decoded.userId) {
-      logger.error('🔌 [SOCKET AUTH] ❌ Both session and JWT auth failed', {
+      logger.error('🔌 [SOCKET AUTH] ❌ All auth methods failed', {
         socketId: socket.id,
         tokenSource,
         tokenLength: token.length,
-        tokenPreview: token.substring(0, 10) + '...',
+        tokenPreview: token.substring(0, 20) + '...',
+        hadCookieJwt: !!cookieJwt,
+        triedCookieFallback: tokenSource === 'cookie-fallback',
       });
       return next(new Error('Invalid authentication token'));
     }
