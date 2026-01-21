@@ -854,123 +854,84 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
     // The room cleanup happens in cleanupTwilioSession
   }, [room]); // Run when room changes and refs are available
 
-  // Re-attach video tracks when PiP mode changes
-  // This fixes the issue where video disappears when switching between modes
-  useEffect(() => {
-    if (!room || !localVideoRef.current || !remoteVideoRef.current) {
-      return;
-    }
-
-    // Skip if room is a mock (development mode)
-    if (room.isMock) {
-      console.log('⚠️ Mock room detected, skipping video track re-attachment');
-      return;
-    }
-
-    console.log('🔄 Re-attaching video tracks for PiP mode:', pipMode);
-
-    // Clear and re-attach local video - use safe DOM manipulation
-    const localContainer = localVideoRef.current;
-    try {
-      // Safely remove all children - check parent relationship before removing
-      const localChildren = Array.from(localContainer.childNodes);
-      localChildren.forEach((child) => {
-        try {
-          if (child.parentNode === localContainer) {
-            localContainer.removeChild(child);
-          }
-        } catch (e) {
-          console.warn('Could not remove local video child:', e);
-        }
-      });
-    } catch (e) {
-      console.warn('Error clearing local container:', e);
-    }
-
-    // Re-attach all local video tracks to the new container
-    try {
-      room.localParticipant?.videoTracks?.forEach((publication: any) => {
-        if (publication.track) {
-          try {
-            const element = publication.track.attach();
-            localContainer.appendChild(element);
-            console.log('✅ Re-attached local video track to new container');
-          } catch (e) {
-            console.warn('Could not attach local video track:', e);
-          }
-        }
-      });
-    } catch (e) {
-      console.warn('Error re-attaching local tracks:', e);
-    }
-
-    // Clear and re-attach remote video - use safe DOM manipulation
-    const remoteContainer = remoteVideoRef.current;
-    try {
-      // Safely remove all children - check parent relationship before removing
-      const remoteChildren = Array.from(remoteContainer.childNodes);
-      remoteChildren.forEach((child) => {
-        try {
-          if (child.parentNode === remoteContainer) {
-            remoteContainer.removeChild(child);
-          }
-        } catch (e) {
-          console.warn('Could not remove remote video child:', e);
-        }
-      });
-    } catch (e) {
-      console.warn('Error clearing remote container:', e);
-    }
-
-    // Re-attach all remote participant video tracks
-    try {
-      room.participants?.forEach((participant: any) => {
-        participant.videoTracks?.forEach((publication: any) => {
-          if (publication.track) {
-            try {
-              const element = publication.track.attach();
-              remoteContainer.appendChild(element);
-              console.log('✅ Re-attached remote video track to new container');
-            } catch (e) {
-              console.warn('Could not attach remote video track:', e);
-            }
-          }
-        });
-        // Also re-attach audio tracks
-        participant.audioTracks?.forEach((publication: any) => {
-          if (publication.track) {
-            try {
-              const element = publication.track.attach();
-              remoteContainer.appendChild(element);
-              console.log('✅ Re-attached remote audio track to new container');
-            } catch (e) {
-              console.warn('Could not attach remote audio track:', e);
-            }
-          }
-        });
-      });
-    } catch (e) {
-      console.warn('Error re-attaching remote tracks:', e);
-    }
-  }, [pipMode, room]); // Run when PiP mode changes
+  // NOTE: Video track re-attachment on PiP mode change is NO LONGER NEEDED
+  // The video containers are now ALWAYS mounted (using CSS-based layout switching)
+  // so tracks only need to be attached once when first created.
+  // Removing the re-attachment logic fixed the React DOM "removeChild" error
+  // that occurred when React's reconciliation conflicted with direct DOM manipulation.
 
   // Connect to socket for real-time features
   useEffect(() => {
     if (!sessionData?.id || socketRef.current) return;
 
-    console.log('🔌 Connecting to socket...');
-    const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3001', {
+    // Get auth token from localStorage for socket authentication
+    const authToken = localStorage.getItem('token') || localStorage.getItem('portalToken');
+
+    // Use explicit VITE_SOCKET_URL if provided, otherwise derive from API URL
+    let socketUrl = import.meta.env.VITE_SOCKET_URL;
+    if (!socketUrl) {
+      // Derive socket URL from API URL (remove /api/v1 path)
+      socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      try {
+        const url = new URL(socketUrl);
+        socketUrl = `${url.protocol}//${url.host}`;
+      } catch {
+        // If parsing fails, use as-is
+      }
+    }
+
+    console.log('🔌 Connecting to socket...', JSON.stringify({
+      socketUrl,
+      hasAuthToken: !!authToken,
+      authTokenLength: authToken?.length || 0,
+      authTokenPreview: authToken?.slice(0, 20) || null,
+      sessionId: sessionData.id,
+    }));
+
+    if (!authToken) {
+      console.warn('[Socket.IO] No auth token found - socket connection may fail');
+    }
+
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      // Pass auth token for session-based authentication
+      auth: {
+        token: authToken,
+      },
+      // Also pass session info in query for backward compatibility
       query: {
         sessionId: sessionData.id,
         userId: user?.id,
         userRole: userRole,
       },
+      withCredentials: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
     });
 
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('✅ Socket connected');
+      console.log('✅ Socket connected', { socketId: socket.id });
+    });
+
+    socket.on('connect_error', (error) => {
+      // Log with full stringification for production debugging
+      console.error('❌ Socket connection error:', JSON.stringify({
+        message: error.message,
+        name: error.name,
+        // @ts-ignore - Socket.IO may have additional error info
+        description: error.description,
+        // @ts-ignore
+        context: error.context,
+        stack: error.stack?.slice(0, 300),
+      }));
+      console.error('❌ Socket error raw:', error.message || String(error));
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('🔌 Socket disconnected:', reason);
     });
 
     socket.on('transcription:update', (data: any) => {
@@ -1118,147 +1079,91 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
 
   // Main video session UI
   if (sessionStatus === 'connected' && room) {
+    // CSS classes for different PiP modes - video containers always mounted, only styling changes
+    const getRemoteVideoClasses = () => {
+      switch (pipMode) {
+        case 'full':
+        case 'floating':
+          return 'absolute inset-0 w-full h-full';
+        case 'side-by-side':
+          return 'absolute left-4 top-20 bottom-32 w-[calc(50%-1rem)] rounded-lg';
+        case 'grid':
+          return 'absolute left-4 top-20 w-[calc(50%-1rem)] h-[calc(50%-4rem)] rounded-lg';
+        default:
+          return 'absolute inset-0 w-full h-full';
+      }
+    };
+
+    const getLocalVideoClasses = () => {
+      switch (pipMode) {
+        case 'full':
+          return 'absolute top-4 right-4 w-64 h-48 z-30 rounded-lg shadow-2xl border-2 border-gray-600';
+        case 'side-by-side':
+          return 'absolute right-4 top-20 bottom-32 w-[calc(50%-1rem)] rounded-lg';
+        case 'grid':
+          return 'absolute right-4 top-20 w-[calc(50%-1rem)] h-[calc(50%-4rem)] rounded-lg';
+        case 'floating':
+          return 'hidden'; // Handled by FloatingPiPWindow
+        default:
+          return 'absolute top-4 right-4 w-64 h-48 z-30 rounded-lg shadow-2xl border-2 border-gray-600';
+      }
+    };
+
     return (
       <div className="min-h-screen bg-gray-900">
         {/* Main video area */}
         <div className="relative h-screen">
-          {/* Full Screen Mode */}
-          {pipMode === 'full' && (
-            <>
-              {/* Remote video (main view) with speaking indicator */}
-              <SpeakingIndicator
-                participant={Array.from(participants.values())[0]}
-                label={`${sessionData?.appointment?.client?.firstName || 'Participant'} Speaking`}
-                className="w-full h-full"
-              >
-                <div ref={remoteVideoRef} className="w-full h-full bg-gray-800">
-                  {participants.size === 0 && (
-                    <div className="flex items-center justify-center h-full text-white text-xl">
-                      Waiting for other participant to join...
-                    </div>
-                  )}
-                </div>
-              </SpeakingIndicator>
+          {/*
+            IMPORTANT: Video containers are ALWAYS mounted to prevent React DOM conflicts with Twilio.
+            Twilio SDK directly manipulates these DOM elements, so they must remain stable.
+            Layout changes are done via CSS classes only, not conditional rendering.
+          */}
 
-              {/* Local video (picture-in-picture) with speaking indicator */}
-              <SpeakingIndicator
-                participant={room?.localParticipant}
-                label="You're Speaking"
-                className="absolute top-4 right-4 w-64 h-48 z-30"
-              >
-                <div
-                  ref={localVideoRef}
-                  className="w-64 h-48 bg-gray-700 rounded-lg shadow-2xl border-2 border-gray-600"
-                  style={{ filter: `blur(${backgroundBlurIntensity}px)` }}
-                />
-              </SpeakingIndicator>
-            </>
-          )}
-
-          {/* Side-by-Side Mode */}
-          {pipMode === 'side-by-side' && (
-            <div className="flex h-full gap-4 p-4 pt-20 pb-32">
-              {/* Remote video */}
-              <div className="flex-1">
-                <SpeakingIndicator
-                  participant={Array.from(participants.values())[0]}
-                  label={`${sessionData?.appointment?.client?.firstName || 'Participant'} Speaking`}
-                  className="w-full h-full"
-                >
-                  <div ref={remoteVideoRef} className="w-full h-full bg-gray-800 rounded-lg">
-                    {participants.size === 0 && (
-                      <div className="flex items-center justify-center h-full text-white text-xl">
-                        Waiting for other participant...
-                      </div>
-                    )}
+          {/* Remote video container - always mounted */}
+          <div className={`${getRemoteVideoClasses()} transition-all duration-300 ease-in-out`}>
+            <SpeakingIndicator
+              participant={Array.from(participants.values())[0]}
+              label={`${sessionData?.appointment?.client?.firstName || 'Participant'} Speaking`}
+              className="w-full h-full"
+            >
+              <div ref={remoteVideoRef} className="w-full h-full bg-gray-800 rounded-lg overflow-hidden">
+                {participants.size === 0 && (
+                  <div className="flex items-center justify-center h-full text-white text-xl">
+                    Waiting for other participant to join...
                   </div>
-                </SpeakingIndicator>
+                )}
               </div>
+            </SpeakingIndicator>
+          </div>
 
-              {/* Local video */}
-              <div className="flex-1">
-                <SpeakingIndicator
-                  participant={room?.localParticipant}
-                  label="You're Speaking"
-                  className="w-full h-full"
-                >
-                  <div
-                    ref={localVideoRef}
-                    className="w-full h-full bg-gray-700 rounded-lg"
-                    style={{ filter: `blur(${backgroundBlurIntensity}px)` }}
-                  />
-                </SpeakingIndicator>
-              </div>
-            </div>
-          )}
+          {/* Local video container - always mounted (hidden in floating mode) */}
+          <div
+            className={`${getLocalVideoClasses()} transition-all duration-300 ease-in-out`}
+            style={{ filter: pipMode !== 'floating' ? `blur(${backgroundBlurIntensity}px)` : undefined }}
+          >
+            <SpeakingIndicator
+              participant={room?.localParticipant}
+              label="You're Speaking"
+              className="w-full h-full"
+            >
+              <div ref={localVideoRef} className="w-full h-full bg-gray-700 rounded-lg overflow-hidden" />
+            </SpeakingIndicator>
+          </div>
 
-          {/* Grid Mode */}
-          {pipMode === 'grid' && (
-            <div className="grid grid-cols-2 gap-4 p-4 pt-20 pb-32 h-full">
-              {/* Remote video */}
-              <div className="w-full h-full">
-                <SpeakingIndicator
-                  participant={Array.from(participants.values())[0]}
-                  label={`${sessionData?.appointment?.client?.firstName || 'Participant'} Speaking`}
-                  className="w-full h-full"
-                >
-                  <div ref={remoteVideoRef} className="w-full h-full bg-gray-800 rounded-lg">
-                    {participants.size === 0 && (
-                      <div className="flex items-center justify-center h-full text-white text-xl">
-                        Waiting for other participant...
-                      </div>
-                    )}
-                  </div>
-                </SpeakingIndicator>
-              </div>
-
-              {/* Local video */}
-              <div className="w-full h-full">
-                <SpeakingIndicator
-                  participant={room?.localParticipant}
-                  label="You're Speaking"
-                  className="w-full h-full"
-                >
-                  <div
-                    ref={localVideoRef}
-                    className="w-full h-full bg-gray-700 rounded-lg"
-                    style={{ filter: `blur(${backgroundBlurIntensity}px)` }}
-                  />
-                </SpeakingIndicator>
-              </div>
-            </div>
-          )}
-
-          {/* Floating PiP Mode */}
+          {/* Floating PiP Window - only shown in floating mode, renders clone of local video */}
           {pipMode === 'floating' && (
-            <>
-              {/* Remote video (main view) */}
-              <SpeakingIndicator
-                participant={Array.from(participants.values())[0]}
-                label={`${sessionData?.appointment?.client?.firstName || 'Participant'} Speaking`}
-                className="w-full h-full"
+            <FloatingPiPWindow
+              title="You"
+              onClose={() => setPipMode('full')}
+            >
+              {/* This div doesn't use the ref - local video stays in hidden container */}
+              <div
+                className="w-full h-full bg-gray-700 flex items-center justify-center text-white text-sm"
+                style={{ filter: `blur(${backgroundBlurIntensity}px)` }}
               >
-                <div ref={remoteVideoRef} className="w-full h-full bg-gray-800">
-                  {participants.size === 0 && (
-                    <div className="flex items-center justify-center h-full text-white text-xl">
-                      Waiting for other participant to join...
-                    </div>
-                  )}
-                </div>
-              </SpeakingIndicator>
-
-              {/* Local video in draggable floating window */}
-              <FloatingPiPWindow
-                title="You"
-                onClose={() => setPipMode('full')}
-              >
-                <div
-                  ref={localVideoRef}
-                  className="w-full h-full bg-gray-700"
-                  style={{ filter: `blur(${backgroundBlurIntensity}px)` }}
-                />
-              </FloatingPiPWindow>
-            </>
+                <span className="opacity-70">Local video in floating mode</span>
+              </div>
+            </FloatingPiPWindow>
           )}
 
           {/* PiP Mode Controller */}
@@ -1396,6 +1301,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
               sessionId={sessionData?.id || ''}
               onTranscriptionToggle={(enabled) => setShowTranscription(enabled)}
               audioStream={!isPortalContext ? localAudioStream || undefined : undefined}
+              socket={socketRef.current}
             />
           )}
 
