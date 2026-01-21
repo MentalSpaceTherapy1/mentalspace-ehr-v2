@@ -170,7 +170,9 @@ const config: Config = {
   cookieOptions: {
     httpOnly: true, // CRITICAL: Prevents JavaScript access (XSS protection)
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') || 'strict',
+    // IMPORTANT: 'lax' allows cookies on cross-subdomain requests (www.* → api.*)
+    // 'strict' would block cookies on WebSocket connections from different subdomains
+    sameSite: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') || 'lax',
     domain: process.env.COOKIE_DOMAIN, // Optional: set for cross-subdomain
     path: '/',
   },
