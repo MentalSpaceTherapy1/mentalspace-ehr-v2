@@ -482,10 +482,33 @@ async function processTranscriptResult(sessionId: string, result: Result) {
     }
 
     const isPartial = result.IsPartial;
-    const speakerLabel = result.Alternatives[0].Items?.[0]?.Speaker || 'UNKNOWN';
+    const items = alternative.Items || [];
+
+    // Debug: Log what AWS returns for speaker identification
+    const firstItem = items[0];
+    logger.info('🎤 [AWS TRANSCRIBE] Result details', {
+      sessionId,
+      hasItems: items.length > 0,
+      firstItemKeys: firstItem ? Object.keys(firstItem) : [],
+      firstItemSpeaker: firstItem?.Speaker,
+      firstItemSpeakerType: typeof firstItem?.Speaker,
+      resultKeys: Object.keys(result),
+      channelId: (result as any).ChannelId,
+      transcript: alternative.Transcript?.substring(0, 50),
+    });
+
+    // Extract speaker label - AWS Transcribe uses numeric speaker IDs
+    // Speaker can be a number (0, 1) or string ('spk_0', 'spk_1')
+    let rawSpeakerLabel = firstItem?.Speaker;
+    let speakerLabel = 'UNKNOWN';
+
+    if (rawSpeakerLabel !== undefined && rawSpeakerLabel !== null) {
+      // Convert to string if numeric
+      speakerLabel = String(rawSpeakerLabel);
+    }
+
     const startTime = result.StartTime || 0;
     const endTime = result.EndTime || 0;
-    const items = alternative.Items || [];
     const confidence = items.reduce((sum, item) =>
       sum + (item.Confidence || 0), 0) / (items.length || 1);
 
@@ -530,17 +553,34 @@ async function processTranscriptResult(sessionId: string, result: Result) {
 
 /**
  * Map AWS speaker labels to human-readable labels
+ * AWS Transcribe can return:
+ * - Numeric: 0, 1 (as numbers or strings)
+ * - String: 'spk_0', 'spk_1', 'speaker_0', 'speaker_1'
  */
 function mapSpeakerLabel(awsLabel: string): string {
-  // AWS uses spk_0, spk_1, etc.
-  // We'll map the first speaker to CLINICIAN and second to CLIENT
-  // In production, you'd need additional logic to determine which is which
-  if (awsLabel === 'spk_0' || awsLabel === 'speaker_0') {
+  // Normalize the label
+  const normalized = String(awsLabel).toLowerCase().trim();
+
+  // Handle all variations of speaker 0 (first speaker - usually clinician)
+  if (normalized === '0' || normalized === 'spk_0' || normalized === 'speaker_0') {
     return 'CLINICIAN';
-  } else if (awsLabel === 'spk_1' || awsLabel === 'speaker_1') {
+  }
+  // Handle all variations of speaker 1 (second speaker - usually client)
+  if (normalized === '1' || normalized === 'spk_1' || normalized === 'speaker_1') {
     return 'CLIENT';
   }
-  return awsLabel;
+  // Handle additional speakers if any
+  if (normalized === '2' || normalized === 'spk_2' || normalized === 'speaker_2') {
+    return 'SPEAKER_3';
+  }
+
+  // Return original if unknown format (but log it for debugging)
+  logger.warn('🎤 [SPEAKER MAPPING] Unknown speaker label format', {
+    originalLabel: awsLabel,
+    normalizedLabel: normalized,
+  });
+
+  return awsLabel || 'UNKNOWN';
 }
 
 /**
