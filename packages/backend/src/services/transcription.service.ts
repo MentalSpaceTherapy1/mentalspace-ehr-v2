@@ -388,6 +388,8 @@ export async function processAudioStream(
     });
 
     // Start streaming transcription
+    // NOTE: Do NOT include NumberOfChannels when EnableChannelIdentification is false
+    // AWS Transcribe Medical rejects it with validation error otherwise
     const command = new StartMedicalStreamTranscriptionCommand({
       LanguageCode: 'en-US',
       MediaSampleRateHertz: sampleRate,
@@ -396,7 +398,7 @@ export async function processAudioStream(
       Type: MEDICAL_TYPE,
       ShowSpeakerLabel: true, // Enable speaker diarization
       EnableChannelIdentification: false,
-      NumberOfChannels: 1,
+      // NumberOfChannels is only valid when EnableChannelIdentification is true
       AudioStream: audioGenerator(),
     });
 
