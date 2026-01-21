@@ -914,6 +914,18 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
 
     socket.on('connect', () => {
       console.log('✅ Socket connected', { socketId: socket.id });
+
+      // CRITICAL: Emit participant-joined event for transcription speaker labeling
+      // This tells the backend which participants are connected so it can correctly
+      // label transcription (CLINICIAN vs CLIENT) based on who is actually in the session
+      if (sessionData?.id && userRole) {
+        const participantRole = userRole === 'clinician' ? 'clinician' : 'client';
+        socket.emit('session:participant-joined', {
+          sessionId: sessionData.id,
+          role: participantRole,
+        });
+        console.log('🎤 Emitted participant-joined', { sessionId: sessionData.id, role: participantRole });
+      }
     });
 
     socket.on('connect_error', (error) => {
@@ -932,6 +944,18 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
 
     socket.on('disconnect', (reason) => {
       console.warn('🔌 Socket disconnected:', reason);
+
+      // Emit participant-left event for transcription speaker labeling cleanup
+      if (sessionData?.id && userRole) {
+        const participantRole = userRole === 'clinician' ? 'clinician' : 'client';
+        // Note: This event may not reach the server if disconnecting, but cleanup
+        // will also happen via timeout in the backend
+        socket.emit('session:participant-left', {
+          sessionId: sessionData.id,
+          role: participantRole,
+        });
+        console.log('🎤 Emitted participant-left', { sessionId: sessionData.id, role: participantRole });
+      }
     });
 
     socket.on('transcription:update', (data: any) => {

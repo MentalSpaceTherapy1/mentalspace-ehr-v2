@@ -8,6 +8,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import logger from '../../utils/logger';
 import * as transcriptionService from '../../services/transcription.service';
+import { updateParticipantStatus, clearParticipantStatus } from '../../services/transcription.service';
 
 // Audio streaming session tracking
 interface AudioStreamSession {
@@ -138,6 +139,81 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
       });
     } catch (error: any) {
       logger.error('Error leaving transcription session', {
+        error: error.message,
+        userId,
+      });
+    }
+  });
+
+  /**
+   * Track participant joining video session (for transcription speaker labeling)
+   * CRITICAL: This event must be emitted when a participant connects to the video session
+   * so that transcription speaker labels can correctly identify CLINICIAN vs CLIENT
+   */
+  socket.on('session:participant-joined', (data: { sessionId: string; role: 'clinician' | 'client' }) => {
+    try {
+      const { sessionId, role } = data;
+
+      if (!sessionId || !role) {
+        logger.warn('🎤 [PARTICIPANT] Invalid join event - missing sessionId or role', { sessionId, role });
+        return;
+      }
+
+      // Update participant status in transcription service
+      updateParticipantStatus(sessionId, role, true);
+
+      // Notify other participants
+      io.to(`session-${sessionId}`).emit('session:participant-status', {
+        sessionId,
+        role,
+        connected: true,
+        timestamp: new Date().toISOString(),
+      });
+
+      logger.info('🎤 [PARTICIPANT] Participant joined video session', {
+        sessionId,
+        role,
+        userId,
+        socketId: socket.id,
+      });
+    } catch (error: any) {
+      logger.error('Error tracking participant join', {
+        error: error.message,
+        userId,
+      });
+    }
+  });
+
+  /**
+   * Track participant leaving video session
+   */
+  socket.on('session:participant-left', (data: { sessionId: string; role: 'clinician' | 'client' }) => {
+    try {
+      const { sessionId, role } = data;
+
+      if (!sessionId || !role) {
+        return;
+      }
+
+      // Update participant status in transcription service
+      updateParticipantStatus(sessionId, role, false);
+
+      // Notify other participants
+      io.to(`session-${sessionId}`).emit('session:participant-status', {
+        sessionId,
+        role,
+        connected: false,
+        timestamp: new Date().toISOString(),
+      });
+
+      logger.info('🎤 [PARTICIPANT] Participant left video session', {
+        sessionId,
+        role,
+        userId,
+        socketId: socket.id,
+      });
+    } catch (error: any) {
+      logger.error('Error tracking participant leave', {
         error: error.message,
         userId,
       });

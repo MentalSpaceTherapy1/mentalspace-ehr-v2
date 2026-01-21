@@ -41,6 +41,59 @@ const activeStreams = new Map<string, any>();
 // Key: sessionId, Value: Map of AWS speaker label -> role ('CLINICIAN' | 'CLIENT')
 const sessionSpeakerMaps = new Map<string, Map<string, string>>();
 
+// Track participant connection status per session
+// Key: sessionId, Value: { clinicianConnected: boolean, clientConnected: boolean }
+interface ParticipantStatus {
+  clinicianConnected: boolean;
+  clientConnected: boolean;
+}
+const sessionParticipants = new Map<string, ParticipantStatus>();
+
+/**
+ * Update participant connection status for a session
+ * Called from WebSocket handlers when participants join/leave
+ */
+export function updateParticipantStatus(
+  sessionId: string,
+  role: 'clinician' | 'client',
+  connected: boolean
+): void {
+  let status = sessionParticipants.get(sessionId);
+  if (!status) {
+    status = { clinicianConnected: false, clientConnected: false };
+    sessionParticipants.set(sessionId, status);
+  }
+
+  if (role === 'clinician') {
+    status.clinicianConnected = connected;
+  } else {
+    status.clientConnected = connected;
+  }
+
+  logger.info('🎤 [PARTICIPANT STATUS] Updated', {
+    sessionId,
+    role,
+    connected,
+    clinicianConnected: status.clinicianConnected,
+    clientConnected: status.clientConnected,
+  });
+}
+
+/**
+ * Get participant connection status for a session
+ */
+export function getParticipantStatus(sessionId: string): ParticipantStatus {
+  return sessionParticipants.get(sessionId) || { clinicianConnected: false, clientConnected: false };
+}
+
+/**
+ * Clear participant status for a session (call when session ends)
+ */
+export function clearParticipantStatus(sessionId: string): void {
+  sessionParticipants.delete(sessionId);
+  logger.debug('🎤 [PARTICIPANT STATUS] Cleared for session', { sessionId });
+}
+
 /**
  * Check if client has valid consent for transcription
  */
@@ -224,8 +277,9 @@ export async function stopTranscription(sessionId: string, userId: string) {
       activeStreams.delete(sessionId);
     }
 
-    // Clear speaker mapping for this session
+    // Clear speaker mapping and participant status for this session
     clearSessionSpeakerMapping(sessionId);
+    clearParticipantStatus(sessionId);
 
     // Update session
     const updatedSession = await prisma.telehealthSession.update({
@@ -568,10 +622,13 @@ async function processTranscriptResult(sessionId: string, result: Result) {
  * IMPORTANT: AWS Transcribe assigns speaker IDs (0, 1, spk_0, spk_1, etc.) based on
  * internal detection algorithms, NOT based on who speaks first or session roles.
  *
- * Our approach: Use dynamic mapping per session
- * - First unique speaker detected = CLINICIAN (clinician always starts/joins first)
- * - Second unique speaker detected = CLIENT
- * - Any additional speakers = SPEAKER_3, SPEAKER_4, etc.
+ * CONNECTION-AWARE MAPPING:
+ * - If only clinician is connected: ALL speech is labeled as CLINICIAN
+ *   (AWS diarization may detect multiple speakers from pitch/tone changes, but we ignore this)
+ * - If both participants connected: Use dynamic mapping
+ *   - First unique speaker detected = CLINICIAN
+ *   - Second unique speaker detected = CLIENT
+ *   - Any additional speakers = SPEAKER_3, SPEAKER_4, etc.
  */
 function mapSpeakerLabel(awsLabel: string, sessionId: string): string {
   // Normalize the label
@@ -582,6 +639,22 @@ function mapSpeakerLabel(awsLabel: string, sessionId: string): string {
     return 'UNKNOWN';
   }
 
+  // Check participant connection status
+  const participantStatus = getParticipantStatus(sessionId);
+
+  // CRITICAL: If client is NOT connected, ALL speech must be CLINICIAN
+  // AWS diarization may falsely detect multiple speakers from a single person
+  // due to pitch changes, pauses, or audio artifacts
+  if (!participantStatus.clientConnected) {
+    logger.debug('🎤 [SPEAKER MAPPING] Client not connected, forcing CLINICIAN label', {
+      sessionId,
+      awsLabel,
+      normalizedLabel: normalized,
+    });
+    return 'CLINICIAN';
+  }
+
+  // Client IS connected - use dynamic speaker mapping
   // Get or create the speaker map for this session
   let speakerMap = sessionSpeakerMaps.get(sessionId);
   if (!speakerMap) {
@@ -618,6 +691,7 @@ function mapSpeakerLabel(awsLabel: string, sessionId: string): string {
     normalizedLabel: normalized,
     assignedRole: role,
     totalSpeakers: speakerCount + 1,
+    clientConnected: participantStatus.clientConnected,
   });
 
   return role;
