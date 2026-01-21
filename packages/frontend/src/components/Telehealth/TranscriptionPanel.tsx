@@ -12,7 +12,8 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { socket } from '../../lib/socket';
+import { Socket } from 'socket.io-client';
+import { socket as globalSocket } from '../../lib/socket';
 import api from '../../lib/api';
 import {
   SessionTranscript,
@@ -25,13 +26,17 @@ interface TranscriptionPanelProps {
   sessionId: string;
   onTranscriptionToggle?: (enabled: boolean) => void;
   audioStream?: MediaStream; // Audio stream from Twilio for capture (STAFF ONLY)
+  socket?: Socket | null; // Socket from parent component (preferred) or use globalSocket
 }
 
 export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   sessionId,
   onTranscriptionToggle,
   audioStream,
+  socket: propSocket,
 }) => {
+  // Use socket from props (from VideoSession) or fall back to global socket
+  const socket = propSocket || globalSocket;
   const [transcripts, setTranscripts] = useState<SessionTranscript[]>([]);
   const [status, setStatus] = useState<TranscriptionStatus | null>(null);
   const [isVisible, setIsVisible] = useState(true);
