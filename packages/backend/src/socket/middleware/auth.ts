@@ -3,6 +3,8 @@ import { ExtendedError } from 'socket.io/dist/namespace';
 import { verifyToken } from '../../utils/jwt';
 import logger from '../../utils/logger';
 import { parse as parseCookies } from 'cookie';
+import sessionService from '../../services/session.service';
+import prisma from '../../services/database';
 
 // Cookie name for access token (must match auth.ts)
 const ACCESS_TOKEN_COOKIE = 'access_token';
@@ -83,26 +85,20 @@ export async function authenticateSocket(
     // Session tokens are typically short base64 strings (43 chars), JWTs are much longer (100+)
     const looksLikeSessionToken = token.length < 100 && !token.includes('.');
 
-    if (looksLikeSessionToken) {
-      logger.info('🔌 [SOCKET AUTH] Token looks like session token, attempting session validation', {
-        socketId: socket.id,
-        tokenSource,
-        tokenLength: token.length,
-      });
-
+    // Helper function to validate session token and get user
+    const validateSessionToken = async (sessionToken: string, source: string): Promise<boolean> => {
       try {
-        const sessionService = (await import('../../services/session.service.js')).default;
-        const sessionData = await sessionService.validateSession(token);
+        const sessionData = await sessionService.validateSession(sessionToken);
 
         logger.info('🔌 [SOCKET AUTH] Session validation result', {
           socketId: socket.id,
+          source,
           hasSessionData: !!sessionData,
           userId: sessionData?.userId,
         });
 
         if (sessionData && sessionData.userId) {
           // Session auth successful - get user details
-          const prisma = (await import('../../services/database.js')).default;
           const user = await prisma.user.findUnique({
             where: { id: sessionData.userId },
             select: {
@@ -124,10 +120,10 @@ export async function authenticateSocket(
               socketId: socket.id,
               userId: user.id,
               email: user.email,
-              tokenSource,
+              source,
             });
 
-            return next();
+            return true;
           } else {
             logger.warn('🔌 [SOCKET AUTH] Session valid but user not found', {
               socketId: socket.id,
@@ -139,16 +135,38 @@ export async function authenticateSocket(
         logger.warn('🔌 [SOCKET AUTH] Session validation failed', {
           socketId: socket.id,
           error: sessionError instanceof Error ? sessionError.message : 'Unknown',
-          tokenSource,
+          source,
         });
       }
+      return false;
+    };
 
-      // Session token failed - try cookie JWT as fallback (CRITICAL FIX)
+    if (looksLikeSessionToken) {
+      logger.info('🔌 [SOCKET AUTH] Token looks like session token, attempting session validation', {
+        socketId: socket.id,
+        tokenSource,
+        tokenLength: token.length,
+      });
+
+      // Try auth/query token first
+      if (await validateSessionToken(token, tokenSource)) {
+        return next();
+      }
+
+      // Try cookie session token as fallback (cookie also stores session token, not JWT!)
       if (cookieJwt && cookieJwt !== token) {
-        logger.info('🔌 [SOCKET AUTH] Session failed, trying cookie JWT as fallback', {
-          socketId: socket.id,
-          cookieJwtLength: cookieJwt.length,
-        });
+        const cookieLooksLikeSession = cookieJwt.length < 100 && !cookieJwt.includes('.');
+        if (cookieLooksLikeSession) {
+          logger.info('🔌 [SOCKET AUTH] Primary session failed, trying cookie session token', {
+            socketId: socket.id,
+            cookieTokenLength: cookieJwt.length,
+          });
+
+          if (await validateSessionToken(cookieJwt, 'cookie-session')) {
+            return next();
+          }
+        }
+        // If cookie doesn't look like session, try as JWT below
         token = cookieJwt;
         tokenSource = 'cookie-fallback';
       }
