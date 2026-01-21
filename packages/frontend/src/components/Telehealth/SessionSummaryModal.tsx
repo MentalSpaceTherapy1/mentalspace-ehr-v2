@@ -144,7 +144,7 @@ export default function SessionSummaryModal({
       const response = await api.post(`/telehealth/sessions/${sessionData.id}/generate-note`, {
         transcriptText,
         sessionMetadata,
-        noteType: 'Progress Note',
+        noteType: 'PROGRESS_NOTE',
         includeTreatmentPlanUpdates: true,
       });
 
