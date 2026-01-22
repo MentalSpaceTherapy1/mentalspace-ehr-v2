@@ -152,13 +152,19 @@ export default function SessionSummaryModal({
       setAiNoteGenerated(true);
 
       // Navigate to clinical note creation with AI note prefilled
+      // IMPORTANT: Return early after navigation to prevent onClose() from triggering
+      // a second navigation to /appointments (race condition fix)
       if (sessionData.clientId && sessionData.appointmentId) {
         navigate(`/clients/${sessionData.clientId}/notes/create?appointmentId=${sessionData.appointmentId}&sessionId=${sessionData.id}&noteType=progress-note&aiGenerated=true`);
+        return; // Don't call onClose() - it would navigate to /appointments
       } else if (sessionData.clientId) {
         navigate(`/clients/${sessionData.clientId}/notes/create?sessionId=${sessionData.id}&noteType=progress-note&aiGenerated=true`);
+        return; // Don't call onClose() - it would navigate to /appointments
+      } else {
+        // Handle missing clientId - show error instead of silently failing
+        setAiNoteError('Cannot create note: client information is missing from this session.');
+        return;
       }
-
-      onClose();
     } catch (err: any) {
       console.error('Failed to generate AI note:', err);
       const errorMessage = err.response?.data?.error || err.message || 'Failed to generate AI note';
