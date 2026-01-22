@@ -1525,7 +1525,8 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
         open={showSessionSummary}
         onClose={() => {
           setShowSessionSummary(false);
-          navigate('/appointments');
+          // Navigate to appropriate appointments page based on context
+          navigate(isPortalContext ? '/portal/appointments' : '/appointments');
         }}
         sessionData={{
           id: sessionData.id || sessionData.session?.id, // Staff: sessionData.id, Portal: sessionData.session.id
