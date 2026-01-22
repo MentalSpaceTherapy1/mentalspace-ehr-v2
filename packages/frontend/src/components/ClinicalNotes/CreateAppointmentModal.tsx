@@ -80,26 +80,51 @@ export default function CreateAppointmentModal({
       console.error('[CreateAppointmentModal] Full error object:', error);
       console.error('[CreateAppointmentModal] Error response:', error?.response);
       console.error('[CreateAppointmentModal] Error response data:', error?.response?.data);
+      console.error('[CreateAppointmentModal] Error response data (stringified):', JSON.stringify(error?.response?.data, null, 2));
+      console.error('[CreateAppointmentModal] Error response status:', error?.response?.status);
       console.error('[CreateAppointmentModal] Error message:', error?.message);
       console.error('[CreateAppointmentModal] Error name:', error?.name);
       console.error('[CreateAppointmentModal] Error code:', error?.code);
 
       // Try to extract the most meaningful error message
       let errorMessage = 'Failed to create appointment';
+      const statusCode = error?.response?.status;
+      const responseData = error?.response?.data;
 
-      if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error?.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+      // Handle 409 Conflict (scheduling conflict) specially
+      if (statusCode === 409) {
+        if (responseData?.message) {
+          errorMessage = responseData.message;
+        } else {
+          errorMessage = 'Scheduling conflict: An appointment already exists at this time. Please choose a different time slot.';
+        }
+        // If we have conflicts array, add more detail
+        if (responseData?.conflicts?.length > 0) {
+          const conflictCount = responseData.conflicts.length;
+          errorMessage = `Scheduling conflict: ${conflictCount} existing appointment${conflictCount > 1 ? 's' : ''} at this time. Please choose a different time slot.`;
+        }
+      } else if (responseData?.message) {
+        errorMessage = responseData.message;
+      } else if (responseData?.error) {
+        errorMessage = responseData.error;
+      } else if (responseData?.errors && Array.isArray(responseData.errors)) {
         // Handle Zod validation errors
-        errorMessage = error.response.data.errors
+        errorMessage = responseData.errors
           .map((e: any) => e.message || e.path?.join('.'))
           .filter(Boolean)
           .join(', ') || 'Validation error';
       } else if (error?.message && error.message.length > 2) {
         // Only use error.message if it's meaningful (more than 2 chars)
-        errorMessage = error.message;
+        // But provide user-friendly version for common HTTP errors
+        if (error.message.includes('status code 409')) {
+          errorMessage = 'Scheduling conflict: An appointment already exists at this time. Please choose a different time slot.';
+        } else if (error.message.includes('status code 400')) {
+          errorMessage = 'Invalid appointment data. Please check your entries and try again.';
+        } else if (error.message.includes('status code 500')) {
+          errorMessage = 'Server error. Please try again later.';
+        } else {
+          errorMessage = error.message;
+        }
       }
 
       // If error message is suspiciously short, provide more context
