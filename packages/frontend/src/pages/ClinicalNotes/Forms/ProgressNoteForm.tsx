@@ -566,34 +566,118 @@ export default function ProgressNoteForm() {
 
   const handleAcceptGenerated = (data: Record<string, any>) => {
     // Map all fields from generated data to form state
+    // Handle data type transformations between AI output and frontend state
+
     if (data.sessionDate) setSessionDate(data.sessionDate);
     if (data.sessionDuration) setSessionDuration(data.sessionDuration);
     if (data.sessionType) setSessionType(data.sessionType);
     if (data.location) setLocation(data.location);
-    if (data.symptoms) setSymptoms(data.symptoms);
 
-    // Handle goals - ensure it's always an array
-    if (data.goals) {
-      if (Array.isArray(data.goals)) {
-        setGoals(data.goals);
-      } else if (typeof data.goals === 'object') {
-        // If it's a single goal object, wrap it in an array
-        setGoals([data.goals]);
+    // Transform symptoms: AI may return array or object
+    // Frontend expects object: { symptomName: severityLevel }
+    if (data.symptoms) {
+      if (Array.isArray(data.symptoms)) {
+        // AI returned array like ["Depression", "Anxiety"]
+        // Convert to object with default severity "Moderate"
+        const symptomsObj: SymptomState = {};
+        data.symptoms.forEach((symptom: string) => {
+          if (SYMPTOMS.includes(symptom)) {
+            symptomsObj[symptom] = 'Moderate'; // Default severity
+          }
+        });
+        setSymptoms(symptomsObj);
+      } else if (typeof data.symptoms === 'object' && !Array.isArray(data.symptoms)) {
+        // AI returned object like { Depression: "Moderate", Anxiety: "Mild" }
+        // Validate and filter to only valid symptoms
+        const symptomsObj: SymptomState = {};
+        for (const [symptom, severity] of Object.entries(data.symptoms)) {
+          if (SYMPTOMS.includes(symptom) && typeof severity === 'string') {
+            symptomsObj[symptom] = SEVERITIES.includes(severity) ? severity : 'Moderate';
+          }
+        }
+        setSymptoms(symptomsObj);
       }
     }
 
-    if (data.appearance) setAppearance(data.appearance);
+    // Handle goals - ensure it's always an array with proper structure
+    if (data.goals) {
+      if (Array.isArray(data.goals)) {
+        // Validate each goal has required properties
+        const validGoals = data.goals.map((goal: any) => ({
+          goalDescription: goal.goalDescription || goal.description || '',
+          progressLevel: PROGRESS_LEVELS.includes(goal.progressLevel) ? goal.progressLevel : '',
+          notes: goal.notes || '',
+        }));
+        setGoals(validGoals.length > 0 ? validGoals : [{ goalDescription: '', progressLevel: '', notes: '' }]);
+      } else if (typeof data.goals === 'object') {
+        // If it's a single goal object, wrap it in an array
+        setGoals([{
+          goalDescription: data.goals.goalDescription || data.goals.description || '',
+          progressLevel: PROGRESS_LEVELS.includes(data.goals.progressLevel) ? data.goals.progressLevel : '',
+          notes: data.goals.notes || '',
+        }]);
+      }
+    }
+
+    if (data.appearance && APPEARANCES.includes(data.appearance)) setAppearance(data.appearance);
     if (data.mood) setMood(data.mood);
-    if (data.affect) setAffect(data.affect);
-    if (data.thoughtProcess) setThoughtProcess(data.thoughtProcess);
-    if (data.suicidalIdeation !== undefined) setSuicidalIdeation(data.suicidalIdeation);
-    if (data.homicidalIdeation !== undefined) setHomicidalIdeation(data.homicidalIdeation);
-    if (data.riskLevel) setRiskLevel(data.riskLevel);
-    if (data.interventionsUsed) setInterventionsUsed(data.interventionsUsed);
+    if (data.affect && AFFECTS.includes(data.affect)) setAffect(data.affect);
+    if (data.thoughtProcess && THOUGHT_PROCESSES.includes(data.thoughtProcess)) setThoughtProcess(data.thoughtProcess);
+
+    // Transform suicidalIdeation: AI returns select string, frontend expects boolean
+    // Options: 'None', 'Passive', 'Active without plan', 'Active with plan'
+    if (data.suicidalIdeation !== undefined) {
+      if (typeof data.suicidalIdeation === 'boolean') {
+        setSuicidalIdeation(data.suicidalIdeation);
+      } else if (typeof data.suicidalIdeation === 'string') {
+        // Convert string to boolean: anything other than 'None' is true
+        setSuicidalIdeation(data.suicidalIdeation !== 'None' && data.suicidalIdeation !== '');
+      }
+    }
+
+    // Transform homicidalIdeation: AI returns select string, frontend expects boolean
+    // Options: 'None', 'Present'
+    if (data.homicidalIdeation !== undefined) {
+      if (typeof data.homicidalIdeation === 'boolean') {
+        setHomicidalIdeation(data.homicidalIdeation);
+      } else if (typeof data.homicidalIdeation === 'string') {
+        // Convert string to boolean: 'Present' is true, 'None' is false
+        setHomicidalIdeation(data.homicidalIdeation === 'Present' || data.homicidalIdeation === 'Yes');
+      }
+    }
+
+    if (data.riskLevel && RISK_LEVELS.includes(data.riskLevel)) setRiskLevel(data.riskLevel);
+
+    // Transform interventionsUsed: AI may return array or object
+    // Frontend expects object: { interventionName: boolean }
+    if (data.interventionsUsed) {
+      if (Array.isArray(data.interventionsUsed)) {
+        // AI returned array like ["CBT techniques", "DBT skills"]
+        // Convert to object with true values
+        const interventionsObj: InterventionState = {};
+        data.interventionsUsed.forEach((intervention: string) => {
+          if (INTERVENTIONS.includes(intervention)) {
+            interventionsObj[intervention] = true;
+          }
+        });
+        setInterventionsUsed(interventionsObj);
+      } else if (typeof data.interventionsUsed === 'object' && !Array.isArray(data.interventionsUsed)) {
+        // AI returned object like { "CBT techniques": true, "DBT skills": true }
+        // Validate and filter to only valid interventions
+        const interventionsObj: InterventionState = {};
+        for (const [intervention, checked] of Object.entries(data.interventionsUsed)) {
+          if (INTERVENTIONS.includes(intervention)) {
+            interventionsObj[intervention] = Boolean(checked);
+          }
+        }
+        setInterventionsUsed(interventionsObj);
+      }
+    }
+
     if (data.otherIntervention) setOtherIntervention(data.otherIntervention);
-    if (data.engagementLevel) setEngagementLevel(data.engagementLevel);
-    if (data.responseToInterventions) setResponseToInterventions(data.responseToInterventions);
-    if (data.homeworkCompliance) setHomeworkCompliance(data.homeworkCompliance);
+    if (data.engagementLevel && ENGAGEMENT_LEVELS.includes(data.engagementLevel)) setEngagementLevel(data.engagementLevel);
+    if (data.responseToInterventions && RESPONSE_LEVELS.includes(data.responseToInterventions)) setResponseToInterventions(data.responseToInterventions);
+    if (data.homeworkCompliance && HOMEWORK_COMPLIANCE.includes(data.homeworkCompliance)) setHomeworkCompliance(data.homeworkCompliance);
     if (data.clientResponseNotes) setClientResponseNotes(data.clientResponseNotes);
     if (data.subjective) setSubjective(data.subjective);
     if (data.objective) setObjective(data.objective);

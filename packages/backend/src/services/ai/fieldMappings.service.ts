@@ -21,53 +21,58 @@ export interface FieldMapping {
 export const FIELD_MAPPINGS: FieldMapping = {
   'Progress Note': {
     // Session Information
-    sessionDate: { type: 'date', description: 'Session date' },
-    sessionDuration: { type: 'select', options: ['30 minutes', '45 minutes', '60 minutes', '90 minutes'], description: 'Session duration' },
+    sessionDate: { type: 'date', description: 'Session date in YYYY-MM-DD format' },
+    sessionDuration: { type: 'select', options: ['30 minutes', '45 minutes', '60 minutes', '90 minutes'], description: 'Session duration - select exact option' },
     // SYNCED with ProgressNoteForm.tsx SESSION_TYPES
-    sessionType: { type: 'select', options: ['Individual', 'Couples', 'Family', 'Group'], description: 'Session type' },
+    sessionType: { type: 'select', options: ['Individual', 'Couples', 'Family', 'Group'], description: 'Session type - select exact option' },
     // SYNCED with ProgressNoteForm.tsx LOCATIONS
-    location: { type: 'select', options: ['Office', 'Telehealth', 'Home', 'School', 'Other'], description: 'Session location' },
+    location: { type: 'select', options: ['Office', 'Telehealth', 'Home', 'School', 'Other'], description: 'Session location - select exact option' },
 
-    // Current Symptoms - SYNCED with ProgressNoteForm.tsx SYMPTOMS
-    symptoms: { type: 'multiselect', options: ['Depression', 'Anxiety', 'Irritability', 'Sleep problems', 'Appetite changes', 'Suicidal ideation', 'Homicidal ideation', 'Substance use', 'Panic', 'Obsessions/compulsions', 'Trauma symptoms'], description: 'Current symptoms reported' },
+    // Current Symptoms - MUST be an OBJECT mapping symptom name to severity level
+    // Frontend expects: { "Depression": "Moderate", "Anxiety": "Mild" }
+    // SEVERITIES: None, Mild, Moderate, Severe
+    symptoms: { type: 'multiselect', options: ['Depression', 'Anxiety', 'Irritability', 'Sleep problems', 'Appetite changes', 'Suicidal ideation', 'Homicidal ideation', 'Substance use', 'Panic', 'Obsessions/compulsions', 'Trauma symptoms'], description: 'IMPORTANT: Return as OBJECT with symptom names as keys and severity levels (None/Mild/Moderate/Severe) as values. Example: {"Depression": "Moderate", "Anxiety": "Mild"}' },
 
     // Progress Tracking - SYNCED with ProgressNoteForm.tsx PROGRESS_LEVELS
-    progressLevel: { type: 'select', options: ['No Progress', 'Minimal Progress', 'Moderate Progress', 'Significant Progress', 'Goal Achieved'], description: 'Progress toward treatment goals' },
-    goals: { type: 'textarea', description: 'Progress toward treatment goals narrative' },
+    // Goals MUST be an ARRAY of goal objects with specific structure
+    progressLevel: { type: 'select', options: ['No Progress', 'Minimal Progress', 'Moderate Progress', 'Significant Progress', 'Goal Achieved'], description: 'Overall progress toward treatment goals' },
+    goals: { type: 'textarea', description: 'IMPORTANT: Return as ARRAY of goal objects. Each object MUST have: goalDescription (string), progressLevel (No Progress/Minimal Progress/Moderate Progress/Significant Progress/Goal Achieved), notes (string). Example: [{"goalDescription": "Reduce anxiety", "progressLevel": "Moderate Progress", "notes": "Client reports..."}]' },
 
     // Mental Status - SYNCED with ProgressNoteForm.tsx
     // APPEARANCES
-    appearance: { type: 'select', options: ['Well-groomed', 'Disheveled', 'Appropriate'], description: 'Client appearance' },
-    mood: { type: 'text', description: 'Client-reported mood' },
+    appearance: { type: 'select', options: ['Well-groomed', 'Disheveled', 'Appropriate'], description: 'Client appearance - select exact option' },
+    mood: { type: 'text', description: 'Client-reported mood (free text, e.g., "anxious but hopeful")' },
     // AFFECTS
-    affect: { type: 'select', options: ['Appropriate', 'Flat', 'Restricted', 'Labile'], description: 'Observed affect' },
+    affect: { type: 'select', options: ['Appropriate', 'Flat', 'Restricted', 'Labile'], description: 'Observed affect - select exact option' },
     // THOUGHT_PROCESSES
-    thoughtProcess: { type: 'select', options: ['Logical', 'Tangential', 'Disorganized'], description: 'Thought process' },
+    thoughtProcess: { type: 'select', options: ['Logical', 'Tangential', 'Disorganized'], description: 'Thought process - select exact option' },
 
-    // Risk Assessment - SYNCED with ProgressNoteForm.tsx RISK_LEVELS
-    suicidalIdeation: { type: 'select', options: ['None', 'Passive', 'Active without plan', 'Active with plan'], description: 'Suicidal ideation' },
-    homicidalIdeation: { type: 'select', options: ['None', 'Present'], description: 'Homicidal ideation' },
-    riskLevel: { type: 'select', options: ['None', 'Low', 'Moderate', 'High'], description: 'Overall risk level' },
+    // Risk Assessment - Frontend expects BOOLEAN values for ideation fields
+    // Return true if any level of ideation present, false if "None"
+    suicidalIdeation: { type: 'checkbox', description: 'Suicidal ideation - return TRUE if any ideation present (passive, active, etc.), FALSE if none' },
+    homicidalIdeation: { type: 'checkbox', description: 'Homicidal ideation - return TRUE if present, FALSE if none' },
+    riskLevel: { type: 'select', options: ['None', 'Low', 'Moderate', 'High'], description: 'Overall risk level - select exact option' },
 
-    // Interventions - SYNCED with ProgressNoteForm.tsx INTERVENTIONS
-    interventionsUsed: { type: 'multiselect', options: ['CBT techniques', 'DBT skills', 'Psychoeducation', 'Supportive therapy', 'Mindfulness', 'Relaxation training', 'Problem-solving', 'Exposure therapy', 'Behavioral activation'], description: 'Interventions used in session' },
-    otherIntervention: { type: 'text', description: 'Other intervention used (specify)' },
+    // Interventions - MUST be an OBJECT mapping intervention name to boolean
+    // Frontend expects: { "CBT techniques": true, "DBT skills": true }
+    interventionsUsed: { type: 'multiselect', options: ['CBT techniques', 'DBT skills', 'Psychoeducation', 'Supportive therapy', 'Mindfulness', 'Relaxation training', 'Problem-solving', 'Exposure therapy', 'Behavioral activation'], description: 'IMPORTANT: Return as OBJECT with intervention names as keys and true/false as values. Example: {"CBT techniques": true, "Psychoeducation": true}' },
+    otherIntervention: { type: 'text', description: 'Other intervention used (specify) - free text' },
 
     // Client Response - SYNCED with ProgressNoteForm.tsx
     // ENGAGEMENT_LEVELS
-    engagementLevel: { type: 'select', options: ['Highly engaged', 'Moderately engaged', 'Minimally engaged', 'Resistant'], description: 'Client engagement level' },
+    engagementLevel: { type: 'select', options: ['Highly engaged', 'Moderately engaged', 'Minimally engaged', 'Resistant'], description: 'Client engagement level - select exact option' },
     // RESPONSE_LEVELS
-    responseToInterventions: { type: 'select', options: ['Very responsive', 'Moderately responsive', 'Minimal response', 'No response'], description: 'Client response to interventions' },
-    responseNotes: { type: 'textarea', description: 'Detailed response notes' },
+    responseToInterventions: { type: 'select', options: ['Very responsive', 'Moderately responsive', 'Minimal response', 'No response'], description: 'Client response to interventions - select exact option' },
+    responseNotes: { type: 'textarea', description: 'Detailed response notes - free text' },
     // HOMEWORK_COMPLIANCE
-    homeworkCompliance: { type: 'select', options: ['Completed', 'Partially completed', 'Not completed', 'N/A'], description: 'Homework compliance' },
-    clientResponseNotes: { type: 'textarea', description: 'Additional notes on client response' },
+    homeworkCompliance: { type: 'select', options: ['Completed', 'Partially completed', 'Not completed', 'N/A'], description: 'Homework compliance - select exact option' },
+    clientResponseNotes: { type: 'textarea', description: 'Additional notes on client response - free text' },
 
-    // SOAP Notes
-    subjective: { type: 'textarea', description: 'Subjective: Client-reported information' },
-    objective: { type: 'textarea', description: 'Objective: Observable behaviors and findings' },
-    assessment: { type: 'textarea', description: 'Assessment: Clinical impressions' },
-    plan: { type: 'textarea', description: 'Plan: Treatment plan and next steps' },
+    // SOAP Notes - All free text
+    subjective: { type: 'textarea', description: 'Subjective: Client-reported information, symptoms, concerns, mood, experiences since last session' },
+    objective: { type: 'textarea', description: 'Objective: Observable behaviors, mental status exam findings, appearance, affect, speech patterns' },
+    assessment: { type: 'textarea', description: 'Assessment: Clinical impressions, symptom severity analysis, progress evaluation, treatment response' },
+    plan: { type: 'textarea', description: 'Plan: Interventions used, homework assigned, next session plans, treatment frequency, any referrals' },
   },
 
   'Intake Assessment': {

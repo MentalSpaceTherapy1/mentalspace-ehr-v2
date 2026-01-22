@@ -419,36 +419,65 @@ REQUIRED ELEMENTS:
 
 {
   "content": {
-    "fieldName1": "value for text/textarea fields",
-    "fieldName2": ["option1", "option2"],  // For multiselect fields
-    "fieldName3": "Selected Option",  // For select/radio fields (must match valid options exactly)
-    "fieldName4": true,  // For checkbox fields
-    "fieldName5": 45  // For number fields
+    "sessionDate": "2024-01-15",  // Date in YYYY-MM-DD format
+    "sessionDuration": "45 minutes",  // Select exact option from list
+    "sessionType": "Individual",  // Select exact option from list
+    "location": "Office",  // Select exact option from list
+
+    "symptoms": {  // OBJECT mapping symptom name to severity (None/Mild/Moderate/Severe)
+      "Depression": "Moderate",
+      "Anxiety": "Mild"
+    },
+
+    "goals": [  // ARRAY of goal objects
+      {
+        "goalDescription": "Reduce anxiety symptoms",
+        "progressLevel": "Moderate Progress",  // Must match: No Progress, Minimal Progress, Moderate Progress, Significant Progress, Goal Achieved
+        "notes": "Client reports using breathing techniques daily..."
+      }
+    ],
+
+    "appearance": "Well-groomed",  // Select exact option
+    "mood": "anxious but hopeful",  // Free text
+    "affect": "Appropriate",  // Select exact option
+    "thoughtProcess": "Logical",  // Select exact option
+
+    "suicidalIdeation": false,  // BOOLEAN: true if ANY ideation present, false if none
+    "homicidalIdeation": false,  // BOOLEAN: true if present, false if none
+    "riskLevel": "Low",  // Select exact option: None, Low, Moderate, High
+
+    "interventionsUsed": {  // OBJECT mapping intervention name to boolean
+      "CBT techniques": true,
+      "Psychoeducation": true
+    },
+    "otherIntervention": "",  // Free text for additional interventions
+
+    "engagementLevel": "Moderately engaged",  // Select exact option
+    "responseToInterventions": "Moderately responsive",  // Select exact option
+    "homeworkCompliance": "Completed",  // Select exact option
+    "clientResponseNotes": "Client was engaged...",  // Free text
+
+    "subjective": "Client reports...",  // Free text - client-reported information
+    "objective": "Client appeared...",  // Free text - observable behaviors
+    "assessment": "Clinical assessment...",  // Free text - clinical impressions
+    "plan": "Treatment plan..."  // Free text - next steps
   },
-  "confidence": 0.85,  // Your confidence in this documentation (0-1)
-  "suggestions": [
-    "Suggestion 1 for improving documentation",
-    "Suggestion 2 for additional information to gather"
-  ],
-  "warnings": [
-    "Warning 1 about missing critical information",
-    "Warning 2 about safety concerns"
-  ]
+  "confidence": 0.85,
+  "suggestions": ["Suggestion for improving documentation"],
+  "warnings": ["Warning about missing information or safety concerns"]
 }
 
 CRITICAL REQUIREMENTS:
-- Populate ALL relevant fields from the form schema above
-- For select/multiselect/radio fields, ONLY use values from the provided options list
-- Use exact option text (case-sensitive matching)
-- For checkbox fields, use true/false boolean values
+- symptoms: MUST be an OBJECT like {"Depression": "Moderate", "Anxiety": "Mild"} - NOT an array
+- goals: MUST be an ARRAY of objects with goalDescription, progressLevel, notes
+- interventionsUsed: MUST be an OBJECT like {"CBT techniques": true} - NOT an array
+- suicidalIdeation/homicidalIdeation: MUST be BOOLEAN (true/false) - NOT strings
+- For select fields, use EXACT option text (case-sensitive)
 - For date fields, use YYYY-MM-DD format
-- Use professional clinical language throughout
 - Be specific with observable details, not vague generalizations
-- Always document risk assessment (suicidal/homicidal ideation)
+- Always document risk assessment
 - Flag any safety concerns in warnings array
-- Note missing critical information in warnings array
-- Provide actionable suggestions for improving the note
-- If information is not provided for a field, either infer it reasonably from context or set it to null`;
+- If information is not provided for a field, use null or reasonable defaults`;
 
     return prompt;
   }
