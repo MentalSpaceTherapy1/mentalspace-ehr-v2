@@ -46,9 +46,10 @@ export default function CancellationNoteForm() {
   const appointmentIdFromURL = searchParams.get('appointmentId') || '';
 
   // Appointment selection state
+  // Cancellation Note does NOT require an appointment - users can optionally select one
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
   const [appointmentData, setAppointmentData] = useState<any>(null);
-  const [showAppointmentPicker, setShowAppointmentPicker] = useState(!appointmentIdFromURL && !isEditMode);
+  const [showAppointmentPicker, setShowAppointmentPicker] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const appointmentId = selectedAppointmentId;
