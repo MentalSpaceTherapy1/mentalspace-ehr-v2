@@ -783,8 +783,8 @@ export default function TreatmentPlanForm() {
           />
         )}
 
-        {/* Form - only shown after appointment is selected */}
-        {!showAppointmentPicker && selectedAppointmentId && (
+        {/* Form - shown when appointment picker is hidden (appointment is optional for Treatment Plans) */}
+        {!showAppointmentPicker && (
           <form onSubmit={() => handleSubmit({} as any)} className="space-y-6">
             {/* Schedule Header */}
             {appointmentData && (

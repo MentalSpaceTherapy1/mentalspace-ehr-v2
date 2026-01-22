@@ -489,8 +489,8 @@ export default function MiscellaneousNoteForm() {
           />
         )}
 
-        {/* Form - only shown after appointment is selected */}
-        {!showAppointmentPicker && selectedAppointmentId && (
+        {/* Form - shown when appointment picker is hidden (appointment is optional for Miscellaneous Notes) */}
+        {!showAppointmentPicker && (
           <form onSubmit={() => handleSubmit({} as any)} className="space-y-6">
           {/* AI-Powered Note Generation */}
           {/* Schedule Header */}
