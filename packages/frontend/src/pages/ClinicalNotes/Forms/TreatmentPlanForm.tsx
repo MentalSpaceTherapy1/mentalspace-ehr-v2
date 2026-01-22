@@ -188,6 +188,10 @@ export default function TreatmentPlanForm() {
             const date = new Date(apt.appointmentDate);
             setSessionDate(date.toISOString().split('T')[0]);
           }
+          // Auto-populate CPT code from appointment if available
+          if (apt.cptCode && !cptCode) {
+            setCptCode(apt.cptCode);
+          }
         } catch (error) {
           console.error('Error fetching appointment data:', error);
         }

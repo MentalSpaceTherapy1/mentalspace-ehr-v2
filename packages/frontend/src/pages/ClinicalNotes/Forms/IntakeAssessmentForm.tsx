@@ -362,6 +362,10 @@ export default function IntakeAssessmentForm() {
             console.log('🔵 sessionDate value being set:', sessionDateValue);
             setSessionDate(sessionDateValue);
           }
+          // Auto-populate CPT code from appointment if available
+          if (apt.cptCode && !cptCode) {
+            setCptCode(apt.cptCode);
+          }
         } catch (error) {
           console.error('Error fetching appointment data:', error);
         }

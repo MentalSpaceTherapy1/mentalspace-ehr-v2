@@ -277,6 +277,10 @@ export default function ProgressNoteForm() {
             setSessionDuration(`${apt.duration} minutes`);
             setSessionDurationMinutes(apt.duration.toString());
           }
+          // Auto-populate CPT code from appointment if available
+          if (apt.cptCode && !cptCode) {
+            setCptCode(apt.cptCode);
+          }
         } catch (error) {
           console.error('Error fetching appointment data:', error);
         }

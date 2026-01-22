@@ -148,7 +148,12 @@ export default function TerminationNoteForm() {
       if (selectedAppointmentId && !appointmentData) {
         try {
           const response = await api.get(`/appointments/${selectedAppointmentId}`);
-          setAppointmentData(response.data.data);
+          const apt = response.data.data;
+          setAppointmentData(apt);
+          // Auto-populate CPT code from appointment if available
+          if (apt.cptCode && !cptCode) {
+            setCptCode(apt.cptCode);
+          }
         } catch (error) {
           console.error('Error fetching appointment data:', error);
         }

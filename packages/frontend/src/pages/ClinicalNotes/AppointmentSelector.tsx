@@ -10,6 +10,8 @@ interface Appointment {
   appointmentType: string;
   status: string;
   serviceLocation: string;
+  cptCode?: string;
+  duration?: number;
 }
 
 export default function AppointmentSelector() {
@@ -194,7 +196,7 @@ export default function AppointmentSelector() {
                     {appointment.status.replace('_', ' ')}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500 font-semibold">Type:</span>
                     <p className="text-gray-800">{appointment.appointmentType}</p>
@@ -202,6 +204,10 @@ export default function AppointmentSelector() {
                   <div>
                     <span className="text-gray-500 font-semibold">Location:</span>
                     <p className="text-gray-800">{appointment.serviceLocation}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 font-semibold">CPT Code:</span>
+                    <p className="text-gray-800">{appointment.cptCode || 'Not specified'}</p>
                   </div>
                 </div>
               </button>
