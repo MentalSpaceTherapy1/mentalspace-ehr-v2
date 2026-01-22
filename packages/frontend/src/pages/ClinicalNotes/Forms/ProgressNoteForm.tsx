@@ -85,6 +85,8 @@ export default function ProgressNoteForm() {
 
   const appointmentIdFromURL = searchParams.get('appointmentId') || '';
   const allowDraft = searchParams.get('allowDraft') === 'true';
+  const sessionIdFromURL = searchParams.get('sessionId') || '';
+  const aiGeneratedFromURL = searchParams.get('aiGenerated') === 'true';
 
   // Appointment selection state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>(appointmentIdFromURL);
@@ -237,6 +239,16 @@ export default function ProgressNoteForm() {
       return response.data.data;
     },
     enabled: !!clientId && !!selectedAppointmentId,
+  });
+
+  // Fetch session transcript if sessionId is provided (from telehealth session)
+  const { data: transcriptData, isLoading: transcriptLoading } = useQuery({
+    queryKey: ['session-transcript', sessionIdFromURL],
+    queryFn: async () => {
+      const response = await api.get(`/telehealth/sessions/${sessionIdFromURL}/transcription/formatted`);
+      return response.data.data;
+    },
+    enabled: !!sessionIdFromURL,
   });
 
   // Set inherited diagnoses when data arrives
@@ -971,6 +983,8 @@ export default function ProgressNoteForm() {
               onGenerate={handleGenerateFromTranscription}
               isGenerating={isGenerating}
               noteType="Progress Note"
+              initialTranscript={transcriptData?.transcript}
+              transcriptLoading={transcriptLoading}
             />
 
           {/* Current Symptoms */}

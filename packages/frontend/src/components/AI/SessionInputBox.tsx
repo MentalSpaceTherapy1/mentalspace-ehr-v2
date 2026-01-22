@@ -6,6 +6,8 @@ interface SessionInputBoxProps {
   onGenerate: (sessionNotes: string) => Promise<void>;
   isGenerating: boolean;
   noteType: string;
+  initialTranscript?: string;
+  transcriptLoading?: boolean;
 }
 
 // Error types for better messaging
@@ -80,12 +82,21 @@ const SessionInputBox: React.FC<SessionInputBoxProps> = ({
   onGenerate,
   isGenerating,
   noteType,
+  initialTranscript,
+  transcriptLoading,
 }) => {
-  const [sessionNotes, setSessionNotes] = useState('');
+  const [sessionNotes, setSessionNotes] = useState(initialTranscript || '');
   const [isExpanded, setIsExpanded] = useState(true);
   const [errorState, setErrorState] = useState<AIErrorState | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // Update sessionNotes when initialTranscript is loaded
+  React.useEffect(() => {
+    if (initialTranscript && !sessionNotes) {
+      setSessionNotes(initialTranscript);
+    }
+  }, [initialTranscript]);
 
   const handleGenerate = useCallback(async (isRetry = false) => {
     if (!sessionNotes.trim()) {
@@ -185,6 +196,28 @@ const SessionInputBox: React.FC<SessionInputBoxProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Transcript Loading Indicator */}
+          {transcriptLoading && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center space-x-3">
+              <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+              <div>
+                <p className="text-sm font-medium text-blue-800">Loading session transcript...</p>
+                <p className="text-xs text-blue-600">Fetching transcription from your telehealth session</p>
+              </div>
+            </div>
+          )}
+
+          {/* Transcript Loaded Indicator */}
+          {initialTranscript && !transcriptLoading && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center space-x-3">
+              <FileText className="w-5 h-5 text-green-600" />
+              <div>
+                <p className="text-sm font-medium text-green-800">Session transcript loaded</p>
+                <p className="text-xs text-green-600">Transcript from your telehealth session has been pre-filled below</p>
+              </div>
+            </div>
+          )}
 
           {/* Text Area */}
           <div>
