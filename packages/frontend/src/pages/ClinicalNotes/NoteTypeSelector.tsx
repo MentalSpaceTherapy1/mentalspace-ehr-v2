@@ -3,12 +3,13 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Calendar, AlertCircle, X } from 'lucide-react';
 
 // Note types that require appointments (Business Rule #1)
+// Required: Intake Assessment, Progress Note, Consultation Note, Group Therapy Note
+// NOT Required: Treatment Plan, Cancellation Note, Contact Note, Termination Note, Miscellaneous Note
 const APPOINTMENT_REQUIRED_NOTE_TYPES = [
   'Intake Assessment',
   'Progress Note',
-  'Cancellation Note',
   'Consultation Note',
-  'Contact Note',
+  'Group Therapy Note',
 ];
 
 const NOTE_TYPES = [

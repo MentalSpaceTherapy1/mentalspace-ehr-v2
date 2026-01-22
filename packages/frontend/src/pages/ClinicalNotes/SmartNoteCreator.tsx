@@ -18,12 +18,12 @@ import GroupTherapyNoteForm from './Forms/GroupTherapyNoteForm';
 import AppointmentQuickCreate from '../../components/ClinicalNotes/AppointmentQuickCreate';
 
 // Note types that require appointments
+// Required: Intake Assessment, Progress Note, Consultation Note, Group Therapy Note
+// NOT Required: Treatment Plan, Cancellation Note, Contact Note, Termination Note, Miscellaneous Note
 const APPOINTMENT_REQUIRED_NOTE_TYPES = [
   'intake-assessment',
   'progress-note',
-  'cancellation-note',
   'consultation-note',
-  'contact-note',
   'group-therapy',
 ];
 
