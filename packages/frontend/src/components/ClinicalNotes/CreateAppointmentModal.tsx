@@ -64,6 +64,8 @@ export default function CreateAppointmentModal({
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Log the request data for debugging
+      console.log('[CreateAppointmentModal] Sending appointment data:', JSON.stringify(data, null, 2));
       return api.post('/appointments', data);
     },
     onSuccess: (response) => {
@@ -74,15 +76,46 @@ export default function CreateAppointmentModal({
       onClose();
     },
     onError: (error: any) => {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to create appointment';
+      // Enhanced error logging for debugging
+      console.error('[CreateAppointmentModal] Full error object:', error);
+      console.error('[CreateAppointmentModal] Error response:', error?.response);
+      console.error('[CreateAppointmentModal] Error response data:', error?.response?.data);
+      console.error('[CreateAppointmentModal] Error message:', error?.message);
+      console.error('[CreateAppointmentModal] Error name:', error?.name);
+      console.error('[CreateAppointmentModal] Error code:', error?.code);
+
+      // Try to extract the most meaningful error message
+      let errorMessage = 'Failed to create appointment';
+
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        // Handle Zod validation errors
+        errorMessage = error.response.data.errors
+          .map((e: any) => e.message || e.path?.join('.'))
+          .filter(Boolean)
+          .join(', ') || 'Validation error';
+      } else if (error?.message && error.message.length > 2) {
+        // Only use error.message if it's meaningful (more than 2 chars)
+        errorMessage = error.message;
+      }
+
+      // If error message is suspiciously short, provide more context
+      if (errorMessage.length <= 3) {
+        console.warn('[CreateAppointmentModal] Suspicious short error message:', errorMessage);
+        errorMessage = `Appointment creation failed (error code: ${errorMessage}). Please try again or contact support.`;
+      }
+
       toast.error(errorMessage);
-      console.error('Create appointment error:', error);
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate required fields
     if (!appointmentDate || !startTime) {
       toast.error('Please fill in all required fields');
       return;
@@ -93,20 +126,78 @@ export default function CreateAppointmentModal({
       return;
     }
 
+    if (!clientId) {
+      toast.error('Client ID is missing. Please try again.');
+      return;
+    }
+
+    // Validate UUID format for clientId and clinicianId
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(clientId)) {
+      toast.error('Invalid client ID format. Please try again.');
+      console.error('[CreateAppointmentModal] Invalid clientId format:', clientId);
+      return;
+    }
+
+    if (!uuidRegex.test(user.id)) {
+      toast.error('Invalid clinician ID format. Please refresh and try again.');
+      console.error('[CreateAppointmentModal] Invalid clinicianId format:', user.id);
+      return;
+    }
+
+    // Validate time format (HH:MM)
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(startTime)) {
+      toast.error('Invalid start time format. Please use HH:MM format.');
+      return;
+    }
+
+    if (endTime && !timeRegex.test(endTime)) {
+      toast.error('Invalid end time format. Please use HH:MM format.');
+      return;
+    }
+
+    // Validate date format and create ISO string
+    let appointmentDateISO: string;
+    try {
+      const dateObj = new Date(appointmentDate);
+      if (isNaN(dateObj.getTime())) {
+        throw new Error('Invalid date');
+      }
+      appointmentDateISO = dateObj.toISOString();
+    } catch {
+      toast.error('Invalid appointment date. Please select a valid date.');
+      console.error('[CreateAppointmentModal] Invalid appointmentDate:', appointmentDate);
+      return;
+    }
+
+    // Validate appointment type is not empty
+    if (!appointmentType || appointmentType.trim().length === 0) {
+      toast.error('Appointment type is required.');
+      return;
+    }
+
+    // Validate location is not empty
+    if (!location || location.trim().length === 0) {
+      toast.error('Service location is required.');
+      return;
+    }
+
     const appointmentData = {
       clientId,
       clinicianId: user.id,
-      appointmentDate: new Date(appointmentDate).toISOString(),
+      appointmentDate: appointmentDateISO,
       startTime,
-      endTime,
+      endTime: endTime || startTime, // Fallback to startTime if endTime not calculated
       duration,
-      appointmentType,
-      cptCode: serviceCode, // Map frontend serviceCode to backend cptCode
-      serviceLocation: location, // Map frontend location to backend serviceLocation
-      appointmentNotes: participants, // Store participants info in notes
-      status: 'Scheduled',
+      appointmentType: appointmentType.trim(),
+      cptCode: serviceCode || undefined, // Map frontend serviceCode to backend cptCode, use undefined if empty
+      serviceLocation: location.trim(), // Map frontend location to backend serviceLocation
+      appointmentNotes: participants || undefined, // Store participants info in notes, use undefined if empty
+      // Note: status is set by the backend to 'SCHEDULED'
     };
 
+    console.log('[CreateAppointmentModal] Submitting validated data:', appointmentData);
     createAppointmentMutation.mutate(appointmentData);
   };
 

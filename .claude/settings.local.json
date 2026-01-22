@@ -246,7 +246,15 @@
       "Bash(aws elbv2 describe-listeners:*)",
       "mcp__postgres__query",
       "Bash(MSYS_NO_PATHCONV=1 gh run list:*)",
-      "Bash(MSYS_NO_PATHCONV=1 gh run view:*)"
+      "Bash(MSYS_NO_PATHCONV=1 gh run view:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:frontend:*)",
+      "Bash(git reset:*)",
+      "mcp__git__git_status",
+      "mcp__git__git_diff",
+      "mcp__git__git_log",
+      "mcp__git__git_add"
     ],
     "deny": [],
     "ask": []
