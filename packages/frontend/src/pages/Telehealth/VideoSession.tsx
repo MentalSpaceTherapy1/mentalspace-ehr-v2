@@ -101,6 +101,9 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   const [showBackgroundEffects, setShowBackgroundEffects] = useState(false); // NEW: Background effects panel
   const [backgroundBlurIntensity, setBackgroundBlurIntensity] = useState(0); // NEW: Background blur intensity
   const [localAudioStream, setLocalAudioStream] = useState<MediaStream | null>(null); // AI Scribe: Audio stream for transcription (STAFF ONLY)
+  const [remoteAudioStream, setRemoteAudioStream] = useState<MediaStream | null>(null); // AI Scribe: Remote participant's audio
+  const [combinedAudioStream, setCombinedAudioStream] = useState<MediaStream | null>(null); // AI Scribe: Combined local + remote audio
+  const audioContextRef = useRef<AudioContext | null>(null); // For combining audio streams
 
   // Socket for real-time features
   const socketRef = useRef<Socket | null>(null);
@@ -302,6 +305,73 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
     }
   }, [isError, queryError, sessionStatus]);
 
+  // AI SCRIBE: Combine local and remote audio streams for transcription
+  // This ensures both therapist and client voices are captured
+  const combineAudioStreams = useCallback((local: MediaStream | null, remote: MediaStream | null): MediaStream | null => {
+    // If no remote audio, just use local
+    if (!remote && local) {
+      console.log('[AI Scribe] Only local audio available');
+      return local;
+    }
+    // If no local audio, just use remote (shouldn't happen, but handle it)
+    if (!local && remote) {
+      console.log('[AI Scribe] Only remote audio available');
+      return remote;
+    }
+    // If neither, return null
+    if (!local && !remote) {
+      return null;
+    }
+
+    try {
+      // Create or reuse AudioContext
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        audioContextRef.current = new AudioContext();
+      }
+      const audioContext = audioContextRef.current;
+
+      // Create a destination for the combined stream
+      const destination = audioContext.createMediaStreamDestination();
+
+      // Create source nodes from both streams
+      const localSource = audioContext.createMediaStreamSource(local!);
+      const remoteSource = audioContext.createMediaStreamSource(remote!);
+
+      // Connect both sources to the destination
+      localSource.connect(destination);
+      remoteSource.connect(destination);
+
+      console.log('[AI Scribe] ✅ Combined local + remote audio streams for transcription');
+      return destination.stream;
+    } catch (error) {
+      console.error('[AI Scribe] Failed to combine audio streams:', error);
+      // Fallback to local audio only
+      return local;
+    }
+  }, []);
+
+  // Effect to combine audio streams when both are available (STAFF ONLY)
+  useEffect(() => {
+    if (isPortalContext) return; // Only for staff/clinicians
+
+    const combined = combineAudioStreams(localAudioStream, remoteAudioStream);
+    setCombinedAudioStream(combined);
+
+    // If we have remote audio, log that both participants are being captured
+    if (localAudioStream && remoteAudioStream) {
+      console.log('[AI Scribe] 🎙️ Capturing both THERAPIST and CLIENT audio for transcription');
+    }
+  }, [localAudioStream, remoteAudioStream, isPortalContext, combineAudioStreams]);
+
+  // Cleanup audio context on unmount
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
+
   // Create local tracks - NEW FUNCTION
   const createLocalTracks = useCallback(async () => {
     try {
@@ -374,6 +444,16 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
       participant.on('trackSubscribed', (track: any) => {
         console.log(`📹 Track subscribed: ${track.kind}`);
         attachTrack(track, remoteVideoRef.current);
+
+        // AI SCRIBE (STAFF ONLY): Capture remote audio for transcription
+        if (track.kind === 'audio' && !isPortalContext) {
+          const mediaStreamTrack = track.mediaStreamTrack;
+          if (mediaStreamTrack) {
+            const remoteAudio = new MediaStream([mediaStreamTrack]);
+            setRemoteAudioStream(remoteAudio);
+            console.log('[AI Scribe] ✅ Remote participant audio captured for transcription');
+          }
+        }
       });
 
       participant.on('trackUnsubscribed', (track: any) => {
@@ -390,6 +470,11 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
         updated.delete(participant.sid);
         return updated;
       });
+      // AI SCRIBE: Clear remote audio stream when participant leaves
+      if (!isPortalContext) {
+        setRemoteAudioStream(null);
+        console.log('[AI Scribe] Remote participant disconnected - audio stream cleared');
+      }
     });
 
     // Handle room disconnected
@@ -430,11 +515,31 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
       participant.tracks.forEach((publication: any) => {
         if (publication.track) {
           attachTrack(publication.track, remoteVideoRef.current);
+
+          // AI SCRIBE (STAFF ONLY): Capture existing remote audio tracks
+          if (publication.track.kind === 'audio' && !isPortalContext) {
+            const mediaStreamTrack = publication.track.mediaStreamTrack;
+            if (mediaStreamTrack) {
+              const remoteAudio = new MediaStream([mediaStreamTrack]);
+              setRemoteAudioStream(remoteAudio);
+              console.log('[AI Scribe] ✅ Existing remote participant audio captured for transcription');
+            }
+          }
         }
       });
 
       participant.on('trackSubscribed', (track: any) => {
         attachTrack(track, remoteVideoRef.current);
+
+        // AI SCRIBE (STAFF ONLY): Capture remote audio for transcription
+        if (track.kind === 'audio' && !isPortalContext) {
+          const mediaStreamTrack = track.mediaStreamTrack;
+          if (mediaStreamTrack) {
+            const remoteAudio = new MediaStream([mediaStreamTrack]);
+            setRemoteAudioStream(remoteAudio);
+            console.log('[AI Scribe] ✅ Remote participant audio captured for transcription');
+          }
+        }
       });
     });
   }, []);
@@ -1322,9 +1427,9 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
           {/* Transcription panel - AI Scribe feature (STAFF/CLINICIAN ONLY) */}
           {userRole === 'clinician' && showTranscription && (
             <TranscriptionPanel
-              sessionId={sessionData?.id || ''}
+              sessionId={sessionData?.id || sessionData?.session?.id || ''}
               onTranscriptionToggle={(enabled) => setShowTranscription(enabled)}
-              audioStream={!isPortalContext ? localAudioStream || undefined : undefined}
+              audioStream={!isPortalContext ? (combinedAudioStream || localAudioStream || undefined) : undefined}
               socket={socketRef.current}
             />
           )}
@@ -1423,7 +1528,7 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
           navigate('/appointments');
         }}
         sessionData={{
-          id: sessionData.id,
+          id: sessionData.id || sessionData.session?.id, // Staff: sessionData.id, Portal: sessionData.session.id
           clientName: `${sessionData.appointment?.client?.firstName || ''} ${sessionData.appointment?.client?.lastName || ''}`.trim() || 'Client',
           clientId: sessionData.appointment?.client?.id || sessionData.appointment?.clientId,
           appointmentId: sessionData.appointmentId || sessionData.appointment?.id,
