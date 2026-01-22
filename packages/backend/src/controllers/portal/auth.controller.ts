@@ -48,6 +48,10 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(100),
 });
 
+const changeTempPasswordSchema = z.object({
+  newPassword: z.string().min(8).max(100),
+});
+
 const updateAccountSettingsSchema = z.object({
   email: z.string().email().optional(),
   notificationPreferences: z
@@ -275,6 +279,41 @@ export const changePassword = async (req: PortalRequest, res: Response) => {
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to change password',
+    });
+  }
+};
+
+// ============================================================================
+// CHANGE TEMP PASSWORD (First login with temporary password)
+// ============================================================================
+
+export const changeTempPassword = async (req: PortalRequest, res: Response) => {
+  try {
+    const clientId = req.portalAccount?.clientId;
+    const data = changeTempPasswordSchema.parse(req.body);
+
+    const result = await portalAuthService.changeTempPassword({
+      clientId,
+      newPassword: data.newPassword,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        token: result.token,
+        passwordExpiresAt: result.passwordExpiresAt,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Temp password change failed', {
+      message: error?.message,
+      clientId: req.portalAccount?.clientId,
+    });
+
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to set new password',
     });
   }
 };

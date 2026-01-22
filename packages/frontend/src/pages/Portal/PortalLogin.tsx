@@ -20,7 +20,18 @@ export default function PortalLogin() {
       });
 
       if (response.data.success) {
-        // Store token and client info
+        // Check if password change is required (first login with temp password)
+        if (response.data.data.requiresPasswordChange) {
+          // Store temp token for password change
+          localStorage.setItem('portalTempToken', response.data.data.tempToken);
+          localStorage.setItem('portalClient', JSON.stringify(response.data.data.client));
+
+          toast('Please set a new password to continue', { icon: '🔐' });
+          navigate('/portal/change-password');
+          return;
+        }
+
+        // Normal login - store token and client info
         localStorage.setItem('portalToken', response.data.data.token);
         localStorage.setItem('portalClient', JSON.stringify(response.data.data.client));
         localStorage.setItem('portalAccount', JSON.stringify(response.data.data.portalAccount));

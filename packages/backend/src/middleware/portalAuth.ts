@@ -135,6 +135,111 @@ export const authenticatePortal = async (req: Request, res: Response, next: Next
  * Middleware to require email verification
  * Use this after authenticatePortal for endpoints that require verified email
  */
+/**
+ * Middleware to authenticate temp password change requests
+ * Accepts tokens with type 'temp_password_change' for first-time password setup
+ */
+export const authenticateTempPasswordChange = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'No authorization token provided',
+      });
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify JWT token
+    const decoded = jwt.verify(token, config.jwtSecret, {
+      audience: 'mentalspace-portal',
+      issuer: 'mentalspace-ehr',
+    }) as PortalTokenPayload & { portalAccountId?: string; clientId?: string };
+
+    // Must be a temp password change token
+    if (decoded.type !== 'temp_password_change') {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid token type for password change',
+      });
+    }
+
+    // Verify portal account exists
+    const clientId = decoded.clientId || decoded.userId;
+    const portalAccount = await prisma.portalAccount.findUnique({
+      where: { clientId },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!portalAccount) {
+      return res.status(404).json({
+        success: false,
+        message: 'Portal account not found',
+      });
+    }
+
+    // Verify this account actually requires password change
+    if (!portalAccount.mustChangePassword) {
+      return res.status(403).json({
+        success: false,
+        message: 'Password change not required for this account',
+      });
+    }
+
+    // Attach portal account info to request
+    (req as any).portalAccount = {
+      id: portalAccount.id,
+      portalAccountId: portalAccount.id,
+      clientId: portalAccount.clientId,
+      email: portalAccount.email,
+      isEmailVerified: portalAccount.emailVerified,
+      client: portalAccount.client,
+    };
+
+    next();
+  } catch (error: any) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Password change token expired. Please log in again to get a new token.',
+        code: 'TOKEN_EXPIRED',
+      });
+    }
+
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token',
+      });
+    }
+
+    logger.error('Temp password change authentication error', {
+      error: error.message,
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: 'Authentication failed',
+    });
+  }
+};
+
+/**
+ * Middleware to require email verification
+ * Use this after authenticatePortal for endpoints that require verified email
+ */
 export const requireEmailVerification = (req: Request, res: Response, next: NextFunction) => {
   try {
     const portalAccount = (req as any).portalAccount;

@@ -785,6 +785,90 @@ export async function changePassword(data: {
 }
 
 // ============================================================================
+// CHANGE TEMP PASSWORD (First login with temp password)
+// ============================================================================
+
+export async function changeTempPassword(data: {
+  clientId: string;
+  newPassword: string;
+}) {
+  try {
+    const portalAccount = await prisma.portalAccount.findUnique({
+      where: { clientId: data.clientId },
+    });
+
+    if (!portalAccount) {
+      throw new AppError('Portal account not found', 404);
+    }
+
+    // Verify this account requires password change
+    if (!portalAccount.mustChangePassword) {
+      throw new AppError('Password change not required for this account', 400);
+    }
+
+    // Validate new password
+    if (data.newPassword.length < 8) {
+      throw new AppError('Password must be at least 8 characters long', 400);
+    }
+
+    // Check if new password is same as temp password
+    const isSamePassword = await bcrypt.compare(data.newPassword, portalAccount.password);
+    if (isSamePassword) {
+      throw new AppError('New password must be different from temporary password', 400);
+    }
+
+    // Hash new password
+    const password = await bcrypt.hash(data.newPassword, TOKEN_CONFIG.BCRYPT_SALT_ROUNDS);
+
+    // Calculate 6-month expiration for permanent password
+    const passwordExpiresAt = new Date();
+    passwordExpiresAt.setMonth(passwordExpiresAt.getMonth() + PERMANENT_PASSWORD_EXPIRY_MONTHS);
+
+    // Update password and clear temp password flags
+    await prisma.portalAccount.update({
+      where: { id: portalAccount.id },
+      data: {
+        password,
+        mustChangePassword: false,
+        tempPasswordExpiry: null,
+        passwordExpiresAt,
+        passwordChangedAt: new Date(),
+        accountStatus: 'ACTIVE',
+      },
+    });
+
+    logger.info(`Temp password changed for portal account ${portalAccount.id}`, { passwordExpiresAt });
+
+    // Generate a new full access token so user can continue to the portal
+    const token = jwt.sign(
+      {
+        userId: portalAccount.clientId,
+        email: portalAccount.email,
+        type: 'client_portal',
+        role: 'client',
+        audience: 'mentalspace-portal',
+      },
+      config.jwtSecret,
+      {
+        expiresIn: JWT_CONFIG.ACCESS_TOKEN_EXPIRY,
+        audience: JWT_CONFIG.AUDIENCE,
+        issuer: JWT_CONFIG.ISSUER,
+      }
+    );
+
+    return {
+      success: true,
+      message: 'Password set successfully. You can now access the portal.',
+      token,
+      passwordExpiresAt,
+    };
+  } catch (error) {
+    logger.error('Error changing temp password:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
 // ACCOUNT MANAGEMENT
 // ============================================================================
 

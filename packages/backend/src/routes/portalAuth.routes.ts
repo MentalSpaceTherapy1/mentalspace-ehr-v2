@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from 'express';
 import * as portalAuthController from '../controllers/portal/auth.controller';
-import { authenticatePortal } from '../middleware/portalAuth';
+import { authenticatePortal, authenticateTempPasswordChange } from '../middleware/portalAuth';
 import {
   authRateLimiter,
   accountCreationRateLimiter,
@@ -28,6 +28,9 @@ router.post('/login', authRateLimiter, asHandler(portalAuthController.login));
 // Password Reset (Stricter rate limiting to prevent email spam)
 router.post('/forgot-password', passwordResetRateLimiter, asHandler(portalAuthController.requestPasswordReset));
 router.post('/reset-password', passwordResetRateLimiter, asHandler(portalAuthController.resetPassword));
+
+// Temp Password Change (First login with temp password - uses temp token auth)
+router.post('/change-temp-password', authenticateTempPasswordChange, asHandler(portalAuthController.changeTempPassword));
 
 // ============================================================================
 // PROTECTED ROUTES (Authentication required)

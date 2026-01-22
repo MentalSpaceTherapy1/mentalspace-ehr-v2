@@ -74,6 +74,7 @@ import PortalLayout from './components/PortalLayout';
 import PortalLogin from './pages/Portal/PortalLogin';
 import PortalRegister from './pages/Portal/PortalRegister';
 import PortalForgotPassword from './pages/Portal/PortalForgotPassword';
+import PortalChangePassword from './pages/Portal/PortalChangePassword';
 import PortalDashboard from './pages/Portal/PortalDashboard';
 import PortalAppointments from './pages/Portal/PortalAppointments';
 import PortalMessages from './pages/Portal/PortalMessages';
@@ -266,6 +267,7 @@ function App() {
         <Route path="/portal/login" element={<PortalLogin />} />
         <Route path="/portal/register" element={<PortalRegister />} />
         <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
+        <Route path="/portal/change-password" element={<PortalChangePassword />} />
         <Route
           path="/portal/dashboard"
           element={
