@@ -16,6 +16,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { advancedMDAPI } from '../../integrations/advancedmd/api-client';
+import logger from '../../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -237,7 +238,7 @@ export class AdvancedMDEligibilityService {
         checkedAt: new Date(),
       };
     } catch (error: any) {
-      console.error('[Eligibility Service] Error checking eligibility:', error.message);
+      logger.error('Eligibility Service: Error checking eligibility:', error.message);
       return {
         success: false,
         clientId,
@@ -288,7 +289,7 @@ export class AdvancedMDEligibilityService {
         appointment.appointmentDate
       );
     } catch (error: any) {
-      console.error('[Eligibility Service] Error checking appointment eligibility:', error.message);
+      logger.error('Eligibility Service: Error checking appointment eligibility:', error.message);
       return {
         success: false,
         clientId: '',
@@ -404,7 +405,7 @@ export class AdvancedMDEligibilityService {
         eligibilityData,
       };
     } catch (error: any) {
-      console.error('[Eligibility Service] API call failed:', error.message);
+      logger.error('Eligibility Service: API call failed:', error.message);
       return { success: false, error: error.message };
     }
   }
@@ -536,7 +537,7 @@ export class AdvancedMDEligibilityService {
       });
     } catch (error: any) {
       // Log but don't fail if database storage fails
-      console.error('[Eligibility Service] Failed to store eligibility result:', error.message);
+      logger.error('Eligibility Service: Failed to store eligibility result:', error.message);
     }
   }
 

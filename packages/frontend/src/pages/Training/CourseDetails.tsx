@@ -16,20 +16,26 @@ import {
   Video,
 } from 'lucide-react';
 import { useCourse, useEnrollUser } from '../../hooks/useTraining';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function CourseDetails() {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'materials' | 'reviews'>('overview');
 
+  // Use auth hook for user data - no localStorage dependency
+  const { user } = useAuth();
   const { data: course, isLoading } = useCourse(courseId || '');
   const enrollMutation = useEnrollUser();
 
   const handleEnroll = async () => {
-    if (!courseId) return;
+    if (!courseId || !user?.id) {
+      toast.error('Please log in to enroll in courses');
+      return;
+    }
     try {
       await enrollMutation.mutateAsync({
-        userId: localStorage.getItem('userId') || '',
+        userId: user.id,
         courseId,
       });
       toast.success('Successfully enrolled in course!');

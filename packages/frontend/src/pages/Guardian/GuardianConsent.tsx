@@ -48,11 +48,10 @@ import {
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import axios from 'axios';
+// Phase 4.2: Use api instance for httpOnly cookie auth instead of raw axios with Bearer tokens
+import api from '../../lib/api';
 
 dayjs.extend(relativeTime);
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 interface Guardian {
   relationshipId: string;
@@ -131,9 +130,8 @@ const GuardianConsent: React.FC = () => {
 
   const fetchClientAge = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/client/profile`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.get('/client/profile');
 
       if (response.data.success) {
         const dob = new Date(response.data.data.dateOfBirth);
@@ -153,9 +151,8 @@ const GuardianConsent: React.FC = () => {
   const fetchGuardians = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/client/guardian-relationships`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.get('/client/guardian-relationships');
 
       if (response.data.success) {
         setGuardians(response.data.data || []);
@@ -170,9 +167,8 @@ const GuardianConsent: React.FC = () => {
 
   const fetchConsentPreferences = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/client/guardian-consent-preferences`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.get('/client/guardian-consent-preferences');
 
       if (response.data.success && response.data.data) {
         setConsentPreferences(response.data.data);
@@ -184,12 +180,10 @@ const GuardianConsent: React.FC = () => {
 
   const fetchAccessLogs = async (guardianId: string) => {
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/client/guardian-access-logs/${guardianId}`,
-        {
-          params: { limit: 10 },
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        }
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.get(
+        `/client/guardian-access-logs/${guardianId}`,
+        { params: { limit: 10 } }
       );
 
       if (response.data.success) {
@@ -211,15 +205,12 @@ const GuardianConsent: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post(
-        `${API_BASE_URL}/client/request-guardian-change`,
-        {
-          relationshipId: selectedGuardian.relationshipId,
-          changeReason,
-          requestedChanges,
-        },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.post('/client/request-guardian-change', {
+        relationshipId: selectedGuardian.relationshipId,
+        changeReason,
+        requestedChanges,
+      });
 
       if (response.data.success) {
         setSuccess('Change request submitted. An administrator will review your request.');
@@ -240,14 +231,11 @@ const GuardianConsent: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post(
-        `${API_BASE_URL}/client/request-guardian-revocation`,
-        {
-          relationshipId: selectedGuardian.relationshipId,
-          reason: revocationReason,
-        },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.post('/client/request-guardian-revocation', {
+        relationshipId: selectedGuardian.relationshipId,
+        reason: revocationReason,
+      });
 
       if (response.data.success) {
         setSuccess(
@@ -277,11 +265,8 @@ const GuardianConsent: React.FC = () => {
   const saveConsentPreferences = async () => {
     try {
       setLoading(true);
-      const response = await axios.put(
-        `${API_BASE_URL}/client/guardian-consent-preferences`,
-        consentPreferences,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.put('/client/guardian-consent-preferences', consentPreferences);
 
       if (response.data.success) {
         setSuccess('Consent preferences updated successfully. Guardians have been notified.');

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 
 // Session timeout settings (should match backend)
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
@@ -13,6 +14,7 @@ interface SessionTimeoutWarningProps {
 
 export default function SessionTimeoutWarning({ onLogout }: SessionTimeoutWarningProps) {
   const navigate = useNavigate();
+  const { logout: authLogout } = useAuth();
   const [showWarning, setShowWarning] = useState(false);
   const [remainingTime, setRemainingTime] = useState(WARNING_BEFORE_MS);
   const [extending, setExtending] = useState(false);
@@ -45,16 +47,12 @@ export default function SessionTimeoutWarning({ onLogout }: SessionTimeoutWarnin
     }
   };
 
-  // Handle logout
+  // Handle logout - uses centralized auth logout to properly clear all state
   const handleLogout = useCallback(async () => {
-    try {
-      await api.post('/auth/logout');
-    } catch (error) {
-      // Continue with local cleanup even if backend call fails
-    }
-    localStorage.removeItem('user');
-    localStorage.removeItem('passwordExpiryWarning');
     setShowWarning(false);
+
+    // Use centralized logout from useAuth hook (clears cookies, cache, and localStorage)
+    await authLogout();
 
     if (onLogout) {
       onLogout();
@@ -63,7 +61,7 @@ export default function SessionTimeoutWarning({ onLogout }: SessionTimeoutWarnin
         state: { message: 'Your session has expired due to inactivity. Please log in again.' }
       });
     }
-  }, [navigate, onLogout]);
+  }, [navigate, onLogout, authLogout]);
 
   // Check session timeout
   const checkSessionTimeout = useCallback(() => {

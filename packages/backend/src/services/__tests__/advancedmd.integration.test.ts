@@ -378,7 +378,7 @@ describe('AdvancedMD Integration Tests', () => {
       addressCity: 'Springfield',
       addressState: 'IL',
       addressZipCode: '62701',
-      ssn: '123-45-6789',
+      // Note: SSN is never collected by MentalSpace EHR
       advancedMDPatientId: null,
       lastSyncedToAMD: null,
       amdSyncStatus: null,
@@ -526,7 +526,7 @@ describe('AdvancedMD Integration Tests', () => {
         mockClientFindUnique.mockResolvedValue(mockClient);
         mockSyncLogCreate.mockResolvedValue({ id: 'log-1', syncStarted: new Date() });
 
-        // SSN should be included when option set
+        // Note: SSN is never collected or synced - MentalSpace does not collect SSN
         expect(mockClientFindUnique).toBeDefined();
       });
 

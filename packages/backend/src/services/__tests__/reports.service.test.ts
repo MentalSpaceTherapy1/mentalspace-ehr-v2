@@ -110,6 +110,7 @@ import {
   generateIncidentAnalysisReport,
   generateAuditTrailReport,
 } from '../reports.service';
+import { UserRoles } from '@mentalspace/shared';
 
 describe('Reports Service', () => {
   beforeEach(() => {
@@ -130,7 +131,7 @@ describe('Reports Service', () => {
           firstName: 'John',
           lastName: 'Doe',
           email: 'john@test.com',
-          roles: ['CLINICIAN'],
+          roles: [UserRoles.CLINICIAN],
         },
       },
       {
@@ -145,7 +146,7 @@ describe('Reports Service', () => {
           firstName: 'Jane',
           lastName: 'Smith',
           email: 'jane@test.com',
-          roles: ['CLINICIAN'],
+          roles: [UserRoles.CLINICIAN],
         },
       },
     ];
@@ -314,7 +315,7 @@ describe('Reports Service', () => {
         title: 'HIPAA Compliance',
         isRequired: true,
         category: 'COMPLIANCE',
-        targetRoles: ['CLINICIAN', 'ADMINISTRATOR'],
+        targetRoles: [UserRoles.CLINICIAN, UserRoles.ADMINISTRATOR],
       },
     ];
 
@@ -322,7 +323,7 @@ describe('Reports Service', () => {
       mockTrainingRecordFindMany.mockResolvedValue(mockTrainingRecords);
       mockComplianceTrainingFindMany.mockResolvedValue(mockComplianceTrainings);
       mockUserFindMany.mockResolvedValue([
-        { id: 'user-1', firstName: 'John', lastName: 'Doe', roles: ['CLINICIAN'] },
+        { id: 'user-1', firstName: 'John', lastName: 'Doe', roles: [UserRoles.CLINICIAN] },
       ]);
 
       const result = await generateTrainingComplianceReport({});
@@ -646,21 +647,21 @@ describe('Reports Service', () => {
           credentialType: 'LICENSE',
           verificationStatus: 'VERIFIED',
           expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-          user: { id: 'user-1', firstName: 'John', lastName: 'Doe', email: 'john@test.com', roles: ['CLINICIAN'] },
+          user: { id: 'user-1', firstName: 'John', lastName: 'Doe', email: 'john@test.com', roles: [UserRoles.CLINICIAN] },
         },
         {
           id: 'cred-2',
           credentialType: 'LICENSE',
           verificationStatus: 'VERIFIED',
           expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-          user: { id: 'user-2', firstName: 'Jane', lastName: 'Smith', email: 'jane@test.com', roles: ['CLINICIAN'] },
+          user: { id: 'user-2', firstName: 'Jane', lastName: 'Smith', email: 'jane@test.com', roles: [UserRoles.CLINICIAN] },
         },
         {
           id: 'cred-3',
           credentialType: 'CERTIFICATION',
           verificationStatus: 'PENDING',
           expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-          user: { id: 'user-3', firstName: 'Bob', lastName: 'Wilson', email: 'bob@test.com', roles: ['CLINICIAN'] },
+          user: { id: 'user-3', firstName: 'Bob', lastName: 'Wilson', email: 'bob@test.com', roles: [UserRoles.CLINICIAN] },
         },
       ];
 
@@ -734,7 +735,7 @@ describe('Reports Service', () => {
             firstName: 'John',
             lastName: 'Doe',
             email: 'john@test.com',
-            roles: ['CLINICIAN'],
+            roles: [UserRoles.CLINICIAN],
             department: 'Clinical',
             jobTitle: 'Therapist',
             employmentStatus: 'ACTIVE',

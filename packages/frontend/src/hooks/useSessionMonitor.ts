@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { useAuth } from './useAuth';
 
 interface UseSessionMonitorOptions {
   warningTime?: number; // Milliseconds before timeout to show warning (default: 2 minutes)
@@ -25,6 +26,7 @@ export function useSessionMonitor(options: UseSessionMonitorOptions = {}) {
   } = options;
 
   const navigate = useNavigate();
+  const { logout: authLogout } = useAuth();
   const [state, setState] = useState<SessionMonitorState>({
     showWarning: false,
     secondsRemaining: 0,
@@ -88,8 +90,8 @@ export function useSessionMonitor(options: UseSessionMonitorOptions = {}) {
     }
   }, [updateActivity]);
 
-  // Handle logout
-  const handleLogout = useCallback(() => {
+  // Handle logout - uses centralized auth logout
+  const handleLogout = useCallback(async () => {
     // Clear all timers
     if (warningTimeoutRef.current) {
       clearTimeout(warningTimeoutRef.current);
@@ -98,10 +100,8 @@ export function useSessionMonitor(options: UseSessionMonitorOptions = {}) {
       clearTimeout(logoutTimeoutRef.current);
     }
 
-    // Clear storage
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+    // Use centralized logout from useAuth hook (clears cookies, cache, and localStorage)
+    await authLogout();
 
     // Redirect to login
     navigate('/login', {
@@ -109,7 +109,7 @@ export function useSessionMonitor(options: UseSessionMonitorOptions = {}) {
         message: 'Your session has expired due to inactivity. Please log in again.'
       }
     });
-  }, [navigate]);
+  }, [navigate, authLogout]);
 
   // Track user activity
   useEffect(() => {

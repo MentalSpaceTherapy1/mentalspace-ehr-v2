@@ -26,6 +26,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMessaging } from '../../hooks/useMessaging';
+import { useAuth } from '../../hooks/useAuth';
 import { format } from 'date-fns';
 
 interface MessageThreadProps {
@@ -37,6 +38,8 @@ const MessageThread: React.FC<MessageThreadProps> = ({ threadId: propThreadId })
   const threadId = propThreadId || paramThreadId || '';
   const navigate = useNavigate();
   const { messages, sendMessage, markAsRead, loading } = useMessaging();
+  // Use auth hook for user data - no localStorage dependency
+  const { user } = useAuth();
   const [replyText, setReplyText] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -90,8 +93,8 @@ const MessageThread: React.FC<MessageThreadProps> = ({ threadId: propThreadId })
   };
 
   const isCurrentUser = (senderId: string) => {
-    // Mock check - replace with actual user ID check
-    return senderId === localStorage.getItem('userId');
+    // Check if sender is the current user
+    return senderId === user?.id;
   };
 
   return (
@@ -281,7 +284,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({ threadId: propThreadId })
       >
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
           <Avatar sx={{ bgcolor: '#667eea' }}>
-            {localStorage.getItem('userName')?.charAt(0) || 'U'}
+            {user?.firstName?.charAt(0) || 'U'}
           </Avatar>
 
           <TextField

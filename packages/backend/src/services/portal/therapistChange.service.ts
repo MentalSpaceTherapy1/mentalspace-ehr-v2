@@ -1,6 +1,7 @@
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import prisma from '../database';
+import { UserRoles } from '@mentalspace/shared';
 
 // ============================================================================
 // THERAPIST CHANGE REQUESTS (Client-side)
@@ -259,7 +260,7 @@ export async function assignNewTherapist(data: {
     const newClinician = await prisma.user.findFirst({
       where: {
         id: data.newClinicianId,
-        roles: { hasSome: ['CLINICIAN', 'SUPERVISOR'] },
+        roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR] },
         isActive: true,
         acceptsNewClients: true,
       },

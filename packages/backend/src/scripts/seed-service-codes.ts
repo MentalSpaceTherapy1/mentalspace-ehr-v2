@@ -1,4 +1,5 @@
 import prisma from '../services/database';
+import { UserRoles } from '@mentalspace/shared';
 
 
 const serviceCodes = [
@@ -197,7 +198,7 @@ async function main() {
 
   // Get the first admin user to use as createdBy
   const adminUser = await prisma.user.findFirst({
-    where: { roles: { hasSome: ['ADMINISTRATOR'] } },
+    where: { roles: { hasSome: [UserRoles.ADMINISTRATOR] } },
   });
 
   if (!adminUser) {

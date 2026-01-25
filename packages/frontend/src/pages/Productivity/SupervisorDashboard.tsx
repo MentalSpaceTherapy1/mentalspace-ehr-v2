@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { useSupervisorDashboard } from '../../hooks/productivity/useProductivityMetrics';
 import MetricCard from '../../components/Productivity/MetricCard';
 import { Users, TrendingUp, TrendingDown, AlertCircle, Award, Target, MessageCircle } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function SupervisorDashboard() {
-  const userId = localStorage.getItem('userId') || '';
+  // Use auth hook for user data - no localStorage dependency
+  const { user } = useAuth();
+  const userId = user?.id || '';
   const { data: dashboardData, isLoading, error } = useSupervisorDashboard(userId);
   const [selectedClinician, setSelectedClinician] = useState<string | null>(null);
 

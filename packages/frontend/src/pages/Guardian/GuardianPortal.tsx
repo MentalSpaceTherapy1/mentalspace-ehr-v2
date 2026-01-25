@@ -57,12 +57,11 @@ import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+// Phase 4.2: Use api instance for httpOnly cookie auth instead of raw axios with Bearer tokens
+import api from '../../lib/api';
 
 dayjs.extend(isBetween);
 dayjs.extend(relativeTime);
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 interface Minor {
   id: string;
@@ -153,9 +152,8 @@ const GuardianPortal: React.FC = () => {
   const fetchMinors = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/guardian/my-minors`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.get('/guardian/my-minors');
 
       if (response.data.success) {
         const minorsData = response.data.data.map((item: any) => ({
@@ -191,13 +189,10 @@ const GuardianPortal: React.FC = () => {
 
   const fetchMinorData = async (minorId: string) => {
     try {
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
       const [appointmentsRes, messagesRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/guardian/minors/${minorId}/appointments`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        }),
-        axios.get(`${API_BASE_URL}/guardian/minors/${minorId}/messages`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        }),
+        api.get(`/guardian/minors/${minorId}/appointments`),
+        api.get(`/guardian/minors/${minorId}/messages`),
       ]);
 
       if (appointmentsRes.data.success) {
@@ -293,9 +288,9 @@ const GuardianPortal: React.FC = () => {
     if (!cancelConfirm.id) return;
 
     try {
-      const response = await axios.delete(
-        `${API_BASE_URL}/guardian/minors/${selectedMinorId}/appointments/${cancelConfirm.id}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.delete(
+        `/guardian/minors/${selectedMinorId}/appointments/${cancelConfirm.id}`
       );
 
       if (response.data.success) {

@@ -56,6 +56,7 @@ import {
   setSignaturePassword,
 } from '../signature.service';
 import bcrypt from 'bcryptjs';
+import { UserRoles } from '@mentalspace/shared';
 
 describe('Signature Service', () => {
   beforeEach(() => {
@@ -66,7 +67,7 @@ describe('Signature Service', () => {
     it('should find attestation for clinician role', async () => {
       mockUserFindUnique.mockResolvedValue({
         id: 'user-123',
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         licenseState: 'GA',
       });
 
@@ -90,7 +91,7 @@ describe('Signature Service', () => {
     it('should find supervisor attestation for cosign', async () => {
       mockUserFindUnique.mockResolvedValue({
         id: 'user-123',
-        roles: ['SUPERVISOR'],
+        roles: [UserRoles.SUPERVISOR],
         licenseState: 'GA',
       });
 
@@ -116,7 +117,7 @@ describe('Signature Service', () => {
     it('should fallback to US jurisdiction if no state-specific attestation', async () => {
       mockUserFindUnique.mockResolvedValue({
         id: 'user-123',
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         licenseState: 'XX',
       });
 
@@ -147,7 +148,7 @@ describe('Signature Service', () => {
     it('should throw error when no attestation found', async () => {
       mockUserFindUnique.mockResolvedValue({
         id: 'user-123',
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         licenseState: 'GA',
       });
 
@@ -318,7 +319,7 @@ describe('Signature Service', () => {
 
       mockUserFindUnique.mockResolvedValue({
         id: 'user-456',
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         licenseState: 'GA',
       });
 
@@ -365,7 +366,7 @@ describe('Signature Service', () => {
 
       mockUserFindUnique.mockResolvedValue({
         id: 'user-456',
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         licenseState: 'GA',
       });
 
@@ -442,7 +443,7 @@ describe('Signature Service', () => {
 
       mockUserFindUnique.mockResolvedValue({
         id: 'supervisor-789',
-        roles: ['SUPERVISOR'],
+        roles: [UserRoles.SUPERVISOR],
         licenseState: 'GA',
       });
 

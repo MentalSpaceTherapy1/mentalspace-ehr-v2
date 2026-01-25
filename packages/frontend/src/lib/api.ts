@@ -112,7 +112,7 @@ api.interceptors.request.use(
                           config.url?.match(/\/waitlist\/[^/]+\/decline/));
 
     // DEBUG: Log route classification (only in development)
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('[API DEBUG]', {
         url: config.url,
         isTrackingRoute,
@@ -197,7 +197,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (csrfError) {
         // CSRF refresh failed - this shouldn't normally happen
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('[API] Failed to refresh CSRF token:', csrfError);
         }
         return Promise.reject(error);

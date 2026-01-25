@@ -1,241 +1,62 @@
+/**
+ * App.tsx
+ * Phase 4.1: Refactored with Route Lazy Loading
+ * Phase 4.2: Auth now uses httpOnly cookies only (no localStorage for auth state)
+ *
+ * All page components are now lazy-loaded for better code splitting.
+ * Critical components (Layout, ErrorBoundary, Login) remain eagerly loaded.
+ */
+
+import { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+
+// Critical components - kept eager for immediate availability
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
+import LoadingFallback from './components/common/LoadingFallback';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import UserList from './pages/Users/UserList';
-import UserForm from './pages/Users/UserForm';
-import UserDetail from './pages/Users/UserDetail';
-import PracticeSettings from './pages/Settings/PracticeSettingsFinal';
-import MFASettings from './pages/Settings/MFASettings';
-import SessionManagement from './pages/Settings/SessionManagement';
-import UserProfile from './pages/UserProfile';
-import ClientList from './pages/Clients/ClientList';
-import ClientForm from './pages/Clients/ClientForm';
-import ClientDetail from './pages/Clients/ClientDetail';
-import ClientDiagnosesPage from './pages/Clients/ClientDiagnosesPage';
-import DuplicateDetectionPage from './pages/Clients/DuplicateDetectionPage';
-import ClinicalNoteDetail from './pages/ClinicalNotes/ClinicalNoteDetail';
-import ClinicalNotesPage from './pages/ClinicalNotes/ClinicalNotesPage';
-import ComplianceDashboard from './pages/ClinicalNotes/ComplianceDashboard';
-import MyNotes from './pages/ClinicalNotes/MyNotes';
-// Old components kept for backward compatibility with direct form routes
-import IntakeAssessmentForm from './pages/ClinicalNotes/Forms/IntakeAssessmentForm';
-import ProgressNoteForm from './pages/ClinicalNotes/Forms/ProgressNoteForm';
-import TreatmentPlanForm from './pages/ClinicalNotes/Forms/TreatmentPlanForm';
-import CancellationNoteForm from './pages/ClinicalNotes/Forms/CancellationNoteForm';
-import ConsultationNoteForm from './pages/ClinicalNotes/Forms/ConsultationNoteForm';
-import ContactNoteForm from './pages/ClinicalNotes/Forms/ContactNoteForm';
-import TerminationNoteForm from './pages/ClinicalNotes/Forms/TerminationNoteForm';
-import MiscellaneousNoteForm from './pages/ClinicalNotes/Forms/MiscellaneousNoteForm';
-import GroupTherapyNoteForm from './pages/ClinicalNotes/Forms/GroupTherapyNoteForm';
-import AppointmentsCalendar from './pages/Appointments/AppointmentsCalendar';
-import NewAppointment from './pages/Appointments/NewAppointment';
-import Waitlist from './pages/Appointments/Waitlist';
-import ClinicianSchedule from './pages/Appointments/ClinicianSchedule';
-import ProviderComparisonView from './pages/Appointments/ProviderComparisonView';
-import RoomView from './pages/Appointments/RoomView';
-import TimeOffRequests from './pages/TimeOff/TimeOffRequestsPage';
-import ReminderSettings from './pages/Settings/ReminderSettings';
-import ClinicalNoteReminderSettings from './pages/Settings/ClinicalNoteReminderSettings';
-import AppointmentTypes from './pages/Settings/AppointmentTypes';
-import ProviderAvailability from './pages/Settings/ProviderAvailability';
-import VideoSession from './pages/Telehealth/VideoSession';
-import TelehealthDashboard from './pages/Telehealth/TelehealthDashboard';
-import SelfScheduleDashboard from './pages/SelfSchedule/SelfScheduleDashboard';
-import ClientPortalManagement from './pages/ClientPortal/ClientPortalManagement';
-import ProgressTrackingDashboard from './pages/ProgressTracking/ProgressTrackingDashboard';
-import AssignMeasures from './pages/ProgressTracking/AssignMeasures';
-import ProgressReports from './pages/ProgressTracking/ProgressReports';
-import GuardianPortalDashboard from './pages/Guardian/GuardianPortalDashboard';
-import AdminDashboard from './pages/Admin/AdminDashboard';
-import ClinicianToolsDashboard from './pages/Clinician/ClinicianToolsDashboard';
-import BillingDashboard from './pages/Billing/BillingDashboard';
-import ChargesPage from './pages/Billing/ChargesPage';
-import PaymentsPage from './pages/Billing/PaymentsPage';
-import PayerList from './pages/Billing/PayerList';
-import PayerForm from './pages/Billing/PayerForm';
-import PayerRuleList from './pages/Billing/PayerRuleList';
-import PayerRuleForm from './pages/Billing/PayerRuleForm';
-import BillingHoldsList from './pages/Billing/BillingHoldsList';
-import BillingReadinessChecker from './pages/Billing/BillingReadinessChecker';
-import PayerRuleImporter from './pages/Billing/PayerRuleImporter';
-import PayerDashboard from './pages/Billing/PayerDashboard';
-import ClinicianDashboard from './pages/Productivity/ClinicianDashboard';
-import SupervisorDashboard from './pages/Productivity/SupervisorDashboard';
-import AdministratorDashboard from './pages/Productivity/AdministratorDashboard';
-import ReportsDashboard from './pages/Reports/ReportsDashboard';
-import CustomReportsList from './pages/Reports/CustomReportsList';
-import { ReportSubscriptions } from './pages/Reports/ReportSubscriptions';
-import CustomReportBuilder from './pages/Reports/CustomReportBuilder';
-import AnalyticsDashboard from './pages/Analytics/AnalyticsDashboard';
 import PortalLayout from './components/PortalLayout';
 import PortalLogin from './pages/Portal/PortalLogin';
 import PortalRegister from './pages/Portal/PortalRegister';
 import PortalForgotPassword from './pages/Portal/PortalForgotPassword';
 import PortalChangePassword from './pages/Portal/PortalChangePassword';
-import PortalDashboard from './pages/Portal/PortalDashboard';
-import PortalAppointments from './pages/Portal/PortalAppointments';
-import PortalMessages from './pages/Portal/PortalMessages';
-import PortalMoodTracking from './pages/Portal/PortalMoodTracking';
-import PortalSymptomDiary from './pages/Portal/PortalSymptomDiary';
-import PortalSleepDiary from './pages/Portal/PortalSleepDiary';
-import PortalExerciseLog from './pages/Portal/PortalExerciseLog';
-import PortalBilling from './pages/Portal/PortalBilling';
-import PortalProfile from './pages/Portal/PortalProfile';
-import PortalDocuments from './pages/Portal/PortalDocuments';
-import PortalFormViewer from './pages/Portal/PortalFormViewer';
-import PortalAssessments from './pages/Portal/PortalAssessments';
-import PortalAssessmentTake from './pages/Portal/PortalAssessmentTake';
-import PortalAssessmentResults from './pages/Portal/PortalAssessmentResults';
-import PortalAppointmentRequest from './pages/Portal/PortalAppointmentRequest';
-import PortalReferrals from './pages/Portal/PortalReferrals';
-import PortalTherapistChange from './pages/Portal/PortalTherapistChange';
-import PortalTherapistProfile from './pages/Portal/PortalTherapistProfile';
-import SupervisionSessionsList from './pages/Supervision/SupervisionSessionsList';
-import SupervisionSessionForm from './pages/Supervision/SupervisionSessionForm';
-import SupervisionHoursDashboard from './pages/Supervision/SupervisionHoursDashboard';
-import CosignQueue from './pages/ClinicalNotes/CosignQueue';
-import UnlockRequestManagement from './pages/UnlockRequests/UnlockRequestManagement';
-import EditNoteRouter from './pages/ClinicalNotes/EditNoteRouter';
-import SmartNoteCreator from './pages/ClinicalNotes/SmartNoteCreator';
-import LandingPage from './pages/Landing/LandingPage';
-import GroupSessionsPage from './pages/Groups/GroupSessionsPage';
-import GroupDetailsPage from './pages/Groups/GroupDetailsPage';
-import AISchedulingAssistant from './pages/AISchedulingAssistant';
-import OutcomeMeasuresPage from './pages/OutcomeMeasures/OutcomeMeasuresPage';
-import SessionRatings from './pages/Admin/SessionRatings';
-import CrisisDetections from './pages/Admin/CrisisDetections';
-// Old Client diary components - no longer used, redirected to Portal versions
-// import SymptomDiary from './pages/Client/SymptomDiary';
-// import SleepDiary from './pages/Client/SleepDiary';
-// import ExerciseLog from './pages/Client/ExerciseLog';
-import PortalSelfScheduling from './pages/Portal/PortalSelfScheduling';
-import GuardianPortal from './pages/Guardian/GuardianPortal';
-import RequestAccess from './pages/Guardian/RequestAccess';
-import GuardianVerification from './pages/Admin/GuardianVerification';
-import GuardianConsent from './pages/Guardian/GuardianConsent';
-import SchedulingRules from './pages/Admin/SchedulingRules';
-import WaitlistManagement from './pages/Admin/WaitlistManagement';
-import ClientProgress from './pages/Clinician/ClientProgress';
-import MyWaitlist from './pages/Clinician/MyWaitlist';
-import DashboardList from './pages/Dashboards/DashboardList';
-import DashboardBuilder from './pages/Dashboards/DashboardBuilder';
-import PredictionsDashboard from './pages/Predictions/PredictionsDashboard';
-
-// Module 9: Credentialing
-import CredentialingDashboard from './pages/Credentialing/CredentialingDashboard';
-import CredentialList from './pages/Credentialing/CredentialList';
-import CredentialForm from './pages/Credentialing/CredentialForm';
-import CredentialVerification from './pages/Credentialing/CredentialVerification';
-import ExpirationAlerts from './pages/Credentialing/ExpirationAlerts';
-import ComplianceReport from './pages/Credentialing/ComplianceReport';
-import ScreeningStatus from './pages/Credentialing/ScreeningStatus';
-import DocumentUpload from './pages/Credentialing/DocumentUpload';
-import CredentialTimeline from './pages/Credentialing/CredentialTimeline';
-
-// Module 9: Training
-import TrainingDashboard from './pages/Training/TrainingDashboard';
-import CourseCatalog from './pages/Training/CourseCatalog';
-import CourseDetails from './pages/Training/CourseDetails';
-import CourseForm from './pages/Training/CourseForm';
-import EnrollmentManager from './pages/Training/EnrollmentManager';
-import TrainingProgress from './pages/Training/TrainingProgress';
-import CEUTracker from './pages/Training/CEUTracker';
-import ComplianceMonitor from './pages/Training/ComplianceMonitor';
-import TrainingCalendar from './pages/Training/TrainingCalendar';
-import CertificateViewer from './pages/Training/CertificateViewer';
-
-// Module 9: Compliance
-import PolicyLibrary from './pages/Compliance/PolicyLibrary';
-import PolicyViewer from './pages/Compliance/PolicyViewer';
-import PolicyForm from './pages/Compliance/PolicyForm';
-import PolicyDistribution from './pages/Compliance/PolicyDistribution';
-import AcknowledgmentForm from './pages/Compliance/AcknowledgmentForm';
-import IncidentReportingForm from './pages/Compliance/IncidentReportingForm';
-import IncidentList from './pages/Compliance/IncidentList';
-import IncidentDetails from './pages/Compliance/IncidentDetails';
-import InvestigationWorkflow from './pages/Compliance/InvestigationWorkflow';
-import ComplianceDashboardPage from './pages/Compliance/ComplianceDashboard';
-import IncidentTrends from './pages/Compliance/IncidentTrends';
-
-// Module 9: HR Functions
-import PerformanceReviewForm from './pages/HR/PerformanceReviewForm';
-import ReviewList from './pages/HR/ReviewList';
-import ReviewViewer from './pages/HR/ReviewViewer';
-import TimeClockInterface from './pages/HR/TimeClockInterface';
-import AttendanceCalendar from './pages/HR/AttendanceCalendar';
-import AttendanceReport from './pages/HR/AttendanceReport';
-import PTORequestForm from './pages/HR/PTORequestForm';
-import PTOCalendar from './pages/HR/PTOCalendar';
-import PTOApproval from './pages/HR/PTOApproval';
-
-// Module 9: Staff Management
-import StaffDirectory from './pages/Staff/StaffDirectory';
-import StaffProfile from './pages/Staff/StaffProfile';
-import EmploymentForm from './pages/Staff/EmploymentForm';
-import OrganizationalChart from './pages/Staff/OrganizationalChart';
-import OnboardingDashboard from './pages/Staff/OnboardingDashboard';
-import OnboardingChecklist from './pages/Staff/OnboardingChecklist';
-import MilestoneTracker from './pages/Staff/MilestoneTracker';
-
-// Module 9: Communication
-import MessagingHub from './pages/Communication/MessagingHub';
-import MessageComposer from './pages/Communication/MessageComposer';
-import MessageThread from './pages/Communication/MessageThread';
-import ChannelList from './pages/Communication/ChannelList';
-import ChannelView from './pages/Communication/ChannelView';
-import DocumentLibrary from './pages/Communication/DocumentLibrary';
-import DocumentUploader from './pages/Communication/DocumentUploader';
-import DocumentViewer from './pages/Communication/DocumentViewer';
-import FolderTree from './pages/Communication/FolderTree';
-
-// Module 9: Vendor & Financial
-import VendorList from './pages/Vendor/VendorList';
-import VendorForm from './pages/Vendor/VendorForm';
-import VendorProfile from './pages/Vendor/VendorProfile';
-import BudgetDashboard from './pages/Finance/BudgetDashboard';
-import BudgetAllocation from './pages/Finance/BudgetAllocation';
-import ExpenseForm from './pages/Finance/ExpenseForm';
-import ExpenseList from './pages/Finance/ExpenseList';
-import ExpenseApproval from './pages/Finance/ExpenseApproval';
-import PurchaseOrderForm from './pages/Finance/PurchaseOrderForm';
-import POList from './pages/Finance/POList';
-import POApproval from './pages/Finance/POApproval';
-
-// Module 9: Reports
-import Module9ReportsDashboard from './pages/Module9Reports/Module9ReportsDashboard';
-import ReportViewer from './pages/Module9Reports/ReportViewer';
-import ReportBuilder from './pages/Module9Reports/ReportBuilder';
-import ExportDialog from './pages/Module9Reports/ExportDialog';
-import DashboardWidgets from './pages/Module9Reports/DashboardWidgets';
-import AnalyticsCharts from './pages/Module9Reports/AnalyticsCharts';
-import AuditLogViewer from './pages/Module9Reports/AuditLogViewer';
-
-// AdvancedMD Integration
-import AdvancedMDSync from './pages/Admin/AdvancedMDSync';
-import AdvancedMDSettings from './pages/Admin/AdvancedMDSettings';
 import { AdvancedMDProvider } from './components/AdvancedMD';
 
+// Auth hook for checking authentication state
+import { useAuth } from './hooks/useAuth';
+
+// All page components - lazy loaded for code splitting
+import * as LazyRoutes from './routes/lazy';
 
 /**
  * PrivateRoute - Protects EHR routes requiring authentication
  *
- * HIPAA Security: Auth tokens are now in httpOnly cookies (not accessible via JS)
- * We check for user data in localStorage as an indicator of login state.
- * Actual authentication is verified server-side via httpOnly cookie on each API call.
+ * Phase 4.2: Now uses useAuth hook which validates session via API (httpOnly cookies)
+ * - Shows loading spinner while verifying authentication
+ * - Redirects to login if not authenticated
+ * - No localStorage dependency for auth state (more secure)
  */
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  // Check for user data (stored after successful login)
-  // Note: Auth token is in httpOnly cookie, verified server-side on API calls
-  const user = localStorage.getItem('user');
+  const { user, isLoading, isAuthenticated } = useAuth();
 
-  if (!user) {
-    return <Navigate to="/login" />;
+  // Show loading while checking auth status
+  if (isLoading) {
+    return <LoadingFallback message="Verifying session..." />;
   }
 
-  return <Layout>{children}</Layout>;
+  // Not authenticated - redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (
+    <Layout>
+      <Suspense fallback={<LoadingFallback message="Loading page..." />}>
+        {children}
+      </Suspense>
+    </Layout>
+  );
 }
 
 function PortalRoute({ children }: { children: React.ReactNode }) {
@@ -247,7 +68,11 @@ function PortalRoute({ children }: { children: React.ReactNode }) {
 
   return (
     <ErrorBoundary>
-      <PortalLayout>{children}</PortalLayout>
+      <PortalLayout>
+        <Suspense fallback={<LoadingFallback message="Loading page..." />}>
+          {children}
+        </Suspense>
+      </PortalLayout>
     </ErrorBoundary>
   );
 }
@@ -259,11 +84,11 @@ function App() {
       <div className="min-h-screen bg-gray-50">
         <Routes>
         {/* Public Landing Page */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<LazyRoutes.LandingPage />} />
 
         <Route path="/login" element={<Login />} />
 
-        {/* Client Portal Routes */}
+        {/* Client Portal Routes - Auth pages eager, content pages lazy */}
         <Route path="/portal/login" element={<PortalLogin />} />
         <Route path="/portal/register" element={<PortalRegister />} />
         <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
@@ -272,7 +97,7 @@ function App() {
           path="/portal/dashboard"
           element={
             <PortalRoute>
-              <PortalDashboard />
+              <LazyRoutes.PortalDashboard />
             </PortalRoute>
           }
         />
@@ -280,7 +105,7 @@ function App() {
           path="/portal/appointments"
           element={
             <PortalRoute>
-              <PortalAppointments />
+              <LazyRoutes.PortalAppointments />
             </PortalRoute>
           }
         />
@@ -288,7 +113,7 @@ function App() {
           path="/portal/messages"
           element={
             <PortalRoute>
-              <PortalMessages />
+              <LazyRoutes.PortalMessages />
             </PortalRoute>
           }
         />
@@ -296,7 +121,7 @@ function App() {
           path="/portal/mood"
           element={
             <PortalRoute>
-              <PortalMoodTracking />
+              <LazyRoutes.PortalMoodTracking />
             </PortalRoute>
           }
         />
@@ -304,7 +129,7 @@ function App() {
           path="/portal/symptoms"
           element={
             <PortalRoute>
-              <PortalSymptomDiary />
+              <LazyRoutes.PortalSymptomDiary />
             </PortalRoute>
           }
         />
@@ -312,7 +137,7 @@ function App() {
           path="/portal/sleep"
           element={
             <PortalRoute>
-              <PortalSleepDiary />
+              <LazyRoutes.PortalSleepDiary />
             </PortalRoute>
           }
         />
@@ -320,7 +145,7 @@ function App() {
           path="/portal/exercise"
           element={
             <PortalRoute>
-              <PortalExerciseLog />
+              <LazyRoutes.PortalExerciseLog />
             </PortalRoute>
           }
         />
@@ -328,7 +153,7 @@ function App() {
           path="/portal/billing"
           element={
             <PortalRoute>
-              <PortalBilling />
+              <LazyRoutes.PortalBilling />
             </PortalRoute>
           }
         />
@@ -336,7 +161,7 @@ function App() {
           path="/portal/profile"
           element={
             <PortalRoute>
-              <PortalProfile />
+              <LazyRoutes.PortalProfile />
             </PortalRoute>
           }
         />
@@ -344,7 +169,7 @@ function App() {
           path="/portal/documents"
           element={
             <PortalRoute>
-              <PortalDocuments />
+              <LazyRoutes.PortalDocuments />
             </PortalRoute>
           }
         />
@@ -352,7 +177,7 @@ function App() {
           path="/portal/forms/:formId"
           element={
             <PortalRoute>
-              <PortalFormViewer />
+              <LazyRoutes.PortalFormViewer />
             </PortalRoute>
           }
         />
@@ -360,7 +185,7 @@ function App() {
           path="/portal/assessments"
           element={
             <PortalRoute>
-              <PortalAssessments />
+              <LazyRoutes.PortalAssessments />
             </PortalRoute>
           }
         />
@@ -368,7 +193,7 @@ function App() {
           path="/portal/assessments/:assessmentId/take"
           element={
             <PortalRoute>
-              <PortalAssessmentTake />
+              <LazyRoutes.PortalAssessmentTake />
             </PortalRoute>
           }
         />
@@ -376,7 +201,7 @@ function App() {
           path="/portal/assessments/:assessmentId/results"
           element={
             <PortalRoute>
-              <PortalAssessmentResults />
+              <LazyRoutes.PortalAssessmentResults />
             </PortalRoute>
           }
         />
@@ -384,7 +209,7 @@ function App() {
           path="/portal/appointments/request"
           element={
             <PortalRoute>
-              <PortalAppointmentRequest />
+              <LazyRoutes.PortalAppointmentRequest />
             </PortalRoute>
           }
         />
@@ -392,7 +217,7 @@ function App() {
           path="/portal/referrals"
           element={
             <PortalRoute>
-              <PortalReferrals />
+              <LazyRoutes.PortalReferrals />
             </PortalRoute>
           }
         />
@@ -400,7 +225,7 @@ function App() {
           path="/portal/therapist/change"
           element={
             <PortalRoute>
-              <PortalTherapistChange />
+              <LazyRoutes.PortalTherapistChange />
             </PortalRoute>
           }
         />
@@ -408,7 +233,7 @@ function App() {
           path="/portal/therapist/profile"
           element={
             <PortalRoute>
-              <PortalTherapistProfile />
+              <LazyRoutes.PortalTherapistProfile />
             </PortalRoute>
           }
         />
@@ -416,7 +241,7 @@ function App() {
           path="/portal/telehealth/:appointmentId"
           element={
             <PortalRoute>
-              <VideoSession />
+              <LazyRoutes.VideoSession />
             </PortalRoute>
           }
         />
@@ -425,7 +250,7 @@ function App() {
           path="/portal/telehealth/session/:appointmentId"
           element={
             <PortalRoute>
-              <VideoSession />
+              <LazyRoutes.VideoSession />
             </PortalRoute>
           }
         />
@@ -435,7 +260,7 @@ function App() {
           path="/dashboard"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <LazyRoutes.Dashboard />
             </PrivateRoute>
           }
         />
@@ -443,7 +268,7 @@ function App() {
           path="/clients"
           element={
             <PrivateRoute>
-              <ClientList />
+              <LazyRoutes.ClientList />
             </PrivateRoute>
           }
         />
@@ -451,7 +276,7 @@ function App() {
           path="/clients/new"
           element={
             <PrivateRoute>
-              <ClientForm />
+              <LazyRoutes.ClientForm />
             </PrivateRoute>
           }
         />
@@ -459,7 +284,7 @@ function App() {
           path="/clients/:id"
           element={
             <PrivateRoute>
-              <ClientDetail />
+              <LazyRoutes.ClientDetail />
             </PrivateRoute>
           }
         />
@@ -467,7 +292,7 @@ function App() {
           path="/clients/:id/edit"
           element={
             <PrivateRoute>
-              <ClientForm />
+              <LazyRoutes.ClientForm />
             </PrivateRoute>
           }
         />
@@ -475,7 +300,7 @@ function App() {
           path="/clients/:clientId/diagnoses"
           element={
             <PrivateRoute>
-              <ClientDiagnosesPage />
+              <LazyRoutes.ClientDiagnosesPage />
             </PrivateRoute>
           }
         />
@@ -483,7 +308,7 @@ function App() {
           path="/clients/:clientId/outcome-measures"
           element={
             <PrivateRoute>
-              <OutcomeMeasuresPage />
+              <LazyRoutes.OutcomeMeasuresPage />
             </PrivateRoute>
           }
         />
@@ -491,7 +316,7 @@ function App() {
           path="/clients/duplicates"
           element={
             <PrivateRoute>
-              <DuplicateDetectionPage />
+              <LazyRoutes.DuplicateDetectionPage />
             </PrivateRoute>
           }
         />
@@ -499,7 +324,7 @@ function App() {
           path="/appointments"
           element={
             <PrivateRoute>
-              <AppointmentsCalendar />
+              <LazyRoutes.AppointmentsCalendar />
             </PrivateRoute>
           }
         />
@@ -507,7 +332,7 @@ function App() {
           path="/appointments/new"
           element={
             <PrivateRoute>
-              <NewAppointment />
+              <LazyRoutes.NewAppointment />
             </PrivateRoute>
           }
         />
@@ -515,7 +340,7 @@ function App() {
           path="/appointments/:id"
           element={
             <PrivateRoute>
-              <NewAppointment />
+              <LazyRoutes.NewAppointment />
             </PrivateRoute>
           }
         />
@@ -523,7 +348,7 @@ function App() {
           path="/appointments/:id/edit"
           element={
             <PrivateRoute>
-              <NewAppointment />
+              <LazyRoutes.NewAppointment />
             </PrivateRoute>
           }
         />
@@ -531,7 +356,7 @@ function App() {
           path="/appointments/:id/reschedule"
           element={
             <PrivateRoute>
-              <NewAppointment />
+              <LazyRoutes.NewAppointment />
             </PrivateRoute>
           }
         />
@@ -539,7 +364,7 @@ function App() {
           path="/appointments/waitlist"
           element={
             <PrivateRoute>
-              <Waitlist />
+              <LazyRoutes.Waitlist />
             </PrivateRoute>
           }
         />
@@ -547,7 +372,7 @@ function App() {
           path="/appointments/schedules"
           element={
             <PrivateRoute>
-              <ClinicianSchedule />
+              <LazyRoutes.ClinicianSchedule />
             </PrivateRoute>
           }
         />
@@ -555,7 +380,7 @@ function App() {
           path="/appointments/time-off"
           element={
             <PrivateRoute>
-              <TimeOffRequests />
+              <LazyRoutes.TimeOffRequests />
             </PrivateRoute>
           }
         />
@@ -563,7 +388,7 @@ function App() {
           path="/appointments/provider-comparison"
           element={
             <PrivateRoute>
-              <ProviderComparisonView />
+              <LazyRoutes.ProviderComparisonView />
             </PrivateRoute>
           }
         />
@@ -571,7 +396,7 @@ function App() {
           path="/appointments/room-view"
           element={
             <PrivateRoute>
-              <ClinicianSchedule />
+              <LazyRoutes.ClinicianSchedule />
             </PrivateRoute>
           }
         />
@@ -579,7 +404,7 @@ function App() {
           path="/appointments/ai-assistant"
           element={
             <PrivateRoute>
-              <AISchedulingAssistant />
+              <LazyRoutes.AISchedulingAssistant />
             </PrivateRoute>
           }
         />
@@ -587,7 +412,7 @@ function App() {
           path="/settings/reminders"
           element={
             <PrivateRoute>
-              <ReminderSettings />
+              <LazyRoutes.ReminderSettings />
             </PrivateRoute>
           }
         />
@@ -595,7 +420,7 @@ function App() {
           path="/settings/clinical-note-reminders"
           element={
             <PrivateRoute>
-              <ClinicalNoteReminderSettings />
+              <LazyRoutes.ClinicalNoteReminderSettings />
             </PrivateRoute>
           }
         />
@@ -603,7 +428,7 @@ function App() {
           path="/settings/appointment-types"
           element={
             <PrivateRoute>
-              <AppointmentTypes />
+              <LazyRoutes.AppointmentTypes />
             </PrivateRoute>
           }
         />
@@ -611,7 +436,7 @@ function App() {
           path="/settings/availability"
           element={
             <PrivateRoute>
-              <ProviderAvailability />
+              <LazyRoutes.ProviderAvailability />
             </PrivateRoute>
           }
         />
@@ -619,7 +444,7 @@ function App() {
           path="/groups"
           element={
             <PrivateRoute>
-              <GroupSessionsPage />
+              <LazyRoutes.GroupSessionsPage />
             </PrivateRoute>
           }
         />
@@ -627,7 +452,7 @@ function App() {
           path="/groups/:id"
           element={
             <PrivateRoute>
-              <GroupDetailsPage />
+              <LazyRoutes.GroupDetailsPage />
             </PrivateRoute>
           }
         />
@@ -635,7 +460,7 @@ function App() {
           path="/group-sessions"
           element={
             <PrivateRoute>
-              <GroupSessionsPage />
+              <LazyRoutes.GroupSessionsPage />
             </PrivateRoute>
           }
         />
@@ -643,7 +468,7 @@ function App() {
           path="/group-sessions/:id"
           element={
             <PrivateRoute>
-              <GroupDetailsPage />
+              <LazyRoutes.GroupDetailsPage />
             </PrivateRoute>
           }
         />
@@ -651,7 +476,7 @@ function App() {
           path="/telehealth"
           element={
             <PrivateRoute>
-              <TelehealthDashboard />
+              <LazyRoutes.TelehealthDashboard />
             </PrivateRoute>
           }
         />
@@ -659,7 +484,7 @@ function App() {
           path="/telehealth/session/:appointmentId"
           element={
             <PrivateRoute>
-              <VideoSession />
+              <LazyRoutes.VideoSession />
             </PrivateRoute>
           }
         />
@@ -667,7 +492,7 @@ function App() {
           path="/self-schedule"
           element={
             <PrivateRoute>
-              <SelfScheduleDashboard />
+              <LazyRoutes.SelfScheduleDashboard />
             </PrivateRoute>
           }
         />
@@ -675,7 +500,7 @@ function App() {
           path="/client-portal"
           element={
             <PrivateRoute>
-              <ClientPortalManagement />
+              <LazyRoutes.ClientPortalManagement />
             </PrivateRoute>
           }
         />
@@ -683,7 +508,7 @@ function App() {
           path="/progress-tracking"
           element={
             <PrivateRoute>
-              <ProgressTrackingDashboard />
+              <LazyRoutes.ProgressTrackingDashboard />
             </PrivateRoute>
           }
         />
@@ -691,7 +516,7 @@ function App() {
           path="/progress-tracking/assign-measures"
           element={
             <PrivateRoute>
-              <AssignMeasures />
+              <LazyRoutes.AssignMeasures />
             </PrivateRoute>
           }
         />
@@ -699,7 +524,7 @@ function App() {
           path="/progress-tracking/reports"
           element={
             <PrivateRoute>
-              <ProgressReports />
+              <LazyRoutes.ProgressReports />
             </PrivateRoute>
           }
         />
@@ -707,7 +532,7 @@ function App() {
           path="/guardian-portal"
           element={
             <PrivateRoute>
-              <GuardianPortalDashboard />
+              <LazyRoutes.GuardianPortalDashboard />
             </PrivateRoute>
           }
         />
@@ -715,7 +540,7 @@ function App() {
           path="/admin"
           element={
             <PrivateRoute>
-              <AdminDashboard />
+              <LazyRoutes.AdminDashboard />
             </PrivateRoute>
           }
         />
@@ -723,7 +548,7 @@ function App() {
           path="/clinician"
           element={
             <PrivateRoute>
-              <ClinicianToolsDashboard />
+              <LazyRoutes.ClinicianToolsDashboard />
             </PrivateRoute>
           }
         />
@@ -731,7 +556,7 @@ function App() {
           path="/notes"
           element={
             <PrivateRoute>
-              <ComplianceDashboard />
+              <LazyRoutes.ComplianceDashboard />
             </PrivateRoute>
           }
         />
@@ -739,7 +564,7 @@ function App() {
           path="/notes/my-notes"
           element={
             <PrivateRoute>
-              <MyNotes />
+              <LazyRoutes.MyNotes />
             </PrivateRoute>
           }
         />
@@ -747,7 +572,7 @@ function App() {
           path="/clients/:clientId/notes"
           element={
             <PrivateRoute>
-              <ClinicalNotesPage />
+              <LazyRoutes.ClinicalNotesPage />
             </PrivateRoute>
           }
         />
@@ -755,7 +580,7 @@ function App() {
           path="/clients/:clientId/notes/create"
           element={
             <PrivateRoute>
-              <SmartNoteCreator />
+              <LazyRoutes.SmartNoteCreator />
             </PrivateRoute>
           }
         />
@@ -763,7 +588,7 @@ function App() {
           path="/clients/:clientId/notes/new/intake-assessment"
           element={
             <PrivateRoute>
-              <IntakeAssessmentForm />
+              <LazyRoutes.IntakeAssessmentForm />
             </PrivateRoute>
           }
         />
@@ -771,7 +596,7 @@ function App() {
           path="/clients/:clientId/notes/new/progress-note"
           element={
             <PrivateRoute>
-              <ProgressNoteForm />
+              <LazyRoutes.ProgressNoteForm />
             </PrivateRoute>
           }
         />
@@ -779,7 +604,7 @@ function App() {
           path="/clients/:clientId/notes/new/treatment-plan"
           element={
             <PrivateRoute>
-              <TreatmentPlanForm />
+              <LazyRoutes.TreatmentPlanForm />
             </PrivateRoute>
           }
         />
@@ -787,7 +612,7 @@ function App() {
           path="/clients/:clientId/notes/new/cancellation-note"
           element={
             <PrivateRoute>
-              <CancellationNoteForm />
+              <LazyRoutes.CancellationNoteForm />
             </PrivateRoute>
           }
         />
@@ -795,7 +620,7 @@ function App() {
           path="/clients/:clientId/notes/new/consultation-note"
           element={
             <PrivateRoute>
-              <ConsultationNoteForm />
+              <LazyRoutes.ConsultationNoteForm />
             </PrivateRoute>
           }
         />
@@ -803,7 +628,7 @@ function App() {
           path="/clients/:clientId/notes/new/contact-note"
           element={
             <PrivateRoute>
-              <ContactNoteForm />
+              <LazyRoutes.ContactNoteForm />
             </PrivateRoute>
           }
         />
@@ -811,7 +636,7 @@ function App() {
           path="/clients/:clientId/notes/new/termination-note"
           element={
             <PrivateRoute>
-              <TerminationNoteForm />
+              <LazyRoutes.TerminationNoteForm />
             </PrivateRoute>
           }
         />
@@ -819,7 +644,7 @@ function App() {
           path="/clients/:clientId/notes/new/miscellaneous-note"
           element={
             <PrivateRoute>
-              <MiscellaneousNoteForm />
+              <LazyRoutes.MiscellaneousNoteForm />
             </PrivateRoute>
           }
         />
@@ -827,7 +652,7 @@ function App() {
           path="/clinical-notes/new"
           element={
             <PrivateRoute>
-              <SmartNoteCreator />
+              <LazyRoutes.SmartNoteCreator />
             </PrivateRoute>
           }
         />
@@ -835,7 +660,7 @@ function App() {
           path="/clinical-notes/new/group-therapy/:appointmentId"
           element={
             <PrivateRoute>
-              <GroupTherapyNoteForm />
+              <LazyRoutes.GroupTherapyNoteForm />
             </PrivateRoute>
           }
         />
@@ -843,7 +668,7 @@ function App() {
           path="/clients/:clientId/notes/:noteId"
           element={
             <PrivateRoute>
-              <ClinicalNoteDetail />
+              <LazyRoutes.ClinicalNoteDetail />
             </PrivateRoute>
           }
         />
@@ -851,7 +676,7 @@ function App() {
           path="/clients/:clientId/notes/:noteId/edit"
           element={
             <PrivateRoute>
-              <EditNoteRouter />
+              <LazyRoutes.EditNoteRouter />
             </PrivateRoute>
           }
         />
@@ -859,7 +684,7 @@ function App() {
           path="/supervision"
           element={
             <PrivateRoute>
-              <SupervisionSessionsList />
+              <LazyRoutes.SupervisionSessionsList />
             </PrivateRoute>
           }
         />
@@ -867,7 +692,7 @@ function App() {
           path="/supervision/sessions"
           element={
             <PrivateRoute>
-              <SupervisionSessionsList />
+              <LazyRoutes.SupervisionSessionsList />
             </PrivateRoute>
           }
         />
@@ -875,7 +700,7 @@ function App() {
           path="/supervision/sessions/new"
           element={
             <PrivateRoute>
-              <SupervisionSessionForm />
+              <LazyRoutes.SupervisionSessionForm />
             </PrivateRoute>
           }
         />
@@ -883,7 +708,7 @@ function App() {
           path="/supervision/sessions/:id"
           element={
             <PrivateRoute>
-              <SupervisionSessionForm />
+              <LazyRoutes.SupervisionSessionForm />
             </PrivateRoute>
           }
         />
@@ -891,7 +716,7 @@ function App() {
           path="/supervision/hours/:superviseeId"
           element={
             <PrivateRoute>
-              <SupervisionHoursDashboard />
+              <LazyRoutes.SupervisionHoursDashboard />
             </PrivateRoute>
           }
         />
@@ -899,7 +724,7 @@ function App() {
           path="/supervision/cosign-queue"
           element={
             <PrivateRoute>
-              <CosignQueue />
+              <LazyRoutes.CosignQueue />
             </PrivateRoute>
           }
         />
@@ -907,7 +732,7 @@ function App() {
           path="/unlock-requests"
           element={
             <PrivateRoute>
-              <UnlockRequestManagement />
+              <LazyRoutes.UnlockRequestManagement />
             </PrivateRoute>
           }
         />
@@ -915,7 +740,7 @@ function App() {
           path="/billing"
           element={
             <PrivateRoute>
-              <BillingDashboard />
+              <LazyRoutes.BillingDashboard />
             </PrivateRoute>
           }
         />
@@ -923,7 +748,7 @@ function App() {
           path="/billing/charges"
           element={
             <PrivateRoute>
-              <ChargesPage />
+              <LazyRoutes.ChargesPage />
             </PrivateRoute>
           }
         />
@@ -931,7 +756,7 @@ function App() {
           path="/billing/charges/new"
           element={
             <PrivateRoute>
-              <ChargesPage />
+              <LazyRoutes.ChargesPage />
             </PrivateRoute>
           }
         />
@@ -939,7 +764,7 @@ function App() {
           path="/billing/payments"
           element={
             <PrivateRoute>
-              <PaymentsPage />
+              <LazyRoutes.PaymentsPage />
             </PrivateRoute>
           }
         />
@@ -947,7 +772,7 @@ function App() {
           path="/billing/payments/new"
           element={
             <PrivateRoute>
-              <PaymentsPage />
+              <LazyRoutes.PaymentsPage />
             </PrivateRoute>
           }
         />
@@ -955,7 +780,7 @@ function App() {
           path="/billing/payers"
           element={
             <PrivateRoute>
-              <PayerList />
+              <LazyRoutes.PayerList />
             </PrivateRoute>
           }
         />
@@ -963,7 +788,7 @@ function App() {
           path="/billing/payers/new"
           element={
             <PrivateRoute>
-              <PayerForm />
+              <LazyRoutes.PayerForm />
             </PrivateRoute>
           }
         />
@@ -971,7 +796,7 @@ function App() {
           path="/billing/payers/:id/edit"
           element={
             <PrivateRoute>
-              <PayerForm />
+              <LazyRoutes.PayerForm />
             </PrivateRoute>
           }
         />
@@ -979,7 +804,7 @@ function App() {
           path="/billing/payers/:payerId/rules"
           element={
             <PrivateRoute>
-              <PayerRuleList />
+              <LazyRoutes.PayerRuleList />
             </PrivateRoute>
           }
         />
@@ -987,7 +812,7 @@ function App() {
           path="/billing/payers/:payerId/rules/new"
           element={
             <PrivateRoute>
-              <PayerRuleForm />
+              <LazyRoutes.PayerRuleForm />
             </PrivateRoute>
           }
         />
@@ -995,7 +820,7 @@ function App() {
           path="/billing/payers/:payerId/rules/:id/edit"
           element={
             <PrivateRoute>
-              <PayerRuleForm />
+              <LazyRoutes.PayerRuleForm />
             </PrivateRoute>
           }
         />
@@ -1003,7 +828,7 @@ function App() {
           path="/billing/payers/:payerId/rules/import"
           element={
             <PrivateRoute>
-              <PayerRuleImporter />
+              <LazyRoutes.PayerRuleImporter />
             </PrivateRoute>
           }
         />
@@ -1011,7 +836,7 @@ function App() {
           path="/billing/holds"
           element={
             <PrivateRoute>
-              <BillingHoldsList />
+              <LazyRoutes.BillingHoldsList />
             </PrivateRoute>
           }
         />
@@ -1019,7 +844,7 @@ function App() {
           path="/billing/readiness"
           element={
             <PrivateRoute>
-              <BillingReadinessChecker />
+              <LazyRoutes.BillingReadinessChecker />
             </PrivateRoute>
           }
         />
@@ -1027,7 +852,7 @@ function App() {
           path="/billing/payer-dashboard"
           element={
             <PrivateRoute>
-              <PayerDashboard />
+              <LazyRoutes.PayerDashboard />
             </PrivateRoute>
           }
         />
@@ -1035,7 +860,7 @@ function App() {
           path="/users"
           element={
             <PrivateRoute>
-              <UserList />
+              <LazyRoutes.UserList />
             </PrivateRoute>
           }
         />
@@ -1043,7 +868,7 @@ function App() {
           path="/users/new"
           element={
             <PrivateRoute>
-              <UserForm />
+              <LazyRoutes.UserForm />
             </PrivateRoute>
           }
         />
@@ -1051,7 +876,7 @@ function App() {
           path="/users/:id"
           element={
             <PrivateRoute>
-              <UserDetail />
+              <LazyRoutes.UserDetail />
             </PrivateRoute>
           }
         />
@@ -1059,7 +884,7 @@ function App() {
           path="/users/:id/edit"
           element={
             <PrivateRoute>
-              <UserForm />
+              <LazyRoutes.UserForm />
             </PrivateRoute>
           }
         />
@@ -1067,7 +892,7 @@ function App() {
           path="/settings"
           element={
             <PrivateRoute>
-              <PracticeSettings />
+              <LazyRoutes.PracticeSettings />
             </PrivateRoute>
           }
         />
@@ -1075,7 +900,7 @@ function App() {
           path="/profile"
           element={
             <PrivateRoute>
-              <UserProfile />
+              <LazyRoutes.UserProfile />
             </PrivateRoute>
           }
         />
@@ -1083,7 +908,7 @@ function App() {
           path="/profile/mfa-settings"
           element={
             <PrivateRoute>
-              <MFASettings />
+              <LazyRoutes.MFASettings />
             </PrivateRoute>
           }
         />
@@ -1091,7 +916,7 @@ function App() {
           path="/profile/sessions"
           element={
             <PrivateRoute>
-              <SessionManagement />
+              <LazyRoutes.SessionManagement />
             </PrivateRoute>
           }
         />
@@ -1099,7 +924,7 @@ function App() {
           path="/productivity"
           element={
             <PrivateRoute>
-              <ClinicianDashboard />
+              <LazyRoutes.ClinicianProductivityDashboard />
             </PrivateRoute>
           }
         />
@@ -1107,7 +932,7 @@ function App() {
           path="/productivity/clinician"
           element={
             <PrivateRoute>
-              <ClinicianDashboard />
+              <LazyRoutes.ClinicianProductivityDashboard />
             </PrivateRoute>
           }
         />
@@ -1115,7 +940,7 @@ function App() {
           path="/productivity/supervisor"
           element={
             <PrivateRoute>
-              <SupervisorDashboard />
+              <LazyRoutes.SupervisorDashboard />
             </PrivateRoute>
           }
         />
@@ -1123,7 +948,7 @@ function App() {
           path="/productivity/administrator"
           element={
             <PrivateRoute>
-              <AdministratorDashboard />
+              <LazyRoutes.AdministratorDashboard />
             </PrivateRoute>
           }
         />
@@ -1131,7 +956,7 @@ function App() {
           path="/reports"
           element={
             <PrivateRoute>
-              <ReportsDashboard />
+              <LazyRoutes.ReportsDashboard />
             </PrivateRoute>
           }
         />
@@ -1139,7 +964,7 @@ function App() {
           path="/reports/custom"
           element={
             <PrivateRoute>
-              <CustomReportsList />
+              <LazyRoutes.CustomReportsList />
             </PrivateRoute>
           }
         />
@@ -1147,7 +972,7 @@ function App() {
           path="/reports/custom/new"
           element={
             <PrivateRoute>
-              <CustomReportBuilder />
+              <LazyRoutes.CustomReportBuilder />
             </PrivateRoute>
           }
         />
@@ -1155,7 +980,7 @@ function App() {
           path="/reports/custom/:id/edit"
           element={
             <PrivateRoute>
-              <CustomReportBuilder />
+              <LazyRoutes.CustomReportBuilder />
             </PrivateRoute>
           }
         />
@@ -1163,7 +988,7 @@ function App() {
           path="/reports/subscriptions"
           element={
             <PrivateRoute>
-              <ReportSubscriptions />
+              <LazyRoutes.ReportSubscriptions />
             </PrivateRoute>
           }
         />
@@ -1173,7 +998,7 @@ function App() {
           path="/dashboards"
           element={
             <PrivateRoute>
-              <DashboardList />
+              <LazyRoutes.DashboardList />
             </PrivateRoute>
           }
         />
@@ -1181,7 +1006,7 @@ function App() {
           path="/dashboards/:id"
           element={
             <PrivateRoute>
-              <DashboardBuilder />
+              <LazyRoutes.DashboardBuilder />
             </PrivateRoute>
           }
         />
@@ -1189,7 +1014,7 @@ function App() {
           path="/analytics"
           element={
             <PrivateRoute>
-              <AnalyticsDashboard />
+              <LazyRoutes.AnalyticsDashboard />
             </PrivateRoute>
           }
         />
@@ -1197,7 +1022,7 @@ function App() {
           path="/predictions"
           element={
             <PrivateRoute>
-              <PredictionsDashboard />
+              <LazyRoutes.PredictionsDashboard />
             </PrivateRoute>
           }
         />
@@ -1205,7 +1030,7 @@ function App() {
           path="/admin/session-ratings"
           element={
             <PrivateRoute>
-              <SessionRatings />
+              <LazyRoutes.SessionRatings />
             </PrivateRoute>
           }
         />
@@ -1213,7 +1038,7 @@ function App() {
           path="/admin/crisis-detections"
           element={
             <PrivateRoute>
-              <CrisisDetections />
+              <LazyRoutes.CrisisDetections />
             </PrivateRoute>
           }
         />
@@ -1221,7 +1046,7 @@ function App() {
           path="/admin/advancedmd-sync"
           element={
             <PrivateRoute>
-              <AdvancedMDSync />
+              <LazyRoutes.AdvancedMDSync />
             </PrivateRoute>
           }
         />
@@ -1229,7 +1054,7 @@ function App() {
           path="/admin/advancedmd-settings"
           element={
             <PrivateRoute>
-              <AdvancedMDSettings />
+              <LazyRoutes.AdvancedMDSettings />
             </PrivateRoute>
           }
         />
@@ -1241,7 +1066,7 @@ function App() {
           path="/portal/schedule"
           element={
             <PortalRoute>
-              <PortalSelfScheduling />
+              <LazyRoutes.PortalSelfScheduling />
             </PortalRoute>
           }
         />
@@ -1249,7 +1074,7 @@ function App() {
           path="/guardian/portal"
           element={
             <PrivateRoute>
-              <GuardianPortal />
+              <LazyRoutes.GuardianPortal />
             </PrivateRoute>
           }
         />
@@ -1257,7 +1082,7 @@ function App() {
           path="/guardian/request-access"
           element={
             <PrivateRoute>
-              <RequestAccess />
+              <LazyRoutes.RequestAccess />
             </PrivateRoute>
           }
         />
@@ -1265,7 +1090,7 @@ function App() {
           path="/admin/guardian-verification"
           element={
             <PrivateRoute>
-              <GuardianVerification />
+              <LazyRoutes.GuardianVerification />
             </PrivateRoute>
           }
         />
@@ -1273,7 +1098,7 @@ function App() {
           path="/client/guardian-consent"
           element={
             <PrivateRoute>
-              <GuardianConsent />
+              <LazyRoutes.GuardianConsent />
             </PrivateRoute>
           }
         />
@@ -1281,7 +1106,7 @@ function App() {
           path="/admin/scheduling-rules"
           element={
             <PrivateRoute>
-              <SchedulingRules />
+              <LazyRoutes.SchedulingRules />
             </PrivateRoute>
           }
         />
@@ -1289,7 +1114,7 @@ function App() {
           path="/admin/waitlist-management"
           element={
             <PrivateRoute>
-              <WaitlistManagement />
+              <LazyRoutes.WaitlistManagement />
             </PrivateRoute>
           }
         />
@@ -1297,7 +1122,7 @@ function App() {
           path="/clinician/client-progress"
           element={
             <PrivateRoute>
-              <ClientProgress />
+              <LazyRoutes.ClientProgress />
             </PrivateRoute>
           }
         />
@@ -1305,7 +1130,7 @@ function App() {
           path="/clinician/my-waitlist"
           element={
             <PrivateRoute>
-              <MyWaitlist />
+              <LazyRoutes.MyWaitlist />
             </PrivateRoute>
           }
         />
@@ -1320,7 +1145,7 @@ function App() {
           path="/credentialing"
           element={
             <PrivateRoute>
-              <CredentialingDashboard />
+              <LazyRoutes.CredentialingDashboard />
             </PrivateRoute>
           }
         />
@@ -1328,7 +1153,7 @@ function App() {
           path="/credentialing/list"
           element={
             <PrivateRoute>
-              <CredentialList />
+              <LazyRoutes.CredentialList />
             </PrivateRoute>
           }
         />
@@ -1336,7 +1161,7 @@ function App() {
           path="/credentialing/new"
           element={
             <PrivateRoute>
-              <CredentialForm />
+              <LazyRoutes.CredentialForm />
             </PrivateRoute>
           }
         />
@@ -1344,7 +1169,7 @@ function App() {
           path="/credentialing/:id/edit"
           element={
             <PrivateRoute>
-              <CredentialForm />
+              <LazyRoutes.CredentialForm />
             </PrivateRoute>
           }
         />
@@ -1352,7 +1177,7 @@ function App() {
           path="/credentialing/verification"
           element={
             <PrivateRoute>
-              <CredentialVerification />
+              <LazyRoutes.CredentialVerification />
             </PrivateRoute>
           }
         />
@@ -1360,7 +1185,7 @@ function App() {
           path="/credentialing/alerts"
           element={
             <PrivateRoute>
-              <ExpirationAlerts />
+              <LazyRoutes.ExpirationAlerts />
             </PrivateRoute>
           }
         />
@@ -1368,7 +1193,7 @@ function App() {
           path="/credentialing/compliance"
           element={
             <PrivateRoute>
-              <ComplianceReport />
+              <LazyRoutes.ComplianceReport />
             </PrivateRoute>
           }
         />
@@ -1376,7 +1201,7 @@ function App() {
           path="/credentialing/screening"
           element={
             <PrivateRoute>
-              <ScreeningStatus />
+              <LazyRoutes.ScreeningStatus />
             </PrivateRoute>
           }
         />
@@ -1384,7 +1209,7 @@ function App() {
           path="/credentialing/documents"
           element={
             <PrivateRoute>
-              <DocumentUpload />
+              <LazyRoutes.DocumentUpload />
             </PrivateRoute>
           }
         />
@@ -1392,7 +1217,7 @@ function App() {
           path="/credentialing/timeline/:id"
           element={
             <PrivateRoute>
-              <CredentialTimeline />
+              <LazyRoutes.CredentialTimeline />
             </PrivateRoute>
           }
         />
@@ -1402,7 +1227,7 @@ function App() {
           path="/training"
           element={
             <PrivateRoute>
-              <TrainingDashboard />
+              <LazyRoutes.TrainingDashboard />
             </PrivateRoute>
           }
         />
@@ -1410,7 +1235,7 @@ function App() {
           path="/training/catalog"
           element={
             <PrivateRoute>
-              <CourseCatalog />
+              <LazyRoutes.CourseCatalog />
             </PrivateRoute>
           }
         />
@@ -1418,7 +1243,7 @@ function App() {
           path="/training/courses/:id"
           element={
             <PrivateRoute>
-              <CourseDetails />
+              <LazyRoutes.CourseDetails />
             </PrivateRoute>
           }
         />
@@ -1426,7 +1251,7 @@ function App() {
           path="/training/courses/new"
           element={
             <PrivateRoute>
-              <CourseForm />
+              <LazyRoutes.CourseForm />
             </PrivateRoute>
           }
         />
@@ -1434,7 +1259,7 @@ function App() {
           path="/training/courses/:id/edit"
           element={
             <PrivateRoute>
-              <CourseForm />
+              <LazyRoutes.CourseForm />
             </PrivateRoute>
           }
         />
@@ -1442,7 +1267,7 @@ function App() {
           path="/training/enrollments"
           element={
             <PrivateRoute>
-              <EnrollmentManager />
+              <LazyRoutes.EnrollmentManager />
             </PrivateRoute>
           }
         />
@@ -1450,7 +1275,7 @@ function App() {
           path="/training/progress"
           element={
             <PrivateRoute>
-              <TrainingProgress />
+              <LazyRoutes.TrainingProgress />
             </PrivateRoute>
           }
         />
@@ -1458,7 +1283,7 @@ function App() {
           path="/training/ceu"
           element={
             <PrivateRoute>
-              <CEUTracker />
+              <LazyRoutes.CEUTracker />
             </PrivateRoute>
           }
         />
@@ -1466,7 +1291,7 @@ function App() {
           path="/training/compliance"
           element={
             <PrivateRoute>
-              <ComplianceMonitor />
+              <LazyRoutes.ComplianceMonitor />
             </PrivateRoute>
           }
         />
@@ -1474,7 +1299,7 @@ function App() {
           path="/training/calendar"
           element={
             <PrivateRoute>
-              <TrainingCalendar />
+              <LazyRoutes.TrainingCalendar />
             </PrivateRoute>
           }
         />
@@ -1482,7 +1307,7 @@ function App() {
           path="/training/certificates/:id"
           element={
             <PrivateRoute>
-              <CertificateViewer />
+              <LazyRoutes.CertificateViewer />
             </PrivateRoute>
           }
         />
@@ -1492,7 +1317,7 @@ function App() {
           path="/compliance"
           element={
             <PrivateRoute>
-              <ComplianceDashboardPage />
+              <LazyRoutes.ComplianceDashboardPage />
             </PrivateRoute>
           }
         />
@@ -1500,7 +1325,7 @@ function App() {
           path="/compliance/policies"
           element={
             <PrivateRoute>
-              <PolicyLibrary />
+              <LazyRoutes.PolicyLibrary />
             </PrivateRoute>
           }
         />
@@ -1508,7 +1333,7 @@ function App() {
           path="/compliance/policies/:id"
           element={
             <PrivateRoute>
-              <PolicyViewer />
+              <LazyRoutes.PolicyViewer />
             </PrivateRoute>
           }
         />
@@ -1516,7 +1341,7 @@ function App() {
           path="/compliance/policies/new"
           element={
             <PrivateRoute>
-              <PolicyForm />
+              <LazyRoutes.PolicyForm />
             </PrivateRoute>
           }
         />
@@ -1524,7 +1349,7 @@ function App() {
           path="/compliance/policies/:id/edit"
           element={
             <PrivateRoute>
-              <PolicyForm />
+              <LazyRoutes.PolicyForm />
             </PrivateRoute>
           }
         />
@@ -1532,7 +1357,7 @@ function App() {
           path="/compliance/policies/:id/distribute"
           element={
             <PrivateRoute>
-              <PolicyDistribution />
+              <LazyRoutes.PolicyDistribution />
             </PrivateRoute>
           }
         />
@@ -1540,7 +1365,7 @@ function App() {
           path="/compliance/policies/:id/acknowledge"
           element={
             <PrivateRoute>
-              <AcknowledgmentForm />
+              <LazyRoutes.AcknowledgmentForm />
             </PrivateRoute>
           }
         />
@@ -1548,7 +1373,7 @@ function App() {
           path="/compliance/incidents"
           element={
             <PrivateRoute>
-              <IncidentList />
+              <LazyRoutes.IncidentList />
             </PrivateRoute>
           }
         />
@@ -1556,7 +1381,7 @@ function App() {
           path="/compliance/incidents/new"
           element={
             <PrivateRoute>
-              <IncidentReportingForm />
+              <LazyRoutes.IncidentReportingForm />
             </PrivateRoute>
           }
         />
@@ -1564,7 +1389,7 @@ function App() {
           path="/compliance/incidents/:id"
           element={
             <PrivateRoute>
-              <IncidentDetails />
+              <LazyRoutes.IncidentDetails />
             </PrivateRoute>
           }
         />
@@ -1572,7 +1397,7 @@ function App() {
           path="/compliance/incidents/:id/investigate"
           element={
             <PrivateRoute>
-              <InvestigationWorkflow />
+              <LazyRoutes.InvestigationWorkflow />
             </PrivateRoute>
           }
         />
@@ -1580,7 +1405,7 @@ function App() {
           path="/compliance/trends"
           element={
             <PrivateRoute>
-              <IncidentTrends />
+              <LazyRoutes.IncidentTrends />
             </PrivateRoute>
           }
         />
@@ -1594,7 +1419,7 @@ function App() {
           path="/hr/performance"
           element={
             <PrivateRoute>
-              <ReviewList />
+              <LazyRoutes.ReviewList />
             </PrivateRoute>
           }
         />
@@ -1602,7 +1427,7 @@ function App() {
           path="/hr/performance/new"
           element={
             <PrivateRoute>
-              <PerformanceReviewForm />
+              <LazyRoutes.PerformanceReviewForm />
             </PrivateRoute>
           }
         />
@@ -1610,7 +1435,7 @@ function App() {
           path="/hr/performance/:id"
           element={
             <PrivateRoute>
-              <ReviewViewer />
+              <LazyRoutes.ReviewViewer />
             </PrivateRoute>
           }
         />
@@ -1618,7 +1443,7 @@ function App() {
           path="/hr/performance/:id/edit"
           element={
             <PrivateRoute>
-              <PerformanceReviewForm />
+              <LazyRoutes.PerformanceReviewForm />
             </PrivateRoute>
           }
         />
@@ -1626,7 +1451,7 @@ function App() {
           path="/hr/timeclock"
           element={
             <PrivateRoute>
-              <TimeClockInterface />
+              <LazyRoutes.TimeClockInterface />
             </PrivateRoute>
           }
         />
@@ -1634,7 +1459,7 @@ function App() {
           path="/hr/attendance"
           element={
             <PrivateRoute>
-              <AttendanceCalendar />
+              <LazyRoutes.AttendanceCalendar />
             </PrivateRoute>
           }
         />
@@ -1642,7 +1467,7 @@ function App() {
           path="/hr/attendance/report"
           element={
             <PrivateRoute>
-              <AttendanceReport />
+              <LazyRoutes.AttendanceReport />
             </PrivateRoute>
           }
         />
@@ -1650,7 +1475,7 @@ function App() {
           path="/hr/pto/request"
           element={
             <PrivateRoute>
-              <PTORequestForm />
+              <LazyRoutes.PTORequestForm />
             </PrivateRoute>
           }
         />
@@ -1658,7 +1483,7 @@ function App() {
           path="/hr/pto/calendar"
           element={
             <PrivateRoute>
-              <PTOCalendar />
+              <LazyRoutes.PTOCalendar />
             </PrivateRoute>
           }
         />
@@ -1666,7 +1491,7 @@ function App() {
           path="/hr/pto/approval"
           element={
             <PrivateRoute>
-              <PTOApproval />
+              <LazyRoutes.PTOApproval />
             </PrivateRoute>
           }
         />
@@ -1676,7 +1501,7 @@ function App() {
           path="/staff"
           element={
             <PrivateRoute>
-              <StaffDirectory />
+              <LazyRoutes.StaffDirectory />
             </PrivateRoute>
           }
         />
@@ -1685,7 +1510,7 @@ function App() {
           path="/staff/new"
           element={
             <PrivateRoute>
-              <EmploymentForm />
+              <LazyRoutes.EmploymentForm />
             </PrivateRoute>
           }
         />
@@ -1693,7 +1518,7 @@ function App() {
           path="/staff/org-chart"
           element={
             <PrivateRoute>
-              <OrganizationalChart />
+              <LazyRoutes.OrganizationalChart />
             </PrivateRoute>
           }
         />
@@ -1701,7 +1526,7 @@ function App() {
           path="/staff/:id"
           element={
             <PrivateRoute>
-              <StaffProfile />
+              <LazyRoutes.StaffProfile />
             </PrivateRoute>
           }
         />
@@ -1709,7 +1534,7 @@ function App() {
           path="/staff/:id/edit"
           element={
             <PrivateRoute>
-              <EmploymentForm />
+              <LazyRoutes.EmploymentForm />
             </PrivateRoute>
           }
         />
@@ -1717,7 +1542,7 @@ function App() {
           path="/onboarding"
           element={
             <PrivateRoute>
-              <OnboardingDashboard />
+              <LazyRoutes.OnboardingDashboard />
             </PrivateRoute>
           }
         />
@@ -1725,7 +1550,7 @@ function App() {
           path="/onboarding/:id"
           element={
             <PrivateRoute>
-              <OnboardingChecklist />
+              <LazyRoutes.OnboardingChecklist />
             </PrivateRoute>
           }
         />
@@ -1733,7 +1558,7 @@ function App() {
           path="/onboarding/:id/milestones"
           element={
             <PrivateRoute>
-              <MilestoneTracker />
+              <LazyRoutes.MilestoneTracker />
             </PrivateRoute>
           }
         />
@@ -1743,7 +1568,7 @@ function App() {
           path="/messages"
           element={
             <PrivateRoute>
-              <MessagingHub />
+              <LazyRoutes.MessagingHub />
             </PrivateRoute>
           }
         />
@@ -1751,7 +1576,7 @@ function App() {
           path="/messages/compose"
           element={
             <PrivateRoute>
-              <MessageComposer />
+              <LazyRoutes.MessageComposer />
             </PrivateRoute>
           }
         />
@@ -1759,7 +1584,7 @@ function App() {
           path="/messages/:id"
           element={
             <PrivateRoute>
-              <MessageThread />
+              <LazyRoutes.MessageThread />
             </PrivateRoute>
           }
         />
@@ -1767,7 +1592,7 @@ function App() {
           path="/channels"
           element={
             <PrivateRoute>
-              <ChannelList />
+              <LazyRoutes.ChannelList />
             </PrivateRoute>
           }
         />
@@ -1775,7 +1600,7 @@ function App() {
           path="/channels/:id"
           element={
             <PrivateRoute>
-              <ChannelView />
+              <LazyRoutes.ChannelView />
             </PrivateRoute>
           }
         />
@@ -1783,7 +1608,7 @@ function App() {
           path="/documents"
           element={
             <PrivateRoute>
-              <DocumentLibrary />
+              <LazyRoutes.DocumentLibrary />
             </PrivateRoute>
           }
         />
@@ -1791,7 +1616,7 @@ function App() {
           path="/documents/upload"
           element={
             <PrivateRoute>
-              <DocumentUploader />
+              <LazyRoutes.DocumentUploader />
             </PrivateRoute>
           }
         />
@@ -1799,7 +1624,7 @@ function App() {
           path="/documents/:id"
           element={
             <PrivateRoute>
-              <DocumentViewer />
+              <LazyRoutes.DocumentViewer />
             </PrivateRoute>
           }
         />
@@ -1807,7 +1632,7 @@ function App() {
           path="/documents/folders"
           element={
             <PrivateRoute>
-              <FolderTree />
+              <LazyRoutes.FolderTree />
             </PrivateRoute>
           }
         />
@@ -1817,7 +1642,7 @@ function App() {
           path="/vendors"
           element={
             <PrivateRoute>
-              <VendorList />
+              <LazyRoutes.VendorList />
             </PrivateRoute>
           }
         />
@@ -1825,7 +1650,7 @@ function App() {
           path="/vendors/new"
           element={
             <PrivateRoute>
-              <VendorForm />
+              <LazyRoutes.VendorForm />
             </PrivateRoute>
           }
         />
@@ -1833,7 +1658,7 @@ function App() {
           path="/vendors/:id"
           element={
             <PrivateRoute>
-              <VendorProfile />
+              <LazyRoutes.VendorProfile />
             </PrivateRoute>
           }
         />
@@ -1841,11 +1666,11 @@ function App() {
           path="/vendors/:id/edit"
           element={
             <PrivateRoute>
-              <VendorForm />
+              <LazyRoutes.VendorForm />
             </PrivateRoute>
           }
         />
-        {/* MODULE 8: VENDORS & FINANCE */}
+        {/* MODULE 9: FINANCE */}
         <Route
           path="/finance"
           element={<Navigate to="/finance/budget" replace />}
@@ -1854,7 +1679,7 @@ function App() {
           path="/finance/budget"
           element={
             <PrivateRoute>
-              <BudgetDashboard />
+              <LazyRoutes.BudgetDashboard />
             </PrivateRoute>
           }
         />
@@ -1862,7 +1687,7 @@ function App() {
           path="/finance/budget/allocate"
           element={
             <PrivateRoute>
-              <BudgetAllocation />
+              <LazyRoutes.BudgetAllocation />
             </PrivateRoute>
           }
         />
@@ -1870,7 +1695,7 @@ function App() {
           path="/finance/expenses"
           element={
             <PrivateRoute>
-              <ExpenseList />
+              <LazyRoutes.ExpenseList />
             </PrivateRoute>
           }
         />
@@ -1878,7 +1703,7 @@ function App() {
           path="/finance/expenses/new"
           element={
             <PrivateRoute>
-              <ExpenseForm />
+              <LazyRoutes.ExpenseForm />
             </PrivateRoute>
           }
         />
@@ -1886,7 +1711,7 @@ function App() {
           path="/finance/expenses/approval"
           element={
             <PrivateRoute>
-              <ExpenseApproval />
+              <LazyRoutes.ExpenseApproval />
             </PrivateRoute>
           }
         />
@@ -1894,7 +1719,7 @@ function App() {
           path="/finance/purchase-orders"
           element={
             <PrivateRoute>
-              <POList />
+              <LazyRoutes.POList />
             </PrivateRoute>
           }
         />
@@ -1902,7 +1727,7 @@ function App() {
           path="/finance/purchase-orders/new"
           element={
             <PrivateRoute>
-              <PurchaseOrderForm />
+              <LazyRoutes.PurchaseOrderForm />
             </PrivateRoute>
           }
         />
@@ -1910,7 +1735,7 @@ function App() {
           path="/finance/purchase-orders/approval"
           element={
             <PrivateRoute>
-              <POApproval />
+              <LazyRoutes.POApproval />
             </PrivateRoute>
           }
         />
@@ -1920,7 +1745,7 @@ function App() {
           path="/module9/reports"
           element={
             <PrivateRoute>
-              <Module9ReportsDashboard />
+              <LazyRoutes.Module9ReportsDashboard />
             </PrivateRoute>
           }
         />
@@ -1928,7 +1753,7 @@ function App() {
           path="/module9/reports/viewer"
           element={
             <PrivateRoute>
-              <ReportViewer />
+              <LazyRoutes.ReportViewer />
             </PrivateRoute>
           }
         />
@@ -1936,7 +1761,7 @@ function App() {
           path="/module9/reports/builder"
           element={
             <PrivateRoute>
-              <ReportBuilder />
+              <LazyRoutes.ReportBuilder />
             </PrivateRoute>
           }
         />
@@ -1944,7 +1769,7 @@ function App() {
           path="/module9/reports/export"
           element={
             <PrivateRoute>
-              <ExportDialog />
+              <LazyRoutes.ExportDialog />
             </PrivateRoute>
           }
         />
@@ -1952,7 +1777,7 @@ function App() {
           path="/module9/dashboards"
           element={
             <PrivateRoute>
-              <DashboardWidgets />
+              <LazyRoutes.DashboardWidgets />
             </PrivateRoute>
           }
         />
@@ -1960,7 +1785,7 @@ function App() {
           path="/module9/analytics"
           element={
             <PrivateRoute>
-              <AnalyticsCharts />
+              <LazyRoutes.AnalyticsCharts />
             </PrivateRoute>
           }
         />
@@ -1968,7 +1793,7 @@ function App() {
           path="/module9/audit-log"
           element={
             <PrivateRoute>
-              <AuditLogViewer />
+              <LazyRoutes.AuditLogViewer />
             </PrivateRoute>
           }
         />

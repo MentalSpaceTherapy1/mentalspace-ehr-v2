@@ -143,8 +143,9 @@ export default function SmartNoteCreator() {
       setSelectedAppointmentId(appointmentIdParam);
 
       // Fetch appointment details to check if it's a group appointment
-      api.get(`/appointments/${appointmentIdParam}`)
-        .then((response) => {
+      const fetchAppointmentDetails = async () => {
+        try {
+          const response = await api.get(`/appointments/${appointmentIdParam}`);
           const appointment = response.data.data;
 
           // Auto-detect group appointments and suggest Group Therapy Note
@@ -152,10 +153,11 @@ export default function SmartNoteCreator() {
             setSelectedNoteType('group-therapy');
             setStep('form');
           }
-        })
-        .catch((err) => {
+        } catch (err) {
           console.error('Failed to fetch appointment details:', err);
-        });
+        }
+      };
+      fetchAppointmentDetails();
     }
 
     if (noteTypeParam) {

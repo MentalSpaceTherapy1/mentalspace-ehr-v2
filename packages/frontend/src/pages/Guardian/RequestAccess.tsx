@@ -41,9 +41,8 @@ import {
   Warning,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+// Phase 4.2: Use api instance for httpOnly cookie auth instead of raw axios with Bearer tokens
+import api from '../../lib/api';
 
 const RELATIONSHIP_TYPES = [
   { value: 'PARENT', label: 'Parent', requiredDocs: ['Birth certificate OR court order'] },
@@ -257,10 +256,10 @@ const RequestAccess: React.FC = () => {
         formDataUpload.append('documentType', 'VERIFICATION');
         formDataUpload.append('relationshipId', relationshipId);
 
-        await axios.post(`${API_BASE_URL}/guardian/documents/upload`, formDataUpload, {
+        // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+        await api.post('/guardian/documents/upload', formDataUpload, {
           headers: {
             'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
       }
@@ -279,24 +278,19 @@ const RequestAccess: React.FC = () => {
       setError(null);
 
       // Submit guardian relationship request
-      const response = await axios.post(
-        `${API_BASE_URL}/guardian/relationship`,
-        {
-          minorId: formData.minorId || undefined,
-          minorFirstName: formData.minorFirstName,
-          minorLastName: formData.minorLastName,
-          minorDateOfBirth: formData.minorDateOfBirth,
-          relationshipType: formData.relationshipType,
-          accessLevel: formData.accessLevel,
-          permissions: formData.permissions,
-          notes: formData.explanation,
-          contactPhone: formData.contactPhone,
-          contactEmail: formData.contactEmail,
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        }
-      );
+      // Phase 4.2: Use api instance with httpOnly cookies - no manual auth header needed
+      const response = await api.post('/guardian/relationship', {
+        minorId: formData.minorId || undefined,
+        minorFirstName: formData.minorFirstName,
+        minorLastName: formData.minorLastName,
+        minorDateOfBirth: formData.minorDateOfBirth,
+        relationshipType: formData.relationshipType,
+        accessLevel: formData.accessLevel,
+        permissions: formData.permissions,
+        notes: formData.explanation,
+        contactPhone: formData.contactPhone,
+        contactEmail: formData.contactEmail,
+      });
 
       if (response.data.success) {
         const relationshipId = response.data.data.id;

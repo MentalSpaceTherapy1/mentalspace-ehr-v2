@@ -1,15 +1,19 @@
 import { io, Socket } from 'socket.io-client';
 
-// Get the stored authentication token
+/**
+ * Phase 4.2: Portal Token Only
+ *
+ * EHR users authenticate via httpOnly cookies (withCredentials: true).
+ * Portal clients use Bearer tokens stored in localStorage.
+ *
+ * Only return portalToken since EHR auth is handled by cookies automatically.
+ */
 const getStoredToken = (): string | null => {
-  // Try localStorage first (primary storage for session tokens)
-  const token = localStorage.getItem('token');
-  if (token) return token;
-
-  // Fallback to portalToken for client portal users
+  // Portal clients use Bearer tokens in localStorage
   const portalToken = localStorage.getItem('portalToken');
   if (portalToken) return portalToken;
 
+  // EHR users: No token returned - auth handled by httpOnly cookies via withCredentials
   return null;
 };
 
@@ -68,16 +72,15 @@ export const initSocket = () => {
       autoConnect: true,
     });
 
-    if (!token) {
-      console.warn('[Socket.IO] No auth token found - connection may fail');
-    }
+    // Note: token may be null for EHR users - they authenticate via httpOnly cookies
+    // Only portal clients need explicit token in auth.token
 
     socket.on('connect', () => {
-      console.log('[Socket.IO] Connected:', socket?.id);
+      if (import.meta.env.DEV) console.log('[Socket.IO] Connected:', socket?.id);
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('[Socket.IO] Disconnected:', reason);
+      if (import.meta.env.DEV) console.log('[Socket.IO] Disconnected:', reason);
     });
 
     socket.on('connect_error', (error) => {

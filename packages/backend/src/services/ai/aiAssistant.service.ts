@@ -18,6 +18,7 @@ import logger, { auditLogger } from '../../utils/logger';
 import prisma from '../database';
 import { anthropicService } from './anthropic.service';
 import { AIConversationTopic, AIMessageRole, Prisma } from '@prisma/client';
+import { UserRoles } from '@mentalspace/shared';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -590,7 +591,7 @@ class AIAssistantService {
     const where: Prisma.ClientWhereInput = {};
 
     // Filter by clinician if not admin
-    if (userContext.role === 'CLINICIAN' && userContext.clinicianId) {
+    if (userContext.role === UserRoles.CLINICIAN && userContext.clinicianId) {
       where.primaryTherapistId = userContext.clinicianId;
     }
 
@@ -729,7 +730,7 @@ class AIAssistantService {
       appointmentDate: { gte: oneWeekAgo }
     };
 
-    if (userContext.role === 'CLINICIAN' && userContext.clinicianId) {
+    if (userContext.role === UserRoles.CLINICIAN && userContext.clinicianId) {
       where.clinicianId = userContext.clinicianId;
     }
 
@@ -777,7 +778,7 @@ class AIAssistantService {
     ] = await Promise.all([
       prisma.client.count(),
       prisma.client.count({ where: { status: 'ACTIVE' } }),
-      prisma.user.count({ where: { roles: { has: 'CLINICIAN' }, isActive: true } }),
+      prisma.user.count({ where: { roles: { has: UserRoles.CLINICIAN }, isActive: true } }),
       prisma.appointment.groupBy({
         by: ['status'],
         where: { appointmentDate: { gte: startOfMonth } },

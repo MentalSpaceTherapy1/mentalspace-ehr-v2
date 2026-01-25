@@ -35,6 +35,7 @@ import {
   Business,
 } from '@mui/icons-material';
 import api from '../../lib/api';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ReminderConfig {
   id?: string;
@@ -84,8 +85,8 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function ClinicalNoteReminderSettings() {
-  // Get user from localStorage
-  const [user, setUser] = useState<any>(null);
+  // Get user from useAuth hook - no localStorage dependency
+  const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
 
   // State for different config types
@@ -143,12 +144,6 @@ export default function ClinicalNoteReminderSettings() {
   const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   useEffect(() => {
-    // Load user from localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-
     loadConfigurations();
     checkEmailStatus();
   }, []);

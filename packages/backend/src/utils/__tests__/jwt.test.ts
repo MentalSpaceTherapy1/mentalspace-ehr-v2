@@ -84,7 +84,7 @@ describe('JWT Utilities', () => {
       expect(() => verifyToken(invalidToken)).toThrow('Invalid token');
     });
 
-    it('should throw error for expired token', () => {
+    it('should throw error for expired token', async () => {
       // Create a token that expires immediately
       const expiredToken = jwt.sign(
         mockPayload,
@@ -97,9 +97,8 @@ describe('JWT Utilities', () => {
       );
 
       // Wait a bit to ensure expiration
-      return new Promise((resolve) => setTimeout(resolve, 100)).then(() => {
-        expect(() => verifyToken(expiredToken)).toThrow('Token has expired');
-      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(() => verifyToken(expiredToken)).toThrow('Token has expired');
     });
 
     it('should throw error for token with wrong issuer', () => {

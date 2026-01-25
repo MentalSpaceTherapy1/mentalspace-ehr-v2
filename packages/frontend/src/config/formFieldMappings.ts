@@ -99,13 +99,6 @@ export const CLIENT_INFO_TO_DEMOGRAPHICS: FormTransferConfig = {
       label: 'Pronouns',
       dataType: 'string',
     },
-    {
-      sourceField: 'ssn',
-      targetField: 'ssn',
-      label: 'Social Security Number',
-      dataType: 'string',
-      transform: (value: string) => value?.replace(/[^0-9]/g, ''), // Remove formatting
-    },
 
     // Contact Information
     {

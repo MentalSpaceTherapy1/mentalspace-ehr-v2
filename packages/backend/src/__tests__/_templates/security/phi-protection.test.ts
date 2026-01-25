@@ -35,7 +35,6 @@ describe('PHI Protection - Security Tests', () => {
       email: 'phi-test@patient.com',
       phone: '555-1234',
       dateOfBirth: new Date('1985-03-15'),
-      ssn: '123-45-6789',
     });
   });
 
@@ -53,17 +52,16 @@ describe('PHI Protection - Security Tests', () => {
       expect(response.body.error).not.toContain('TestPatient');
     });
 
-    it('should not expose SSN in any error', async () => {
+    it('should not expose phone numbers in any error', async () => {
       const response = await apiHelper.post('/api/v1/clients', authToken, {
         firstName: 'Test',
         lastName: 'User',
-        ssn: '123-45-6789',
+        phone: '555-123-4567',
         // Missing other required fields to trigger error
       });
 
       const errorStr = JSON.stringify(response.body);
-      expect(errorStr).not.toMatch(/\d{3}-\d{2}-\d{4}/); // SSN pattern
-      expect(errorStr).not.toContain('123-45-6789');
+      expect(errorStr).not.toContain('555-123-4567');
     });
 
     it('should not expose date of birth in validation errors', async () => {
@@ -199,9 +197,6 @@ describe('PHI Protection - Security Tests', () => {
           const logStr = JSON.stringify(log);
           expect(logStr).not.toContain(testClient.email);
           expect(logStr).not.toContain(testClient.phone);
-          if (testClient.ssn) {
-            expect(logStr).not.toContain(testClient.ssn);
-          }
         });
       }
     });
@@ -227,9 +222,9 @@ describe('PHI Protection - Security Tests', () => {
   describe('SQL Injection Prevention - PHI Protection', () => {
     it('should prevent SQL injection that could expose PHI', async () => {
       const sqlInjections = [
-        "' OR 1=1; SELECT * FROM Client WHERE ssn='",
+        "' OR 1=1; SELECT * FROM Client WHERE email='",
         "'; DROP TABLE Client; --",
-        "' UNION SELECT email, ssn FROM Client --",
+        "' UNION SELECT email, phone FROM Client --",
       ];
 
       for (const injection of sqlInjections) {
@@ -289,22 +284,21 @@ describe('PHI Protection - Security Tests', () => {
       const unauthResponse = await request(app).get('/api/v1/health');
 
       const responseStr = JSON.stringify(unauthResponse.body);
-      expect(responseStr).not.toMatch(/\d{3}-\d{2}-\d{4}/); // SSN
       expect(responseStr).not.toMatch(/\b[A-Z]{2}\d{6}\b/); // MRN
+      expect(responseStr).not.toMatch(/\d{3}-\d{3}-\d{4}/); // Phone number pattern
     });
 
-    it('should mask/redact sensitive fields in list views', async () => {
+    it('should not expose sensitive client fields in list views', async () => {
       const response = await apiHelper.get('/api/v1/clients', authToken);
 
       expect(response.status).toBe(200);
 
-      // In list views, SSN should be masked or excluded
+      // Note: SSN is never collected by MentalSpace EHR
+      // Verify client data structure is appropriate for list views
       if (response.body.data && response.body.data.length > 0) {
         response.body.data.forEach((client: any) => {
-          if (client.ssn) {
-            // SSN should be masked (e.g., "***-**-6789")
-            expect(client.ssn).toMatch(/\*\*\*-\*\*-\d{4}/);
-          }
+          // SSN field should not exist as we don't collect it
+          expect(client.ssn).toBeUndefined();
         });
       }
     });

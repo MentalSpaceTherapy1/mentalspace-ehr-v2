@@ -1,6 +1,7 @@
 import { AuthService } from '../auth.service';
 import bcrypt from 'bcryptjs';
 import { UnauthorizedError, ConflictError } from '../../utils/errors';
+import { UserRoles } from '@mentalspace/shared';
 
 // Mock dependencies before imports
 jest.mock('../database', () => ({
@@ -179,7 +180,7 @@ describe('AuthService', () => {
         failedLoginAttempts: 3,
         accountLockedUntil: null,
         isActive: true,
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         passwordChangedAt: new Date(),
         mfaEnabled: false,
       };
@@ -214,7 +215,7 @@ describe('AuthService', () => {
         failedLoginAttempts: 5,
         accountLockedUntil: new Date(Date.now() - 1000), // Expired 1 second ago
         isActive: true,
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         passwordChangedAt: new Date(),
         mfaEnabled: false,
       };
@@ -254,7 +255,7 @@ describe('AuthService', () => {
         failedLoginAttempts: 0,
         accountLockedUntil: null,
         isActive: true,
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         passwordChangedAt,
         mfaEnabled: false,
         mustChangePassword: false,
@@ -282,7 +283,7 @@ describe('AuthService', () => {
         failedLoginAttempts: 0,
         accountLockedUntil: null,
         isActive: true,
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         passwordChangedAt,
         mfaEnabled: false,
         mustChangePassword: false,
@@ -319,7 +320,7 @@ describe('AuthService', () => {
         failedLoginAttempts: 0,
         accountLockedUntil: null,
         isActive: true,
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         passwordChangedAt: new Date(),
         mfaEnabled: true,
         mfaSecret: 'encrypted-secret',
@@ -347,7 +348,7 @@ describe('AuthService', () => {
         failedLoginAttempts: 0,
         accountLockedUntil: null,
         isActive: true,
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         passwordChangedAt: new Date(),
         mfaEnabled: true,
         mfaSecret: 'encrypted-secret',
@@ -373,7 +374,7 @@ describe('AuthService', () => {
         failedLoginAttempts: 0,
         accountLockedUntil: null,
         isActive: true,
-        roles: ['CLINICIAN'],
+        roles: [UserRoles.CLINICIAN],
         passwordChangedAt: new Date(),
         mfaEnabled: false,
       };

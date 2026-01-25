@@ -88,14 +88,17 @@ export default function OutcomeMeasuresPage() {
 
   // Fetch client name
   useEffect(() => {
-    if (clientId) {
-      api.get(`/clients/${clientId}`)
-        .then(res => {
-          const client = res.data.data;
-          setClientName(`${client.firstName} ${client.lastName}`);
-        })
-        .catch(err => console.error('Error fetching client:', err));
-    }
+    const fetchClientName = async () => {
+      if (!clientId) return;
+      try {
+        const res = await api.get(`/clients/${clientId}`);
+        const client = res.data.data;
+        setClientName(`${client.firstName} ${client.lastName}`);
+      } catch (err) {
+        console.error('Error fetching client:', err);
+      }
+    };
+    fetchClientName();
   }, [clientId]);
 
   // Fetch history

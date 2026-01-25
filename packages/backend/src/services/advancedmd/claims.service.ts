@@ -13,7 +13,7 @@
  * @module services/advancedmd/claims.service
  */
 
-import { PrismaClient } from '@prisma/client';
+import prisma from '../database';
 import { advancedMDAPI } from '../../integrations/advancedmd/api-client';
 import {
   ClaimData,
@@ -21,8 +21,8 @@ import {
   ClaimStatusDetail,
   CheckClaimStatusRequest,
 } from '../../types/advancedmd.types';
-
-const prisma = new PrismaClient();
+import { withTransaction, TransactionClient } from '../../utils/transaction';
+import logger from '../../utils/logger';
 
 /**
  * Claim submission result
@@ -215,7 +215,7 @@ export class AdvancedMDClaimsService {
         submittedAt: new Date(),
       };
     } catch (error: any) {
-      console.error('[Claims Service] Error creating claim:', error.message);
+      logger.error('Claims Service: Error creating claim:', error.message);
       return {
         success: false,
         error: error.message,
@@ -299,38 +299,50 @@ export class AdvancedMDClaimsService {
       // Parse response for AMD claim ID
       const advancedMDClaimId = this.extractClaimIdFromResponse(response.data);
 
-      // Update claim status
-      await prisma.claim.update({
-        where: { id: claimId },
-        data: {
-          claimStatus: 'submitted',
-          advancedMDClaimId,
-          submissionDate: new Date(),
-        },
-      });
+      // Execute all database updates in a transaction for atomicity
+      await withTransaction(
+        async (tx) => {
+          // Update claim status
+          await tx.claim.update({
+            where: { id: claimId },
+            data: {
+              claimStatus: 'submitted',
+              advancedMDClaimId,
+              submissionDate: new Date(),
+            },
+          });
 
-      // Update charges as billed
-      await prisma.chargeEntry.updateMany({
-        where: { id: { in: claim.charges.map((c) => c.id) } },
-        data: {
-          chargeStatus: 'Billed',
-          claimId: claimId,
-        },
-      });
+          // Update charges as billed
+          await tx.chargeEntry.updateMany({
+            where: { id: { in: claim.charges.map((c) => c.id) } },
+            data: {
+              chargeStatus: 'Billed',
+              claimId: claimId,
+            },
+          });
 
-      // Log sync
-      await prisma.advancedMDSyncLog.create({
-        data: {
-          syncType: 'claim',
-          entityId: claimId,
-          entityType: 'Claim',
-          syncDirection: 'to_amd',
-          syncStatus: 'success',
-          syncStarted: new Date(),
-          syncCompleted: new Date(),
-          advancedMDId: advancedMDClaimId,
-          responseData: response.data,
+          // Log sync
+          await tx.advancedMDSyncLog.create({
+            data: {
+              syncType: 'claim',
+              entityId: claimId,
+              entityType: 'Claim',
+              syncDirection: 'to_amd',
+              syncStatus: 'success',
+              syncStarted: new Date(),
+              syncCompleted: new Date(),
+              advancedMDId: advancedMDClaimId,
+              responseData: response.data,
+            },
+          });
         },
+        { label: 'SubmitClaim', maxRetries: 1 }
+      );
+
+      logger.info('Claim submitted successfully', {
+        claimId,
+        claimNumber: claim.claimNumber,
+        advancedMDClaimId,
       });
 
       return {
@@ -341,7 +353,7 @@ export class AdvancedMDClaimsService {
         submittedAt: new Date(),
       };
     } catch (error: any) {
-      console.error('[Claims Service] Error submitting claim:', error.message);
+      logger.error('Error submitting claim', { error: error.message, claimId });
       return {
         success: false,
         claimId,
@@ -426,26 +438,38 @@ export class AdvancedMDClaimsService {
       // Parse status response
       const statusData = this.parseClaimStatusResponse(response.data);
 
-      // Update local claim with status
+      // Update local claim with status - use transaction for atomicity
       const newStatus = this.mapAMDStatusToLocal(statusData.status);
-      await prisma.claim.update({
-        where: { id: claimId },
-        data: {
-          claimStatus: newStatus,
-          clearinghouseStatus: statusData.clearinghouseStatus,
-          rejectionReason: statusData.rejectionReason,
-          rejectionCode: statusData.rejectionCode,
-          totalPaidAmount: statusData.totalPaid,
-          totalAdjustmentAmount: statusData.totalAdjustment,
-          totalPatientResponsibility: statusData.patientResponsibility,
-          statusDate: new Date(),
-        },
-      });
 
-      // If claim is paid or denied, update charges
-      if (newStatus === 'paid' || newStatus === 'denied') {
-        await this.updateChargesFromClaimStatus(claimId, newStatus, statusData);
-      }
+      await withTransaction(
+        async (tx) => {
+          // Update claim with status data
+          await tx.claim.update({
+            where: { id: claimId },
+            data: {
+              claimStatus: newStatus,
+              clearinghouseStatus: statusData.clearinghouseStatus,
+              rejectionReason: statusData.rejectionReason,
+              rejectionCode: statusData.rejectionCode,
+              totalPaidAmount: statusData.totalPaid,
+              totalAdjustmentAmount: statusData.totalAdjustment,
+              totalPatientResponsibility: statusData.patientResponsibility,
+              statusDate: new Date(),
+            },
+          });
+
+          // If claim is paid or denied, update charges
+          if (newStatus === 'paid' || newStatus === 'denied') {
+            await this.updateChargesFromClaimStatusTx(tx, claimId, newStatus, statusData);
+          }
+        },
+        { label: 'CheckClaimStatus' }
+      );
+
+      logger.info('Claim status checked successfully', {
+        claimId,
+        status: newStatus,
+      });
 
       return {
         success: true,
@@ -462,7 +486,7 @@ export class AdvancedMDClaimsService {
         patientResponsibility: this.parseAmount(statusData.patientResponsibility),
       };
     } catch (error: any) {
-      console.error('[Claims Service] Error checking claim status:', error.message);
+      logger.error('Error checking claim status', { error: error.message, claimId });
       return {
         success: false,
         claimId,
@@ -611,7 +635,7 @@ export class AdvancedMDClaimsService {
       // Submit the claim
       return this.submitClaim(claimId);
     } catch (error: any) {
-      console.error('[Claims Service] Error resubmitting claim:', error.message);
+      logger.error('Claims Service: Error resubmitting claim:', error.message);
       return {
         success: false,
         claimId,
@@ -778,7 +802,7 @@ export class AdvancedMDClaimsService {
   }
 
   /**
-   * Update charges based on claim status
+   * Update charges based on claim status (non-transactional)
    */
   private async updateChargesFromClaimStatus(
     claimId: string,
@@ -788,6 +812,23 @@ export class AdvancedMDClaimsService {
     const newChargeStatus = status === 'paid' ? 'Paid' : status === 'denied' ? 'Denied' : 'Billed';
 
     await prisma.chargeEntry.updateMany({
+      where: { claimId },
+      data: { chargeStatus: newChargeStatus },
+    });
+  }
+
+  /**
+   * Update charges based on claim status (within transaction)
+   */
+  private async updateChargesFromClaimStatusTx(
+    tx: TransactionClient,
+    claimId: string,
+    status: ClaimStatus,
+    statusData: ClaimStatusDetail
+  ): Promise<void> {
+    const newChargeStatus = status === 'paid' ? 'Paid' : status === 'denied' ? 'Denied' : 'Billed';
+
+    await tx.chargeEntry.updateMany({
       where: { claimId },
       data: { chargeStatus: newChargeStatus },
     });

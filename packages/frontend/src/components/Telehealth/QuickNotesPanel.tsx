@@ -65,17 +65,18 @@ export default function QuickNotesPanel({
   };
 
   // Copy notes to clipboard
-  const copyNotes = () => {
+  const copyNotes = async () => {
     if (!notes.trim()) {
       toast.error('No notes to copy');
       return;
     }
 
-    navigator.clipboard.writeText(notes).then(() => {
+    try {
+      await navigator.clipboard.writeText(notes);
       toast.success('Notes copied to clipboard');
-    }).catch(() => {
+    } catch {
       toast.error('Failed to copy notes');
-    });
+    }
   };
 
   // Download notes as text file

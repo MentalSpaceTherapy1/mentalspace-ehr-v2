@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getNavItems, NavItem } from '../config/navigation';
 import { useMenuState } from '../hooks/useMenuState';
-import api from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 import SessionTimeoutWarning from './SessionTimeoutWarning';
 import NotificationDropdown from './NotificationDropdown';
 import AIAssistantChat from './AI/AIAssistantChat';
@@ -27,8 +27,9 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { isMenuOpen, toggleMenu } = useMenuState();
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const navItems = getNavItems(user.role);
+  // Use auth hook for user data - no localStorage dependency
+  const { user, logout } = useAuth();
+  const navItems = getNavItems(user?.role);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   /**
@@ -36,16 +37,7 @@ export default function Layout({ children }: LayoutProps) {
    * HIPAA Security: Calls backend to clear httpOnly auth cookies
    */
   const handleLogout = async () => {
-    try {
-      // Call backend to clear httpOnly cookies and terminate session
-      await api.post('/auth/logout');
-    } catch (error) {
-      // Continue with local cleanup even if backend call fails
-    }
-
-    // Clear local user data (tokens are in httpOnly cookies, handled by backend)
-    localStorage.removeItem('user');
-    localStorage.removeItem('passwordExpiryWarning');
+    await logout();
     navigate('/login');
   };
 
@@ -160,14 +152,14 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex items-center space-x-3 mb-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
                   <span className="text-white font-bold text-sm">
-                    {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+                    {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-gray-900 truncate">
-                    {user.firstName} {user.lastName}
+                    {user?.firstName} {user?.lastName}
                   </p>
-                  <p className="text-xs text-gray-600 truncate">{user.role}</p>
+                  <p className="text-xs text-gray-600 truncate">{user?.role}</p>
                 </div>
               </div>
               <button
@@ -224,7 +216,7 @@ export default function Layout({ children }: LayoutProps) {
               {/* User Avatar */}
               <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-all duration-200">
                 <span className="text-white font-bold text-sm">
-                  {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+                  {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
                 </span>
               </div>
             </div>

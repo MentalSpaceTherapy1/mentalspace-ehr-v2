@@ -238,6 +238,7 @@ class AdvancedMDClient {
     firstName?: string;
     lastName?: string;
     dateOfBirth?: string;
+    /** @deprecated SSN is never collected by MentalSpace. Field exists for AdvancedMD API compatibility only. */
     ssn?: string;
   }): Promise<any> {
     return this.makeRequest('/patients/search', 'POST', criteria, {

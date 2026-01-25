@@ -226,32 +226,6 @@ export function isValidUrl(url: string): boolean {
 }
 
 /**
- * Sanitize SSN (for display)
- */
-export function sanitizeSSN(ssn: string): string {
-  // Remove all non-digits
-  const digits = ssn.replace(/\D/g, '');
-  return digits.substring(0, 9);
-}
-
-/**
- * Validate SSN format
- */
-export function isValidSSN(ssn: string): boolean {
-  const digits = ssn.replace(/\D/g, '');
-  return digits.length === 9;
-}
-
-/**
- * Format SSN for display (masked)
- */
-export function formatSSNMasked(ssn: string): string {
-  const clean = sanitizeSSN(ssn);
-  if (clean.length !== 9) return '***-**-****';
-  return `***-**-${clean.slice(-4)}`;
-}
-
-/**
  * Sanitize ZIP code
  */
 export function sanitizeZipCode(zip: string): string {
@@ -300,7 +274,7 @@ export function isValidNPI(npi: string): boolean {
  */
 export function sanitizeFormData<T extends Record<string, unknown>>(
   data: T,
-  fieldConfig: Record<keyof T, 'text' | 'html' | 'email' | 'phone' | 'ssn' | 'zip' | 'raw'>
+  fieldConfig: Record<keyof T, 'text' | 'html' | 'email' | 'phone' | 'zip' | 'raw'>
 ): T {
   const sanitized = { ...data };
 
@@ -320,9 +294,6 @@ export function sanitizeFormData<T extends Record<string, unknown>>(
         break;
       case 'phone':
         (sanitized as Record<string, unknown>)[key] = sanitizePhoneNumber(value);
-        break;
-      case 'ssn':
-        (sanitized as Record<string, unknown>)[key] = sanitizeSSN(value);
         break;
       case 'zip':
         (sanitized as Record<string, unknown>)[key] = sanitizeZipCode(value);
@@ -382,7 +353,6 @@ export default {
   sanitizeEmail,
   sanitizePhoneNumber,
   sanitizeUrl,
-  sanitizeSSN,
   sanitizeZipCode,
   sanitizeMRN,
   sanitizeNPI,
@@ -390,10 +360,8 @@ export default {
   isValidEmail,
   isValidPhoneNumber,
   isValidUrl,
-  isValidSSN,
   isValidZipCode,
   isValidNPI,
-  formatSSNMasked,
   escapeHtml,
   useSanitizedInput,
 };

@@ -52,7 +52,7 @@ export class AudioCaptureService {
       });
 
       // If the context sample rate doesn't match, we'll need to resample
-      console.log(`[AudioCapture] AudioContext sample rate: ${this.audioContext.sampleRate}`);
+      if (import.meta.env.DEV) console.log(`[AudioCapture] AudioContext sample rate: ${this.audioContext.sampleRate}`);
 
       // Create source from the media stream
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(mediaStream);
@@ -83,7 +83,7 @@ export class AudioCaptureService {
       this.mediaStreamSource.connect(this.scriptProcessor);
       this.scriptProcessor.connect(this.audioContext.destination);
 
-      console.log('[AudioCapture] Initialized successfully');
+      if (import.meta.env.DEV) console.log('[AudioCapture] Initialized successfully');
       return true;
     } catch (error) {
       console.error('[AudioCapture] Failed to initialize:', error);
@@ -110,7 +110,7 @@ export class AudioCaptureService {
       channels: this.config.channelCount,
     });
 
-    console.log('[AudioCapture] Started capturing audio');
+    if (import.meta.env.DEV) console.log('[AudioCapture] Started capturing audio');
   }
 
   /**
@@ -126,7 +126,7 @@ export class AudioCaptureService {
       });
     }
 
-    console.log('[AudioCapture] Stopped capturing audio');
+    if (import.meta.env.DEV) console.log('[AudioCapture] Stopped capturing audio');
   }
 
   /**
@@ -153,7 +153,7 @@ export class AudioCaptureService {
     this.socket = null;
     this.sessionId = null;
 
-    console.log('[AudioCapture] Destroyed');
+    if (import.meta.env.DEV) console.log('[AudioCapture] Destroyed');
   }
 
   /**

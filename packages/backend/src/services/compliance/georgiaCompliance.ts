@@ -3,6 +3,7 @@ import prisma from '../database';
 // Phase 6 - Week 20 - Georgia-Specific Compliance Automation
 
 import logger, { auditLogger } from '../../utils/logger';
+import { UserRoles } from '@mentalspace/shared';
 import { alertService } from '../alerts/alertService';
 
 interface ComplianceViolation {
@@ -348,7 +349,7 @@ class GeorgiaComplianceService {
     logger.info('Running Georgia compliance checks for all clinicians...');
 
     const clinicians = await prisma.user.findMany({
-      where: { roles: { hasSome: ['CLINICIAN'] }, isActive: true },
+      where: { roles: { hasSome: [UserRoles.CLINICIAN] }, isActive: true },
       select: { id: true, firstName: true, lastName: true },
     });
 
@@ -375,7 +376,7 @@ class GeorgiaComplianceService {
     violationsByType: Record<string, number>;
   }> {
     const clinicians = await prisma.user.findMany({
-      where: { roles: { hasSome: ['CLINICIAN'] }, isActive: true },
+      where: { roles: { hasSome: [UserRoles.CLINICIAN] }, isActive: true },
       select: { id: true },
     });
 

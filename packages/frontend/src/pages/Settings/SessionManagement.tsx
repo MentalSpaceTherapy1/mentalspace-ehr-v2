@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 interface Session {
   id: string;
@@ -46,6 +47,7 @@ export default function SessionManagement() {
   const [terminatingId, setTerminatingId] = useState<string | null>(null);
   const [showTerminateAllDialog, setShowTerminateAllDialog] = useState(false);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   useEffect(() => {
     fetchSessions();
@@ -91,10 +93,8 @@ export default function SessionManagement() {
 
       await api.delete('/sessions/all');
 
-      // Clear local storage
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      // Use centralized logout from useAuth hook (clears cookies, cache, and localStorage)
+      await logout();
 
       // Redirect to login
       navigate('/login', {

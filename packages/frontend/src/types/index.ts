@@ -1,3 +1,10 @@
+import { UserRoles, UserRole } from '@mentalspace/shared';
+
+// Re-export for convenience
+// Phase 4.2: Use 'export type' for type re-exports with isolatedModules
+export { UserRoles };
+export type { UserRole };
+
 // API Response wrapper
 export interface ApiResponse<T> {
   success: boolean;
@@ -11,7 +18,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'ADMINISTRATOR' | 'SUPERVISOR' | 'CLINICIAN' | 'BILLING_STAFF' | 'FRONT_DESK' | 'ASSOCIATE';
+  role: UserRole;
   licenseNumber?: string;
   licenseState?: string;
   licenseExpiration?: string;

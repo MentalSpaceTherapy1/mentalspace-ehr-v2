@@ -80,6 +80,12 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'lastModifiedBy') THEN
     ALTER TABLE "session_recordings" ADD COLUMN "lastModifiedBy" TEXT;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'retentionDays') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "retentionDays" INTEGER DEFAULT 2555;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'session_recordings' AND column_name = 'encryptionMethod') THEN
+    ALTER TABLE "session_recordings" ADD COLUMN "encryptionMethod" TEXT DEFAULT 'AES256';
+  END IF;
 END $$;
 
 -- Create indexes for performance

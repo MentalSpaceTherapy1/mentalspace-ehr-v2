@@ -17,10 +17,10 @@
  * @module services/advancedmd/era.service
  */
 
-import { PrismaClient } from '@prisma/client';
+import prisma from '../database';
 import { advancedMDAPI } from '../../integrations/advancedmd/api-client';
-
-const prisma = new PrismaClient();
+import { withTransaction, TransactionClient } from '../../utils/transaction';
+import logger from '../../utils/logger';
 
 // TODO: PendingPayment model needs to be added to the Prisma schema
 // For now, we cast to any to suppress TypeScript errors
@@ -527,76 +527,94 @@ export class AdvancedMDERAService {
         };
       }
 
-      // Create payment record
-      const paymentRecord = await prisma.paymentRecord.create({
-        data: {
-          clientId: charge.clientId,
-          paymentDate: pendingPayment.paymentDate,
-          paymentAmount: pendingPayment.paidAmount,
-          paymentSource: pendingPayment.payerName || 'Insurance',
-          paymentMethod: pendingPayment.eftNumber ? 'EFT' : 'Check',
-          checkNumber: pendingPayment.checkNumber,
-          transactionId: pendingPayment.eftNumber,
-          claimNumber: pendingPayment.claimNumber,
-          appliedPaymentsJson: [
-            {
-              chargeId,
-              amount: pendingPayment.paidAmount,
-              adjustmentAmount: pendingPayment.adjustmentAmount,
-              adjustmentCode: pendingPayment.adjustmentReasonCode,
-            },
-          ],
-          adjustmentsJson: pendingPayment.adjustmentAmount
-            ? [
-                {
-                  code: pendingPayment.adjustmentReasonCode,
-                  amount: pendingPayment.adjustmentAmount,
-                },
-              ]
-            : undefined,
-          postedBy: 'SYSTEM_ERA_IMPORT',
-        },
-      });
-
-      // Update charge with payment
+      // Calculate new amounts before transaction
       const newPaymentAmount = Number(charge.paymentAmount || 0) + pendingPayment.paidAmount;
       const newAdjustmentAmount = Number(charge.adjustmentAmount || 0) + (pendingPayment.adjustmentAmount || 0);
       const chargeAmount = Number(charge.chargeAmount);
       const balance = chargeAmount - newPaymentAmount - newAdjustmentAmount;
 
-      await prisma.chargeEntry.update({
-        where: { id: chargeId },
-        data: {
-          paymentAmount: newPaymentAmount,
-          adjustmentAmount: newAdjustmentAmount,
-          chargeStatus: balance <= 0.01 ? 'Paid' : 'Partial Payment',
-        },
-      });
-
-      // Update claim if exists
-      if (claimId) {
-        const claim = await prisma.claim.findUnique({ where: { id: claimId } });
-        if (claim) {
-          const newPaidAmount = Number(claim.totalPaidAmount || 0) + pendingPayment.paidAmount;
-          await prisma.claim.update({
-            where: { id: claimId },
+      // Execute all payment updates in a transaction for atomicity
+      const paymentRecord = await withTransaction(
+        async (tx) => {
+          // Create payment record
+          const newPaymentRecord = await tx.paymentRecord.create({
             data: {
-              totalPaidAmount: newPaidAmount,
-              totalAdjustmentAmount: Number(claim.totalAdjustmentAmount || 0) + (pendingPayment.adjustmentAmount || 0),
-              claimStatus: newPaidAmount >= Number(claim.totalChargeAmount) ? 'paid' : 'partial_paid',
+              clientId: charge.clientId,
+              paymentDate: pendingPayment.paymentDate,
+              paymentAmount: pendingPayment.paidAmount,
+              paymentSource: pendingPayment.payerName || 'Insurance',
+              paymentMethod: pendingPayment.eftNumber ? 'EFT' : 'Check',
+              checkNumber: pendingPayment.checkNumber,
+              transactionId: pendingPayment.eftNumber,
+              claimNumber: pendingPayment.claimNumber,
+              appliedPaymentsJson: [
+                {
+                  chargeId,
+                  amount: pendingPayment.paidAmount,
+                  adjustmentAmount: pendingPayment.adjustmentAmount,
+                  adjustmentCode: pendingPayment.adjustmentReasonCode,
+                },
+              ],
+              adjustmentsJson: pendingPayment.adjustmentAmount
+                ? [
+                    {
+                      code: pendingPayment.adjustmentReasonCode,
+                      amount: pendingPayment.adjustmentAmount,
+                    },
+                  ]
+                : undefined,
+              postedBy: 'SYSTEM_ERA_IMPORT',
             },
           });
-        }
-      }
 
-      // Mark pending payment as posted
-      await pendingPaymentModel.pendingPayment.update({
-        where: { id: pendingPaymentId },
-        data: {
-          status: 'posted',
-          postedPaymentId: paymentRecord.id,
-          postedAt: new Date(),
+          // Update charge with payment
+          await tx.chargeEntry.update({
+            where: { id: chargeId },
+            data: {
+              paymentAmount: newPaymentAmount,
+              adjustmentAmount: newAdjustmentAmount,
+              chargeStatus: balance <= 0.01 ? 'Paid' : 'Partial Payment',
+            },
+          });
+
+          // Update claim if exists
+          if (claimId) {
+            const claim = await tx.claim.findUnique({ where: { id: claimId } });
+            if (claim) {
+              const newPaidAmount = Number(claim.totalPaidAmount || 0) + pendingPayment.paidAmount;
+              await tx.claim.update({
+                where: { id: claimId },
+                data: {
+                  totalPaidAmount: newPaidAmount,
+                  totalAdjustmentAmount: Number(claim.totalAdjustmentAmount || 0) + (pendingPayment.adjustmentAmount || 0),
+                  claimStatus: newPaidAmount >= Number(claim.totalChargeAmount) ? 'paid' : 'partial_paid',
+                },
+              });
+            }
+          }
+
+          // Mark pending payment as posted
+          // Note: pendingPaymentModel is cast to any, so we use it outside the transaction
+          // since it's the same prisma instance
+          await (tx as any).pendingPayment.update({
+            where: { id: pendingPaymentId },
+            data: {
+              status: 'posted',
+              postedPaymentId: newPaymentRecord.id,
+              postedAt: new Date(),
+            },
+          });
+
+          return newPaymentRecord;
         },
+        { label: 'PostPayment', maxRetries: 1 }
+      );
+
+      logger.info('Payment posted successfully', {
+        paymentId: paymentRecord.id,
+        chargeId,
+        claimId,
+        amount: pendingPayment.paidAmount,
       });
 
       return {
@@ -608,7 +626,7 @@ export class AdvancedMDERAService {
         adjustmentAmount: pendingPayment.adjustmentAmount || undefined,
       };
     } catch (error: any) {
-      console.error('[ERA Service] Error posting payment:', error.message);
+      logger.error('Error posting payment', { error: error.message, pendingPaymentId });
       return {
         success: false,
         paymentId: pendingPaymentId,
@@ -730,7 +748,7 @@ export class AdvancedMDERAService {
 
       return result;
     } catch (error: any) {
-      console.error('[ERA Service] Error reconciling payments:', error.message);
+      logger.error('ERA Service: Error reconciling payments', { error: error.message });
       return {
         ...result,
         success: false,

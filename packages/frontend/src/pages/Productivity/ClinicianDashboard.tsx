@@ -1,13 +1,13 @@
 import React from 'react';
 import { useClinicianDashboard, useMetricsHistory } from '../../hooks/productivity/useProductivityMetrics';
 import { useRealtimeKVR } from '../../hooks/productivity/useRealtimeKVR';
+import { useAuth } from '../../hooks/useAuth';
 import MetricCard from '../../components/Productivity/MetricCard';
 import { AlertCircle, CheckCircle, Clock, FileText, User, TrendingUp } from 'lucide-react';
 
 export default function ClinicianDashboard() {
-  // Get userId from the user object in localStorage
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  // Get user from useAuth hook - no localStorage dependency
+  const { user } = useAuth();
   const userId = user?.id || '';
   const { data: dashboardData, isLoading, error } = useClinicianDashboard(userId);
   const { kvr: realtimeKVR, metadata, connected } = useRealtimeKVR(userId);

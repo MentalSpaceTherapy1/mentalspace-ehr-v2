@@ -43,6 +43,7 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
+import api from '../../lib/api';
 
 interface RecordingPlaybackProps {
   sessionId: string;
@@ -116,22 +117,12 @@ const RecordingPlayback: React.FC<RecordingPlaybackProps> = ({
       setLoading(true);
       setError('');
 
-      // Fetch recording details
-      const recordingResponse = await fetch(
-        `/api/v1/telehealth/sessions/${sessionId}/recording${recordingId ? `?recordingId=${recordingId}` : ''}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      // Fetch recording details - uses api instance with httpOnly cookie auth
+      const recordingResponse = await api.get(
+        `/telehealth/sessions/${sessionId}/recording${recordingId ? `?recordingId=${recordingId}` : ''}`
       );
 
-      if (!recordingResponse.ok) {
-        throw new Error('Failed to fetch recording details');
-      }
-
-      const recordingData = await recordingResponse.json();
-      const recordings = recordingData.recordings;
+      const recordings = recordingResponse.data.recordings;
 
       if (!recordings || recordings.length === 0) {
         throw new Error('No recordings found for this session');
@@ -140,25 +131,15 @@ const RecordingPlayback: React.FC<RecordingPlaybackProps> = ({
       const rec = recordings[0];
       setRecording(rec);
 
-      // Fetch playback URL (presigned, expires in 1 hour)
-      const urlResponse = await fetch(
-        `/api/v1/telehealth/sessions/${sessionId}/recording/playback-url${recordingId ? `?recordingId=${recordingId}` : ''}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      // Fetch playback URL (presigned, expires in 1 hour) - uses api instance with httpOnly cookie auth
+      const urlResponse = await api.get(
+        `/telehealth/sessions/${sessionId}/recording/playback-url${recordingId ? `?recordingId=${recordingId}` : ''}`
       );
 
-      if (!urlResponse.ok) {
-        throw new Error('Failed to generate playback URL');
-      }
-
-      const urlData = await urlResponse.json();
-      setPlaybackUrl(urlData.url);
+      setPlaybackUrl(urlResponse.data.url);
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to load recording');
+      setError(err.response?.data?.message || err.message || 'Failed to load recording');
       setLoading(false);
     }
   };
@@ -221,20 +202,12 @@ const RecordingPlayback: React.FC<RecordingPlaybackProps> = ({
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(
-        `/api/v1/telehealth/sessions/${sessionId}/recording/download${recordingId ? `?recordingId=${recordingId}` : ''}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      // Uses api instance with httpOnly cookie auth
+      const response = await api.get(
+        `/telehealth/sessions/${sessionId}/recording/download${recordingId ? `?recordingId=${recordingId}` : ''}`
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to generate download URL');
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       // Create temporary link and trigger download
       const link = document.createElement('a');
@@ -244,7 +217,7 @@ const RecordingPlayback: React.FC<RecordingPlaybackProps> = ({
       link.click();
       document.body.removeChild(link);
     } catch (err: any) {
-      setError(err.message || 'Failed to download recording');
+      setError(err.response?.data?.message || err.message || 'Failed to download recording');
     }
   };
 
@@ -256,26 +229,15 @@ const RecordingPlayback: React.FC<RecordingPlaybackProps> = ({
 
     try {
       setDeleting(true);
-      const response = await fetch(
-        `/api/v1/telehealth/recordings/${recording!.id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify({ reason: deletionReason }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to delete recording');
-      }
+      // Uses api instance with httpOnly cookie auth
+      await api.delete(`/telehealth/recordings/${recording!.id}`, {
+        data: { reason: deletionReason },
+      });
 
       setDeleteDialogOpen(false);
       onDeleted?.();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete recording');
+      setError(err.response?.data?.message || err.message || 'Failed to delete recording');
       setDeleting(false);
     }
   };

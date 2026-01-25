@@ -343,33 +343,34 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
 
     console.log('🔌 Connecting to socket...');
 
-    // Get auth token from localStorage for socket authentication
-    const authToken = localStorage.getItem('token') || localStorage.getItem('portalToken');
-    if (!authToken) {
-      console.warn('[Socket.IO] No auth token found - socket connection may fail');
-    }
+    /**
+     * Phase 4.2: Socket Authentication
+     * EHR users authenticate via httpOnly cookies (withCredentials: true)
+     * No localStorage token needed for EHR auth
+     */
 
     // Derive socket URL from API URL (remove /api/v1 path)
-    let socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    try {
-      const url = new URL(socketUrl);
-      socketUrl = `${url.protocol}//${url.host}`;
-    } catch {
-      // If parsing fails, use as-is
+    let socketUrl = import.meta.env.VITE_SOCKET_URL;
+    if (!socketUrl) {
+      socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      try {
+        const url = new URL(socketUrl);
+        socketUrl = `${url.protocol}//${url.host}`;
+      } catch {
+        // If parsing fails, use as-is
+      }
     }
 
     const socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
-      // Pass auth token for session-based authentication
-      auth: {
-        token: authToken,
-      },
+      // Phase 4.2: No auth.token needed - EHR users use httpOnly cookies via withCredentials
       // Also pass session info in query for backward compatibility
       query: {
         sessionId: sessionData.id,
         userId: user?.id,
         userRole: userRole,
       },
+      // CRITICAL: withCredentials enables httpOnly cookie auth for EHR users
       withCredentials: true,
       reconnection: true,
       reconnectionDelay: 1000,

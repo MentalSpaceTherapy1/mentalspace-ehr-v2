@@ -2,33 +2,19 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import axios from 'axios';
 import App from './App';
 import './index.css';
 
-// Configure axios defaults globally
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
-axios.defaults.baseURL = API_URL;
-axios.defaults.headers.common['Content-Type'] = 'application/json';
-
-// Add request interceptor for auth token
-axios.interceptors.request.use(
-  (config) => {
-    // Check if this is a portal request
-    const isPortalRequest = config.url?.includes('/portal');
-
-    // Use appropriate token based on request type
-    const token = isPortalRequest
-      ? localStorage.getItem('portalToken')
-      : localStorage.getItem('token');
-
-    if (token && config.headers && !config.headers.Authorization) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+/**
+ * HIPAA Security: Auth is handled via httpOnly cookies
+ *
+ * The api.ts module handles all auth logic:
+ * - EHR routes: httpOnly cookies (automatically sent with withCredentials: true)
+ * - Portal routes: Bearer tokens from localStorage (separate auth system)
+ * - CSRF tokens: Added to state-changing requests
+ *
+ * No need for global axios interceptors here - use the api instance from lib/api.ts
+ */
 
 const queryClient = new QueryClient({
   defaultOptions: {

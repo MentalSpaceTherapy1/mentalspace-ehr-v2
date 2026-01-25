@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useUpcomingTrainings, useCourses, useEnrollments, useEnrollUser, Enrollment } from '../../hooks/useTraining';
+import { useAuth } from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
 
 interface CalendarEvent {
@@ -27,6 +28,7 @@ interface CalendarEvent {
 
 export default function TrainingCalendar() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedType, setSelectedType] = useState<'all' | 'due' | 'expiring' | 'scheduled'>('all');
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -154,16 +156,13 @@ export default function TrainingCalendar() {
   // Handle enrollment
   const handleEnroll = async (courseId: string) => {
     try {
-      // Get current user ID from localStorage or context
-      const userStr = localStorage.getItem('user');
-      const userId = userStr ? JSON.parse(userStr).id : null;
-
-      if (!userId) {
+      // Get current user ID from useAuth hook
+      if (!user?.id) {
         toast.error('Please log in to enroll in courses');
         return;
       }
 
-      await enrollMutation.mutateAsync({ userId, courseId });
+      await enrollMutation.mutateAsync({ userId: user.id, courseId });
       toast.success('Successfully enrolled in course!');
       setSelectedEvent(null);
     } catch (error: any) {

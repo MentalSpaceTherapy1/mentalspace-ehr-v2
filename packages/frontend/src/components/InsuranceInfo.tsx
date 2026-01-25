@@ -20,7 +20,6 @@ interface Insurance {
   subscriberLastName?: string;
   subscriberDOB?: string;
   relationshipToSubscriber?: string;
-  subscriberSSN?: string;
   copay?: number;
   deductible?: number;
   outOfPocketMax?: number;
@@ -57,7 +56,6 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
     subscriberLastName: '',
     subscriberDOB: '',
     subscriberRelationship: 'SELF',
-    subscriberSSN: '',
     copay: '',
     deductible: '',
     outOfPocketMax: '',
@@ -106,7 +104,6 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
         subscriberDOB: data.subscriberDOB ? new Date(data.subscriberDOB).toISOString() : undefined,
         // Backend expects 'relationshipToSubscriber' not 'subscriberRelationship'
         relationshipToSubscriber: data.subscriberRelationship || undefined,
-        subscriberSSN: data.subscriberSSN || undefined,
         copay: data.copay ? parseFloat(data.copay) : undefined,
         deductible: data.deductible ? parseFloat(data.deductible) : undefined,
         outOfPocketMax: data.outOfPocketMax ? parseFloat(data.outOfPocketMax) : undefined,
@@ -187,7 +184,6 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
       subscriberLastName: ins.subscriberLastName || '',
       subscriberDOB: ins.subscriberDOB ? new Date(ins.subscriberDOB).toISOString().split('T')[0] : '',
       subscriberRelationship: ins.relationshipToSubscriber || 'SELF',
-      subscriberSSN: ins.subscriberSSN || '',
       copay: ins.copay?.toString() || '',
       deductible: ins.deductible?.toString() || '',
       outOfPocketMax: ins.outOfPocketMax?.toString() || '',
@@ -224,7 +220,6 @@ export default function InsuranceInfo({ clientId }: InsuranceInfoProps) {
       subscriberLastName: '',
       subscriberDOB: '',
       subscriberRelationship: 'SELF',
-      subscriberSSN: '',
       copay: '',
       deductible: '',
       outOfPocketMax: '',

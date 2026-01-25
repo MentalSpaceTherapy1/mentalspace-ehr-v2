@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
+import { ensureCsrfToken } from '../lib/api';
 import MFAVerificationScreen from '../components/Auth/MFAVerificationScreen';
 import AccountLockedScreen from '../components/Auth/AccountLockedScreen';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -50,35 +53,28 @@ export default function Login() {
         setCurrentPassword(password); // Store the temp password for change-password call
         setShowPasswordChange(true);
         setLoading(false);
-
-        // Store user data temporarily
-        const userData = {
-          ...response.data.data.user,
-          role: response.data.data.user.roles?.[0] || response.data.data.user.role,
-        };
-        localStorage.setItem('user', JSON.stringify(userData));
+        // Note: Session is established via httpOnly cookie, no localStorage needed
         return;
       }
 
       // HIPAA Security: Auth token is now in httpOnly cookie (set by backend)
-      // We no longer store tokens in localStorage to prevent XSS token theft
-
-      // Store user data in localStorage (non-sensitive display data only)
-      // Add backward compatibility: set both 'role' (singular) and 'roles' (array)
-      const userData = {
-        ...response.data.data.user,
-        role: response.data.data.user.roles?.[0] || response.data.data.user.role,
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
+      // We no longer store tokens or user data in localStorage to prevent XSS theft
+      // The useAuth hook will fetch user data from /auth/me using the httpOnly cookie
 
       // Check for password expiration warning
       if (response.data.data.passwordExpiresIn !== undefined) {
         const daysUntilExpiry = response.data.data.passwordExpiresIn;
         if (daysUntilExpiry <= 7) {
-          // Show warning banner in dashboard
+          // Show warning banner in dashboard (this is non-auth state, OK in localStorage)
           localStorage.setItem('passwordExpiryWarning', daysUntilExpiry.toString());
         }
       }
+
+      // Ensure we have a CSRF token for subsequent requests
+      await ensureCsrfToken();
+
+      // Invalidate auth query so useAuth refetches user from /auth/me
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'user'] });
 
       // Redirect to dashboard
       navigate('/dashboard');
@@ -145,23 +141,22 @@ export default function Login() {
     }
   };
 
-  const handleMFASuccess = () => {
+  const handleMFASuccess = async () => {
     // HIPAA Security: Auth token is now in httpOnly cookie (set by backend after MFA)
     // We no longer receive or store tokens in localStorage
 
-    // Fetch and store user data (non-sensitive display data only)
-    api.get('/auth/me').then(response => {
-      // Add backward compatibility: set both 'role' (singular) and 'roles' (array)
-      const userData = {
-        ...response.data.data,
-        role: response.data.data.roles?.[0] || response.data.data.role,
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
+    try {
+      // Ensure we have a CSRF token for subsequent requests
+      await ensureCsrfToken();
+
+      // Invalidate auth query so useAuth refetches user from /auth/me
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'user'] });
+
       navigate('/dashboard');
-    }).catch(() => {
-      setError('Failed to fetch user data');
+    } catch {
+      setError('Failed to complete authentication');
       setShowMFAVerification(false);
-    });
+    }
   };
 
   const handleMFACancel = () => {

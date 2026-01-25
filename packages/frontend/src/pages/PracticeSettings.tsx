@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../lib/api';
 
 export default function PracticeSettings() {
   const queryClient = useQueryClient();
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Fetch current user profile
+  // Fetch current user profile - uses api instance with httpOnly cookie auth
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/auth/me');
       return response.data.data;
     },
   });
@@ -62,13 +59,10 @@ export default function PracticeSettings() {
     }
   });
 
-  // Update settings mutation
+  // Update settings mutation - uses api instance with httpOnly cookie auth
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
-      const response = await axios.patch('/users/me', data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.patch('/users/me', data);
       return response.data;
     },
     onSuccess: () => {

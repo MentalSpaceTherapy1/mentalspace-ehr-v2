@@ -12,12 +12,15 @@ import {
   List,
 } from 'lucide-react';
 import { useEnrollments, useDownloadCertificate } from '../../hooks/useTraining';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function CertificateViewer() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCertificate, setSelectedCertificate] = useState<any>(null);
   const [shareLink, setShareLink] = useState<string>('');
 
+  // Use auth hook for user data - no localStorage dependency
+  const { user } = useAuth();
   const { data: enrollments } = useEnrollments();
   const downloadMutation = useDownloadCertificate();
 
@@ -312,7 +315,7 @@ export default function CertificateViewer() {
                 <h1 className="text-4xl font-bold mb-4">Certificate of Completion</h1>
                 <p className="text-xl mb-6">This certifies that</p>
                 <h2 className="text-3xl font-bold mb-6">
-                  {localStorage.getItem('userName') || 'User Name'}
+                  {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : 'User Name'}
                 </h2>
                 <p className="text-xl mb-6">has successfully completed</p>
                 <h3 className="text-2xl font-bold mb-6">{selectedCertificate.courseName}</h3>

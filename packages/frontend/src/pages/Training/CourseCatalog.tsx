@@ -12,6 +12,7 @@ import {
   Play,
 } from 'lucide-react';
 import { useCourses, useEnrollUser } from '../../hooks/useTraining';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function CourseCatalog() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,15 +29,21 @@ export default function CourseCatalog() {
 
   const { data: courses, isLoading } = useCourses(filters);
   const enrollMutation = useEnrollUser();
+  // Use auth hook for user data - no localStorage dependency
+  const { user } = useAuth();
 
   const categories = ['Clinical Skills', 'Ethics', 'Technology', 'Leadership', 'Compliance'];
   const types = ['CEU', 'Certification', 'Professional Development'];
   const formats = ['Online', 'In-Person', 'Hybrid', 'Self-Paced'];
 
   const handleEnroll = async (courseId: string) => {
+    if (!user?.id) {
+      toast.error('Please log in to enroll in courses');
+      return;
+    }
     try {
       await enrollMutation.mutateAsync({
-        userId: localStorage.getItem('userId') || '',
+        userId: user.id,
         courseId,
       });
       toast.success('Successfully enrolled in course!');

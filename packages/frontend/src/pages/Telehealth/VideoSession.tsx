@@ -22,6 +22,8 @@ import { TranscriptionPanel } from '../../components/Telehealth/TranscriptionPan
 import RecordingConsentDialog from '../../components/Telehealth/RecordingConsentDialog';
 import RecordingPlayback from '../../components/Telehealth/RecordingPlayback';
 import { io, Socket } from 'socket.io-client';
+// Phase 4.2: Import useAuth for EHR context user data
+import { useAuth } from '../../hooks/useAuth';
 
 // Import Twilio Video SDK - ensure it's available globally
 // Using a more resilient loading approach that doesn't break other components
@@ -70,10 +72,15 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   // Detect if we're in portal context (client portal route)
   const isPortalContext = window.location.pathname.startsWith('/portal/');
 
-  // Get user from localStorage similar to other components
-  // For portal users, use portalClient; for staff, use user
-  const userStr = isPortalContext ? localStorage.getItem('portalClient') : localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  /**
+   * Phase 4.2: Get user data appropriately based on context
+   * - Portal users: still use localStorage (portalClient) for their separate auth system
+   * - EHR/Staff users: use useAuth hook which gets data via httpOnly cookies
+   */
+  const { user: ehrUser } = useAuth();
+  const portalUserStr = isPortalContext ? localStorage.getItem('portalClient') : null;
+  const portalUser = portalUserStr ? JSON.parse(portalUserStr) : null;
+  const user = isPortalContext ? portalUser : ehrUser;
 
   // State
   const [room, setRoom] = useState<any>(null);
@@ -846,25 +853,27 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   }, [room, isScreenSharing, Video]);
 
   // Toggle fullscreen
-  const toggleFullscreen = useCallback(() => {
+  const toggleFullscreen = useCallback(async () => {
     if (!document.fullscreenElement) {
       // Enter fullscreen
-      document.documentElement.requestFullscreen().then(() => {
+      try {
+        await document.documentElement.requestFullscreen();
         setIsFullscreen(true);
         toast.success('Entered fullscreen mode');
-      }).catch((err) => {
+      } catch (err) {
         console.error('Failed to enter fullscreen:', err);
         toast.error('Failed to enter fullscreen');
-      });
+      }
     } else {
       // Exit fullscreen
-      document.exitFullscreen().then(() => {
+      try {
+        await document.exitFullscreen();
         setIsFullscreen(false);
         toast.success('Exited fullscreen mode');
-      }).catch((err) => {
+      } catch (err) {
         console.error('Failed to exit fullscreen:', err);
         toast.error('Failed to exit fullscreen');
-      });
+      }
     }
   }, []);
 
@@ -969,8 +978,12 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
   useEffect(() => {
     if (!sessionData?.id || socketRef.current) return;
 
-    // Get auth token from localStorage for socket authentication
-    const authToken = localStorage.getItem('token') || localStorage.getItem('portalToken');
+    /**
+     * Phase 4.2: Socket Authentication
+     * - Portal users: use portalToken from localStorage
+     * - EHR users: authenticate via httpOnly cookies (withCredentials: true)
+     */
+    const portalToken = isPortalContext ? localStorage.getItem('portalToken') : null;
 
     // Use explicit VITE_SOCKET_URL if provided, otherwise derive from API URL
     let socketUrl = import.meta.env.VITE_SOCKET_URL;
@@ -987,28 +1000,25 @@ const VideoSession: React.FC<VideoSessionProps> = () => {
 
     console.log('🔌 Connecting to socket...', JSON.stringify({
       socketUrl,
-      hasAuthToken: !!authToken,
-      authTokenLength: authToken?.length || 0,
-      authTokenPreview: authToken?.slice(0, 20) || null,
+      isPortalContext,
+      hasPortalToken: !!portalToken,
       sessionId: sessionData.id,
     }));
 
-    if (!authToken) {
-      console.warn('[Socket.IO] No auth token found - socket connection may fail');
-    }
+    // Note: EHR users authenticate via httpOnly cookies - no token needed in auth object
+    // Portal users need explicit token since they don't use httpOnly cookies
 
     const socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
-      // Pass auth token for session-based authentication
-      auth: {
-        token: authToken,
-      },
+      // Only pass token for portal users - EHR users use httpOnly cookies
+      auth: portalToken ? { token: portalToken } : undefined,
       // Also pass session info in query for backward compatibility
       query: {
         sessionId: sessionData.id,
         userId: user?.id,
         userRole: userRole,
       },
+      // CRITICAL: withCredentials enables httpOnly cookie auth for EHR users
       withCredentials: true,
       reconnection: true,
       reconnectionDelay: 1000,
