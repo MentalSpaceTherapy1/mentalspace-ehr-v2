@@ -1,3 +1,7 @@
+// Re-export role types from constants (single source of truth)
+import { UserRole } from '../constants/roles';
+export { UserRole };
+
 // API Response Types
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -13,16 +17,6 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
     total: number;
     totalPages: number;
   };
-}
-
-// User Types
-export enum UserRole {
-  ADMINISTRATOR = 'ADMINISTRATOR',
-  SUPERVISOR = 'SUPERVISOR',
-  CLINICIAN = 'CLINICIAN',
-  BILLING_STAFF = 'BILLING_STAFF',
-  FRONT_DESK = 'FRONT_DESK',
-  ASSOCIATE = 'ASSOCIATE',
 }
 
 export interface UserProfile {

@@ -1,3 +1,8 @@
+// Re-export all constants from sub-modules
+export * from './roles';
+export * from './status';
+export * from './errors';
+
 // API Constants
 export const API_VERSION = 'v1';
 export const API_PREFIX = `/api/${API_VERSION}`;
@@ -7,7 +12,7 @@ export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 20;
 export const MAX_LIMIT = 100;
 
-// User Role Constants
+// User Role Constants (legacy - use RoleGroups from './roles' instead)
 export const ADMIN_ROLES = ['ADMINISTRATOR'];
 export const SUPERVISOR_ROLES = ['ADMINISTRATOR', 'SUPERVISOR'];
 export const CLINICIAN_ROLES = ['ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'];
