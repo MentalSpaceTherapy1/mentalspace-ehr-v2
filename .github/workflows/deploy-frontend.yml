@@ -43,6 +43,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Fix Rollup platform binaries
+        run: |
+          # Reinstall rollup to get platform-specific native binaries
+          # This fixes cross-platform lockfile issues with optional dependencies
+          npm rebuild @rollup/rollup-linux-x64-gnu || npm install @rollup/rollup-linux-x64-gnu --no-save
+
       - name: Build shared package
         run: |
           cd packages/shared
