@@ -308,16 +308,130 @@ model User {
   ptoBalance                   PTOBalance?         @relation("PTOBalance")
 
   // Phase 2: AI Generated Notes Relations
-  aiNotesAsClinician   AIGeneratedNote[]      @relation("ClinicianAINotes")
-  aiNotesAsReviewer    AIGeneratedNote[]      @relation("ReviewerAINotes")
-  aiAuditLogs          AIGenerationAuditLog[] @relation("AIAuditLogs")
-  aiTemplatesCreated   AIPromptTemplate[]     @relation("AITemplateCreator")
-  aiTemplatesUpdated   AIPromptTemplate[]     @relation("AITemplateUpdater")
+  aiNotesAsClinician AIGeneratedNote[]      @relation("ClinicianAINotes")
+  aiNotesAsReviewer  AIGeneratedNote[]      @relation("ReviewerAINotes")
+  aiAuditLogs        AIGenerationAuditLog[] @relation("AIAuditLogs")
+  aiTemplatesCreated AIPromptTemplate[]     @relation("AITemplateCreator")
+  aiTemplatesUpdated AIPromptTemplate[]     @relation("AITemplateUpdater")
 
   // AI Personal Assistant
-  aiConversations      AIConversation[]
+  aiConversations AIConversation[]
+
+  // Phase 2.1: User Model Split - New Relations
+  // These models extract fields from User for better separation of concerns
+  // Fields on User are kept temporarily for backward compatibility
+  userProfile     UserProfile?
+  userCredentials UserCredentials?
+  userPreferences UserPreferences?
 
   @@map("users")
+}
+
+// ============================================================================
+// USER MODEL SPLIT (Phase 2.1 Remediation)
+// These models extract related fields from the User model for better
+// separation of concerns and reduced model complexity.
+// Original fields on User are kept temporarily for backward compatibility.
+// ============================================================================
+
+/// Personal and contact information for a user
+/// Extracted from User model for better separation of concerns
+model UserProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Personal info (mirrors User fields for transition period)
+  middleName    String?
+  suffix        String?
+  preferredName String?
+
+  // Contact details
+  phoneNumber           String?
+  officeExtension       String?
+  personalEmail         String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+
+  // Professional profile (client-facing)
+  profileBio          String?
+  profilePhotoS3      String?
+  yearsOfExperience   Int?
+  education           String[]
+  approachesToTherapy String[]
+  treatmentPhilosophy String?
+  specialties         String[]
+  languagesSpoken     String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
+/// Professional credentials and licensing information
+/// Extracted from User model for better separation of concerns
+model UserCredentials {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Professional title
+  title String?
+
+  // Licensing
+  licenseNumber     String?
+  licenseState      String?
+  licenseExpiration DateTime?
+  npiNumber         String?
+  deaNumber         String?
+  taxonomyCode      String?
+
+  // Supervision licenses (for supervisors)
+  supervisionLicenses String[]
+
+  // Digital signature
+  digitalSignature String?
+  signatureDate    DateTime?
+
+  // Signature authentication (Phase 1.4)
+  signaturePin       String?
+  signaturePassword  String?
+  signatureBiometric String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_credentials")
+}
+
+/// User notification and practice preferences
+/// Extracted from User model for better separation of concerns
+model UserPreferences {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notification preferences
+  emailNotifications   Boolean @default(true)
+  smsNotifications     Boolean @default(false)
+  appointmentReminders Boolean @default(true)
+  noteReminders        Boolean @default(true)
+  supervisoryAlerts    Boolean @default(true)
+
+  // Practice settings
+  defaultOfficeLocation  String?
+  availableForScheduling Boolean @default(true)
+  acceptsNewClients      Boolean @default(true)
+
+  // UI preferences (new fields)
+  theme    String @default("light")
+  timezone String @default("America/New_York")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_preferences")
 }
 
 // ============================================================================
@@ -664,7 +778,7 @@ model Client {
   // AdvancedMD Integration Fields
   advancedMDPatientId String?   @unique
   lastSyncedToAMD     DateTime?
-  amdSyncStatus       String?   // 'pending', 'synced', 'error'
+  amdSyncStatus       String? // 'pending', 'synced', 'error'
   amdSyncError        String?
 
   // Timestamps
@@ -853,7 +967,6 @@ model InsuranceInformation {
   subscriberFirstName      String?
   subscriberLastName       String?
   subscriberDOB            DateTime?
-  subscriberSSN            String?
   relationshipToSubscriber String?
   subscriberEmployer       String?
 
@@ -888,13 +1001,15 @@ model InsuranceInformation {
   frontCardImage String? // S3 URL
   backCardImage  String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   // Relations
   authorizationsRequired Boolean              @default(false)
   priorAuthorizations    PriorAuthorization[]
 
+  @@index([deletedAt])
   @@map("insurance_information")
 }
 
@@ -1092,12 +1207,20 @@ model Appointment {
   advancedMDProviderId String?
   advancedMDFacilityId String?
   lastSyncedToAMD      DateTime?
-  amdSyncStatus        String?   // 'pending', 'synced', 'error'
+  amdSyncStatus        String? // 'pending', 'synced', 'error'
   amdSyncError         String?
 
   // Phase 2: AI Generated Notes Relations
   aiGeneratedNotes AIGeneratedNote[]
 
+  // Soft delete
+  deletedAt DateTime?
+
+  // Composite indexes for query performance
+  @@index([clinicianId, appointmentDate])
+  @@index([clientId, appointmentDate])
+  @@index([status, appointmentDate])
+  @@index([deletedAt])
   @@map("appointments")
 }
 
@@ -1325,16 +1448,16 @@ enum AIGeneratedNoteType {
 
 // Phase 2: AI Generated Note Model
 model AIGeneratedNote {
-  id            String @id @default(uuid())
-  sessionId     String @unique
+  id            String            @id @default(uuid())
+  sessionId     String            @unique
   session       TelehealthSession @relation("SessionAINotes", fields: [sessionId], references: [id], onDelete: Cascade)
   appointmentId String
   clientId      String
   clinicianId   String
 
   // Note Configuration
-  noteType AIGeneratedNoteType     @default(PROGRESS_NOTE)
-  status   AIGeneratedNoteStatus   @default(GENERATING)
+  noteType AIGeneratedNoteType   @default(PROGRESS_NOTE)
+  status   AIGeneratedNoteStatus @default(GENERATING)
 
   // Source Data
   transcriptText  String  @db.Text
@@ -1352,8 +1475,8 @@ model AIGeneratedNote {
 
   // AI Metadata
   generationConfidence Float?
-  modelUsed            String  @default("claude-sonnet-4-20250514")
-  promptVersion        String  @default("1.0")
+  modelUsed            String @default("claude-sonnet-4-20250514")
+  promptVersion        String @default("1.0")
   generationTimeMs     Int?
   tokenCount           Int?
 
@@ -1384,10 +1507,10 @@ model AIGeneratedNote {
   approvedAt  DateTime?
 
   // Relations
-  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  client      Client      @relation("ClientAINotes", fields: [clientId], references: [id], onDelete: Cascade)
-  clinician   User        @relation("ClinicianAINotes", fields: [clinicianId], references: [id], onDelete: Cascade)
-  reviewer    User?       @relation("ReviewerAINotes", fields: [reviewedBy], references: [id])
+  appointment Appointment            @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  client      Client                 @relation("ClientAINotes", fields: [clientId], references: [id], onDelete: Cascade)
+  clinician   User                   @relation("ClinicianAINotes", fields: [clinicianId], references: [id], onDelete: Cascade)
+  reviewer    User?                  @relation("ReviewerAINotes", fields: [reviewedBy], references: [id])
   auditLogs   AIGenerationAuditLog[]
 
   @@index([sessionId])
@@ -1402,14 +1525,14 @@ model AIGeneratedNote {
 
 // Phase 2: AI Generation Audit Log
 model AIGenerationAuditLog {
-  id        String @id @default(uuid())
-  aiNoteId  String
-  aiNote    AIGeneratedNote @relation(fields: [aiNoteId], references: [id], onDelete: Cascade)
+  id       String          @id @default(uuid())
+  aiNoteId String
+  aiNote   AIGeneratedNote @relation(fields: [aiNoteId], references: [id], onDelete: Cascade)
 
   eventType String // GENERATION_STARTED, GENERATION_COMPLETED, etc.
-  eventData Json   @default("{}")
+  eventData Json     @default("{}")
   userId    String?
-  user      User?  @relation("AIAuditLogs", fields: [userId], references: [id])
+  user      User?    @relation("AIAuditLogs", fields: [userId], references: [id])
   ipAddress String?
   userAgent String?
   timestamp DateTime @default(now())
@@ -1422,13 +1545,13 @@ model AIGenerationAuditLog {
 
 // Phase 2: AI Prompt Templates
 model AIPromptTemplate {
-  id           String @id @default(uuid())
+  id           String  @id @default(uuid())
   templateName String
   templateType String // SOAP_GENERATION, RISK_ASSESSMENT, TREATMENT_PLAN_UPDATE
   version      String
-  promptText   String @db.Text
-  systemPrompt String @db.Text
-  modelConfig  Json   @default("{}")
+  promptText   String  @db.Text
+  systemPrompt String  @db.Text
+  modelConfig  Json    @default("{}")
   isActive     Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -1765,11 +1888,11 @@ enum NoteStatus {
 }
 
 model ClinicalNote {
-  id            String      @id @default(uuid())
+  id            String       @id @default(uuid())
   clientId      String
-  client        Client      @relation(fields: [clientId], references: [id])
+  client        Client       @relation(fields: [clientId], references: [id])
   clinicianId   String
-  clinician     User        @relation("NoteCreator", fields: [clinicianId], references: [id])
+  clinician     User         @relation("NoteCreator", fields: [clinicianId], references: [id])
   appointmentId String?
   appointment   Appointment? @relation(fields: [appointmentId], references: [id])
 
@@ -1827,7 +1950,7 @@ model ClinicalNote {
 
   // Compliance
   dueDate         DateTime?
-  completedOnTime Boolean  @default(false)
+  completedOnTime Boolean   @default(false)
   daysToComplete  Int?
 
   // Sunday Lockout & Unlock Requests
@@ -1872,8 +1995,16 @@ model ClinicalNote {
   // Phase 2.3: Outcome Measures
   outcomeMeasures OutcomeMeasure[]
 
+  // Soft delete
+  deletedAt DateTime?
+
   // Unique constraint: One note per appointment per note type
   @@unique([appointmentId, noteType])
+  // Composite indexes for query performance
+  @@index([clinicianId, status, dueDate])
+  @@index([clientId, sessionDate])
+  @@index([status, createdAt])
+  @@index([deletedAt])
   @@map("clinical_notes")
 }
 
@@ -2236,10 +2367,10 @@ model PortalAccount {
   passwordResetTokenExpiry DateTime?
 
   // Password Management (72-hour temp passwords, 6-month permanent passwords)
-  mustChangePassword     Boolean   @default(false)
-  tempPasswordExpiry     DateTime? // Temporary password expires in 72 hours
-  passwordExpiresAt      DateTime? // Permanent password expires in 6 months
-  passwordChangedAt      DateTime?
+  mustChangePassword Boolean   @default(false)
+  tempPasswordExpiry DateTime? // Temporary password expires in 72 hours
+  passwordExpiresAt  DateTime? // Permanent password expires in 6 months
+  passwordChangedAt  DateTime?
 
   lastLoginDate       DateTime?
   failedLoginAttempts Int       @default(0)
@@ -2487,6 +2618,10 @@ model ChargeEntry {
   createdAt DateTime @default(now())
   createdBy String
 
+  // Composite indexes for query performance
+  @@index([clientId, serviceDate])
+  @@index([chargeStatus, createdAt])
+  @@index([providerId, serviceDate])
   @@map("charge_entries")
 }
 
@@ -2619,12 +2754,14 @@ model ClientDocument {
   tags   String[]
   status String   @default("Active")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   // Relations
   relationshipConsents ClientRelationship[]
 
+  @@index([deletedAt])
   @@map("client_documents")
 }
 
@@ -3674,7 +3811,11 @@ model NoteAmendment {
   ipAddress String
   userAgent String
 
+  // Soft delete
+  deletedAt DateTime?
+
   @@index([noteId, amendmentNumber])
+  @@index([deletedAt])
   @@map("note_amendments")
 }
 
@@ -5735,54 +5876,54 @@ model PTOBalance {
 
 // Eligibility Verification Results
 model EligibilityCheck {
-  id           String   @id @default(uuid())
-  clientId     String
-  client       Client   @relation("ClientEligibilityCheck", fields: [clientId], references: [id])
-  insuranceId  String
+  id          String @id @default(uuid())
+  clientId    String
+  client      Client @relation("ClientEligibilityCheck", fields: [clientId], references: [id])
+  insuranceId String
 
-  checkDate    DateTime @default(now())
+  checkDate DateTime @default(now())
 
   // Request Info
-  serviceType  String?  // '30' for Mental Health
-  providerId   String?
+  serviceType String? // '30' for Mental Health
+  providerId  String?
 
   // Response Data
-  responseData Json     // Full response from AdvancedMD
+  responseData Json // Full response from AdvancedMD
 
   // Coverage Status
-  coverageActive   Boolean?
+  coverageActive     Boolean?
   eligibleForService Boolean?
 
   // Financial Responsibility
-  copay              Decimal?  @db.Decimal(10, 2)
-  coinsurance        Int?      // percentage
-  deductible         Decimal?  @db.Decimal(10, 2)
-  deductibleMet      Decimal?  @db.Decimal(10, 2)
-  outOfPocketMax     Decimal?  @db.Decimal(10, 2)
-  outOfPocketMet     Decimal?  @db.Decimal(10, 2)
+  copay          Decimal? @db.Decimal(10, 2)
+  coinsurance    Int? // percentage
+  deductible     Decimal? @db.Decimal(10, 2)
+  deductibleMet  Decimal? @db.Decimal(10, 2)
+  outOfPocketMax Decimal? @db.Decimal(10, 2)
+  outOfPocketMet Decimal? @db.Decimal(10, 2)
 
   // Coverage Details
-  planName           String?
-  planType           String?
-  coverageLevel      String?   // 'Individual', 'Family'
+  planName      String?
+  planType      String?
+  coverageLevel String? // 'Individual', 'Family'
 
   // Authorization
-  requiresAuth       Boolean   @default(false)
-  authNumber         String?
+  requiresAuth Boolean @default(false)
+  authNumber   String?
 
   // Limitations
-  serviceLimit       Int?      // Visit limit
-  serviceUsed        Int?      // Visits used
-  serviceRemaining   Int?
+  serviceLimit     Int? // Visit limit
+  serviceUsed      Int? // Visits used
+  serviceRemaining Int?
 
   // Caching
-  cachedUntil    DateTime  // 24 hours from checkDate
+  cachedUntil DateTime // 24 hours from checkDate
 
   // Status
-  checkStatus    String    // 'success', 'failed', 'error'
-  errorMessage   String?
+  checkStatus  String // 'success', 'failed', 'error'
+  errorMessage String?
 
-  createdAt      DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([clientId, checkDate])
   @@index([cachedUntil])
@@ -5791,16 +5932,16 @@ model EligibilityCheck {
 
 // Claims Management
 model Claim {
-  id             String   @id @default(uuid())
-  claimNumber    String   @unique
-  clientId       String
-  client         Client   @relation("ClientClaim", fields: [clientId], references: [id])
-  insuranceId    String
+  id          String @id @default(uuid())
+  claimNumber String @unique
+  clientId    String
+  client      Client @relation("ClientClaim", fields: [clientId], references: [id])
+  insuranceId String
 
   // Claim Info
-  claimType      String   @default("Professional") // 'Professional', 'Institutional'
-  billingProvider String
-  renderingProvider String?
+  claimType           String  @default("Professional") // 'Professional', 'Institutional'
+  billingProvider     String
+  renderingProvider   String?
   supervisingProvider String?
 
   // Dates
@@ -5809,53 +5950,53 @@ model Claim {
   submissionDate   DateTime?
 
   // Status
-  claimStatus        String   @default("draft") // 'draft', 'ready', 'submitted', 'accepted', 'rejected', 'in_process', 'paid', 'denied', 'partial_paid'
-  statusDate         DateTime @default(now())
-  statusUpdatedBy    String?
+  claimStatus     String   @default("draft") // 'draft', 'ready', 'submitted', 'accepted', 'rejected', 'in_process', 'paid', 'denied', 'partial_paid'
+  statusDate      DateTime @default(now())
+  statusUpdatedBy String?
 
   // Financial
-  totalChargeAmount    Decimal  @db.Decimal(10, 2)
-  totalAllowedAmount   Decimal? @db.Decimal(10, 2)
-  totalPaidAmount      Decimal  @default(0) @db.Decimal(10, 2)
-  totalAdjustmentAmount Decimal @default(0) @db.Decimal(10, 2)
+  totalChargeAmount          Decimal  @db.Decimal(10, 2)
+  totalAllowedAmount         Decimal? @db.Decimal(10, 2)
+  totalPaidAmount            Decimal  @default(0) @db.Decimal(10, 2)
+  totalAdjustmentAmount      Decimal  @default(0) @db.Decimal(10, 2)
   totalPatientResponsibility Decimal? @db.Decimal(10, 2)
 
   // AdvancedMD Integration
-  advancedMDClaimId    String?
-  advancedMDVisitId    String?
+  advancedMDClaimId String?
+  advancedMDVisitId String?
 
   // Clearinghouse
-  clearinghouseId      String?
-  clearinghouseName    String?  // 'Waystar', 'Change'
-  clearinghouseStatus  String?
+  clearinghouseId       String?
+  clearinghouseName     String? // 'Waystar', 'Change'
+  clearinghouseStatus   String?
   clearinghouseResponse Json?
 
   // Rejection/Denial
-  rejectionReason      String?
-  rejectionCode        String?
-  denialReason         String?
-  denialCode           String?
+  rejectionReason String?
+  rejectionCode   String?
+  denialReason    String?
+  denialCode      String?
 
   // Resubmission
-  isResubmission       Boolean  @default(false)
-  originalClaimId      String?
-  resubmissionReason   String?
-  resubmissionDate     DateTime?
+  isResubmission     Boolean   @default(false)
+  originalClaimId    String?
+  resubmissionReason String?
+  resubmissionDate   DateTime?
 
   // Notes
-  notes                String?
+  notes String?
 
   // Timestamps
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  createdBy            String
-  lastModifiedBy       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String
+  lastModifiedBy String?
 
   // Relations
-  charges              ClaimCharge[]
-  payments             ClaimPayment[]
-  eraRecords           ERARecord[]
-  paymentMappings      PaymentClaimMapping[] @relation("PaymentClaimMapping")
+  charges         ClaimCharge[]
+  payments        ClaimPayment[]
+  eraRecords      ERARecord[]
+  paymentMappings PaymentClaimMapping[] @relation("PaymentClaimMapping")
 
   @@index([clientId, claimStatus])
   @@index([claimStatus, submissionDate])
@@ -5865,10 +6006,10 @@ model Claim {
 
 // Claim Charge Line Items
 model ClaimCharge {
-  id         String @id @default(uuid())
-  claimId    String
-  claim      Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  chargeId   String
+  id       String @id @default(uuid())
+  claimId  String
+  claim    Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  chargeId String
 
   // Line Item Details (denormalized for claim submission)
   serviceDate    DateTime
@@ -5878,7 +6019,7 @@ model ClaimCharge {
   chargeAmount   Decimal  @db.Decimal(10, 2)
   diagnosisCodes String[] // Pointers to claim diagnosis codes
 
-  createdAt      DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([claimId])
   @@map("claim_charges")
@@ -5886,30 +6027,30 @@ model ClaimCharge {
 
 // Claim Payments (from ERA/EOB)
 model ClaimPayment {
-  id              String   @id @default(uuid())
-  claimId         String
-  claim           Claim    @relation(fields: [claimId], references: [id])
+  id      String @id @default(uuid())
+  claimId String
+  claim   Claim  @relation(fields: [claimId], references: [id])
 
-  paymentDate     DateTime
-  paymentAmount   Decimal  @db.Decimal(10, 2)
-  checkNumber     String?
+  paymentDate      DateTime
+  paymentAmount    Decimal  @db.Decimal(10, 2)
+  checkNumber      String?
   payerClaimNumber String?
 
   // Payment Breakdown
-  paidAmount         Decimal  @db.Decimal(10, 2)
-  adjustmentAmount   Decimal  @db.Decimal(10, 2)
+  paidAmount            Decimal  @db.Decimal(10, 2)
+  adjustmentAmount      Decimal  @db.Decimal(10, 2)
   patientResponsibility Decimal? @db.Decimal(10, 2)
 
   // Adjustment Codes
-  adjustmentCodes    Json?    // Array of adjustment code objects
-  remarkCodes        Json?    // Array of remark code objects
+  adjustmentCodes Json? // Array of adjustment code objects
+  remarkCodes     Json? // Array of remark code objects
 
   // Source
-  paymentSource      String   // 'ERA', 'Manual', 'Check'
-  eraRecordId        String?
+  paymentSource String // 'ERA', 'Manual', 'Check'
+  eraRecordId   String?
 
-  createdAt          DateTime @default(now())
-  createdBy          String
+  createdAt DateTime @default(now())
+  createdBy String
 
   @@index([claimId, paymentDate])
   @@map("claim_payments")
@@ -5917,43 +6058,43 @@ model ClaimPayment {
 
 // ERA (Electronic Remittance Advice) 835 EDI Records
 model ERARecord {
-  id                String   @id @default(uuid())
-  claimId           String?
-  claim             Claim?   @relation(fields: [claimId], references: [id])
+  id      String  @id @default(uuid())
+  claimId String?
+  claim   Claim?  @relation(fields: [claimId], references: [id])
 
   // ERA Header Info
-  transactionType   String   // '835'
-  payerName         String
-  payerId           String?
-  payerClaimNumber  String?
+  transactionType  String // '835'
+  payerName        String
+  payerId          String?
+  payerClaimNumber String?
 
   // Payment Info
-  paymentMethod     String   // 'CHK', 'ACH', 'EFT'
-  checkEFTNumber    String?
-  paymentDate       DateTime
-  totalPaidAmount   Decimal  @db.Decimal(10, 2)
+  paymentMethod   String // 'CHK', 'ACH', 'EFT'
+  checkEFTNumber  String?
+  paymentDate     DateTime
+  totalPaidAmount Decimal  @db.Decimal(10, 2)
 
   // File Info
-  eraFileName       String?
-  eraFileS3Key      String?  // S3 location of original 835 file
-  receivedDate      DateTime @default(now())
+  eraFileName  String?
+  eraFileS3Key String? // S3 location of original 835 file
+  receivedDate DateTime @default(now())
 
   // Raw EDI Data
-  rawEDI            String   @db.Text // Full 835 EDI content
-  parsedData        Json     // Parsed 835 data structure
+  rawEDI     String @db.Text // Full 835 EDI content
+  parsedData Json // Parsed 835 data structure
 
   // Processing Status
-  processingStatus  String   @default("pending") // 'pending', 'parsed', 'posted', 'error'
-  processingError   String?
-  processedDate     DateTime?
-  processedBy       String?
+  processingStatus String    @default("pending") // 'pending', 'parsed', 'posted', 'error'
+  processingError  String?
+  processedDate    DateTime?
+  processedBy      String?
 
   // Auto-posting
-  autoPosted        Boolean  @default(false)
-  autoPostingRules  Json?
+  autoPosted       Boolean @default(false)
+  autoPostingRules Json?
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([payerId, paymentDate])
   @@index([processingStatus])
@@ -5963,32 +6104,32 @@ model ERARecord {
 
 // Patient/Appointment Sync Log
 model AdvancedMDSyncLog {
-  id           String   @id @default(uuid())
-  syncType     String   // 'patient', 'appointment', 'charge', 'claim', 'eligibility'
-  entityId     String   // Client ID, Appointment ID, Charge ID, etc.
-  entityType   String   // 'Client', 'Appointment', 'ChargeEntry', 'Claim'
+  id         String @id @default(uuid())
+  syncType   String // 'patient', 'appointment', 'charge', 'claim', 'eligibility'
+  entityId   String // Client ID, Appointment ID, Charge ID, etc.
+  entityType String // 'Client', 'Appointment', 'ChargeEntry', 'Claim'
 
-  syncDirection String  // 'to_amd', 'from_amd'
-  syncStatus    String  // 'success', 'error', 'pending'
+  syncDirection String // 'to_amd', 'from_amd'
+  syncStatus    String // 'success', 'error', 'pending'
 
   // Request/Response
-  requestData   Json?
-  responseData  Json?
-  errorMessage  String?
+  requestData  Json?
+  responseData Json?
+  errorMessage String?
 
   // AdvancedMD IDs
-  advancedMDId  String?
+  advancedMDId String?
 
   // Timing
-  syncStarted   DateTime @default(now())
+  syncStarted   DateTime  @default(now())
   syncCompleted DateTime?
   durationMs    Int?
 
   // Metadata
-  triggeredBy   String?  // User ID or 'SYSTEM'
-  retryCount    Int      @default(0)
+  triggeredBy String? // User ID or 'SYSTEM'
+  retryCount  Int     @default(0)
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([entityType, entityId])
   @@index([syncStatus, syncStarted])
@@ -5998,40 +6139,40 @@ model AdvancedMDSyncLog {
 
 // AdvancedMD Configuration & Credentials
 model AdvancedMDConfig {
-  id              String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Office Information
-  officeKey       String   @unique  // '990207'
-  officeName      String?
+  officeKey  String  @unique // '990207'
+  officeName String?
 
   // Partner Login Credentials (Programmatic API)
-  partnerUsername String   // 'CAHCAPI'
-  partnerPassword String   // Encrypted
+  partnerUsername String // 'CAHCAPI'
+  partnerPassword String // Encrypted
 
   // Application Login Credentials (UI/Fallback)
-  appUsername     String   // 'ADMIN'
-  appPassword     String   // Encrypted: 'Bing@@0912'
+  appUsername String // 'ADMIN'
+  appPassword String // Encrypted: 'Bing@@0912'
 
   // Dynamic URLs (Updated after each login)
-  partnerLoginURL String   @default("https://partnerlogin.advancedmd.com/practicemanager/xmlrpc/processrequest.aspx")
-  redirectURLXMLRPC String?
-  redirectURLRESTPM String?
-  redirectURLRESTEHR String?
+  partnerLoginURL      String  @default("https://partnerlogin.advancedmd.com/practicemanager/xmlrpc/processrequest.aspx")
+  redirectURLXMLRPC    String?
+  redirectURLRESTPM    String?
+  redirectURLRESTEHR   String?
   redirectURLScheduler String?
 
   // Session Management
-  currentToken    String?  // AMD_TOKEN
-  tokenExpiresAt  DateTime?
+  currentToken     String? // AMD_TOKEN
+  tokenExpiresAt   DateTime?
   tokenRefreshedAt DateTime?
 
   // Environment
-  environment     String   @default("sandbox") // 'sandbox', 'production'
+  environment String @default("sandbox") // 'sandbox', 'production'
 
   // Sync Settings
-  syncEnabled     Boolean  @default(false)
+  syncEnabled      Boolean @default(false)
   autoSyncPatients Boolean @default(false)
-  autoSyncVisits  Boolean  @default(false)
-  autoSyncClaims  Boolean  @default(false)
+  autoSyncVisits   Boolean @default(false)
+  autoSyncClaims   Boolean @default(false)
 
   // Polling Intervals (in minutes)
   pollingIntervalClaims   Int @default(30)
@@ -6044,51 +6185,51 @@ model AdvancedMDConfig {
   enablePaymentSync      Boolean @default(false) // ODBC not configured yet
 
   // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  lastSyncAt      DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSyncAt DateTime?
 
   @@map("advancedmd_config")
 }
 
 // Rate Limiter State Tracking
 model AdvancedMDRateLimitState {
-  id           String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Tier Classification
-  tier         String   // 'tier1', 'tier2', 'tier3'
-  endpoint     String   // API endpoint name (e.g., 'GETUPDATEDPATIENTS', 'SAVECHARGES')
+  tier     String // 'tier1', 'tier2', 'tier3'
+  endpoint String // API endpoint name (e.g., 'GETUPDATEDPATIENTS', 'SAVECHARGES')
 
   // Rate Limit Tracking
-  callsThisMinute     Int      @default(0)
-  callsThisHour       Int      @default(0)
+  callsThisMinute Int @default(0)
+  callsThisHour   Int @default(0)
 
   // Time Windows
-  currentMinuteStart  DateTime @default(now())
-  currentHourStart    DateTime @default(now())
+  currentMinuteStart DateTime @default(now())
+  currentHourStart   DateTime @default(now())
 
   // Peak/Off-Peak Detection
-  isPeakHours         Boolean  @default(false)
-  peakHoursStart      String   @default("06:00") // Mountain Time
-  peakHoursEnd        String   @default("18:00") // Mountain Time
+  isPeakHours    Boolean @default(false)
+  peakHoursStart String  @default("06:00") // Mountain Time
+  peakHoursEnd   String  @default("18:00") // Mountain Time
 
   // Rate Limits (calls per minute)
-  limitPeak           Int      // Based on tier
-  limitOffPeak        Int      // Based on tier
+  limitPeak    Int // Based on tier
+  limitOffPeak Int // Based on tier
 
   // Backoff State
-  isBackingOff        Boolean  @default(false)
-  backoffUntil        DateTime?
-  backoffRetryCount   Int      @default(0)
+  isBackingOff      Boolean   @default(false)
+  backoffUntil      DateTime?
+  backoffRetryCount Int       @default(0)
 
   // Last Call Tracking
-  lastCallAt          DateTime?
-  lastCallSuccess     Boolean  @default(true)
-  lastCallError       String?
+  lastCallAt      DateTime?
+  lastCallSuccess Boolean   @default(true)
+  lastCallError   String?
 
   // Timestamps
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([tier, endpoint])
   @@index([isPeakHours, currentMinuteStart])
@@ -6097,20 +6238,20 @@ model AdvancedMDRateLimitState {
 
 // AdvancedMD Code Cache for CPT, ICD-10, Modifiers, Providers, Facilities
 model AdvancedMDCodeCache {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Cache Key
-  type        String   // 'CPT', 'ICD10', 'MODIFIER', 'PROVIDER', 'FACILITY'
-  code        String   // The code being looked up (e.g., '90834', 'F41.1', 'GT')
+  type String // 'CPT', 'ICD10', 'MODIFIER', 'PROVIDER', 'FACILITY'
+  code String // The code being looked up (e.g., '90834', 'F41.1', 'GT')
 
   // AdvancedMD Response
-  amdId       String   // AdvancedMD internal ID for this code
-  description String?  // Code description from AdvancedMD
+  amdId       String // AdvancedMD internal ID for this code
+  description String? // Code description from AdvancedMD
 
   // Cache Management
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  lastUsedAt  DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastUsedAt DateTime @default(now())
 
   @@unique([type, code])
   @@index([type])
@@ -6120,40 +6261,40 @@ model AdvancedMDCodeCache {
 
 // Manual Payment-to-Claim Reconciliation
 model PaymentClaimMapping {
-  id                  String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Payment Information
-  paymentId           String   // From ERARecord or manual payment entry
-  paymentAmount       Decimal  @db.Decimal(10, 2)
-  paymentDate         DateTime
-  paymentSource       String   // 'ERA', 'EOB', 'Check', 'EFT'
-  checkNumber         String?
+  paymentId     String // From ERARecord or manual payment entry
+  paymentAmount Decimal  @db.Decimal(10, 2)
+  paymentDate   DateTime
+  paymentSource String // 'ERA', 'EOB', 'Check', 'EFT'
+  checkNumber   String?
 
   // Claim Information
-  claimId             String
-  claim               Claim    @relation("PaymentClaimMapping", fields: [claimId], references: [id])
-  claimNumber         String
+  claimId     String
+  claim       Claim  @relation("PaymentClaimMapping", fields: [claimId], references: [id])
+  claimNumber String
 
   // Matching Details
-  matchScore          Int?     // 0-100 confidence score
-  matchMethod         String   // 'auto_suggested', 'manual'
-  matchReason         String?  // 'amount_match', 'date_range', 'patient_match'
+  matchScore  Int? // 0-100 confidence score
+  matchMethod String // 'auto_suggested', 'manual'
+  matchReason String? // 'amount_match', 'date_range', 'patient_match'
 
   // Split Payment Support
-  splitPaymentGroup   String?  // Group ID for payments split across multiple claims
-  allocatedAmount     Decimal  @db.Decimal(10, 2) // Amount allocated to this claim
+  splitPaymentGroup String? // Group ID for payments split across multiple claims
+  allocatedAmount   Decimal @db.Decimal(10, 2) // Amount allocated to this claim
 
   // Reconciliation
-  isReconciled        Boolean  @default(false)
-  reconciledAt        DateTime?
-  reconciledBy        String?  // User ID
+  isReconciled Boolean   @default(false)
+  reconciledAt DateTime?
+  reconciledBy String? // User ID
 
   // Notes
   reconciliationNotes String?
 
   // Timestamps
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([claimId, isReconciled])
   @@index([paymentId, isReconciled])
@@ -6163,72 +6304,72 @@ model PaymentClaimMapping {
 
 // In-House Claim Validation Rules
 model ClaimValidationRule {
-  id                  String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Rule Identification
-  ruleName            String   @unique
-  ruleType            String   // 'cpt_icd_combo', 'modifier_required', 'unit_limit', 'date_range', 'payer_specific'
-  description         String
+  ruleName    String @unique
+  ruleType    String // 'cpt_icd_combo', 'modifier_required', 'unit_limit', 'date_range', 'payer_specific'
+  description String
 
   // Scope
-  isActive            Boolean  @default(true)
-  severity            String   @default("error") // 'error', 'warning', 'info'
+  isActive Boolean @default(true)
+  severity String  @default("error") // 'error', 'warning', 'info'
 
   // CPT Code Rules
-  cptCode             String?
-  cptCodePattern      String?  // Regex pattern for multiple codes
-  allowedModifiers    String[]
-  requiredModifiers   String[]
-  maxUnits            Int?
-  minUnits            Int?
+  cptCode           String?
+  cptCodePattern    String? // Regex pattern for multiple codes
+  allowedModifiers  String[]
+  requiredModifiers String[]
+  maxUnits          Int?
+  minUnits          Int?
 
   // ICD Code Rules
-  requiredICDPrefix   String?  // 'F' for mental health
-  allowedICDPatterns  String[] // Regex patterns
-  minDiagnosisCodes   Int?
-  maxDiagnosisCodes   Int?
+  requiredICDPrefix  String? // 'F' for mental health
+  allowedICDPatterns String[] // Regex patterns
+  minDiagnosisCodes  Int?
+  maxDiagnosisCodes  Int?
 
   // CPT-ICD Combination Rules
-  requiresICDMatch    Boolean  @default(false)
-  icdMatchPattern     String?
+  requiresICDMatch Boolean @default(false)
+  icdMatchPattern  String?
 
   // Payer Rules
-  payerId             String?
-  payerName           String?
-  payerCategory       String?  // 'Medicare', 'Medicaid', 'Commercial'
+  payerId       String?
+  payerName     String?
+  payerCategory String? // 'Medicare', 'Medicaid', 'Commercial'
 
   // Service Rules
-  placeOfService      String[] // Valid POS codes
-  requiresPriorAuth   Boolean  @default(false)
+  placeOfService    String[] // Valid POS codes
+  requiresPriorAuth Boolean  @default(false)
 
   // Date Rules
-  timelyFilingDays    Int?     // Days from service date
-  maxFutureDays       Int?     // Cannot be more than N days in future
+  timelyFilingDays Int? // Days from service date
+  maxFutureDays    Int? // Cannot be more than N days in future
 
   // Financial Rules
-  maxChargeAmount     Decimal? @db.Decimal(10, 2)
-  minChargeAmount     Decimal? @db.Decimal(10, 2)
+  maxChargeAmount Decimal? @db.Decimal(10, 2)
+  minChargeAmount Decimal? @db.Decimal(10, 2)
 
   // Custom Validation Logic
-  customValidationJS  String?  @db.Text // JavaScript function for complex validation
+  customValidationJS String? @db.Text // JavaScript function for complex validation
 
   // Effective Dates
-  effectiveDate       DateTime @default(now())
-  terminationDate     DateTime?
+  effectiveDate   DateTime  @default(now())
+  terminationDate DateTime?
 
   // Override Capability
-  allowOverride       Boolean  @default(true)
+  allowOverride        Boolean  @default(true)
   overrideRequiresRole String[] // Roles that can override: ['ADMINISTRATOR', 'BILLING_STAFF']
 
   // Usage Tracking
-  timesTriggered      Int      @default(0)
-  lastTriggeredAt     DateTime?
+  timesTriggered  Int       @default(0)
+  lastTriggeredAt DateTime?
 
   // Timestamps
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  createdBy           String
-  lastModifiedBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String
+  lastModifiedBy String?
 
   @@index([ruleType, isActive])
   @@index([cptCode, isActive])
@@ -6239,59 +6380,59 @@ model ClaimValidationRule {
 
 // CPT Codes (Synced from AdvancedMD)
 model CPTCode {
-  id                  String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Code Information
-  code                String   @unique // '90837', '99214', etc.
-  description         String
-  category            String?  // 'Evaluation & Management', 'Psychotherapy', etc.
+  code        String  @unique // '90837', '99214', etc.
+  description String
+  category    String? // 'Evaluation & Management', 'Psychotherapy', etc.
 
   // AdvancedMD Integration
-  advancedMDProcId    String?  // Internal AMD ID
+  advancedMDProcId String? // Internal AMD ID
 
   // Billing Details
-  defaultFee          Decimal? @db.Decimal(10, 2)
-  rvu                 Decimal? @db.Decimal(6, 2) // Relative Value Units
+  defaultFee Decimal? @db.Decimal(10, 2)
+  rvu        Decimal? @db.Decimal(6, 2) // Relative Value Units
 
   // Validity
-  isActive            Boolean  @default(true)
-  effectiveDate       DateTime?
-  terminationDate     DateTime?
+  isActive        Boolean   @default(true)
+  effectiveDate   DateTime?
+  terminationDate DateTime?
 
   // Unit Rules
-  billableUnits       Boolean  @default(true)
-  maxUnits            Int?
-  minUnits            Int      @default(1)
+  billableUnits Boolean @default(true)
+  maxUnits      Int?
+  minUnits      Int     @default(1)
 
   // Modifiers
-  allowedModifiers    String[] // ['25', '59', 'GT', etc.]
-  typicalModifiers    String[]
+  allowedModifiers String[] // ['25', '59', 'GT', etc.]
+  typicalModifiers String[]
 
   // Requirements
-  requiresDiagnosis   Boolean  @default(true)
-  requiresPlace       Boolean  @default(false)
-  requiresAuth        Boolean  @default(false)
+  requiresDiagnosis Boolean @default(true)
+  requiresPlace     Boolean @default(false)
+  requiresAuth      Boolean @default(false)
 
   // Telehealth
-  telehealthEligible  Boolean  @default(false)
-  telehealthModifier  String?  // 'GT', '95', etc.
+  telehealthEligible Boolean @default(false)
+  telehealthModifier String? // 'GT', '95', etc.
 
   // Medicare/Medicaid
-  medicareApproved    Boolean  @default(false)
-  medicaidApproved    Boolean  @default(false)
+  medicareApproved Boolean @default(false)
+  medicaidApproved Boolean @default(false)
 
   // Metadata
-  notes               String?
+  notes String?
 
   // Fee Schedules (Payer-Specific)
-  feeSchedules        Json?    // {payerId: amount}
+  feeSchedules Json? // {payerId: amount}
 
   // Sync Tracking
-  lastSyncedFromAMD   DateTime?
+  lastSyncedFromAMD DateTime?
 
   // Timestamps
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([code, isActive])
   @@index([category, isActive])
@@ -6301,49 +6442,49 @@ model CPTCode {
 
 // ICD-10 Codes (Synced from AdvancedMD)
 model ICDCode {
-  id                  String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Code Information
-  code                String   @unique // 'F41.1', 'F43.10', etc.
-  description         String
-  category            String?  // 'Mental, Behavioral and Neurodevelopmental disorders'
+  code        String  @unique // 'F41.1', 'F43.10', etc.
+  description String
+  category    String? // 'Mental, Behavioral and Neurodevelopmental disorders'
 
   // Code Classification
-  codeType            String   @default("diagnosis") // 'diagnosis', 'symptom'
-  isBillable          Boolean  @default(true)
+  codeType   String  @default("diagnosis") // 'diagnosis', 'symptom'
+  isBillable Boolean @default(true)
 
   // Validity
-  isActive            Boolean  @default(true)
-  effectiveDate       DateTime?
-  terminationDate     DateTime?
+  isActive        Boolean   @default(true)
+  effectiveDate   DateTime?
+  terminationDate DateTime?
 
   // Clinical Details
-  severity            String?  // 'Mild', 'Moderate', 'Severe'
-  acuity              String?  // 'Acute', 'Chronic'
+  severity String? // 'Mild', 'Moderate', 'Severe'
+  acuity   String? // 'Acute', 'Chronic'
 
   // Medicare/Medicaid
-  medicareApproved    Boolean  @default(false)
-  medicaidApproved    Boolean  @default(false)
+  medicareApproved Boolean @default(false)
+  medicaidApproved Boolean @default(false)
 
   // Common Usage
-  isCommonlyUsed      Boolean  @default(false)
-  usageCount          Int      @default(0)
-  lastUsedAt          DateTime?
+  isCommonlyUsed Boolean   @default(false)
+  usageCount     Int       @default(0)
+  lastUsedAt     DateTime?
 
   // Related Codes
-  relatedCodes        String[] // Array of related ICD codes
-  excludesCodes       String[] // Mutually exclusive codes
+  relatedCodes  String[] // Array of related ICD codes
+  excludesCodes String[] // Mutually exclusive codes
 
   // Metadata
-  notes               String?
-  clinicalGuidelines  String?  @db.Text
+  notes              String?
+  clinicalGuidelines String? @db.Text
 
   // Sync Tracking
-  lastSyncedFromAMD   DateTime?
+  lastSyncedFromAMD DateTime?
 
   // Timestamps
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([code, isActive])
   @@index([category, isActive])
@@ -6357,47 +6498,47 @@ model ICDCode {
 // ============================================================================
 
 enum NoteReminderConfigType {
-  PRACTICE   // Practice-wide defaults
-  USER       // User-specific overrides
-  NOTE_TYPE  // Note-type specific settings
+  PRACTICE // Practice-wide defaults
+  USER // User-specific overrides
+  NOTE_TYPE // Note-type specific settings
 }
 
 // Configuration for clinical note completion reminders
 model ClinicalNoteReminderConfig {
-  id                       String                 @id @default(uuid())
-  configurationType        NoteReminderConfigType @default(PRACTICE)
+  id                String                 @id @default(uuid())
+  configurationType NoteReminderConfigType @default(PRACTICE)
 
   // Optional associations based on type
-  userId                   String?
-  noteType                 String?                // e.g., "PROGRESS_NOTE", "INTAKE_ASSESSMENT"
+  userId   String?
+  noteType String? // e.g., "PROGRESS_NOTE", "INTAKE_ASSESSMENT"
 
   // Core settings
-  enabled                  Boolean                @default(true)
-  reminderIntervals        Int[]                  @default([72, 48, 24]) // Hours before due
+  enabled           Boolean @default(true)
+  reminderIntervals Int[]   @default([72, 48, 24]) // Hours before due
 
   // Overdue reminder settings
-  sendOverdueReminders     Boolean                @default(true)
-  overdueReminderFrequency Int                    @default(24) // Hours between reminders
-  maxOverdueReminders      Int                    @default(3)
+  sendOverdueReminders     Boolean @default(true)
+  overdueReminderFrequency Int     @default(24) // Hours between reminders
+  maxOverdueReminders      Int     @default(3)
 
   // Sunday warning (remind about notes due Monday)
-  enableSundayWarnings     Boolean                @default(true)
-  sundayWarningTime        String                 @default("17:00")
+  enableSundayWarnings Boolean @default(true)
+  sundayWarningTime    String  @default("17:00")
 
   // Daily digest
-  enableDailyDigest        Boolean                @default(false)
-  digestTime               String                 @default("09:00")
-  digestDays               String[]               @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+  enableDailyDigest Boolean  @default(false)
+  digestTime        String   @default("09:00")
+  digestDays        String[] @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
 
   // Escalation settings
-  enableEscalation         Boolean                @default(true)
-  escalationAfterHours     Int                    @default(48) // Hours overdue before escalation
-  escalateTo               String[]               @default([]) // User IDs to escalate to
-  escalationMessage        String?
+  enableEscalation     Boolean  @default(true)
+  escalationAfterHours Int      @default(48) // Hours overdue before escalation
+  escalateTo           String[] @default([]) // User IDs to escalate to
+  escalationMessage    String?
 
   // Timestamps
-  createdAt                DateTime               @default(now())
-  updatedAt                DateTime               @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([configurationType, userId, noteType])
   @@index([configurationType])
@@ -6410,41 +6551,41 @@ model ClinicalNoteReminderConfig {
 // ============================================================================
 
 enum AIConversationTopic {
-  CLINICAL    // Client-related queries, diagnoses, treatment
+  CLINICAL // Client-related queries, diagnoses, treatment
   OPERATIONAL // Scheduling, appointments, waitlist, calendar
-  BILLING     // Charges, payments, claims, revenue, AR
-  STAFF       // Users, employees, credentials, supervision, org chart
-  HR          // PTO, time attendance, performance reviews, onboarding
-  COMPLIANCE  // Policies, incidents, audits, HIPAA, training
-  REPORTING   // Reports, analytics, dashboards
-  GENERAL     // Help, navigation, general questions
+  BILLING // Charges, payments, claims, revenue, AR
+  STAFF // Users, employees, credentials, supervision, org chart
+  HR // PTO, time attendance, performance reviews, onboarding
+  COMPLIANCE // Policies, incidents, audits, HIPAA, training
+  REPORTING // Reports, analytics, dashboards
+  GENERAL // Help, navigation, general questions
 }
 
 // AI Assistant conversation thread
 model AIConversation {
-  id          String               @id @default(uuid())
-  userId      String
-  user        User                 @relation(fields: [userId], references: [id])
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  title       String?              // Auto-generated or user-defined title
-  topic       AIConversationTopic  @default(GENERAL)
+  title String? // Auto-generated or user-defined title
+  topic AIConversationTopic @default(GENERAL)
 
   // Context for the conversation
-  clientId    String?              // If conversation is about a specific client
-  client      Client?              @relation(fields: [clientId], references: [id])
+  clientId String? // If conversation is about a specific client
+  client   Client? @relation(fields: [clientId], references: [id])
 
   // Metadata
-  isArchived  Boolean              @default(false)
-  isPinned    Boolean              @default(false)
+  isArchived Boolean @default(false)
+  isPinned   Boolean @default(false)
 
   // Token usage tracking
-  totalTokensUsed Int              @default(0)
+  totalTokensUsed Int @default(0)
 
   // Messages in this conversation
-  messages    AIConversationMessage[]
+  messages AIConversationMessage[]
 
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([clientId])
@@ -6461,26 +6602,26 @@ enum AIMessageRole {
 
 // Individual messages in an AI conversation
 model AIConversationMessage {
-  id              String             @id @default(uuid())
-  conversationId  String
-  conversation    AIConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  role            AIMessageRole
-  content         String             // The message content
+  role    AIMessageRole
+  content String // The message content
 
   // AI-specific metadata (for assistant messages)
-  tokensUsed      Int?               // Tokens used for this response
-  modelUsed       String?            // e.g., "claude-3-opus-20240229"
-  confidence      Float?             // AI's confidence in the response
+  tokensUsed Int? // Tokens used for this response
+  modelUsed  String? // e.g., "claude-3-opus-20240229"
+  confidence Float? // AI's confidence in the response
 
   // Data access tracking (for audit)
-  dataSourcesAccessed Json?          // What data the AI accessed to answer
+  dataSourcesAccessed Json? // What data the AI accessed to answer
 
   // Error handling
-  isError         Boolean            @default(false)
-  errorMessage    String?
+  isError      Boolean @default(false)
+  errorMessage String?
 
-  createdAt       DateTime           @default(now())
+  createdAt DateTime @default(now())
 
   @@index([conversationId])
   @@index([createdAt])
@@ -6489,21 +6630,21 @@ model AIConversationMessage {
 
 // Audit log for AI data access (HIPAA compliance)
 model AIDataAccessLog {
-  id              String             @id @default(uuid())
-  conversationId  String
-  messageId       String?
-  userId          String
+  id             String  @id @default(uuid())
+  conversationId String
+  messageId      String?
+  userId         String
 
   // What was accessed
-  dataType        String             // "client", "appointment", "billing", etc.
-  recordIds       String[]           // IDs of records accessed
-  queryDescription String            // Human-readable description of what was queried
+  dataType         String // "client", "appointment", "billing", etc.
+  recordIds        String[] // IDs of records accessed
+  queryDescription String // Human-readable description of what was queried
 
   // Result
-  recordCount     Int                // How many records were returned
-  containsPHI     Boolean            @default(false)
+  recordCount Int // How many records were returned
+  containsPHI Boolean @default(false)
 
-  createdAt       DateTime           @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([conversationId])
