@@ -1,110 +1,123 @@
-import cron from 'node-cron';
+/**
+ * Notification Scheduler (Legacy Wrapper)
+ * Phase 3.1: Updated to use unified notification architecture
+ *
+ * This file maintains backward compatibility with existing code
+ * that imports from './scheduler'. It now delegates to the new
+ * unified scheduler implementations.
+ *
+ * @deprecated Use the new unified schedulers from './schedulers' instead:
+ * ```typescript
+ * import {
+ *   startAllSchedulers,
+ *   stopAllSchedulers,
+ *   getAllSchedulerStatus,
+ * } from './schedulers';
+ * ```
+ */
+
 import logger from '../../utils/logger';
-import { processReminders } from './reminder.service';
+import {
+  appointmentReminderScheduler,
+  clinicalNoteReminderScheduler,
+  startAllSchedulers,
+  stopAllSchedulers,
+  getAllSchedulerStatus,
+} from './schedulers';
 
 /**
- * Cron job scheduler for automated tasks
+ * Legacy notification scheduler class
+ * @deprecated Use startAllSchedulers(), stopAllSchedulers(), etc. from './schedulers'
  */
 export class NotificationScheduler {
-  private reminderJob: ReturnType<typeof cron.schedule> | null = null;
-  private isRunning: boolean = false;
+  private started = false;
 
   /**
    * Start the reminder processing cron job
-   * Runs every 15 minutes to check for appointments needing reminders
+   * Now delegates to the new unified schedulers
+   * @deprecated Use startAllSchedulers() instead
    */
   startReminderJob() {
-    if (this.reminderJob) {
-      logger.warn('Reminder job is already running');
+    if (this.started) {
+      logger.warn('Scheduler already started');
       return;
     }
 
-    // Schedule: Every 15 minutes
-    // Cron format: minute hour day month weekday
-    // */15 * * * * = every 15 minutes
-    this.reminderJob = cron.schedule('*/15 * * * *', async () => {
-      if (this.isRunning) {
-        logger.warn('Previous reminder job still running, skipping this cycle');
-        return;
-      }
-
-      try {
-        this.isRunning = true;
-        logger.info('🔔 Starting scheduled reminder processing...');
-
-        const results = await processReminders();
-
-        logger.info('✅ Reminder processing completed', {
-          total: results.total,
-          emailSent: results.emailSent,
-          smsSent: results.smsSent,
-          failed: results.failed,
-        });
-      } catch (error) {
-        logger.error('❌ Error in scheduled reminder processing', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      } finally {
-        this.isRunning = false;
-      }
-    });
-
-    logger.info('✅ Reminder cron job started (runs every 15 minutes)');
+    startAllSchedulers();
+    this.started = true;
   }
 
   /**
    * Stop the reminder processing cron job
+   * @deprecated Use stopAllSchedulers() instead
    */
   stopReminderJob() {
-    if (this.reminderJob) {
-      this.reminderJob.stop();
-      this.reminderJob = null;
-      logger.info('🛑 Reminder cron job stopped');
+    if (!this.started) {
+      return;
     }
+
+    stopAllSchedulers();
+    this.started = false;
   }
 
   /**
    * Get the status of the scheduler
+   * @deprecated Use getAllSchedulerStatus() instead
    */
   getStatus() {
+    const status = getAllSchedulerStatus();
+
+    // Return legacy format for backward compatibility
     return {
-      reminderJobActive: this.reminderJob !== null,
-      isProcessing: this.isRunning,
+      reminderJobActive: status.appointmentReminder.isRunning || status.clinicalNoteReminder.isRunning,
+      isProcessing: status.appointmentReminder.isProcessing || status.clinicalNoteReminder.isProcessing,
+      // New fields for richer status info
+      schedulers: status,
     };
   }
 
   /**
    * Run reminder processing immediately (for testing)
+   * @deprecated Use appointmentReminderScheduler.runNow() or clinicalNoteReminderScheduler.runNow()
    */
   async runReminderJobNow() {
-    if (this.isRunning) {
-      throw new Error('Reminder job is already running');
-    }
+    logger.info('Running unified schedulers manually...');
 
-    try {
-      this.isRunning = true;
-      logger.info('🔔 Running reminder processing manually...');
+    const results = await Promise.allSettled([
+      appointmentReminderScheduler.runNow(),
+      clinicalNoteReminderScheduler.runNow(),
+    ]);
 
-      const results = await processReminders();
+    const appointmentResult = results[0].status === 'fulfilled' ? results[0].value : null;
+    const clinicalResult = results[1].status === 'fulfilled' ? results[1].value : null;
 
-      logger.info('✅ Manual reminder processing completed', {
-        total: results.total,
-        emailSent: results.emailSent,
-        smsSent: results.smsSent,
-        failed: results.failed,
-      });
+    // Return legacy format for backward compatibility
+    const total = (appointmentResult?.total || 0) + (clinicalResult?.total || 0);
+    const sent = (appointmentResult?.sent || 0) + (clinicalResult?.sent || 0);
+    const failed = (appointmentResult?.failed || 0) + (clinicalResult?.failed || 0);
 
-      return results;
-    } catch (error) {
-      logger.error('❌ Error in manual reminder processing', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-      throw error;
-    } finally {
-      this.isRunning = false;
-    }
+    return {
+      total,
+      emailSent: sent, // Legacy field - now combined across channels
+      smsSent: 0, // Legacy field - SMS count now included in 'sent'
+      failed,
+      // New detailed results
+      details: {
+        appointmentReminder: appointmentResult,
+        clinicalNoteReminder: clinicalResult,
+      },
+    };
   }
 }
 
-// Export a singleton instance
+// Export singleton instance (for backward compatibility)
 export const notificationScheduler = new NotificationScheduler();
+
+// Re-export new unified exports for migration path
+export {
+  startAllSchedulers,
+  stopAllSchedulers,
+  getAllSchedulerStatus,
+  appointmentReminderScheduler,
+  clinicalNoteReminderScheduler,
+};
