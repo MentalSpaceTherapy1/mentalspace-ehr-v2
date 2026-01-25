@@ -256,7 +256,18 @@
       "mcp__git__git_log",
       "mcp__git__git_add",
       "mcp__git__git_commit",
-      "mcp__git__git_push"
+      "mcp__git__git_push",
+      "Bash(npm run:*)",
+      "Bash(npx eslint@8:*)",
+      "mcp__filesystem__directory_tree",
+      "mcp__filesystem__read_text_file",
+      "mcp__plugin_serena_serena__get_symbols_overview",
+      "mcp__plugin_serena_serena__list_memories",
+      "Bash(npx jest --testPathPattern=\"notification\")",
+      "Bash(npx jest --testPathPattern=\"clinicalNotesValidation\")",
+      "Bash(npx jest --testPathPattern=\"note-validation\")",
+      "Bash(comm -23:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []
