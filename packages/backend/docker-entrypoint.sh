@@ -13,9 +13,7 @@ cd /app/packages/database
 # This bypasses the broken migration history and ensures columns exist
 echo ""
 echo "Applying soft delete column hotfix..."
-npx prisma db execute --stdin <<'EOSQL' || {
-  echo "Hotfix SQL completed (columns may already exist)"
-}
+cat > /tmp/hotfix.sql << 'SQLEOF'
 ALTER TABLE "insurance_information" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
 ALTER TABLE "appointments" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
 ALTER TABLE "clinical_notes" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
@@ -26,7 +24,8 @@ CREATE INDEX IF NOT EXISTS "appointments_deletedAt_idx" ON "appointments"("delet
 CREATE INDEX IF NOT EXISTS "clinical_notes_deletedAt_idx" ON "clinical_notes"("deletedAt");
 CREATE INDEX IF NOT EXISTS "client_documents_deletedAt_idx" ON "client_documents"("deletedAt");
 CREATE INDEX IF NOT EXISTS "note_amendments_deletedAt_idx" ON "note_amendments"("deletedAt");
-EOSQL
+SQLEOF
+npx prisma db execute --file /tmp/hotfix.sql || echo "Hotfix SQL completed (may have already been applied)"
 echo "Soft delete column hotfix complete"
 
 # Check migration status
