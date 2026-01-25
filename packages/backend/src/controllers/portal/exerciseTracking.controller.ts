@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../../utils/apiResponse';
 
 // Valid activity types
 const VALID_ACTIVITY_TYPES = [
@@ -45,63 +46,39 @@ export const createExerciseLog = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate required fields
     if (!activityType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Activity type is required',
-      });
+      return sendBadRequest(res, 'Activity type is required');
     }
 
     if (!duration || duration <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Duration must be greater than 0',
-      });
+      return sendBadRequest(res, 'Duration must be greater than 0');
     }
 
     if (duration > 1440) {
-      return res.status(400).json({
-        success: false,
-        message: 'Duration cannot exceed 1440 minutes (24 hours)',
-      });
+      return sendBadRequest(res, 'Duration cannot exceed 1440 minutes (24 hours)');
     }
 
     if (!intensity) {
-      return res.status(400).json({
-        success: false,
-        message: 'Intensity is required',
-      });
+      return sendBadRequest(res, 'Intensity is required');
     }
 
     // Validate activity type
     if (!VALID_ACTIVITY_TYPES.includes(activityType)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid activity type. Valid types: ${VALID_ACTIVITY_TYPES.join(', ')}`,
-      });
+      return sendBadRequest(res, `Invalid activity type. Valid types: ${VALID_ACTIVITY_TYPES.join(', ')}`);
     }
 
     // Validate intensity
     if (!VALID_INTENSITIES.includes(intensity)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Intensity must be LOW, MODERATE, or HIGH',
-      });
+      return sendBadRequest(res, 'Intensity must be LOW, MODERATE, or HIGH');
     }
 
     // Validate mood if provided
     if (mood && !VALID_MOODS.includes(mood)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid mood value',
-      });
+      return sendBadRequest(res, 'Invalid mood value');
     }
 
     // Create exercise log
@@ -119,25 +96,18 @@ export const createExerciseLog = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Exercise log created for client ${clientId}: ${activityType}, ${duration}min, ${intensity}`);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Exercise log created successfully',
-      data: {
-        id: exerciseLog.id,
-        activityType: exerciseLog.activityType,
-        duration: exerciseLog.duration,
-        intensity: exerciseLog.intensity,
-        notes: exerciseLog.notes,
-        mood: exerciseLog.mood,
-        loggedAt: exerciseLog.loggedAt,
-      },
-    });
-  } catch (error: any) {
+    return sendCreated(res, {
+      id: exerciseLog.id,
+      activityType: exerciseLog.activityType,
+      duration: exerciseLog.duration,
+      intensity: exerciseLog.intensity,
+      notes: exerciseLog.notes,
+      mood: exerciseLog.mood,
+      loggedAt: exerciseLog.loggedAt,
+    }, 'Exercise log created successfully');
+  } catch (error) {
     logger.error('Error creating exercise log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create exercise log',
-    });
+    return sendServerError(res, 'Failed to create exercise log');
   }
 };
 
@@ -151,10 +121,7 @@ export const getExerciseLogs = async (req: PortalRequest, res: Response) => {
     const { days, startDate, endDate, activityType, intensity } = req.query;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Build where clause
@@ -200,16 +167,10 @@ export const getExerciseLogs = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${formattedLogs.length} exercise logs for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: formattedLogs,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, formattedLogs);
+  } catch (error) {
     logger.error('Error fetching exercise logs:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch exercise logs',
-    });
+    return sendServerError(res, 'Failed to fetch exercise logs');
   }
 };
 
@@ -223,10 +184,7 @@ export const getExerciseLogById = async (req: PortalRequest, res: Response) => {
     const { logId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const log = await prisma.exerciseLog.findFirst({
@@ -237,30 +195,21 @@ export const getExerciseLogById = async (req: PortalRequest, res: Response) => {
     });
 
     if (!log) {
-      return res.status(404).json({
-        success: false,
-        message: 'Exercise log not found',
-      });
+      return sendNotFound(res, 'Exercise log');
     }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: log.id,
-        activityType: log.activityType,
-        duration: log.duration,
-        intensity: log.intensity,
-        notes: log.notes,
-        mood: log.mood,
-        loggedAt: log.loggedAt,
-      },
+    return sendSuccess(res, {
+      id: log.id,
+      activityType: log.activityType,
+      duration: log.duration,
+      intensity: log.intensity,
+      notes: log.notes,
+      mood: log.mood,
+      loggedAt: log.loggedAt,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching exercise log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch exercise log',
-    });
+    return sendServerError(res, 'Failed to fetch exercise log');
   }
 };
 
@@ -282,10 +231,7 @@ export const updateExerciseLog = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify ownership
@@ -297,42 +243,27 @@ export const updateExerciseLog = async (req: PortalRequest, res: Response) => {
     });
 
     if (!existingLog) {
-      return res.status(404).json({
-        success: false,
-        message: 'Exercise log not found',
-      });
+      return sendNotFound(res, 'Exercise log');
     }
 
     // Validate duration if provided
     if (duration !== undefined && (duration <= 0 || duration > 1440)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Duration must be between 1 and 1440 minutes',
-      });
+      return sendBadRequest(res, 'Duration must be between 1 and 1440 minutes');
     }
 
     // Validate intensity if provided
     if (intensity && !VALID_INTENSITIES.includes(intensity)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Intensity must be LOW, MODERATE, or HIGH',
-      });
+      return sendBadRequest(res, 'Intensity must be LOW, MODERATE, or HIGH');
     }
 
     // Validate activity type if provided
     if (activityType && !VALID_ACTIVITY_TYPES.includes(activityType)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid activity type',
-      });
+      return sendBadRequest(res, 'Invalid activity type');
     }
 
     // Validate mood if provided
     if (mood && !VALID_MOODS.includes(mood)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid mood value',
-      });
+      return sendBadRequest(res, 'Invalid mood value');
     }
 
     const updatedLog = await prisma.exerciseLog.update({
@@ -349,17 +280,10 @@ export const updateExerciseLog = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Exercise log ${logId} updated for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Exercise log updated successfully',
-      data: updatedLog,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, updatedLog, 'Exercise log updated successfully');
+  } catch (error) {
     logger.error('Error updating exercise log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update exercise log',
-    });
+    return sendServerError(res, 'Failed to update exercise log');
   }
 };
 
@@ -373,10 +297,7 @@ export const deleteExerciseLog = async (req: PortalRequest, res: Response) => {
     const { logId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify ownership
@@ -388,10 +309,7 @@ export const deleteExerciseLog = async (req: PortalRequest, res: Response) => {
     });
 
     if (!existingLog) {
-      return res.status(404).json({
-        success: false,
-        message: 'Exercise log not found',
-      });
+      return sendNotFound(res, 'Exercise log');
     }
 
     await prisma.exerciseLog.delete({
@@ -400,16 +318,10 @@ export const deleteExerciseLog = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Exercise log ${logId} deleted for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Exercise log deleted successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Exercise log deleted successfully');
+  } catch (error) {
     logger.error('Error deleting exercise log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to delete exercise log',
-    });
+    return sendServerError(res, 'Failed to delete exercise log');
   }
 };
 
@@ -422,10 +334,7 @@ export const getExerciseStats = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get exercise logs from last 30 days
@@ -441,21 +350,18 @@ export const getExerciseStats = async (req: PortalRequest, res: Response) => {
     });
 
     if (exerciseLogs.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          totalMinutes: 0,
-          totalSessions: 0,
-          averageSessionDuration: 0,
-          activeDays: 0,
-          currentStreak: 0,
-          longestStreak: 0,
-          mostFrequentActivity: null,
-          intensityDistribution: { LOW: 0, MODERATE: 0, HIGH: 0 },
-          activityBreakdown: [],
-          weeklyStats: [],
-          exerciseTrend: 'stable',
-        },
+      return sendSuccess(res, {
+        totalMinutes: 0,
+        totalSessions: 0,
+        averageSessionDuration: 0,
+        activeDays: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        mostFrequentActivity: null,
+        intensityDistribution: { LOW: 0, MODERATE: 0, HIGH: 0 },
+        activityBreakdown: [],
+        weeklyStats: [],
+        exerciseTrend: 'stable',
       });
     }
 
@@ -561,27 +467,21 @@ export const getExerciseStats = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Calculated exercise stats for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        totalMinutes,
-        totalSessions,
-        averageSessionDuration: Math.round(averageSessionDuration * 10) / 10,
-        activeDays,
-        currentStreak,
-        longestStreak,
-        mostFrequentActivity,
-        intensityDistribution,
-        activityBreakdown,
-        weeklyStats,
-        exerciseTrend,
-      },
+    return sendSuccess(res, {
+      totalMinutes,
+      totalSessions,
+      averageSessionDuration: Math.round(averageSessionDuration * 10) / 10,
+      activeDays,
+      currentStreak,
+      longestStreak,
+      mostFrequentActivity,
+      intensityDistribution,
+      activityBreakdown,
+      weeklyStats,
+      exerciseTrend,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error calculating exercise stats:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to calculate exercise stats',
-    });
+    return sendServerError(res, 'Failed to calculate exercise stats');
   }
 };

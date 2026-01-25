@@ -1,12 +1,31 @@
 import { Request, Response } from 'express';
 import logger from '../utils/logger';
-import prisma from '../services/database';
+// Phase 3.2: Removed unused prisma import - all operations delegated to export services
 import { exportReportToPDF, exportDashboardToPDF } from '../services/export-pdf.service';
 import { exportReportToExcel, exportMultipleReportsToExcel } from '../services/export-excel.service';
 import { exportReportToCSV } from '../services/export-csv.service';
 import archiver from 'archiver';
 import fs from 'fs';
 import path from 'path';
+
+// Type definitions for export controller
+interface MockResponse {
+  json: (data: unknown) => unknown;
+  status: (code: number) => { json: (data: unknown) => unknown };
+}
+
+interface ReportData {
+  [key: string]: unknown;
+}
+
+interface ReportResult {
+  data?: ReportData;
+}
+
+interface QuickStatsData {
+  data: ReportData;
+}
+import { sendSuccess, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 const EXPORTS_DIR = path.join(__dirname, '../../exports');
 
@@ -18,19 +37,20 @@ if (!fs.existsSync(EXPORTS_DIR)) {
 /**
  * Get report data by ID and type
  */
-async function getReportData(reportId: string, reportType: string, req: Request): Promise<any> {
+async function getReportData(reportId: string, reportType: string, req: Request): Promise<ReportData | undefined> {
   const { startDate, endDate, clinicianId } = req.query;
 
   // Import report controllers dynamically
   const reportsController = await import('./reports.controller');
 
   // Create a mock response to capture data
-  const mockRes: any = {
-    json: (data: any) => data,
+  const mockRes: MockResponse = {
+    json: (data: unknown) => data,
     status: (code: number) => ({
-      json: (data: any) => {
+      json: (data: unknown) => {
         if (code !== 200) {
-          throw new Error(data.message || 'Failed to fetch report data');
+          const errorData = data as { message?: string };
+          throw new Error(errorData.message || 'Failed to fetch report data');
         }
         return data;
       }
@@ -76,7 +96,7 @@ async function getReportData(reportId: string, reportType: string, req: Request)
       throw new Error(`Unknown report type: ${reportType}`);
   }
 
-  return (result as any)?.data;
+  return (result as ReportResult | undefined)?.data;
 }
 
 /**
@@ -88,10 +108,7 @@ export async function exportReportPDF(req: Request, res: Response) {
     const { reportType } = req.body;
 
     if (!reportType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Report type is required'
-      });
+      return sendBadRequest(res, 'Report type is required');
     }
 
     logger.info(`Exporting report ${reportId} to PDF (type: ${reportType})`);
@@ -103,22 +120,15 @@ export async function exportReportPDF(req: Request, res: Response) {
     const result = await exportReportToPDF(reportId, reportType, reportData);
 
     // Return download URL
-    res.json({
-      success: true,
-      data: {
-        filename: result.filename,
-        downloadUrl: `/api/v1/exports/download/${result.filename}`,
-        size: result.size,
-        format: 'PDF'
-      }
+    return sendSuccess(res, {
+      filename: result.filename,
+      downloadUrl: `/api/v1/exports/download/${result.filename}`,
+      size: result.size,
+      format: 'PDF'
     });
   } catch (error) {
     logger.error('Error exporting report to PDF:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to export report to PDF',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to export report to PDF');
   }
 }
 
@@ -131,10 +141,7 @@ export async function exportReportExcel(req: Request, res: Response) {
     const { reportType } = req.body;
 
     if (!reportType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Report type is required'
-      });
+      return sendBadRequest(res, 'Report type is required');
     }
 
     logger.info(`Exporting report ${reportId} to Excel (type: ${reportType})`);
@@ -146,22 +153,15 @@ export async function exportReportExcel(req: Request, res: Response) {
     const result = await exportReportToExcel(reportId, reportType, reportData);
 
     // Return download URL
-    res.json({
-      success: true,
-      data: {
-        filename: result.filename,
-        downloadUrl: `/api/v1/exports/download/${result.filename}`,
-        size: result.size,
-        format: 'Excel'
-      }
+    return sendSuccess(res, {
+      filename: result.filename,
+      downloadUrl: `/api/v1/exports/download/${result.filename}`,
+      size: result.size,
+      format: 'Excel'
     });
   } catch (error) {
     logger.error('Error exporting report to Excel:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to export report to Excel',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to export report to Excel');
   }
 }
 
@@ -174,10 +174,7 @@ export async function exportReportCSV(req: Request, res: Response) {
     const { reportType } = req.body;
 
     if (!reportType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Report type is required'
-      });
+      return sendBadRequest(res, 'Report type is required');
     }
 
     logger.info(`Exporting report ${reportId} to CSV (type: ${reportType})`);
@@ -189,22 +186,15 @@ export async function exportReportCSV(req: Request, res: Response) {
     const result = await exportReportToCSV(reportId, reportType, reportData);
 
     // Return download URL
-    res.json({
-      success: true,
-      data: {
-        filename: result.filename,
-        downloadUrl: `/api/v1/exports/download/${result.filename}`,
-        size: result.size,
-        format: 'CSV'
-      }
+    return sendSuccess(res, {
+      filename: result.filename,
+      downloadUrl: `/api/v1/exports/download/${result.filename}`,
+      size: result.size,
+      format: 'CSV'
     });
   } catch (error) {
     logger.error('Error exporting report to CSV:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to export report to CSV',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to export report to CSV');
   }
 }
 
@@ -216,10 +206,7 @@ export async function bulkExportReports(req: Request, res: Response) {
     const { reports, format = 'pdf' } = req.body;
 
     if (!reports || !Array.isArray(reports) || reports.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Reports array is required and must not be empty'
-      });
+      return sendBadRequest(res, 'Reports array is required and must not be empty');
     }
 
     logger.info(`Bulk exporting ${reports.length} reports in ${format} format`);
@@ -292,23 +279,16 @@ export async function bulkExportReports(req: Request, res: Response) {
       }
     });
 
-    res.json({
-      success: true,
-      data: {
-        filename: zipFilename,
-        downloadUrl: `/api/v1/exports/download/${zipFilename}`,
-        size: stats.size,
-        format: 'ZIP',
-        fileCount: exportedFiles.length
-      }
+    return sendSuccess(res, {
+      filename: zipFilename,
+      downloadUrl: `/api/v1/exports/download/${zipFilename}`,
+      size: stats.size,
+      format: 'ZIP',
+      fileCount: exportedFiles.length
     });
   } catch (error) {
     logger.error('Error in bulk export:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to perform bulk export',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to perform bulk export');
   }
 }
 
@@ -323,35 +303,34 @@ export async function exportDashboard(req: Request, res: Response) {
 
     // Get dashboard data (quick stats)
     const reportsController = await import('./reports.controller');
-    let statsData: any;
-    const mockRes: any = {
-      json: (data: any) => {
-        statsData = data;
-        return data;
-      }
-    };
+    let statsData: QuickStatsData | undefined;
+    const mockRes = {
+      json: (data: unknown) => {
+        statsData = data as QuickStatsData;
+        return mockRes;
+      },
+      status: () => mockRes,
+      setHeader: () => mockRes,
+    } as unknown as Response;
 
-    await reportsController.getReportQuickStats(req, mockRes as Response);
+    await reportsController.getReportQuickStats(req, mockRes);
+
+    if (!statsData) {
+      return sendServerError(res, 'Failed to retrieve dashboard data');
+    }
 
     // Generate PDF
     const result = await exportDashboardToPDF(dashboardId, statsData.data);
 
-    res.json({
-      success: true,
-      data: {
-        filename: result.filename,
-        downloadUrl: `/api/v1/exports/download/${result.filename}`,
-        size: result.size,
-        format: 'PDF'
-      }
+    return sendSuccess(res, {
+      filename: result.filename,
+      downloadUrl: `/api/v1/exports/download/${result.filename}`,
+      size: result.size,
+      format: 'PDF'
     });
   } catch (error) {
     logger.error('Error exporting dashboard:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to export dashboard',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to export dashboard');
   }
 }
 
@@ -364,20 +343,14 @@ export async function downloadExport(req: Request, res: Response) {
 
     // Validate filename to prevent directory traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid filename'
-      });
+      return sendBadRequest(res, 'Invalid filename');
     }
 
     const filepath = path.join(EXPORTS_DIR, filename);
 
     // Check if file exists
     if (!fs.existsSync(filepath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Export file not found'
-      });
+      return sendNotFound(res, 'Export file');
     }
 
     // Set content type based on file extension
@@ -409,11 +382,7 @@ export async function downloadExport(req: Request, res: Response) {
     });
   } catch (error) {
     logger.error('Error downloading export:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to download export',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to download export');
   }
 }
 
@@ -452,22 +421,15 @@ export async function listExportHistory(req: Request, res: Response) {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(Number(offset), Number(offset) + Number(limit));
 
-    res.json({
-      success: true,
-      data: {
-        exports,
-        total: files.length,
-        limit: Number(limit),
-        offset: Number(offset)
-      }
+    return sendSuccess(res, {
+      exports,
+      total: files.length,
+      limit: Number(limit),
+      offset: Number(offset)
     });
   } catch (error) {
     logger.error('Error listing export history:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to list export history',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to list export history');
   }
 }
 
@@ -480,20 +442,14 @@ export async function deleteExport(req: Request, res: Response) {
 
     // Validate filename
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid filename'
-      });
+      return sendBadRequest(res, 'Invalid filename');
     }
 
     const filepath = path.join(EXPORTS_DIR, filename);
 
     // Check if file exists
     if (!fs.existsSync(filepath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Export file not found'
-      });
+      return sendNotFound(res, 'Export file');
     }
 
     // Delete file
@@ -501,17 +457,10 @@ export async function deleteExport(req: Request, res: Response) {
 
     logger.info(`Export file deleted: ${filename}`);
 
-    res.json({
-      success: true,
-      message: 'Export file deleted successfully'
-    });
+    return sendSuccess(res, { message: 'Export file deleted successfully' });
   } catch (error) {
     logger.error('Error deleting export:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete export',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to delete export');
   }
 }
 
@@ -539,17 +488,10 @@ export async function cleanupOldExports(req: Request, res: Response) {
 
     logger.info(`Cleaned up ${deletedCount} old export files`);
 
-    res.json({
-      success: true,
-      message: `Deleted ${deletedCount} export file(s) older than ${daysToKeep} days`
-    });
+    return sendSuccess(res, { message: `Deleted ${deletedCount} export file(s) older than ${daysToKeep} days` });
   } catch (error) {
     logger.error('Error cleaning up exports:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to clean up old exports',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to clean up old exports');
   }
 }
 

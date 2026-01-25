@@ -1,7 +1,10 @@
 import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as scheduleService from '../services/clinicianSchedule.service';
+import { sendSuccess, sendCreated, sendBadRequest, sendServerError, sendUnauthorized, sendValidationError } from '../utils/apiResponse';
 
 // Validation schemas
 const dayScheduleSchema = z.object({
@@ -50,7 +53,11 @@ const scheduleExceptionSchema = z.object({
 export const upsertClinicianSchedule = async (req: Request, res: Response) => {
   try {
     const validatedData = upsertScheduleSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const schedule = await scheduleService.upsertClinicianSchedule({
       clinicianId: validatedData.clinicianId,
@@ -67,27 +74,20 @@ export const upsertClinicianSchedule = async (req: Request, res: Response) => {
       createdBy: userId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Clinician schedule saved successfully',
-      data: schedule,
-    });
+    return sendSuccess(res, schedule, 'Clinician schedule saved successfully');
   } catch (error) {
     logger.error('Upsert clinician schedule error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to save clinician schedule',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to save clinician schedule');
   }
 };
 
@@ -115,44 +115,33 @@ export const getClinicianSchedule = async (req: Request, res: Response) => {
         endTime: '17:00',
       };
 
-      return res.status(200).json({
-        success: true,
-        data: {
-          clinicianId,
-          weeklyScheduleJson: {
-            monday: defaultDaySchedule,
-            tuesday: defaultDaySchedule,
-            wednesday: defaultDaySchedule,
-            thursday: defaultDaySchedule,
-            friday: defaultDaySchedule,
-            saturday: { isAvailable: false, startTime: '09:00', endTime: '17:00' },
-            sunday: { isAvailable: false, startTime: '09:00', endTime: '17:00' },
-          },
-          acceptNewClients: true,
-          maxAppointmentsPerDay: null,
-          maxAppointmentsPerWeek: null,
-          bufferTimeBetweenAppointments: 0,
-          availableLocations: ['Office', 'Telehealth'],
-          effectiveStartDate: new Date().toISOString(),
-          effectiveEndDate: null,
-          isDefault: true, // Flag to indicate this is a default schedule
+      return sendSuccess(res, {
+        clinicianId,
+        weeklyScheduleJson: {
+          monday: defaultDaySchedule,
+          tuesday: defaultDaySchedule,
+          wednesday: defaultDaySchedule,
+          thursday: defaultDaySchedule,
+          friday: defaultDaySchedule,
+          saturday: { isAvailable: false, startTime: '09:00', endTime: '17:00' },
+          sunday: { isAvailable: false, startTime: '09:00', endTime: '17:00' },
         },
-        message: 'No custom schedule configured. Using default schedule.',
-      });
+        acceptNewClients: true,
+        maxAppointmentsPerDay: null,
+        maxAppointmentsPerWeek: null,
+        bufferTimeBetweenAppointments: 0,
+        availableLocations: ['Office', 'Telehealth'],
+        effectiveStartDate: new Date().toISOString(),
+        effectiveEndDate: null,
+        isDefault: true, // Flag to indicate this is a default schedule
+      }, 'No custom schedule configured. Using default schedule.');
     }
 
-    res.status(200).json({
-      success: true,
-      data: schedule,
-    });
+    return sendSuccess(res, schedule);
   } catch (error) {
     logger.error('Get clinician schedule error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve clinician schedule',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve clinician schedule');
   }
 };
 
@@ -169,19 +158,11 @@ export const getAllCliniciansSchedules = async (req: Request, res: Response) => 
       effectiveDate
     );
 
-    res.status(200).json({
-      success: true,
-      data: schedules,
-      count: schedules.length,
-    });
+    return sendSuccess(res, { data: schedules, count: schedules.length });
   } catch (error) {
     logger.error('Get all clinicians schedules error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve clinicians schedules',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve clinicians schedules');
   }
 };
 
@@ -191,7 +172,11 @@ export const getAllCliniciansSchedules = async (req: Request, res: Response) => 
 export const createScheduleException = async (req: Request, res: Response) => {
   try {
     const validatedData = scheduleExceptionSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const exception = await scheduleService.createScheduleException({
       clinicianId: validatedData.clinicianId,
@@ -206,27 +191,20 @@ export const createScheduleException = async (req: Request, res: Response) => {
       createdBy: userId,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Schedule exception created successfully',
-      data: exception,
-    });
+    return sendCreated(res, exception, 'Schedule exception created successfully');
   } catch (error) {
     logger.error('Create schedule exception error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create schedule exception',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to create schedule exception');
   }
 };
 
@@ -249,19 +227,11 @@ export const getScheduleExceptions = async (req: Request, res: Response) => {
       endDate
     );
 
-    res.status(200).json({
-      success: true,
-      data: exceptions,
-      count: exceptions.length,
-    });
+    return sendSuccess(res, { data: exceptions, count: exceptions.length });
   } catch (error) {
     logger.error('Get schedule exceptions error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve schedule exceptions',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve schedule exceptions');
   }
 };
 
@@ -271,23 +241,19 @@ export const getScheduleExceptions = async (req: Request, res: Response) => {
 export const approveScheduleException = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const exception = await scheduleService.approveScheduleException(id, userId);
 
-    res.status(200).json({
-      success: true,
-      message: 'Schedule exception approved',
-      data: exception,
-    });
+    return sendSuccess(res, exception, 'Schedule exception approved');
   } catch (error) {
     logger.error('Approve schedule exception error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to approve schedule exception',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to approve schedule exception');
   }
 };
 
@@ -298,13 +264,14 @@ export const denyScheduleException = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { denialReason } = req.body;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     if (!denialReason) {
-      return res.status(400).json({
-        success: false,
-        message: 'Denial reason is required',
-      });
+      return sendBadRequest(res, 'Denial reason is required');
     }
 
     const exception = await scheduleService.denyScheduleException(
@@ -313,19 +280,11 @@ export const denyScheduleException = async (req: Request, res: Response) => {
       userId
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'Schedule exception denied',
-      data: exception,
-    });
+    return sendSuccess(res, exception, 'Schedule exception denied');
   } catch (error) {
     logger.error('Deny schedule exception error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to deny schedule exception',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to deny schedule exception');
   }
 };
 
@@ -335,23 +294,19 @@ export const denyScheduleException = async (req: Request, res: Response) => {
 export const deleteScheduleException = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const exception = await scheduleService.deleteScheduleException(id, userId);
 
-    res.status(200).json({
-      success: true,
-      message: 'Schedule exception deleted',
-      data: exception,
-    });
+    return sendSuccess(res, exception, 'Schedule exception deleted');
   } catch (error) {
     logger.error('Delete schedule exception error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete schedule exception',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to delete schedule exception');
   }
 };
 
@@ -364,10 +319,7 @@ export const getClinicianAvailability = async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date and end date are required',
-      });
+      return sendBadRequest(res, 'Start date and end date are required');
     }
 
     const availability = await scheduleService.getClinicianAvailability(
@@ -376,19 +328,11 @@ export const getClinicianAvailability = async (req: Request, res: Response) => {
       new Date(endDate as string)
     );
 
-    res.status(200).json({
-      success: true,
-      data: availability,
-      count: availability.length,
-    });
+    return sendSuccess(res, { data: availability, count: availability.length });
   } catch (error) {
     logger.error('Get clinician availability error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve clinician availability',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve clinician availability');
   }
 };
 
@@ -401,10 +345,7 @@ export const checkCapacity = async (req: Request, res: Response) => {
     const { appointmentDate, startTime, duration } = req.query;
 
     if (!appointmentDate || !startTime || !duration) {
-      return res.status(400).json({
-        success: false,
-        message: 'Appointment date, start time, and duration are required',
-      });
+      return sendBadRequest(res, 'Appointment date, start time, and duration are required');
     }
 
     const result = await scheduleService.hasCapacity(
@@ -414,17 +355,10 @@ export const checkCapacity = async (req: Request, res: Response) => {
       parseInt(duration as string, 10)
     );
 
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
+    return sendSuccess(res, result);
   } catch (error) {
     logger.error('Check capacity error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to check capacity',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to check capacity');
   }
 };

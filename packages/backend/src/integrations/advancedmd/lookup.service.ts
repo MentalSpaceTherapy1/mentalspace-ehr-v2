@@ -19,6 +19,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { advancedMDAPI } from './api-client';
+import logger from '../../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -124,7 +125,7 @@ export class AdvancedMDLookupService {
 
       return { found: false, code: cptCode };
     } catch (error: any) {
-      console.error(`[Lookup Service] Error looking up CPT code ${cptCode}:`, error.message);
+      logger.error('Lookup Service: Error looking up CPT code', { cptCode, error: error.message });
       return { found: false, code: cptCode };
     }
   }
@@ -205,7 +206,7 @@ export class AdvancedMDLookupService {
         code: icdCode,
       };
     } catch (error: any) {
-      console.error(`[Lookup Service] Error looking up ICD-10 code ${icdCode}:`, error.message);
+      logger.error('Lookup Service: Error looking up ICD-10 code', { icdCode, error: error.message });
 
       // ICD codes can often be used directly
       return {
@@ -290,7 +291,7 @@ export class AdvancedMDLookupService {
         code: modifierCode,
       };
     } catch (error: any) {
-      console.error(`[Lookup Service] Error looking up modifier ${modifierCode}:`, error.message);
+      logger.error('Lookup Service: Error looking up modifier', { modifierCode, error: error.message });
 
       // Modifiers can often be used directly
       return {
@@ -347,7 +348,7 @@ export class AdvancedMDLookupService {
 
       return { found: false };
     } catch (error: any) {
-      console.error(`[Lookup Service] Error looking up provider ${providerName}:`, error.message);
+      logger.error('Lookup Service: Error looking up provider', { providerName, error: error.message });
       return { found: false };
     }
   }
@@ -398,7 +399,7 @@ export class AdvancedMDLookupService {
 
       return { found: false };
     } catch (error: any) {
-      console.error(`[Lookup Service] Error looking up facility ${facilityName}:`, error.message);
+      logger.error('Lookup Service: Error looking up facility', { facilityName, error: error.message });
       return { found: false };
     }
   }
@@ -469,7 +470,7 @@ export class AdvancedMDLookupService {
         },
       });
     } catch (error: any) {
-      console.error(`[Lookup Service] Error saving cache to database:`, error.message);
+      logger.error('Lookup Service: Error saving cache to database', { error: error.message });
     }
   }
 
@@ -521,9 +522,9 @@ export class AdvancedMDLookupService {
         }
       }
 
-      console.log(`[Lookup Service] Loaded ${cacheEntries.length} cached lookups from database`);
+      logger.info(`[Lookup Service] Loaded ${cacheEntries.length} cached lookups from database`);
     } catch (error: any) {
-      console.error(`[Lookup Service] Error loading cache from database:`, error.message);
+      logger.error('Lookup Service: Error loading cache from database', { error: error.message });
     }
   }
 
@@ -536,7 +537,7 @@ export class AdvancedMDLookupService {
     this.modifierCache.clear();
     this.providerCache.clear();
     this.facilityCache.clear();
-    console.log('[Lookup Service] All caches cleared');
+    logger.info('[Lookup Service] All caches cleared');
   }
 
   /**

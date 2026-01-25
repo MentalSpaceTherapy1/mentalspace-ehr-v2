@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../../types/express.d';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
+import { sendSuccess, sendUnauthorized, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Temporary admin endpoint to seed intake forms
@@ -8,13 +11,10 @@ import prisma from '../../services/database';
  */
 export const seedIntakeForms = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Check if forms already exist
@@ -190,21 +190,13 @@ export const seedIntakeForms = async (req: Request, res: Response) => {
     logger.info(`Successfully created ${createdCount} new intake forms`);
     logger.info(`Total forms in database: ${finalCount}`);
 
-    return res.status(200).json({
-      success: true,
-      message: `Successfully created ${createdCount} intake forms`,
-      data: {
-        existingCount,
-        createdCount,
-        totalCount: finalCount,
-      },
-    });
+    return sendSuccess(res, {
+      existingCount,
+      createdCount,
+      totalCount: finalCount,
+    }, `Successfully created ${createdCount} intake forms`);
   } catch (error) {
     logger.error('Error seeding intake forms:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to seed intake forms',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to seed intake forms');
   }
 };

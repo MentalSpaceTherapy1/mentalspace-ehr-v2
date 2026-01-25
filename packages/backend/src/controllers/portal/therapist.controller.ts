@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendUnauthorized, sendNotFound, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Get therapist profile for client's assigned therapist
@@ -13,10 +14,7 @@ export const getTherapistProfile = async (req: PortalRequest, res: Response) => 
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get client with their primary therapist
@@ -50,52 +48,40 @@ export const getTherapistProfile = async (req: PortalRequest, res: Response) => 
     });
 
     if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found',
-      });
+      return sendNotFound(res, 'Client');
     }
 
     if (!client.primaryTherapist) {
-      return res.status(404).json({
-        success: false,
-        message: 'No therapist assigned',
-      });
+      return sendNotFound(res, 'Therapist');
     }
 
     const therapist = client.primaryTherapist;
 
     logger.info(`Retrieved therapist profile for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: therapist.id,
-        name: therapist.preferredName || `${therapist.firstName} ${therapist.lastName}`,
-        firstName: therapist.firstName,
-        lastName: therapist.lastName,
-        title: therapist.title,
-        credentials: therapist.credentials,
-        specialties: therapist.specialties,
-        languagesSpoken: therapist.languagesSpoken,
-        bio: therapist.profileBio,
-        photoUrl: therapist.profilePhotoS3,
-        yearsOfExperience: therapist.yearsOfExperience,
-        education: therapist.education,
-        approaches: therapist.approachesToTherapy,
-        philosophy: therapist.treatmentPhilosophy,
-        licenseNumber: therapist.licenseNumber,
-        licenseState: therapist.licenseState,
-        phone: therapist.phoneNumber,
-        email: therapist.email,
-      },
+    return sendSuccess(res, {
+      id: therapist.id,
+      name: therapist.preferredName || `${therapist.firstName} ${therapist.lastName}`,
+      firstName: therapist.firstName,
+      lastName: therapist.lastName,
+      title: therapist.title,
+      credentials: therapist.credentials,
+      specialties: therapist.specialties,
+      languagesSpoken: therapist.languagesSpoken,
+      bio: therapist.profileBio,
+      photoUrl: therapist.profilePhotoS3,
+      yearsOfExperience: therapist.yearsOfExperience,
+      education: therapist.education,
+      approaches: therapist.approachesToTherapy,
+      philosophy: therapist.treatmentPhilosophy,
+      licenseNumber: therapist.licenseNumber,
+      licenseState: therapist.licenseState,
+      phone: therapist.phoneNumber,
+      email: therapist.email,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching therapist profile:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch therapist profile',
-    });
+    return sendServerError(res, 'Failed to fetch therapist profile');
   }
 };
 
@@ -109,10 +95,7 @@ export const getTherapistAvailability = async (req: PortalRequest, res: Response
     const { startDate, endDate } = req.query;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get client's therapist
@@ -122,10 +105,7 @@ export const getTherapistAvailability = async (req: PortalRequest, res: Response
     });
 
     if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found',
-      });
+      return sendNotFound(res, 'Client');
     }
 
     // Get therapist's schedule
@@ -135,29 +115,20 @@ export const getTherapistAvailability = async (req: PortalRequest, res: Response
     });
 
     if (!schedule) {
-      return res.status(404).json({
-        success: false,
-        message: 'Therapist schedule not found',
-      });
+      return sendNotFound(res, 'Therapist schedule');
     }
 
     logger.info(`Retrieved therapist availability for client ${clientId}`);
 
     // Note: In a full implementation, you'd calculate available slots
     // based on schedule and existing appointments
-    return res.status(200).json({
-      success: true,
-      data: {
-        scheduleId: schedule.id,
-        availability: schedule.weeklyScheduleJson,
-        message: 'Please contact your therapist to schedule an appointment',
-      },
+    return sendSuccess(res, {
+      scheduleId: schedule.id,
+      availability: schedule.weeklyScheduleJson,
+      message: 'Please contact your therapist to schedule an appointment',
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching therapist availability:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch therapist availability',
-    });
+    return sendServerError(res, 'Failed to fetch therapist availability');
   }
 };

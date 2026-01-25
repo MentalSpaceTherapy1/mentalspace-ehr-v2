@@ -1,10 +1,27 @@
 import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import prisma from '../services/database';
+import { AppointmentStatus } from '@mentalspace/database';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+
+// Type for filtered client with minimal fields
+interface FilteredClientProfile {
+  id: string;
+  firstName: string;
+  lastName: string;
+  medicalRecordNumber: string;
+  dateOfBirth: Date | null;
+  email: string | null;
+  phoneNumber: string | null;
+}
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import * as guardianService from '../services/guardian.service';
 import guardianRelationshipService from '../services/guardian-relationship.service';
 import documentUploadService from '../services/document-upload.service';
 import auditLogService from '../services/audit-log.service';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendValidationError } from '../utils/apiResponse';
 
 // Validation schemas
 const createRelationshipSchema = z.object({
@@ -48,13 +65,10 @@ const revokeRelationshipSchema = z.object({
  */
 export const requestGuardianAccess = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const validatedData = createRelationshipSchema.parse(req.body);
@@ -64,29 +78,17 @@ export const requestGuardianAccess = async (req: Request, res: Response) => {
       guardianId: userId,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Guardian access request submitted successfully. Pending admin verification.',
-      data: relationship,
-    });
+    return sendCreated(res, relationship, 'Guardian access request submitted successfully. Pending admin verification.');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     const errorId = logControllerError('Request guardian access', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to request guardian access',
-      errorId,
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to request guardian access', errorId);
   }
 };
 
@@ -95,31 +97,21 @@ export const requestGuardianAccess = async (req: Request, res: Response) => {
  */
 export const getMyMinors = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const minors = await guardianRelationshipService.getMinorsByGuardian(userId);
 
-    res.status(200).json({
-      success: true,
-      data: minors,
-    });
+    return sendSuccess(res, minors);
   } catch (error) {
     const errorId = logControllerError('Get my minors', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve minors',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve minors', errorId);
   }
 };
 
@@ -130,37 +122,19 @@ export const getMinorProfile = async (req: Request, res: Response) => {
   try {
     const { minorId } = req.params;
 
-    const client = await prisma.client.findUnique({
-      where: { id: minorId },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        medicalRecordNumber: true,
-        dateOfBirth: true,
-        email: true,
-        primaryPhone: true,
-        addressCity: true,
-        addressState: true,
-        addressZipCode: true,
-        // Based on accessLevel, we might filter what's returned
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const client = await guardianService.getMinorProfileById(minorId);
 
     if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found',
-      });
+      return sendNotFound(res, 'Client');
     }
 
     // Filter based on access level from guardian context
     const guardianContext = req.guardianContext;
-    let filteredClient = client;
 
     if (guardianContext?.accessLevel === 'VIEW_ONLY') {
       // Return limited info for view-only access
-      filteredClient = {
+      const limitedProfile: FilteredClientProfile = {
         id: client.id,
         firstName: client.firstName,
         lastName: client.lastName,
@@ -168,23 +142,17 @@ export const getMinorProfile = async (req: Request, res: Response) => {
         dateOfBirth: client.dateOfBirth,
         email: client.email,
         phoneNumber: client.primaryPhone,
-      } as any;
+      };
+      return sendSuccess(res, limitedProfile);
     }
 
-    res.status(200).json({
-      success: true,
-      data: filteredClient,
-    });
+    return sendSuccess(res, client);
   } catch (error) {
     const errorId = logControllerError('Get minor profile', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve minor profile',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve minor profile', errorId);
   }
 };
 
@@ -196,54 +164,21 @@ export const getMinorAppointments = async (req: Request, res: Response) => {
     const { minorId } = req.params;
     const { status, startDate, endDate } = req.query;
 
-    const where: any = { clientId: minorId };
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (startDate || endDate) {
-      where.startTime = {};
-      if (startDate) where.startTime.gte = new Date(startDate as string);
-      if (endDate) where.startTime.lte = new Date(endDate as string);
-    }
-
-    const appointments = await prisma.appointment.findMany({
-      where,
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            specialties: true,
-          },
-        },
-        appointmentTypeObj: {
-          select: {
-            id: true,
-            typeName: true,
-            defaultDuration: true,
-          },
-        },
-      },
-      orderBy: { appointmentDate: 'desc' },
+    // Phase 3.2: Use service method instead of direct prisma call
+    const appointments = await guardianService.getMinorAppointments({
+      minorId,
+      status: status as AppointmentStatus | undefined,
+      startDate: startDate ? new Date(startDate as string) : undefined,
+      endDate: endDate ? new Date(endDate as string) : undefined,
     });
 
-    res.status(200).json({
-      success: true,
-      data: appointments,
-    });
+    return sendSuccess(res, appointments);
   } catch (error) {
     const errorId = logControllerError('Get minor appointments', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve appointments',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve appointments', errorId);
   }
 };
 
@@ -254,60 +189,40 @@ export const scheduleMinorAppointment = async (req: Request, res: Response) => {
   try {
     const { minorId } = req.params;
     const { clinicianId, appointmentTypeId, startTime, notes } = req.body;
+    const userId = req.user?.userId;
 
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
+    // Phase 3.2: Use service method instead of direct prisma call
     // Create appointment
     const startDate = new Date(startTime);
     const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Default 1 hour duration
-    const appointment = await prisma.appointment.create({
-      data: {
-        clientId: minorId,
-        clinicianId,
-        appointmentTypeId,
-        appointmentDate: startDate,
-        startTime: startDate.toTimeString().slice(0, 5), // HH:MM format
-        endTime: endDate.toTimeString().slice(0, 5),
-        duration: 60, // Default 60 minutes
-        appointmentType: 'INDIVIDUAL_THERAPY',
-        serviceLocation: 'IN_PERSON',
-        status: 'SCHEDULED',
-        statusUpdatedBy: (req as any).user?.userId || 'SYSTEM',
-        createdBy: (req as any).user?.userId,
-        lastModifiedBy: (req as any).user?.userId || 'SYSTEM',
-        appointmentNotes: notes || `Scheduled by guardian: ${(req as any).user?.userId}`,
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        appointmentTypeObj: {
-          select: {
-            id: true,
-            typeName: true,
-            defaultDuration: true,
-          },
-        },
-      },
+    const appointment = await guardianService.createMinorAppointment({
+      clientId: minorId,
+      clinicianId,
+      appointmentTypeId,
+      appointmentDate: startDate,
+      startTime: startDate.toTimeString().slice(0, 5), // HH:MM format
+      endTime: endDate.toTimeString().slice(0, 5),
+      duration: 60, // Default 60 minutes
+      appointmentType: 'INDIVIDUAL_THERAPY',
+      serviceLocation: 'IN_PERSON',
+      status: 'SCHEDULED',
+      statusUpdatedBy: userId,
+      createdBy: userId,
+      lastModifiedBy: userId,
+      appointmentNotes: notes || `Scheduled by guardian: ${userId}`,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Appointment scheduled successfully',
-      data: appointment,
-    });
+    return sendCreated(res, appointment, 'Appointment scheduled successfully');
   } catch (error) {
     const errorId = logControllerError('Schedule minor appointment', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to schedule appointment',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to schedule appointment', errorId);
   }
 };
 
@@ -320,21 +235,13 @@ export const getMinorMessages = async (req: Request, res: Response) => {
 
     // This would integrate with your messaging system
     // For now, return a placeholder
-    res.status(200).json({
-      success: true,
-      data: [],
-      message: 'Messaging integration pending',
-    });
+    return sendSuccess(res, [], 'Messaging integration pending');
   } catch (error) {
     const errorId = logControllerError('Get minor messages', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve messages',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve messages', errorId);
   }
 };
 
@@ -348,26 +255,18 @@ export const sendMinorMessage = async (req: Request, res: Response) => {
 
     // This would integrate with your messaging system
     // For now, return a placeholder
-    res.status(201).json({
-      success: true,
-      message: 'Message sent successfully (placeholder)',
-      data: {
-        minorId,
-        message,
-        clinicianId,
-        sentBy: (req as any).user?.userId,
-      },
-    });
+    return sendCreated(res, {
+      minorId,
+      message,
+      clinicianId,
+      sentBy: req.user?.userId,
+    }, 'Message sent successfully (placeholder)');
   } catch (error) {
     const errorId = logControllerError('Send minor message', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send message',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to send message', errorId);
   }
 };
 
@@ -377,14 +276,15 @@ export const sendMinorMessage = async (req: Request, res: Response) => {
 export const uploadVerificationDocument = async (req: Request, res: Response) => {
   try {
     const { relationshipId } = req.params;
-    const userId = (req as any).user?.userId;
-    const file = (req as any).file;
+    const userId = req.user?.userId;
+    const file = req.file;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     if (!file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No file uploaded',
-      });
+      return sendBadRequest(res, 'No file uploaded');
     }
 
     const documentMetadata = await documentUploadService.uploadDocument({
@@ -399,21 +299,13 @@ export const uploadVerificationDocument = async (req: Request, res: Response) =>
       documentType: req.body.documentType || 'OTHER',
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Document uploaded successfully',
-      data: documentMetadata,
-    });
+    return sendCreated(res, documentMetadata, 'Document uploaded successfully');
   } catch (error) {
     const errorId = logControllerError('Upload verification document', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to upload document',
-      errorId,
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to upload document', errorId);
   }
 };
 
@@ -435,21 +327,13 @@ export const getPendingVerifications = async (req: Request, res: Response) => {
       limit,
     });
 
-    res.status(200).json({
-      success: true,
-      data: result.relationships,
-      pagination: result.pagination,
-    });
+    return sendSuccess(res, { relationships: result.relationships, pagination: result.pagination });
   } catch (error) {
     const errorId = logControllerError('Get pending verifications', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve pending verifications',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve pending verifications', errorId);
   }
 };
 
@@ -463,28 +347,20 @@ export const getAllRelationships = async (req: Request, res: Response) => {
     const { verificationStatus, guardianId, minorId } = req.query;
 
     const result = await guardianRelationshipService.getGuardianRelationships({
-      verificationStatus: verificationStatus as any,
-      guardianId: guardianId as string,
-      minorId: minorId as string,
+      verificationStatus: verificationStatus as 'PENDING' | 'VERIFIED' | 'REJECTED' | undefined,
+      guardianId: guardianId as string | undefined,
+      minorId: minorId as string | undefined,
       page,
       limit,
     });
 
-    res.status(200).json({
-      success: true,
-      data: result.relationships,
-      pagination: result.pagination,
-    });
+    return sendSuccess(res, { relationships: result.relationships, pagination: result.pagination });
   } catch (error) {
     const errorId = logControllerError('Get all relationships', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve relationships',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve relationships', errorId);
   }
 };
 
@@ -494,7 +370,12 @@ export const getAllRelationships = async (req: Request, res: Response) => {
 export const verifyRelationship = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).user?.userId;
+    const adminId = req.user?.userId;
+
+    if (!adminId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const validatedData = verifyRelationshipSchema.parse(req.body);
 
     const relationship = await guardianRelationshipService.verifyRelationship(
@@ -509,29 +390,17 @@ export const verifyRelationship = async (req: Request, res: Response) => {
       minorId: relationship.minorId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Guardian relationship verified successfully',
-      data: relationship,
-    });
+    return sendSuccess(res, relationship, 'Guardian relationship verified successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     const errorId = logControllerError('Verify relationship', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to verify relationship',
-      errorId,
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to verify relationship', errorId);
   }
 };
 
@@ -541,7 +410,12 @@ export const verifyRelationship = async (req: Request, res: Response) => {
 export const rejectRelationship = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).user?.userId;
+    const adminId = req.user?.userId;
+
+    if (!adminId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const validatedData = rejectRelationshipSchema.parse(req.body);
 
     const relationship = await guardianRelationshipService.rejectRelationship(
@@ -557,29 +431,17 @@ export const rejectRelationship = async (req: Request, res: Response) => {
       reason: validatedData.reason,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Guardian relationship rejected',
-      data: relationship,
-    });
+    return sendSuccess(res, relationship, 'Guardian relationship rejected');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     const errorId = logControllerError('Reject relationship', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to reject relationship',
-      errorId,
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to reject relationship', errorId);
   }
 };
 
@@ -589,7 +451,12 @@ export const rejectRelationship = async (req: Request, res: Response) => {
 export const revokeRelationship = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).user?.userId;
+    const adminId = req.user?.userId;
+
+    if (!adminId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const validatedData = revokeRelationshipSchema.parse(req.body);
 
     const relationship = await guardianRelationshipService.revokeRelationship(
@@ -604,29 +471,17 @@ export const revokeRelationship = async (req: Request, res: Response) => {
       reason: validatedData.reason,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Guardian relationship revoked',
-      data: relationship,
-    });
+    return sendSuccess(res, relationship, 'Guardian relationship revoked');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     const errorId = logControllerError('Revoke relationship', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to revoke relationship',
-      errorId,
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to revoke relationship', errorId);
   }
 };
 
@@ -643,29 +498,17 @@ export const updateGuardianRelationship = async (req: Request, res: Response) =>
       endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Guardian relationship updated successfully',
-      data: relationship,
-    });
+    return sendSuccess(res, relationship, 'Guardian relationship updated successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     const errorId = logControllerError('Update guardian relationship', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update relationship',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to update relationship', errorId);
   }
 };
 
@@ -679,26 +522,16 @@ export const getRelationshipById = async (req: Request, res: Response) => {
     const relationship = await guardianRelationshipService.getRelationshipById(id);
 
     if (!relationship) {
-      return res.status(404).json({
-        success: false,
-        message: 'Guardian relationship not found',
-      });
+      return sendNotFound(res, 'Guardian relationship');
     }
 
-    res.status(200).json({
-      success: true,
-      data: relationship,
-    });
+    return sendSuccess(res, relationship);
   } catch (error) {
     const errorId = logControllerError('Get relationship by ID', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve relationship',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve relationship', errorId);
   }
 };
 
@@ -708,31 +541,25 @@ export const getRelationshipById = async (req: Request, res: Response) => {
 export const getDocumentUrl = async (req: Request, res: Response) => {
   try {
     const { storageLocation } = req.body;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     if (!storageLocation) {
-      return res.status(400).json({
-        success: false,
-        message: 'Storage location required',
-      });
+      return sendBadRequest(res, 'Storage location required');
     }
 
     const url = await documentUploadService.getDocumentUrl(storageLocation, userId);
 
-    res.status(200).json({
-      success: true,
-      data: { url },
-    });
+    return sendSuccess(res, { url });
   } catch (error) {
     const errorId = logControllerError('Get document URL', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate document URL',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to generate document URL', errorId);
   }
 };
 
@@ -753,21 +580,13 @@ export const getGuardianAuditLog = async (req: Request, res: Response) => {
       limit,
     });
 
-    res.status(200).json({
-      success: true,
-      data: result.logs,
-      pagination: result.pagination,
-    });
+    return sendSuccess(res, { logs: result.logs, pagination: result.pagination });
   } catch (error) {
     const errorId = logControllerError('Get guardian audit log', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve audit log',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve audit log', errorId);
   }
 };
 

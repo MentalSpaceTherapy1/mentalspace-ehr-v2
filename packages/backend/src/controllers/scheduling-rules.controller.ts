@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
+import { UserRoles } from '@mentalspace/shared';
 import { z } from 'zod';
 import logger from '../utils/logger';
 import * as schedulingRulesService from '../services/scheduling-rules.service';
+import { sendSuccess, sendCreated, sendBadRequest, sendForbidden, sendNotFound, sendServerError, sendConflict, sendValidationError } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Module 7: Scheduling Rules Controller
@@ -62,29 +65,22 @@ export const getSchedulingRules = async (req: Request, res: Response) => {
 
     // If user is a clinician, restrict to their own rules unless they're admin
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes(UserRoles.ADMINISTRATOR) || userRoles.includes(UserRoles.SUPER_ADMIN);
 
-    if (!isAdmin && userRoles.includes('CLINICIAN')) {
+    if (!isAdmin && userRoles.includes(UserRoles.CLINICIAN)) {
       filters.clinicianId = req.user?.id;
       filters.includeOrgWide = true;
     }
 
     const rules = await schedulingRulesService.getSchedulingRules(filters);
 
-    res.status(200).json({
-      success: true,
-      data: rules,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, rules);
+  } catch (error) {
     logger.error('Get scheduling rules error', {
-      error: error.message,
+      error: getErrorMessage(error),
       query: req.query,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve scheduling rules',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve scheduling rules');
   }
 };
 
@@ -104,37 +100,24 @@ export const getSchedulingRuleById = async (req: Request, res: Response) => {
     const rule = await schedulingRulesService.getSchedulingRuleById(id);
 
     if (!rule) {
-      return res.status(404).json({
-        success: false,
-        message: 'Scheduling rule not found',
-      });
+      return sendNotFound(res, 'Scheduling rule');
     }
 
     // Check authorization
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes(UserRoles.ADMINISTRATOR) || userRoles.includes(UserRoles.SUPER_ADMIN);
 
     if (!isAdmin && rule.clinicianId && rule.clinicianId !== req.user?.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view this scheduling rule',
-      });
+      return sendForbidden(res, 'Not authorized to view this scheduling rule');
     }
 
-    res.status(200).json({
-      success: true,
-      data: rule,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, rule);
+  } catch (error) {
     logger.error('Get scheduling rule by ID error', {
-      error: error.message,
+      error: getErrorMessage(error),
       ruleId: req.params.id,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve scheduling rule',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve scheduling rule');
   }
 };
 
@@ -147,11 +130,12 @@ export const createSchedulingRule = async (req: Request, res: Response) => {
     const validation = createSchedulingRuleSchema.safeParse(req.body);
 
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request data',
-        errors: validation.error.errors,
-      });
+      const formattedErrors = validation.error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
     const data = validation.data;
@@ -163,50 +147,33 @@ export const createSchedulingRule = async (req: Request, res: Response) => {
 
     // Check authorization
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes(UserRoles.ADMINISTRATOR) || userRoles.includes(UserRoles.SUPER_ADMIN);
 
     // Only admins can create org-wide rules
     if (!data.clinicianId && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only administrators can create organization-wide scheduling rules',
-      });
+      return sendForbidden(res, 'Only administrators can create organization-wide scheduling rules');
     }
 
     // Clinicians can only create rules for themselves
     if (data.clinicianId && !isAdmin && data.clinicianId !== req.user?.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to create scheduling rule for another clinician',
-      });
+      return sendForbidden(res, 'Not authorized to create scheduling rule for another clinician');
     }
 
     const rule = await schedulingRulesService.createSchedulingRule(data);
 
-    res.status(201).json({
-      success: true,
-      message: 'Scheduling rule created successfully',
-      data: rule,
-    });
-  } catch (error: any) {
+    return sendCreated(res, rule, 'Scheduling rule created successfully');
+  } catch (error) {
     logger.error('Create scheduling rule error', {
-      error: error.message,
+      error: getErrorMessage(error),
       body: req.body,
     });
 
     // Handle specific error cases
-    if (error.message.includes('already has an active')) {
-      return res.status(409).json({
-        success: false,
-        message: error.message,
-      });
+    if (getErrorMessage(error).includes('already has an active')) {
+      return sendConflict(res, getErrorMessage(error));
     }
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to create scheduling rule',
-      error: error.message,
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to create scheduling rule');
   }
 };
 
@@ -220,11 +187,12 @@ export const updateSchedulingRule = async (req: Request, res: Response) => {
     const validation = updateSchedulingRuleSchema.safeParse(req.body);
 
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request data',
-        errors: validation.error.errors,
-      });
+      const formattedErrors = validation.error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
     const data = validation.data;
@@ -238,49 +206,32 @@ export const updateSchedulingRule = async (req: Request, res: Response) => {
     const existingRule = await schedulingRulesService.getSchedulingRuleById(id);
 
     if (!existingRule) {
-      return res.status(404).json({
-        success: false,
-        message: 'Scheduling rule not found',
-      });
+      return sendNotFound(res, 'Scheduling rule');
     }
 
     // Check authorization
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes(UserRoles.ADMINISTRATOR) || userRoles.includes(UserRoles.SUPER_ADMIN);
 
     // Only admins can update org-wide rules
     if (!existingRule.clinicianId && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only administrators can update organization-wide scheduling rules',
-      });
+      return sendForbidden(res, 'Only administrators can update organization-wide scheduling rules');
     }
 
     // Clinicians can only update their own rules
     if (existingRule.clinicianId && !isAdmin && existingRule.clinicianId !== req.user?.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this scheduling rule',
-      });
+      return sendForbidden(res, 'Not authorized to update this scheduling rule');
     }
 
     const rule = await schedulingRulesService.updateSchedulingRule(id, data);
 
-    res.status(200).json({
-      success: true,
-      message: 'Scheduling rule updated successfully',
-      data: rule,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, rule, 'Scheduling rule updated successfully');
+  } catch (error) {
     logger.error('Update scheduling rule error', {
-      error: error.message,
+      error: getErrorMessage(error),
       ruleId: req.params.id,
     });
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to update scheduling rule',
-      error: error.message,
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to update scheduling rule');
   }
 };
 
@@ -301,48 +252,32 @@ export const deleteSchedulingRule = async (req: Request, res: Response) => {
     const existingRule = await schedulingRulesService.getSchedulingRuleById(id);
 
     if (!existingRule) {
-      return res.status(404).json({
-        success: false,
-        message: 'Scheduling rule not found',
-      });
+      return sendNotFound(res, 'Scheduling rule');
     }
 
     // Check authorization
     const userRoles = req.user?.roles || [];
-    const isAdmin = userRoles.includes('ADMINISTRATOR') || userRoles.includes('SUPER_ADMIN');
+    const isAdmin = userRoles.includes(UserRoles.ADMINISTRATOR) || userRoles.includes(UserRoles.SUPER_ADMIN);
 
     // Only admins can delete org-wide rules
     if (!existingRule.clinicianId && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only administrators can delete organization-wide scheduling rules',
-      });
+      return sendForbidden(res, 'Only administrators can delete organization-wide scheduling rules');
     }
 
     // Clinicians can only delete their own rules
     if (existingRule.clinicianId && !isAdmin && existingRule.clinicianId !== req.user?.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete this scheduling rule',
-      });
+      return sendForbidden(res, 'Not authorized to delete this scheduling rule');
     }
 
     await schedulingRulesService.deleteSchedulingRule(id);
 
-    res.status(200).json({
-      success: true,
-      message: 'Scheduling rule deleted successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Scheduling rule deleted successfully');
+  } catch (error) {
     logger.error('Delete scheduling rule error', {
-      error: error.message,
+      error: getErrorMessage(error),
       ruleId: req.params.id,
     });
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to delete scheduling rule',
-      error: error.message,
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to delete scheduling rule');
   }
 };
 
@@ -361,19 +296,12 @@ export const getEffectiveRules = async (req: Request, res: Response) => {
 
     const rules = await schedulingRulesService.getEffectiveRules(clinicianId);
 
-    res.status(200).json({
-      success: true,
-      data: rules,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, rules);
+  } catch (error) {
     logger.error('Get effective rules error', {
-      error: error.message,
+      error: getErrorMessage(error),
       clinicianId: req.params.clinicianId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve effective scheduling rules',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve effective scheduling rules');
   }
 };

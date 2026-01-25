@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import logger from '../utils/logger';
-import prisma from '../services/database';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import * as clientAssessmentsService from '../services/clientAssessments.service';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError, sendValidationError, sendUnauthorized } from '../utils/apiResponse';
 
 /**
  * EHR-side controller for managing client assessment assignments
@@ -27,28 +31,18 @@ export const getClientAssessments = async (req: Request, res: Response) => {
     const { clientId } = req.params;
     const { status } = req.query;
 
-    const where: any = { clientId };
-    if (status) {
-      where.status = status;
-    }
-
-    const assessments = await prisma.assessmentAssignment.findMany({
-      where,
-      orderBy: { assignedAt: 'desc' },
+    // Phase 3.2: Use service method instead of direct prisma call
+    const assessments = await clientAssessmentsService.getClientAssessments({
+      clientId,
+      status: status as string | undefined,
     });
 
     logger.info(`Retrieved ${assessments.length} assessments for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: assessments,
-    });
+    return sendSuccess(res, assessments);
   } catch (error) {
     logger.error('Error fetching client assessments:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch assessments',
-    });
+    return sendServerError(res, 'Failed to fetch assessments');
   }
 };
 
@@ -59,45 +53,35 @@ export const getClientAssessments = async (req: Request, res: Response) => {
 export const assignAssessmentToClient = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const validatedData = assignAssessmentSchema.parse({ ...req.body, clientId });
 
-    const assignment = await prisma.assessmentAssignment.create({
-      data: {
-        clientId,
-        assessmentType: validatedData.assessmentType,
-        assessmentName: validatedData.assessmentName,
-        description: validatedData.description || `Complete the ${validatedData.assessmentName}`,
-        assignedBy: userId,
-        assignedAt: new Date(),
-        dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
-        status: 'PENDING',
-      },
+    // Phase 3.2: Use service method instead of direct prisma call
+    const assignment = await clientAssessmentsService.assignAssessment({
+      clientId,
+      assessmentType: validatedData.assessmentType,
+      assessmentName: validatedData.assessmentName,
+      description: validatedData.description,
+      assignedBy: userId,
+      dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
     });
 
     logger.info(`Assessment ${validatedData.assessmentType} assigned to client ${clientId} by user ${userId}`);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Assessment assigned successfully',
-      data: assignment,
-    });
+    return sendCreated(res, assignment, 'Assessment assigned successfully');
   } catch (error) {
     logger.error('Error assigning assessment:', error);
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to assign assessment',
-    });
+    return sendServerError(res, 'Failed to assign assessment');
   }
 };
 
@@ -108,45 +92,27 @@ export const assignAssessmentToClient = async (req: Request, res: Response) => {
 export const removeAssessmentAssignment = async (req: Request, res: Response) => {
   try {
     const { clientId, assessmentId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
-    const assessment = await prisma.assessmentAssignment.findFirst({
-      where: {
-        id: assessmentId,
-        clientId,
-      },
-    });
+    // Phase 3.2: Use service methods instead of direct prisma calls
+    const assessment = await clientAssessmentsService.findAssignment(assessmentId, clientId);
 
     if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Assessment assignment not found',
-      });
+      return sendNotFound(res, 'Assessment assignment');
     }
 
     if (assessment.status === 'COMPLETED') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot remove completed assessment',
-      });
+      return sendBadRequest(res, 'Cannot remove completed assessment');
     }
 
-    await prisma.assessmentAssignment.delete({
-      where: { id: assessmentId },
-    });
+    await clientAssessmentsService.deleteAssignment(assessmentId);
 
     logger.info(`Assessment assignment ${assessmentId} removed by user ${userId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Assessment assignment removed successfully',
-    });
+    return sendSuccess(res, null, 'Assessment assignment removed successfully');
   } catch (error) {
     logger.error('Error removing assessment assignment:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to remove assessment assignment',
-    });
+    return sendServerError(res, 'Failed to remove assessment assignment');
   }
 };
 
@@ -157,36 +123,22 @@ export const removeAssessmentAssignment = async (req: Request, res: Response) =>
 export const sendAssessmentReminder = async (req: Request, res: Response) => {
   try {
     const { clientId, assessmentId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
-    const assessment = await prisma.assessmentAssignment.findFirst({
-      where: {
-        id: assessmentId,
-        clientId,
-        status: 'PENDING',
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const assessment = await clientAssessmentsService.findPendingAssignment(assessmentId, clientId);
 
     if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Pending assessment not found',
-      });
+      return sendNotFound(res, 'Pending assessment');
     }
 
     // TODO: Send actual email/notification to client
     logger.info(`Assessment reminder sent for ${assessmentId} by user ${userId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Reminder sent successfully',
-    });
+    return sendSuccess(res, null, 'Reminder sent successfully');
   } catch (error) {
     logger.error('Error sending assessment reminder:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to send reminder',
-    });
+    return sendServerError(res, 'Failed to send reminder');
   }
 };
 
@@ -198,32 +150,19 @@ export const viewAssessmentResults = async (req: Request, res: Response) => {
   try {
     const { clientId, assessmentId } = req.params;
 
-    const assessment = await prisma.assessmentAssignment.findFirst({
-      where: {
-        id: assessmentId,
-        clientId,
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const assessment = await clientAssessmentsService.findAssignment(assessmentId, clientId);
 
     if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Assessment not found',
-      });
+      return sendNotFound(res, 'Assessment');
     }
 
     logger.info(`Assessment results viewed for ${assessmentId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: assessment,
-    });
+    return sendSuccess(res, assessment);
   } catch (error) {
     logger.error('Error viewing assessment results:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to view assessment results',
-    });
+    return sendServerError(res, 'Failed to view assessment results');
   }
 };
 
@@ -236,41 +175,18 @@ export const getAssessmentHistory = async (req: Request, res: Response) => {
     const { clientId } = req.params;
     const { assessmentType } = req.query;
 
-    const where: any = {
+    // Phase 3.2: Use service method instead of direct prisma call
+    const history = await clientAssessmentsService.getAssessmentHistory({
       clientId,
-      status: 'COMPLETED',
-    };
-
-    if (assessmentType) {
-      where.assessmentType = assessmentType;
-    }
-
-    const history = await prisma.assessmentAssignment.findMany({
-      where,
-      orderBy: { completedAt: 'desc' },
-      select: {
-        id: true,
-        assessmentName: true,
-        assessmentType: true,
-        assignedAt: true,
-        completedAt: true,
-        score: true,
-        interpretation: true,
-      },
+      assessmentType: assessmentType as string | undefined,
     });
 
     logger.info(`Retrieved assessment history for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: history,
-    });
+    return sendSuccess(res, history);
   } catch (error) {
     logger.error('Error fetching assessment history:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch assessment history',
-    });
+    return sendServerError(res, 'Failed to fetch assessment history');
   }
 };
 
@@ -282,34 +198,19 @@ export const exportAssessmentPDF = async (req: Request, res: Response) => {
   try {
     const { clientId, assessmentId } = req.params;
 
-    const assessment = await prisma.assessmentAssignment.findFirst({
-      where: {
-        id: assessmentId,
-        clientId,
-        status: 'COMPLETED',
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const assessment = await clientAssessmentsService.findCompletedAssignment(assessmentId, clientId);
 
     if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Completed assessment not found',
-      });
+      return sendNotFound(res, 'Completed assessment');
     }
 
     // TODO: Generate actual PDF using a library like pdfkit or puppeteer
     logger.info(`PDF export requested for assessment ${assessmentId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'PDF export placeholder - implement PDF generation',
-      data: assessment,
-    });
+    return sendSuccess(res, assessment, 'PDF export placeholder - implement PDF generation');
   } catch (error) {
     logger.error('Error exporting assessment PDF:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to export assessment',
-    });
+    return sendServerError(res, 'Failed to export assessment');
   }
 };

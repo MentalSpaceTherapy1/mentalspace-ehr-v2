@@ -1,6 +1,7 @@
 import prisma from './database';
 import type { TimeOffRequest, Appointment } from '@prisma/client';
 import { startOfDay, endOfDay, format } from 'date-fns';
+import logger from '../utils/logger';
 
 /**
  * Module 3 Phase 2.3: Time-Off Request Service
@@ -438,8 +439,8 @@ export async function getTimeOffRequestById(id: string): Promise<TimeOffRequest 
 export async function getAllTimeOffRequests(
   filters?: TimeOffFilters
 ): Promise<TimeOffRequest[]> {
-  console.log('=== getAllTimeOffRequests Service Called ===');
-  console.log('Filters received:', JSON.stringify(filters, null, 2));
+  logger.debug('=== getAllTimeOffRequests Service Called ===');
+  logger.debug('Filters received:', JSON.stringify(filters, null, 2));
 
   const where: any = {};
 
@@ -468,7 +469,7 @@ export async function getAllTimeOffRequests(
     ];
   }
 
-  console.log('Where clause constructed:', JSON.stringify(where, null, 2));
+  logger.debug('Where clause constructed:', JSON.stringify(where, null, 2));
 
   const results = await prisma.timeOffRequest.findMany({
     where,
@@ -514,8 +515,8 @@ export async function getAllTimeOffRequests(
     ],
   });
 
-  console.log('Query results count:', results.length);
-  console.log('Results sample:', results.length > 0 ? JSON.stringify(results[0], null, 2) : 'No results');
+  logger.debug('Query results count:', results.length);
+  logger.debug('Results sample:', results.length > 0 ? JSON.stringify(results[0], null, 2) : 'No results');
 
   return results;
 }
@@ -775,7 +776,7 @@ async function autoRescheduleAffectedAppointments(
         }
       }
     } catch (error) {
-      console.error(`Failed to reschedule appointment ${appointment.id}:`, error);
+      logger.error('Failed to reschedule appointment', { appointmentId: appointment.id, error });
       // Continue with other appointments
     }
   }
@@ -811,4 +812,27 @@ export async function getTimeOffStats(providerId?: string) {
       return acc;
     }, {} as Record<string, number>),
   };
+}
+
+// ============================================================================
+// Phase 3.2: Additional service methods moved from controller
+// ============================================================================
+
+/**
+ * Check if the time_off_requests table exists in the database
+ */
+export async function checkTimeOffTableExists(): Promise<boolean> {
+  try {
+    const result = await prisma.$queryRaw<[{ exists: boolean }]>`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'time_off_requests'
+      ) as exists
+    `;
+    return result[0]?.exists || false;
+  } catch (error) {
+    logger.error('Error checking time_off_requests table existence:', error);
+    return false;
+  }
 }

@@ -10,6 +10,7 @@
  */
 
 import { PrismaClient } from '@mentalspace/database';
+import { UserRoles } from '@mentalspace/shared';
 
 const prisma = new PrismaClient();
 
@@ -673,7 +674,7 @@ export class DemandForecaster {
     // Get total provider capacity
     const providers = await prisma.user.count({
       where: {
-        roles: { hasSome: ['CLINICIAN', 'ADMINISTRATOR'] },
+        roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.ADMINISTRATOR] },
         isActive: true
       }
     });

@@ -1,94 +1,74 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as portalAppointmentsService from '../services/portalAppointments.service';
 import * as portalMessagingService from '../services/portalMessaging.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 // ========== APPOINTMENTS ==========
 
 export const getUpcomingAppointments = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const appointments = await portalAppointmentsService.getUpcomingAppointments(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: appointments,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, appointments);
+  } catch (error) {
     logger.error('Failed to get upcoming appointments', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve appointments',
-    });
+    return sendServerError(res, 'Failed to retrieve appointments');
   }
 };
 
 export const getPastAppointments = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const appointments = await portalAppointmentsService.getPastAppointments(clientId, limit);
 
-    res.status(200).json({
-      success: true,
-      data: appointments,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, appointments);
+  } catch (error) {
     logger.error('Failed to get past appointments', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve appointments',
-    });
+    return sendServerError(res, 'Failed to retrieve appointments');
   }
 };
 
 export const getAppointmentDetails = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { appointmentId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const appointment = await portalAppointmentsService.getAppointmentDetails(appointmentId, clientId);
 
-    res.status(200).json({
-      success: true,
-      data: appointment,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, appointment);
+  } catch (error) {
     logger.error('Failed to get appointment details', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(error.message === 'Appointment not found' ? 404 : 500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve appointment',
-    });
+    if (getErrorMessage(error) === 'Appointment not found') {
+      return sendNotFound(res, 'Appointment');
+    }
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve appointment');
   }
 };
 
@@ -98,15 +78,12 @@ const cancelAppointmentSchema = z.object({
 
 export const cancelAppointment = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { appointmentId } = req.params;
     const validatedData = cancelAppointmentSchema.parse(req.body);
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const appointment = await portalAppointmentsService.requestCancellation(
@@ -115,19 +92,12 @@ export const cancelAppointment = async (req: Request, res: Response) => {
       validatedData.reason
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'Appointment cancelled successfully',
-      data: appointment,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, appointment, 'Appointment cancelled successfully');
+  } catch (error) {
     logger.error('Failed to cancel appointment', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to cancel appointment',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to cancel appointment');
   }
 };
 
@@ -141,14 +111,11 @@ const sendMessageSchema = z.object({
 
 export const sendMessage = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const validatedData = sendMessageSchema.parse(req.body);
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const message = await portalMessagingService.sendMessage({
@@ -158,105 +125,71 @@ export const sendMessage = async (req: Request, res: Response) => {
       priority: validatedData.priority,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Message sent successfully',
-      data: message,
-    });
-  } catch (error: any) {
+    return sendCreated(res, message, 'Message sent successfully');
+  } catch (error) {
     logger.error('Failed to send message', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(400).json({
-      success: false,
-      message: 'Failed to send message',
-    });
+    return sendBadRequest(res, 'Failed to send message');
   }
 };
 
 export const getMessages = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const messages = await portalMessagingService.getMessages(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: messages,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, messages);
+  } catch (error) {
     logger.error('Failed to get messages', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve messages',
-    });
+    return sendServerError(res, 'Failed to retrieve messages');
   }
 };
 
 export const getMessageThread = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { threadId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const messages = await portalMessagingService.getMessageThread(threadId, clientId);
 
-    res.status(200).json({
-      success: true,
-      data: messages,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, messages);
+  } catch (error) {
     logger.error('Failed to get message thread', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve messages',
-    });
+    return sendServerError(res, 'Failed to retrieve messages');
   }
 };
 
 export const markMessageAsRead = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { messageId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const message = await portalMessagingService.markAsRead(messageId, clientId);
 
-    res.status(200).json({
-      success: true,
-      data: message,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, message);
+  } catch (error) {
     logger.error('Failed to mark message as read', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to mark message as read',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to mark message as read');
   }
 };
 
@@ -266,15 +199,12 @@ const replyMessageSchema = z.object({
 
 export const replyToMessage = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
     const { messageId } = req.params;
     const validatedData = replyMessageSchema.parse(req.body);
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const reply = await portalMessagingService.replyToMessage(
@@ -283,47 +213,31 @@ export const replyToMessage = async (req: Request, res: Response) => {
       validatedData.message
     );
 
-    res.status(201).json({
-      success: true,
-      message: 'Reply sent successfully',
-      data: reply,
-    });
-  } catch (error: any) {
+    return sendCreated(res, reply, 'Reply sent successfully');
+  } catch (error) {
     logger.error('Failed to send reply', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to send reply',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to send reply');
   }
 };
 
 export const getUnreadCount = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const count = await portalMessagingService.getUnreadCount(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: { count },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { count });
+  } catch (error) {
     logger.error('Failed to get unread count', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get unread count',
-    });
+    return sendServerError(res, 'Failed to get unread count');
   }
 };
 
@@ -331,13 +245,10 @@ export const getUnreadCount = async (req: Request, res: Response) => {
 
 export const getDashboard = async (req: Request, res: Response) => {
   try {
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     // Get dashboard data in parallel
@@ -346,20 +257,14 @@ export const getDashboard = async (req: Request, res: Response) => {
       portalMessagingService.getUnreadCount(clientId),
     ]);
 
-    res.status(200).json({
-      success: true,
-      data: {
-        upcomingAppointments: upcomingAppointments.slice(0, 3), // Only next 3
-        unreadMessagesCount: unreadCount,
-      },
+    return sendSuccess(res, {
+      upcomingAppointments: upcomingAppointments.slice(0, 3), // Only next 3
+      unreadMessagesCount: unreadCount,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to get dashboard data', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to load dashboard',
-    });
+    return sendServerError(res, 'Failed to load dashboard');
   }
 };

@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import logger, { logControllerError } from '../../utils/logger';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../../types/express.d';
 import prisma from '../../services/database';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendForbidden, sendPaginated } from '../../utils/apiResponse';
 
 /**
  * Get guardian verification statistics
@@ -8,13 +11,10 @@ import prisma from '../../services/database';
  */
 export const getGuardianStats = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     // Get counts by status
@@ -61,24 +61,17 @@ export const getGuardianStats = async (req: Request, res: Response) => {
       averageVerificationDays = Math.round(totalDays / verifiedRelationships.length);
     }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        pending,
-        verified,
-        rejected: rejectedThisMonth,
-        averageVerificationDays,
-      },
+    return sendSuccess(res, {
+      pending,
+      verified,
+      rejected: rejectedThisMonth,
+      averageVerificationDays,
     });
   } catch (error) {
     const errorId = logControllerError('Get guardian stats', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve guardian statistics',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve guardian statistics', errorId);
   }
 };
 
@@ -88,13 +81,10 @@ export const getGuardianStats = async (req: Request, res: Response) => {
  */
 export const getGuardianRelationships = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const {
@@ -217,25 +207,17 @@ export const getGuardianRelationships = async (req: Request, res: Response) => {
       rejectionReason: null, // Could be stored in notes or a separate field
     }));
 
-    return res.status(200).json({
-      success: true,
-      data: transformedRelationships,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limitNum),
-      },
+    return sendPaginated(res, transformedRelationships, {
+      page: pageNum,
+      limit: limitNum,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limitNum),
     });
   } catch (error) {
     const errorId = logControllerError('Get guardian relationships', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve guardian relationships',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve guardian relationships', errorId);
   }
 };
 
@@ -245,15 +227,12 @@ export const getGuardianRelationships = async (req: Request, res: Response) => {
  */
 export const verifyGuardianRelationship = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { notes } = req.body;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     const relationship = await prisma.guardianRelationship.findUnique({
@@ -261,17 +240,11 @@ export const verifyGuardianRelationship = async (req: Request, res: Response) =>
     });
 
     if (!relationship) {
-      return res.status(404).json({
-        success: false,
-        message: 'Guardian relationship not found',
-      });
+      return sendNotFound(res, 'Guardian relationship');
     }
 
     if (relationship.verificationStatus !== 'PENDING') {
-      return res.status(400).json({
-        success: false,
-        message: 'Relationship is not pending verification',
-      });
+      return sendBadRequest(res, 'Relationship is not pending verification');
     }
 
     const updatedRelationship = await prisma.guardianRelationship.update({
@@ -286,20 +259,12 @@ export const verifyGuardianRelationship = async (req: Request, res: Response) =>
 
     logger.info(`Guardian relationship ${id} verified by user ${userId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Guardian relationship verified successfully',
-      data: updatedRelationship,
-    });
+    return sendSuccess(res, updatedRelationship, 'Guardian relationship verified successfully');
   } catch (error) {
     const errorId = logControllerError('Verify guardian relationship', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to verify guardian relationship',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to verify guardian relationship', errorId);
   }
 };
 
@@ -309,22 +274,16 @@ export const verifyGuardianRelationship = async (req: Request, res: Response) =>
  */
 export const rejectGuardianRelationship = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { reason } = req.body;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     if (!reason) {
-      return res.status(400).json({
-        success: false,
-        message: 'Rejection reason is required',
-      });
+      return sendBadRequest(res, 'Rejection reason is required');
     }
 
     const relationship = await prisma.guardianRelationship.findUnique({
@@ -332,17 +291,11 @@ export const rejectGuardianRelationship = async (req: Request, res: Response) =>
     });
 
     if (!relationship) {
-      return res.status(404).json({
-        success: false,
-        message: 'Guardian relationship not found',
-      });
+      return sendNotFound(res, 'Guardian relationship');
     }
 
     if (relationship.verificationStatus !== 'PENDING') {
-      return res.status(400).json({
-        success: false,
-        message: 'Relationship is not pending verification',
-      });
+      return sendBadRequest(res, 'Relationship is not pending verification');
     }
 
     const updatedRelationship = await prisma.guardianRelationship.update({
@@ -355,20 +308,12 @@ export const rejectGuardianRelationship = async (req: Request, res: Response) =>
 
     logger.info(`Guardian relationship ${id} rejected by user ${userId}: ${reason}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Guardian relationship rejected',
-      data: updatedRelationship,
-    });
+    return sendSuccess(res, updatedRelationship, 'Guardian relationship rejected');
   } catch (error) {
     const errorId = logControllerError('Reject guardian relationship', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to reject guardian relationship',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to reject guardian relationship', errorId);
   }
 };
 
@@ -378,22 +323,16 @@ export const rejectGuardianRelationship = async (req: Request, res: Response) =>
  */
 export const revokeGuardianRelationship = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { reason } = req.body;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     if (!reason) {
-      return res.status(400).json({
-        success: false,
-        message: 'Revocation reason is required',
-      });
+      return sendBadRequest(res, 'Revocation reason is required');
     }
 
     const relationship = await prisma.guardianRelationship.findUnique({
@@ -401,17 +340,11 @@ export const revokeGuardianRelationship = async (req: Request, res: Response) =>
     });
 
     if (!relationship) {
-      return res.status(404).json({
-        success: false,
-        message: 'Guardian relationship not found',
-      });
+      return sendNotFound(res, 'Guardian relationship');
     }
 
     if (relationship.verificationStatus !== 'VERIFIED') {
-      return res.status(400).json({
-        success: false,
-        message: 'Only verified relationships can be revoked',
-      });
+      return sendBadRequest(res, 'Only verified relationships can be revoked');
     }
 
     // Set end date to now to revoke access
@@ -426,20 +359,12 @@ export const revokeGuardianRelationship = async (req: Request, res: Response) =>
 
     logger.info(`Guardian relationship ${id} revoked by user ${userId}: ${reason}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Guardian relationship revoked',
-      data: updatedRelationship,
-    });
+    return sendSuccess(res, updatedRelationship, 'Guardian relationship revoked');
   } catch (error) {
     const errorId = logControllerError('Revoke guardian relationship', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to revoke guardian relationship',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to revoke guardian relationship', errorId);
   }
 };
 
@@ -449,41 +374,26 @@ export const revokeGuardianRelationship = async (req: Request, res: Response) =>
  */
 export const getDocumentUrl = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { storageLocation } = req.body;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res);
     }
 
     if (!storageLocation) {
-      return res.status(400).json({
-        success: false,
-        message: 'Storage location is required',
-      });
+      return sendBadRequest(res, 'Storage location is required');
     }
 
     // For now, return the storage location directly
     // In production, this would generate a presigned S3 URL
     // TODO: Implement presigned URL generation for S3 documents
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        url: storageLocation,
-      },
-    });
+    return sendSuccess(res, { url: storageLocation });
   } catch (error) {
     const errorId = logControllerError('Get document URL', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get document URL',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to get document URL', errorId);
   }
 };

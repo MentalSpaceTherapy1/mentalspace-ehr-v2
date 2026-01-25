@@ -12,6 +12,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import axios, { AxiosInstance } from 'axios';
+import logger from '../../utils/logger';
 import {
   PatientDemographic,
   LookupPatientRequest,
@@ -53,6 +54,10 @@ export interface PatientSyncResult {
  * Client to Patient Demographic Mapping Options
  */
 export interface MappingOptions {
+  /**
+   * @deprecated SSN is never collected by MentalSpace. This field exists only for
+   * API compatibility with AdvancedMD but will never be populated with actual data.
+   */
   includeSSN?: boolean;
   includeEmail?: boolean;
   includePhone?: boolean;
@@ -84,7 +89,7 @@ export class AdvancedMDPatientSyncService {
    */
   async initialize(): Promise<void> {
     await this.authService.initialize();
-    console.log('[AMD Patient Sync] Service initialized');
+    logger.info('[AMD Patient Sync] Service initialized');
   }
 
   /**
@@ -96,7 +101,7 @@ export class AdvancedMDPatientSyncService {
     dateOfBirth?: string
   ): Promise<PatientLookupResult> {
     try {
-      console.log(`[AMD Patient Sync] Looking up patient: ${firstName} ${lastName}`);
+      logger.info(`[AMD Patient Sync] Looking up patient: ${firstName} ${lastName}`);
 
       // Check rate limit
       await this.rateLimiter.checkRateLimit('LOOKUPPATIENT');
@@ -131,7 +136,7 @@ export class AdvancedMDPatientSyncService {
       return this.parseLookupResponse(response.data);
     } catch (error: any) {
       await this.rateLimiter.recordFailure('LOOKUPPATIENT', error.message, false);
-      console.error('[AMD Patient Sync] Lookup failed:', error.message);
+      logger.error('AMD Patient Sync: Lookup failed:', error.message);
       throw error;
     }
   }
@@ -141,7 +146,7 @@ export class AdvancedMDPatientSyncService {
    */
   async lookupPatientById(advancedMDPatientId: string): Promise<PatientLookupResult> {
     try {
-      console.log(`[AMD Patient Sync] Looking up patient by ID: ${advancedMDPatientId}`);
+      logger.info(`[AMD Patient Sync] Looking up patient by ID: ${advancedMDPatientId}`);
 
       await this.rateLimiter.checkRateLimit('LOOKUPPATIENT');
       const token = await this.authService.getToken();
@@ -181,7 +186,7 @@ export class AdvancedMDPatientSyncService {
     const syncLog = await this.createSyncLog(clientId, 'to_amd', 'pending');
 
     try {
-      console.log(`[AMD Patient Sync] Creating patient for client: ${clientId}`);
+      logger.info(`[AMD Patient Sync] Creating patient for client: ${clientId}`);
 
       // Get client data
       const client = await prisma.client.findUnique({
@@ -252,7 +257,7 @@ export class AdvancedMDPatientSyncService {
       // Complete sync log
       await this.completeSyncLog(syncLog.id, 'success', response.data, patientId);
 
-      console.log(`[AMD Patient Sync] Patient created: ${patientId}`);
+      logger.info(`[AMD Patient Sync] Patient created: ${patientId}`);
 
       return {
         success: true,
@@ -272,7 +277,7 @@ export class AdvancedMDPatientSyncService {
         },
       });
 
-      console.error('[AMD Patient Sync] Create failed:', error.message);
+      logger.error('AMD Patient Sync: Create failed:', error.message);
 
       return {
         success: false,
@@ -292,7 +297,7 @@ export class AdvancedMDPatientSyncService {
     const syncLog = await this.createSyncLog(clientId, 'to_amd', 'pending');
 
     try {
-      console.log(`[AMD Patient Sync] Updating patient for client: ${clientId}`);
+      logger.info(`[AMD Patient Sync] Updating patient for client: ${clientId}`);
 
       // Get client data
       const client = await prisma.client.findUnique({
@@ -363,7 +368,7 @@ export class AdvancedMDPatientSyncService {
         client.advancedMDPatientId
       );
 
-      console.log(`[AMD Patient Sync] Patient updated: ${client.advancedMDPatientId}`);
+      logger.info(`[AMD Patient Sync] Patient updated: ${client.advancedMDPatientId}`);
 
       return {
         success: true,
@@ -382,7 +387,7 @@ export class AdvancedMDPatientSyncService {
         },
       });
 
-      console.error('[AMD Patient Sync] Update failed:', error.message);
+      logger.error('AMD Patient Sync: Update failed:', error.message);
 
       return {
         success: false,
@@ -398,7 +403,7 @@ export class AdvancedMDPatientSyncService {
    */
   async syncPatientToAMD(clientId: string, profileId?: string, options: MappingOptions = {}): Promise<PatientSyncResult> {
     try {
-      console.log(`[AMD Patient Sync] Syncing patient to AMD: ${clientId}`);
+      logger.info(`[AMD Patient Sync] Syncing patient to AMD: ${clientId}`);
 
       // Get client data
       const client = await prisma.client.findUnique({
@@ -428,7 +433,7 @@ export class AdvancedMDPatientSyncService {
       // Create new patient in AMD
       return this.createPatient(clientId, profileId, options);
     } catch (error: any) {
-      console.error('[AMD Patient Sync] Sync to AMD failed:', error.message);
+      logger.error('AMD Patient Sync: Sync to AMD failed:', error.message);
       return {
         success: false,
         errorMessage: error.message,
@@ -441,7 +446,7 @@ export class AdvancedMDPatientSyncService {
    */
   async syncPatientFromAMD(advancedMDPatientId: string): Promise<PatientSyncResult> {
     try {
-      console.log(`[AMD Patient Sync] Syncing patient from AMD: ${advancedMDPatientId}`);
+      logger.info(`[AMD Patient Sync] Syncing patient from AMD: ${advancedMDPatientId}`);
 
       // Lookup patient in AMD
       const lookupResult = await this.lookupPatientById(advancedMDPatientId);
@@ -462,14 +467,14 @@ export class AdvancedMDPatientSyncService {
       // Update client with AMD data
       await this.updateClientFromDemographic(client.id, lookupResult.demographic);
 
-      console.log(`[AMD Patient Sync] Patient synced from AMD: ${advancedMDPatientId}`);
+      logger.info(`[AMD Patient Sync] Patient synced from AMD: ${advancedMDPatientId}`);
 
       return {
         success: true,
         advancedMDPatientId,
       };
     } catch (error: any) {
-      console.error('[AMD Patient Sync] Sync from AMD failed:', error.message);
+      logger.error('AMD Patient Sync: Sync from AMD failed:', error.message);
       return {
         success: false,
         errorMessage: error.message,
@@ -482,7 +487,7 @@ export class AdvancedMDPatientSyncService {
    */
   async getUpdatedPatients(since: Date): Promise<PatientDemographic[]> {
     try {
-      console.log(`[AMD Patient Sync] Getting updated patients since: ${since.toISOString()}`);
+      logger.info(`[AMD Patient Sync] Getting updated patients since: ${since.toISOString()}`);
 
       await this.rateLimiter.checkRateLimit('GETUPDATEDPATIENTS');
       const token = await this.authService.getToken();
@@ -533,6 +538,8 @@ export class AdvancedMDPatientSyncService {
     };
 
     // Optional fields based on options
+    // NOTE: SSN is never collected by MentalSpace. This condition will never be true
+    // as client.ssn is always undefined. Kept for AdvancedMD API compatibility only.
     if (options.includeSSN && client.ssn) {
       demographic.ssn = client.ssn;
     }

@@ -3,6 +3,8 @@ import { z } from 'zod';
 import * as portalAuthService from '../../services/portal/auth.service';
 import logger from '../../utils/logger';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendServerError } from '../../utils/apiResponse';
+import { getErrorMessage, getErrorCode, getErrorStack, getErrorStatusCode } from '../../utils/errorHelpers';
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -85,22 +87,15 @@ export const register = async (req: Request, res: Response) => {
       email: data.email,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Portal account created successfully. Please check your email to verify your account.',
-      data: result,
-    });
-  } catch (error: any) {
+    return sendCreated(res, result, 'Portal account created successfully. Please check your email to verify your account.');
+  } catch (error) {
     logger.error('Portal registration failed', {
-      message: error?.message,
-      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
-      statusCode: error?.statusCode,
+      message: getErrorMessage(error),
+      stack: process.env.NODE_ENV === 'development' ? getErrorStack(error) : undefined,
+      statusCode: getErrorStatusCode(error),
     });
 
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to create portal account',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to create portal account');
   }
 };
 
@@ -123,25 +118,18 @@ export const activateAccount = async (req: Request, res: Response) => {
       email: data.email,
     });
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-      data: {
-        email: result.email,
-        clientName: result.clientName,
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, {
+      email: result.email,
+      clientName: result.clientName,
+    }, result.message);
+  } catch (error) {
     logger.error('Portal account activation failed', {
-      message: error?.message,
-      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
-      statusCode: error?.statusCode,
+      message: getErrorMessage(error),
+      stack: process.env.NODE_ENV === 'development' ? getErrorStack(error) : undefined,
+      statusCode: getErrorStatusCode(error),
     });
 
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to activate portal account',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to activate portal account');
   }
 };
 
@@ -155,16 +143,9 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     const result = await portalAuthService.verifyEmail(data.token);
 
-    res.status(200).json({
-      success: true,
-      message: 'Email verified successfully',
-      data: result,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to verify email',
-    });
+    return sendSuccess(res, result, 'Email verified successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to verify email');
   }
 };
 
@@ -174,16 +155,9 @@ export const resendVerificationEmail = async (req: Request, res: Response) => {
 
     const result = await portalAuthService.resendVerificationEmail(data.email);
 
-    res.status(200).json({
-      success: true,
-      message: 'Verification email sent',
-      data: result,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to resend verification email',
-    });
+    return sendSuccess(res, result, 'Verification email sent');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to resend verification email');
   }
 };
 
@@ -200,16 +174,9 @@ export const login = async (req: Request, res: Response) => {
       password: data.password,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      data: result,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Login failed',
-    });
+    return sendSuccess(res, result, 'Login successful');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Login failed');
   }
 };
 
@@ -223,15 +190,9 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
     const result = await portalAuthService.requestPasswordReset(data.email);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to process password reset request',
-    });
+    return sendSuccess(res, null, result.message);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to process password reset request');
   }
 };
 
@@ -244,15 +205,9 @@ export const resetPassword = async (req: Request, res: Response) => {
       newPassword: data.newPassword,
     });
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to reset password',
-    });
+    return sendSuccess(res, null, result.message);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to reset password');
   }
 };
 
@@ -271,15 +226,9 @@ export const changePassword = async (req: PortalRequest, res: Response) => {
       newPassword: data.newPassword,
     });
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to change password',
-    });
+    return sendSuccess(res, null, result.message);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to change password');
   }
 };
 
@@ -297,24 +246,17 @@ export const changeTempPassword = async (req: PortalRequest, res: Response) => {
       newPassword: data.newPassword,
     });
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-      data: {
-        token: result.token,
-        passwordExpiresAt: result.passwordExpiresAt,
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, {
+      token: result.token,
+      passwordExpiresAt: result.passwordExpiresAt,
+    }, result.message);
+  } catch (error) {
     logger.error('Temp password change failed', {
-      message: error?.message,
+      message: getErrorMessage(error),
       clientId: req.portalAccount?.clientId,
     });
 
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to set new password',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to set new password');
   }
 };
 
@@ -328,15 +270,9 @@ export const getAccount = async (req: PortalRequest, res: Response) => {
 
     const account = await portalAuthService.getAccount(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: account,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch account',
-    });
+    return sendSuccess(res, account);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch account');
   }
 };
 
@@ -351,16 +287,9 @@ export const updateAccountSettings = async (req: PortalRequest, res: Response) =
       notificationPreferences: data.notificationPreferences,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Account settings updated successfully',
-      data: result,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to update account settings',
-    });
+    return sendSuccess(res, result, 'Account settings updated successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to update account settings');
   }
 };
 
@@ -370,14 +299,8 @@ export const deactivateAccount = async (req: PortalRequest, res: Response) => {
 
     const result = await portalAuthService.deactivateAccount(clientId);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to deactivate account',
-    });
+    return sendSuccess(res, null, result.message);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to deactivate account');
   }
 };

@@ -1,18 +1,22 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { PrismaClient } from '@mentalspace/database';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 3.2: Removed direct PrismaClient import - using service methods instead
+import prisma from '../services/database';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import logger, { auditLogger } from '../utils/logger';
 import { ReminderService } from '../services/reminder.service.new';
 import { TwilioReminderService } from '../services/twilio.reminder.service';
 import { EmailReminderService } from '../services/email.reminder.service';
 import { IcsGeneratorService } from '../services/icsGenerator.service';
+import * as reminderConfigService from '../services/reminder-config.service';
 import {
   triggerReminderProcessing,
   triggerFailedReminderRetry,
   getReminderJobStatus,
 } from '../jobs/processReminders.job';
-
-const prisma = new PrismaClient();
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendForbidden, sendPaginated, sendValidationError } from '../utils/apiResponse';
 
 // Initialize services
 const twilioService = new TwilioReminderService(prisma);
@@ -86,22 +90,11 @@ const testEmailSchema = z.object({
  */
 export const getConfig = async (req: Request, res: Response) => {
   try {
-    const config = await prisma.reminderConfiguration.findFirst({
-      include: {
-        practiceSettings: {
-          select: {
-            id: true,
-            practiceName: true,
-          },
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const config = await reminderConfigService.getReminderConfiguration();
 
     if (!config) {
-      return res.status(404).json({
-        success: false,
-        message: 'Reminder configuration not found',
-      });
+      return sendNotFound(res, 'Reminder configuration');
     }
 
     // Mask sensitive credentials
@@ -113,17 +106,10 @@ export const getConfig = async (req: Request, res: Response) => {
       twilioAuthToken: config.twilioAuthToken ? '***HIDDEN***' : null,
     };
 
-    res.status(200).json({
-      success: true,
-      data: safeConfig,
-    });
+    return sendSuccess(res, safeConfig);
   } catch (error) {
     logger.error('Error getting reminder config', { error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get reminder configuration',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to get reminder configuration');
   }
 };
 
@@ -134,20 +120,8 @@ export const updateConfig = async (req: Request, res: Response) => {
   try {
     const validatedData = configSchema.parse(req.body);
 
-    // Check if configuration exists
-    const existingConfig = await prisma.reminderConfiguration.findFirst();
-
-    let config;
-    if (existingConfig) {
-      config = await prisma.reminderConfiguration.update({
-        where: { id: existingConfig.id },
-        data: validatedData,
-      });
-    } else {
-      config = await prisma.reminderConfiguration.create({
-        data: validatedData,
-      });
-    }
+    // Phase 3.2: Use service method instead of direct prisma call
+    const config = await reminderConfigService.upsertReminderConfiguration(validatedData);
 
     // Reinitialize services with new configuration
     await twilioService.reinitialize();
@@ -155,30 +129,18 @@ export const updateConfig = async (req: Request, res: Response) => {
 
     auditLogger.info('Reminder configuration updated', {
       configId: config.id,
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
       action: 'REMINDER_CONFIG_UPDATED',
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Reminder configuration updated successfully',
-      data: config,
-    });
+    return sendSuccess(res, config, 'Reminder configuration updated successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     logger.error('Error updating reminder config', { error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update reminder configuration',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to update reminder configuration');
   }
 };
 
@@ -194,30 +156,19 @@ export const testSms = async (req: Request, res: Response) => {
     auditLogger.info('SMS test requested', {
       phoneNumber,
       success,
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
     });
 
-    res.status(200).json({
-      success,
-      message: success
-        ? 'Test SMS sent successfully'
-        : 'Failed to send test SMS. Check configuration.',
-    });
+    return sendSuccess(res, { success }, success
+      ? 'Test SMS sent successfully'
+      : 'Failed to send test SMS. Check configuration.');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     logger.error('Error testing SMS', { error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to test SMS',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to test SMS');
   }
 };
 
@@ -233,30 +184,19 @@ export const testEmail = async (req: Request, res: Response) => {
     auditLogger.info('Email test requested', {
       email,
       success,
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
     });
 
-    res.status(200).json({
-      success,
-      message: success
-        ? 'Test email sent successfully'
-        : 'Failed to send test email. Check configuration.',
-    });
+    return sendSuccess(res, { success }, success
+      ? 'Test email sent successfully'
+      : 'Failed to send test email. Check configuration.');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     logger.error('Error testing email', { error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to test email',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to test email');
   }
 };
 
@@ -331,17 +271,10 @@ export const getAppointmentReminders = async (req: Request, res: Response) => {
 
     const reminders = await reminderService.getAppointmentReminders(appointmentId);
 
-    res.status(200).json({
-      success: true,
-      data: reminders,
-    });
+    return sendSuccess(res, reminders);
   } catch (error) {
     logger.error('Error getting appointment reminders', { error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get reminders',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to get reminders');
   }
 };
 
@@ -356,20 +289,13 @@ export const resendReminder = async (req: Request, res: Response) => {
 
     auditLogger.info('Reminder resent manually', {
       reminderId,
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Reminder resent successfully',
-    });
+    return sendSuccess(res, null, 'Reminder resent successfully');
   } catch (error) {
     logger.error('Error resending reminder', { error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to resend reminder',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to resend reminder');
   }
 };
 
@@ -384,20 +310,13 @@ export const scheduleReminders = async (req: Request, res: Response) => {
 
     auditLogger.info('Reminders scheduled manually', {
       appointmentId,
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Reminders scheduled successfully',
-    });
+    return sendSuccess(res, null, 'Reminders scheduled successfully');
   } catch (error) {
     logger.error('Error scheduling reminders', { error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to schedule reminders',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to schedule reminders');
   }
 };
 
@@ -409,21 +328,14 @@ export const processReminders = async (req: Request, res: Response) => {
     const results = await triggerReminderProcessing();
 
     auditLogger.info('Reminder processing triggered manually', {
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
       results,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Reminder processing completed',
-      data: results,
-    });
+    return sendSuccess(res, results, 'Reminder processing completed');
   } catch (error) {
     logger.error('Error processing reminders', { error });
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to process reminders',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to process reminders');
   }
 };
 
@@ -435,19 +347,13 @@ export const retryFailedReminders = async (req: Request, res: Response) => {
     await triggerFailedReminderRetry();
 
     auditLogger.info('Failed reminder retry triggered manually', {
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Failed reminder retry completed',
-    });
+    return sendSuccess(res, null, 'Failed reminder retry completed');
   } catch (error) {
     logger.error('Error retrying failed reminders', { error });
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to retry reminders',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to retry reminders');
   }
 };
 
@@ -458,16 +364,10 @@ export const getJobStatus = async (req: Request, res: Response) => {
   try {
     const status = getReminderJobStatus();
 
-    res.status(200).json({
-      success: true,
-      data: status,
-    });
+    return sendSuccess(res, status);
   } catch (error) {
     logger.error('Error getting job status', { error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get job status',
-    });
+    return sendServerError(res, 'Failed to get job status');
   }
 };
 
@@ -478,31 +378,15 @@ export const getStatistics = async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
 
-    const stats = await prisma.appointmentReminder.groupBy({
-      by: ['deliveryStatus', 'reminderType'],
-      _count: {
-        id: true,
-      },
-      _sum: {
-        cost: true,
-      },
-      where: {
-        createdAt: {
-          gte: startDate ? new Date(startDate as string) : undefined,
-          lte: endDate ? new Date(endDate as string) : undefined,
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const stats = await reminderConfigService.getReminderStatistics(
+      startDate ? new Date(startDate as string) : undefined,
+      endDate ? new Date(endDate as string) : undefined
+    );
 
-    res.status(200).json({
-      success: true,
-      data: stats,
-    });
+    return sendSuccess(res, stats);
   } catch (error) {
     logger.error('Error getting reminder statistics', { error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get statistics',
-    });
+    return sendServerError(res, 'Failed to get statistics');
   }
 };

@@ -1,5 +1,6 @@
 import prisma from './database';
 import logger from '../utils/logger';
+import { AppointmentStatus } from '@mentalspace/shared';
 
 /**
  * ============================================================================
@@ -1942,10 +1943,10 @@ export async function generatePracticeManagementDashboard(params: PracticeManage
     // Calculate appointment statistics
     const appointmentStats = {
       total: appointments.length,
-      completed: appointments.filter(a => a.status === 'COMPLETED').length,
-      scheduled: appointments.filter(a => a.status === 'SCHEDULED').length,
-      cancelled: appointments.filter(a => a.status === 'CANCELLED').length,
-      noShow: appointments.filter(a => a.status === 'NO_SHOW').length
+      completed: appointments.filter(a => a.status === AppointmentStatus.COMPLETED).length,
+      scheduled: appointments.filter(a => a.status === AppointmentStatus.SCHEDULED).length,
+      cancelled: appointments.filter(a => a.status === AppointmentStatus.CANCELLED).length,
+      noShow: appointments.filter(a => a.status === AppointmentStatus.NO_SHOW).length
     };
 
     // Calculate compliance metrics

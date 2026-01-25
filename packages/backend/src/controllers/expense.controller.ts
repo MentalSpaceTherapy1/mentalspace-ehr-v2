@@ -8,8 +8,10 @@
 
 import { Request, Response } from 'express';
 import { logControllerError } from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
 import * as expenseService from '../services/expense.service';
 import { ExpenseStatus, BudgetCategory } from '@prisma/client';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * POST /api/expenses
@@ -18,10 +20,10 @@ import { ExpenseStatus, BudgetCategory } from '@prisma/client';
 export async function createExpense(req: Request, res: Response): Promise<void> {
   try {
     const expense = await expenseService.createExpense(req.body);
-    res.status(201).json(expense);
-  } catch (error: any) {
+    sendCreated(res, expense, 'Expense created successfully');
+  } catch (error) {
     logControllerError('Error creating expense', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -35,14 +37,14 @@ export async function getExpense(req: Request, res: Response): Promise<void> {
     const expense = await expenseService.getExpenseById(id);
 
     if (!expense) {
-      res.status(404).json({ error: 'Expense not found' });
+      sendNotFound(res, 'Expense');
       return;
     }
 
-    res.json(expense);
-  } catch (error: any) {
+    sendSuccess(res, expense);
+  } catch (error) {
     logControllerError('Error fetching expense', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -84,10 +86,10 @@ export async function listExpenses(req: Request, res: Response): Promise<void> {
       limit: limit ? parseInt(limit as string) : undefined,
     });
 
-    res.json(result);
-  } catch (error: any) {
+    sendSuccess(res, result);
+  } catch (error) {
     logControllerError('Error listing expenses', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -99,10 +101,10 @@ export async function updateExpense(req: Request, res: Response): Promise<void> 
   try {
     const { id } = req.params;
     const expense = await expenseService.updateExpense(id, req.body);
-    res.json(expense);
-  } catch (error: any) {
+    sendSuccess(res, expense, 'Expense updated successfully');
+  } catch (error) {
     logControllerError('Error updating expense', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -116,15 +118,15 @@ export async function approveExpense(req: Request, res: Response): Promise<void>
     const { approvedById, approvalNotes } = req.body;
 
     if (!approvedById) {
-      res.status(400).json({ error: 'Approver ID is required' });
+      sendBadRequest(res, 'Approver ID is required');
       return;
     }
 
     const expense = await expenseService.approveExpense(id, approvedById, approvalNotes);
-    res.json(expense);
-  } catch (error: any) {
+    sendSuccess(res, expense, 'Expense approved successfully');
+  } catch (error) {
     logControllerError('Error approving expense', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -138,15 +140,15 @@ export async function denyExpense(req: Request, res: Response): Promise<void> {
     const { approvedById, approvalNotes } = req.body;
 
     if (!approvedById || !approvalNotes) {
-      res.status(400).json({ error: 'Approver ID and approval notes are required' });
+      sendBadRequest(res, 'Approver ID and approval notes are required');
       return;
     }
 
     const expense = await expenseService.denyExpense(id, approvedById, approvalNotes);
-    res.json(expense);
-  } catch (error: any) {
+    sendSuccess(res, expense, 'Expense denied successfully');
+  } catch (error) {
     logControllerError('Error denying expense', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -164,10 +166,10 @@ export async function markExpensePaid(req: Request, res: Response): Promise<void
       reimbursementDate ? new Date(reimbursementDate) : new Date()
     );
 
-    res.json(expense);
-  } catch (error: any) {
+    sendSuccess(res, expense, 'Expense marked as paid');
+  } catch (error) {
     logControllerError('Error marking expense as paid', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -186,10 +188,10 @@ export async function getExpenseSummary(req: Request, res: Response): Promise<vo
       category: category as BudgetCategory,
     });
 
-    res.json(summary);
-  } catch (error: any) {
+    sendSuccess(res, summary);
+  } catch (error) {
     logControllerError('Error fetching expense summary', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -203,10 +205,10 @@ export async function getPendingExpenses(req: Request, res: Response): Promise<v
     const expenses = await expenseService.getPendingExpenses(
       limit ? parseInt(limit as string) : undefined
     );
-    res.json(expenses);
-  } catch (error: any) {
+    sendSuccess(res, expenses);
+  } catch (error) {
     logControllerError('Error fetching pending expenses', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -225,9 +227,9 @@ export async function getUserExpenseHistory(req: Request, res: Response): Promis
       limit ? parseInt(limit as string) : undefined
     );
 
-    res.json(result);
-  } catch (error: any) {
+    sendSuccess(res, result);
+  } catch (error) {
     logControllerError('Error fetching user expense history', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }

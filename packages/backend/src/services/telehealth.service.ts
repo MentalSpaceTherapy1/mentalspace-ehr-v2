@@ -3,6 +3,7 @@ import logger from '../utils/logger';
 import config from '../config';
 import * as twilioService from './twilio.service';
 import { v4 as uuidv4 } from 'uuid';
+import { AppointmentStatus as AppointmentStatusConst, TelehealthStatus } from '@mentalspace/shared';
 
 interface ConsentValidationResult {
   isValid: boolean;
@@ -154,7 +155,7 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
         clinicianJoinUrl: `${config.frontendUrl}/telehealth/session/${data.appointmentId}?role=clinician`,
         clientJoinUrl: `${config.frontendUrl}/portal/telehealth/${data.appointmentId}`,
         meetingDataJson: twilioRoom, // Store Twilio room data
-        status: 'SCHEDULED',
+        status: TelehealthStatus.SCHEDULED,
         recordingConsent: false,
         recordingEnabled: false,
         createdBy: data.createdBy,
@@ -429,7 +430,7 @@ export async function endTelehealthSession(sessionId: string, userId: string, en
     const updatedSession = await prisma.telehealthSession.update({
       where: { id: sessionId },
       data: {
-        status: 'COMPLETED',
+        status: TelehealthStatus.COMPLETED,
         sessionEndedAt: new Date(),
         actualDuration,
         endReason: endReason || 'Normal',
@@ -443,7 +444,7 @@ export async function endTelehealthSession(sessionId: string, userId: string, en
         await prisma.appointment.update({
           where: { id: session.appointmentId },
           data: {
-            status: 'COMPLETED',
+            status: TelehealthStatus.COMPLETED,
             updatedAt: new Date(),
           },
         });
@@ -765,7 +766,7 @@ export async function activateEmergency(data: {
       await prisma.telehealthSession.update({
         where: { id: data.sessionId },
         data: {
-          status: 'COMPLETED',
+          status: TelehealthStatus.COMPLETED,
           sessionEndedAt: new Date(),
           endReason: 'Emergency',
         },

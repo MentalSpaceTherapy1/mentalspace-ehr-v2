@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Create a new symptom log entry
@@ -22,42 +23,27 @@ export const createSymptomLog = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate required fields
     if (!symptoms || !Array.isArray(symptoms) || symptoms.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one symptom is required',
-      });
+      return sendBadRequest(res, 'At least one symptom is required');
     }
 
     if (severity === undefined || severity === null) {
-      return res.status(400).json({
-        success: false,
-        message: 'Severity is required',
-      });
+      return sendBadRequest(res, 'Severity is required');
     }
 
     // Validate severity range (1-10)
     if (severity < 1 || severity > 10) {
-      return res.status(400).json({
-        success: false,
-        message: 'Severity must be between 1 and 10',
-      });
+      return sendBadRequest(res, 'Severity must be between 1 and 10');
     }
 
     // Validate mood if provided
     const validMoods = ['VERY_POOR', 'POOR', 'NEUTRAL', 'GOOD', 'VERY_GOOD'];
     if (mood && !validMoods.includes(mood)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid mood value',
-      });
+      return sendBadRequest(res, 'Invalid mood value');
     }
 
     // Create symptom log
@@ -76,27 +62,20 @@ export const createSymptomLog = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Symptom log created for client ${clientId}: severity ${severity}`);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Symptom log created successfully',
-      data: {
-        id: symptomLog.id,
-        symptoms: symptomLog.symptoms,
-        severity: symptomLog.severity,
-        triggers: symptomLog.triggers,
-        notes: symptomLog.notes,
-        mood: symptomLog.mood,
-        duration: symptomLog.duration,
-        medications: symptomLog.medications,
-        loggedAt: symptomLog.loggedAt,
-      },
-    });
-  } catch (error: any) {
+    return sendCreated(res, {
+      id: symptomLog.id,
+      symptoms: symptomLog.symptoms,
+      severity: symptomLog.severity,
+      triggers: symptomLog.triggers,
+      notes: symptomLog.notes,
+      mood: symptomLog.mood,
+      duration: symptomLog.duration,
+      medications: symptomLog.medications,
+      loggedAt: symptomLog.loggedAt,
+    }, 'Symptom log created successfully');
+  } catch (error) {
     logger.error('Error creating symptom log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create symptom log',
-    });
+    return sendServerError(res, 'Failed to create symptom log');
   }
 };
 
@@ -110,10 +89,7 @@ export const getSymptomLogs = async (req: PortalRequest, res: Response) => {
     const { days, startDate, endDate } = req.query;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Build date filter
@@ -151,16 +127,10 @@ export const getSymptomLogs = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${formattedLogs.length} symptom logs for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: formattedLogs,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, formattedLogs);
+  } catch (error) {
     logger.error('Error fetching symptom logs:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch symptom logs',
-    });
+    return sendServerError(res, 'Failed to fetch symptom logs');
   }
 };
 
@@ -174,10 +144,7 @@ export const getSymptomLogById = async (req: PortalRequest, res: Response) => {
     const { logId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const log = await prisma.symptomLog.findFirst({
@@ -188,32 +155,23 @@ export const getSymptomLogById = async (req: PortalRequest, res: Response) => {
     });
 
     if (!log) {
-      return res.status(404).json({
-        success: false,
-        message: 'Symptom log not found',
-      });
+      return sendNotFound(res, 'Symptom log');
     }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: log.id,
-        symptoms: log.symptoms,
-        severity: log.severity,
-        triggers: log.triggers,
-        notes: log.notes,
-        mood: log.mood,
-        duration: log.duration,
-        medications: log.medications,
-        loggedAt: log.loggedAt,
-      },
+    return sendSuccess(res, {
+      id: log.id,
+      symptoms: log.symptoms,
+      severity: log.severity,
+      triggers: log.triggers,
+      notes: log.notes,
+      mood: log.mood,
+      duration: log.duration,
+      medications: log.medications,
+      loggedAt: log.loggedAt,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching symptom log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch symptom log',
-    });
+    return sendServerError(res, 'Failed to fetch symptom log');
   }
 };
 
@@ -236,10 +194,7 @@ export const updateSymptomLog = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify ownership
@@ -251,27 +206,18 @@ export const updateSymptomLog = async (req: PortalRequest, res: Response) => {
     });
 
     if (!existingLog) {
-      return res.status(404).json({
-        success: false,
-        message: 'Symptom log not found',
-      });
+      return sendNotFound(res, 'Symptom log');
     }
 
     // Validate severity if provided
     if (severity !== undefined && (severity < 1 || severity > 10)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Severity must be between 1 and 10',
-      });
+      return sendBadRequest(res, 'Severity must be between 1 and 10');
     }
 
     // Validate mood if provided
     const validMoods = ['VERY_POOR', 'POOR', 'NEUTRAL', 'GOOD', 'VERY_GOOD'];
     if (mood && !validMoods.includes(mood)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid mood value',
-      });
+      return sendBadRequest(res, 'Invalid mood value');
     }
 
     const updatedLog = await prisma.symptomLog.update({
@@ -289,17 +235,10 @@ export const updateSymptomLog = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Symptom log ${logId} updated for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Symptom log updated successfully',
-      data: updatedLog,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, updatedLog, 'Symptom log updated successfully');
+  } catch (error) {
     logger.error('Error updating symptom log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update symptom log',
-    });
+    return sendServerError(res, 'Failed to update symptom log');
   }
 };
 
@@ -313,10 +252,7 @@ export const deleteSymptomLog = async (req: PortalRequest, res: Response) => {
     const { logId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify ownership
@@ -328,10 +264,7 @@ export const deleteSymptomLog = async (req: PortalRequest, res: Response) => {
     });
 
     if (!existingLog) {
-      return res.status(404).json({
-        success: false,
-        message: 'Symptom log not found',
-      });
+      return sendNotFound(res, 'Symptom log');
     }
 
     await prisma.symptomLog.delete({
@@ -340,16 +273,10 @@ export const deleteSymptomLog = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Symptom log ${logId} deleted for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Symptom log deleted successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Symptom log deleted successfully');
+  } catch (error) {
     logger.error('Error deleting symptom log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to delete symptom log',
-    });
+    return sendServerError(res, 'Failed to delete symptom log');
   }
 };
 
@@ -362,10 +289,7 @@ export const getSymptomTrends = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get symptom logs from last 30 days
@@ -381,17 +305,14 @@ export const getSymptomTrends = async (req: PortalRequest, res: Response) => {
     });
 
     if (symptomLogs.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          averageSeverity: 0,
-          severityTrend: 'stable',
-          totalEntries: 0,
-          streakDays: 0,
-          mostCommonSymptoms: [],
-          mostCommonTriggers: [],
-          weeklyAverage: [],
-        },
+      return sendSuccess(res, {
+        averageSeverity: 0,
+        severityTrend: 'stable',
+        totalEntries: 0,
+        streakDays: 0,
+        mostCommonSymptoms: [],
+        mostCommonTriggers: [],
+        weeklyAverage: [],
       });
     }
 
@@ -487,23 +408,17 @@ export const getSymptomTrends = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Calculated symptom trends for client ${clientId}: ${severityTrend}`);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        averageSeverity: Math.round(averageSeverity * 10) / 10,
-        severityTrend,
-        totalEntries: symptomLogs.length,
-        streakDays,
-        mostCommonSymptoms,
-        mostCommonTriggers,
-        weeklyAverage,
-      },
+    return sendSuccess(res, {
+      averageSeverity: Math.round(averageSeverity * 10) / 10,
+      severityTrend,
+      totalEntries: symptomLogs.length,
+      streakDays,
+      mostCommonSymptoms,
+      mostCommonTriggers,
+      weeklyAverage,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error calculating symptom trends:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to calculate symptom trends',
-    });
+    return sendServerError(res, 'Failed to calculate symptom trends');
   }
 };

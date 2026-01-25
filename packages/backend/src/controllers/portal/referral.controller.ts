@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendConflict, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Submit a new client referral
@@ -21,18 +22,12 @@ export const submitReferral = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate required fields
     if (!referredPersonName || !referredPersonPhone) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name and phone number are required',
-      });
+      return sendBadRequest(res, 'Name and phone number are required');
     }
 
     // Check for duplicate referral (same phone number from same client)
@@ -47,10 +42,7 @@ export const submitReferral = async (req: PortalRequest, res: Response) => {
     });
 
     if (existingReferral) {
-      return res.status(409).json({
-        success: false,
-        message: 'You have already referred this person. We will contact them soon.',
-      });
+      return sendConflict(res, 'You have already referred this person. We will contact them soon.');
     }
 
     // Create referral
@@ -69,17 +61,10 @@ export const submitReferral = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Client ${clientId} submitted referral for ${referredPersonName}`);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Thank you for your referral! We will reach out to them soon.',
-      data: referral,
-    });
+    return sendCreated(res, referral, 'Thank you for your referral! We will reach out to them soon.');
   } catch (error) {
     logger.error('Error submitting referral:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to submit referral',
-    });
+    return sendServerError(res, 'Failed to submit referral');
   }
 };
 
@@ -92,10 +77,7 @@ export const getReferrals = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const referrals = await prisma.clientReferral.findMany({
@@ -121,16 +103,10 @@ export const getReferrals = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${referrals.length} referrals for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: referrals,
-    });
+    return sendSuccess(res, referrals);
   } catch (error) {
     logger.error('Error fetching referrals:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch referrals',
-    });
+    return sendServerError(res, 'Failed to fetch referrals');
   }
 };
 
@@ -143,10 +119,7 @@ export const getReferralStats = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get counts by status
@@ -198,16 +171,10 @@ export const getReferralStats = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved referral stats for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: stats,
-    });
+    return sendSuccess(res, stats);
   } catch (error) {
     logger.error('Error fetching referral stats:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch referral statistics',
-    });
+    return sendServerError(res, 'Failed to fetch referral statistics');
   }
 };
 
@@ -221,10 +188,7 @@ export const getReferralDetails = async (req: PortalRequest, res: Response) => {
     const { referralId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const referral = await prisma.clientReferral.findFirst({
@@ -252,23 +216,14 @@ export const getReferralDetails = async (req: PortalRequest, res: Response) => {
     });
 
     if (!referral) {
-      return res.status(404).json({
-        success: false,
-        message: 'Referral not found',
-      });
+      return sendNotFound(res, 'Referral');
     }
 
     logger.info(`Client ${clientId} viewed referral ${referralId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: referral,
-    });
+    return sendSuccess(res, referral);
   } catch (error) {
     logger.error('Error fetching referral details:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch referral details',
-    });
+    return sendServerError(res, 'Failed to fetch referral details');
   }
 };

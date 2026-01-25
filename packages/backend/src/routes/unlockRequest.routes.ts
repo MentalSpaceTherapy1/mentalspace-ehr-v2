@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { sendEmail, EmailTemplates } from '../services/email.service';
 import prisma from '../services/database';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -19,7 +21,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 
     let unlockRequests;
 
-    if (user?.roles.includes('ADMINISTRATOR')) {
+    if (user?.roles.includes(UserRoles.ADMINISTRATOR)) {
       // Admins see all unlock requests
       unlockRequests = await prisma.clinicalNote.findMany({
         where: {
@@ -45,7 +47,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
         },
         orderBy: { unlockRequestDate: 'asc' },
       });
-    } else if (user?.roles.includes('SUPERVISOR')) {
+    } else if (user?.roles.includes(UserRoles.SUPERVISOR)) {
       // Supervisors see unlock requests from their supervisees
       const supervisees = await prisma.user.findMany({
         where: { supervisorId: userId },
@@ -102,7 +104,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 
     res.json(unlockRequests);
   } catch (error) {
-    console.error('Error fetching unlock requests:', error);
+    logger.error('Unlock Request Routes:Error fetching unlock requests:', error);
     res.status(500).json({ error: 'Failed to fetch unlock requests' });
   }
 });
@@ -188,7 +190,7 @@ router.post('/:noteId/request', authenticate, async (req: Request, res: Response
       // Find an admin to notify
       const admin = await prisma.user.findFirst({
         where: {
-          roles: { has: 'ADMINISTRATOR' },
+          roles: { has: UserRoles.ADMINISTRATOR },
           isActive: true,
         },
         select: {
@@ -227,7 +229,7 @@ router.post('/:noteId/request', authenticate, async (req: Request, res: Response
       notifiedTo: notifyName,
     });
   } catch (error) {
-    console.error('Error requesting unlock:', error);
+    logger.error('Unlock Request Routes:Error requesting unlock:', error);
     res.status(500).json({ error: 'Failed to request unlock' });
   }
 });
@@ -250,7 +252,7 @@ router.post('/:noteId/approve', authenticate, async (req: Request, res: Response
     });
 
     // Check if user is supervisor or admin
-    if (!user?.roles.includes('SUPERVISOR') && !user?.roles.includes('ADMINISTRATOR')) {
+    if (!user?.roles.includes(UserRoles.SUPERVISOR) && !user?.roles.includes(UserRoles.ADMINISTRATOR)) {
       return res.status(403).json({ error: 'Only supervisors or administrators can approve unlock requests' });
     }
 
@@ -284,7 +286,7 @@ router.post('/:noteId/approve', authenticate, async (req: Request, res: Response
     }
 
     // If user is supervisor, verify they supervise this clinician
-    if (user.roles.includes('SUPERVISOR') && !user.roles.includes('ADMINISTRATOR')) {
+    if (user.roles.includes(UserRoles.SUPERVISOR) && !user.roles.includes(UserRoles.ADMINISTRATOR)) {
       if (note.clinician.supervisorId !== userId) {
         return res.status(403).json({ error: 'You can only approve unlock requests for your supervisees' });
       }
@@ -325,7 +327,7 @@ router.post('/:noteId/approve', authenticate, async (req: Request, res: Response
       unlockUntil: unlockUntil,
     });
   } catch (error) {
-    console.error('Error approving unlock request:', error);
+    logger.error('Unlock Request Routes:Error approving unlock request:', error);
     res.status(500).json({ error: 'Failed to approve unlock request' });
   }
 });
@@ -354,7 +356,7 @@ router.post('/:noteId/deny', authenticate, async (req: Request, res: Response) =
     });
 
     // Check if user is supervisor or admin
-    if (!user?.roles.includes('SUPERVISOR') && !user?.roles.includes('ADMINISTRATOR')) {
+    if (!user?.roles.includes(UserRoles.SUPERVISOR) && !user?.roles.includes(UserRoles.ADMINISTRATOR)) {
       return res.status(403).json({ error: 'Only supervisors or administrators can deny unlock requests' });
     }
 
@@ -388,7 +390,7 @@ router.post('/:noteId/deny', authenticate, async (req: Request, res: Response) =
     }
 
     // If user is supervisor, verify they supervise this clinician
-    if (user.roles.includes('SUPERVISOR') && !user.roles.includes('ADMINISTRATOR')) {
+    if (user.roles.includes(UserRoles.SUPERVISOR) && !user.roles.includes(UserRoles.ADMINISTRATOR)) {
       if (note.clinician.supervisorId !== userId) {
         return res.status(403).json({ error: 'You can only deny unlock requests for your supervisees' });
       }
@@ -421,7 +423,7 @@ router.post('/:noteId/deny', authenticate, async (req: Request, res: Response) =
       note: updatedNote,
     });
   } catch (error) {
-    console.error('Error denying unlock request:', error);
+    logger.error('Unlock Request Routes:Error denying unlock request:', error);
     res.status(500).json({ error: 'Failed to deny unlock request' });
   }
 });
@@ -440,7 +442,7 @@ router.get('/stats', authenticate, async (req: Request, res: Response) => {
 
     let whereClause: any = { unlockRequested: true, isLocked: true };
 
-    if (user?.roles.includes('SUPERVISOR') && !user.roles.includes('ADMINISTRATOR')) {
+    if (user?.roles.includes(UserRoles.SUPERVISOR) && !user.roles.includes(UserRoles.ADMINISTRATOR)) {
       // Supervisors only see their supervisees' requests
       const supervisees = await prisma.user.findMany({
         where: { supervisorId: userId },
@@ -448,7 +450,7 @@ router.get('/stats', authenticate, async (req: Request, res: Response) => {
       });
 
       whereClause.clinicianId = { in: supervisees.map((s) => s.id) };
-    } else if (!user?.roles.includes('ADMINISTRATOR')) {
+    } else if (!user?.roles.includes(UserRoles.ADMINISTRATOR)) {
       // Regular clinicians see their own
       whereClause.clinicianId = userId;
     }
@@ -475,7 +477,7 @@ router.get('/stats', authenticate, async (req: Request, res: Response) => {
       oldestRequestDate: oldestRequest?.unlockRequestDate || null,
     });
   } catch (error) {
-    console.error('Error fetching unlock request stats:', error);
+    logger.error('Unlock Request Routes:Error fetching unlock request stats:', error);
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });

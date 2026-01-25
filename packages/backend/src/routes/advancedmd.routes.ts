@@ -15,6 +15,8 @@ import {
   advancedMDPatientSync,
   advancedMDAppointmentSync,
 } from '../integrations/advancedmd';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -39,7 +41,7 @@ const requireAdminOrBilling = (req: Request, res: Response, next: NextFunction) 
   const userRoles = user.roles || (user.role ? [user.role] : []);
 
   // Use actual UserRole enum values: ADMINISTRATOR, BILLING_STAFF, SUPER_ADMIN
-  const allowedRoles = ['ADMINISTRATOR', 'BILLING_STAFF', 'SUPER_ADMIN'];
+  const allowedRoles: readonly string[] = [UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, UserRoles.SUPER_ADMIN];
   const hasAllowedRole = userRoles.some((role: string) => allowedRoles.includes(role));
 
   if (!hasAllowedRole) {
@@ -96,7 +98,7 @@ router.get('/patients/:clientId/sync-status', requireAuth, async (req: Request, 
       isSynced: !!client.advancedMDPatientId,
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error getting patient sync status:', error);
+    logger.error('AdvancedMD Routes: Error getting patient sync status:', error);
     res.status(500).json({ error: 'Failed to get sync status', message: error.message });
   }
 });
@@ -131,7 +133,7 @@ router.post('/patients/:clientId/sync', requireAdminOrBilling, async (req: Reque
       });
     }
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error syncing patient:', error);
+    logger.error('AdvancedMD Routes: Error syncing patient:', error);
     res.status(500).json({ error: 'Failed to sync patient', message: error.message });
   }
 });
@@ -156,7 +158,7 @@ router.get('/patients/:clientId/sync-logs', requireAdminOrBilling, async (req: R
 
     res.json({ logs });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error getting patient sync logs:', error);
+    logger.error('AdvancedMD Routes: Error getting patient sync logs:', error);
     res.status(500).json({ error: 'Failed to get sync logs', message: error.message });
   }
 });
@@ -201,7 +203,7 @@ router.get('/appointments/:appointmentId/sync-status', requireAuth, async (req: 
       isSynced: !!appointment.advancedMDVisitId,
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error getting appointment sync status:', error);
+    logger.error('AdvancedMD Routes: Error getting appointment sync status:', error);
     res.status(500).json({ error: 'Failed to get sync status', message: error.message });
   }
 });
@@ -257,7 +259,7 @@ router.post('/appointments/:appointmentId/sync', requireAdminOrBilling, async (r
       });
     }
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error syncing appointment:', error);
+    logger.error('AdvancedMD Routes: Error syncing appointment:', error);
     res.status(500).json({ error: 'Failed to sync appointment', message: error.message });
   }
 });
@@ -294,7 +296,7 @@ router.post('/appointments/bulk-sync', requireAdminOrBilling, async (req: Reques
       results,
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error bulk syncing appointments:', error);
+    logger.error('AdvancedMD Routes: Error bulk syncing appointments:', error);
     res.status(500).json({ error: 'Failed to bulk sync appointments', message: error.message });
   }
 });
@@ -321,7 +323,7 @@ router.post('/appointments/pull-updates', requireAdminOrBilling, async (req: Req
       updates,
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error pulling appointment updates:', error);
+    logger.error('AdvancedMD Routes: Error pulling appointment updates:', error);
     res.status(500).json({ error: 'Failed to pull updates', message: error.message });
   }
 });
@@ -361,7 +363,7 @@ router.post('/appointments/:appointmentId/status-update', requireAdminOrBilling,
       syncedToAMD: !!appointment.advancedMDVisitId,
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error updating appointment status:', error);
+    logger.error('AdvancedMD Routes: Error updating appointment status:', error);
     res.status(500).json({ error: 'Failed to update status', message: error.message });
   }
 });
@@ -431,7 +433,7 @@ router.get('/sync/dashboard', requireAdminOrBilling, async (req: Request, res: R
       errorCount,
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error getting dashboard:', error);
+    logger.error('AdvancedMD Routes: Error getting dashboard:', error);
     res.status(500).json({ error: 'Failed to get dashboard', message: error.message });
   }
 });
@@ -476,7 +478,7 @@ router.get('/sync/logs', requireAdminOrBilling, async (req: Request, res: Respon
       },
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error getting sync logs:', error);
+    logger.error('AdvancedMD Routes: Error getting sync logs:', error);
     res.status(500).json({ error: 'Failed to get sync logs', message: error.message });
   }
 });
@@ -518,7 +520,7 @@ router.get('/sync/stats', requireAdminOrBilling, async (req: Request, res: Respo
       averageDuration: avgDuration._avg.durationMs,
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error getting sync stats:', error);
+    logger.error('AdvancedMD Routes: Error getting sync stats:', error);
     res.status(500).json({ error: 'Failed to get sync stats', message: error.message });
   }
 });
@@ -557,7 +559,7 @@ router.get('/sync/config', requireAdminOrBilling, async (req: Request, res: Resp
       hasValidToken: config.tokenExpiresAt ? new Date(config.tokenExpiresAt) > new Date() : false,
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Error getting config:', error);
+    logger.error('AdvancedMD Routes: Error getting config:', error);
     res.status(500).json({ error: 'Failed to get config', message: error.message });
   }
 });
@@ -584,7 +586,7 @@ router.post('/sync/test-connection', requireAdminOrBilling, async (req: Request,
       timestamp: new Date(),
     });
   } catch (error: any) {
-    console.error('[AdvancedMD Routes] Connection test failed:', error);
+    logger.error('AdvancedMD Routes: Connection test failed:', error);
     res.status(200).json({
       success: false,
       message: 'Connection test failed',

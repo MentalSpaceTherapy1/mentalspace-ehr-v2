@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import config from '../config';
 import logger from '../utils/logger';
 import prisma from '../services/database';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 
 interface PortalTokenPayload {
   userId: string; // This is the clientId in portal tokens
@@ -94,7 +96,7 @@ export const authenticatePortal = async (req: Request, res: Response, next: Next
     }
 
     // Attach portal account info to request
-    (req as any).portalAccount = {
+    req.portalAccount = {
       id: portalAccount.id,
       portalAccountId: portalAccount.id,
       clientId: portalAccount.clientId,
@@ -104,8 +106,9 @@ export const authenticatePortal = async (req: Request, res: Response, next: Next
     };
 
     next();
-  } catch (error: any) {
-    if (error.name === 'TokenExpiredError') {
+  } catch (error: unknown) {
+    const err = error as { name?: string; message?: string };
+    if (err.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
         message: 'Token expired',
@@ -113,7 +116,7 @@ export const authenticatePortal = async (req: Request, res: Response, next: Next
       });
     }
 
-    if (error.name === 'JsonWebTokenError') {
+    if (err.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,
         message: 'Invalid token',
@@ -121,7 +124,7 @@ export const authenticatePortal = async (req: Request, res: Response, next: Next
     }
 
     logger.error('Portal authentication error', {
-      error: error.message,
+      error: err.message,
     });
 
     return res.status(500).json({
@@ -199,7 +202,7 @@ export const authenticateTempPasswordChange = async (req: Request, res: Response
     }
 
     // Attach portal account info to request
-    (req as any).portalAccount = {
+    req.portalAccount = {
       id: portalAccount.id,
       portalAccountId: portalAccount.id,
       clientId: portalAccount.clientId,
@@ -209,8 +212,9 @@ export const authenticateTempPasswordChange = async (req: Request, res: Response
     };
 
     next();
-  } catch (error: any) {
-    if (error.name === 'TokenExpiredError') {
+  } catch (error: unknown) {
+    const err = error as { name?: string; message?: string };
+    if (err.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
         message: 'Password change token expired. Please log in again to get a new token.',
@@ -218,7 +222,7 @@ export const authenticateTempPasswordChange = async (req: Request, res: Response
       });
     }
 
-    if (error.name === 'JsonWebTokenError') {
+    if (err.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,
         message: 'Invalid token',
@@ -226,7 +230,7 @@ export const authenticateTempPasswordChange = async (req: Request, res: Response
     }
 
     logger.error('Temp password change authentication error', {
-      error: error.message,
+      error: err.message,
     });
 
     return res.status(500).json({
@@ -242,7 +246,7 @@ export const authenticateTempPasswordChange = async (req: Request, res: Response
  */
 export const requireEmailVerification = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const portalAccount = (req as any).portalAccount;
+    const portalAccount = req.portalAccount;
 
     if (!portalAccount) {
       return res.status(401).json({
@@ -260,7 +264,7 @@ export const requireEmailVerification = (req: Request, res: Response, next: Next
     }
 
     next();
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Email verification check failed:', error);
 
     return res.status(403).json({

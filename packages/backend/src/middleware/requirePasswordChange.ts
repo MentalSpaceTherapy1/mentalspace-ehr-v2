@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../services/database';
 import { UnauthorizedError } from '../utils/errors';
 import logger from '../utils/logger';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 
 /**
  * Middleware to check if user must change password before accessing routes
@@ -36,7 +38,7 @@ export async function requirePasswordChange(
     }
 
     // Get user from request (set by authenticate middleware)
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
       return next();  // Let authenticate middleware handle this
@@ -78,7 +80,7 @@ export async function ensurePasswordChangeRequired(
   next: NextFunction
 ) {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
       throw new UnauthorizedError('Not authenticated');

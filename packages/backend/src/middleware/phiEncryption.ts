@@ -59,7 +59,6 @@ export const PHI_FIELDS_BY_MODEL: Record<string, string[]> = {
     'groupNumber',
     'subscriberFirstName',
     'subscriberLastName',
-    'subscriberSSN', // Critical - SSN must always be encrypted
     'subscriberEmployer',
     'customerServicePhone',
     'precertificationPhone',
@@ -162,7 +161,7 @@ export const PHI_FIELDS_BY_MODEL: Record<string, string[]> = {
  */
 export const HASHABLE_FIELDS: Record<string, string[]> = {
   Client: ['medicalRecordNumber', 'email', 'primaryPhone'],
-  InsuranceInformation: ['subscriberSSN', 'memberId'],
+  InsuranceInformation: ['memberId'],
   User: ['email'],
   PortalAccount: ['email'],
 };
@@ -226,7 +225,7 @@ export function encryptPHIFields(modelName: string, data: any): any {
   // doesn't have the corresponding hash columns (e.g., medicalRecordNumberHash).
   // To enable hash-based lookups for encrypted fields, add these columns:
   // - Client: medicalRecordNumberHash, emailHash, primaryPhoneHash
-  // - InsuranceInformation: subscriberSSNHash, memberIdHash
+  // - InsuranceInformation: memberIdHash
   // - User: emailHash
   // - PortalAccount: emailHash
   //

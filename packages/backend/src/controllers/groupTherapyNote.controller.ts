@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import * as groupTherapyNoteService from '../services/groupTherapyNote.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendServerError } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Create a group therapy session note with attendance
@@ -12,10 +14,7 @@ export const createGroupTherapyNote = async (req: Request, res: Response) => {
 
     // groupId is optional for ad-hoc groups
     if (!appointmentId || !attendance || !Array.isArray(attendance)) {
-      return res.status(400).json({
-        success: false,
-        message: 'appointmentId and attendance array are required',
-      });
+      return sendBadRequest(res, 'appointmentId and attendance array are required');
     }
 
     const result = await groupTherapyNoteService.createGroupTherapyNote({
@@ -28,20 +27,13 @@ export const createGroupTherapyNote = async (req: Request, res: Response) => {
       ...noteData,
     });
 
-    res.status(201).json({
-      success: true,
-      data: result,
-      message: 'Group therapy note created successfully',
-    });
-  } catch (error: any) {
+    return sendCreated(res, result, 'Group therapy note created successfully');
+  } catch (error) {
     logger.error('Error creating group therapy note', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to create group therapy note',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to create group therapy note');
   }
 };
 
@@ -55,10 +47,7 @@ export const updateGroupAttendance = async (req: Request, res: Response) => {
     const { attendance } = req.body;
 
     if (!attendance || !Array.isArray(attendance)) {
-      return res.status(400).json({
-        success: false,
-        message: 'attendance array is required',
-      });
+      return sendBadRequest(res, 'attendance array is required');
     }
 
     const result = await groupTherapyNoteService.updateGroupAttendance({
@@ -66,21 +55,14 @@ export const updateGroupAttendance = async (req: Request, res: Response) => {
       attendance,
     });
 
-    res.status(200).json({
-      success: true,
-      data: result,
-      message: 'Attendance updated successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, result, 'Attendance updated successfully');
+  } catch (error) {
     logger.error('Error updating group attendance', {
-      error: error.message,
+      error: getErrorMessage(error),
       noteId: req.params.noteId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to update attendance',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to update attendance');
   }
 };
 
@@ -94,21 +76,14 @@ export const getGroupAttendance = async (req: Request, res: Response) => {
 
     const attendance = await groupTherapyNoteService.getGroupAttendance(appointmentId);
 
-    res.status(200).json({
-      success: true,
-      data: attendance,
-      message: `Retrieved ${attendance.length} attendance records`,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, attendance, `Retrieved ${attendance.length} attendance records`);
+  } catch (error) {
     logger.error('Error getting group attendance', {
-      error: error.message,
+      error: getErrorMessage(error),
       appointmentId: req.params.appointmentId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve attendance',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve attendance');
   }
 };
 
@@ -122,20 +97,13 @@ export const getGroupMembers = async (req: Request, res: Response) => {
 
     const members = await groupTherapyNoteService.getGroupMembers(groupId);
 
-    res.status(200).json({
-      success: true,
-      data: members,
-      message: `Retrieved ${members.length} active group members`,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, members, `Retrieved ${members.length} active group members`);
+  } catch (error) {
     logger.error('Error getting group members', {
-      error: error.message,
+      error: getErrorMessage(error),
       groupId: req.params.groupId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve group members',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve group members');
   }
 };

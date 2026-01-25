@@ -1,12 +1,16 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import prisma from '../services/database';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import * as portalAdminService from '../services/portalAdmin.service';
 import {
   sessionReviewsService,
   therapistChangeService,
 } from '../services/portal';
-import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
+import { sendSuccess, sendServerError } from '../utils/apiResponse';
 
 // ============================================================================
 // ADMIN: PORTAL OVERSIGHT
@@ -30,16 +34,11 @@ export const getAllReviews = async (req: Request, res: Response) => {
       maxRating,
     });
 
-    res.status(200).json({
-      success: true,
-      data: reviews,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, reviews);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch reviews';
     logger.error('Error fetching all reviews:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch reviews',
-    });
+    return sendServerError(res, errorMessage);
   }
 };
 
@@ -49,16 +48,11 @@ export const getReviewStatistics = async (req: Request, res: Response) => {
 
     const stats = await sessionReviewsService.getReviewStatistics(clinicianId);
 
-    res.status(200).json({
-      success: true,
-      data: stats,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, stats);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch statistics';
     logger.error('Error fetching review statistics:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch statistics',
-    });
+    return sendServerError(res, errorMessage);
   }
 };
 
@@ -68,8 +62,7 @@ export const getReviewStatistics = async (req: Request, res: Response) => {
 
 export const getAllChangeRequests = async (req: Request, res: Response) => {
   try {
-    const status = req.query.status as any;
-    const clinicianId = req.query.clinicianId as string;
+    const status = req.query.status as string | undefined;
     const isSensitive = req.query.isSensitive === 'true';
 
     const requests = await therapistChangeService.getAllChangeRequests({
@@ -77,16 +70,11 @@ export const getAllChangeRequests = async (req: Request, res: Response) => {
       onlySensitive: isSensitive,
     });
 
-    res.status(200).json({
-      success: true,
-      data: requests,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, requests);
+  } catch (error: unknown) {
     logger.error('Error fetching change requests:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch change requests',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch change requests';
+    return sendServerError(res, errorMessage);
   }
 };
 
@@ -96,7 +84,10 @@ const reviewChangeRequestSchema = z.object({
 
 export const reviewChangeRequest = async (req: Request, res: Response) => {
   try {
-    const adminUserId = (req as any).user?.id;
+    const adminUserId = req.user?.userId;
+    if (!adminUserId) {
+      return sendServerError(res, 'User not authenticated');
+    }
     const { requestId } = req.params;
     const data = reviewChangeRequestSchema.parse(req.body);
 
@@ -106,17 +97,11 @@ export const reviewChangeRequest = async (req: Request, res: Response) => {
       reviewNotes: data.reviewNotes,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Change request marked as under review',
-      data: request,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, request, 'Change request marked as under review');
+  } catch (error: unknown) {
     logger.error('Error reviewing change request:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to review change request',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to review change request';
+    return sendServerError(res, errorMessage);
   }
 };
 
@@ -126,7 +111,10 @@ const assignNewTherapistSchema = z.object({
 
 export const assignNewTherapist = async (req: Request, res: Response) => {
   try {
-    const adminUserId = (req as any).user?.id;
+    const adminUserId = req.user?.userId;
+    if (!adminUserId) {
+      return sendServerError(res, 'User not authenticated');
+    }
     const { requestId } = req.params;
     const data = assignNewTherapistSchema.parse(req.body);
 
@@ -136,23 +124,20 @@ export const assignNewTherapist = async (req: Request, res: Response) => {
       newClinicianId: data.newClinicianId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'New therapist assigned. Ready to complete transfer.',
-      data: request,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, request, 'New therapist assigned. Ready to complete transfer.');
+  } catch (error: unknown) {
     logger.error('Error assigning new therapist:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to assign new therapist',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to assign new therapist';
+    return sendServerError(res, errorMessage);
   }
 };
 
 export const completeTransfer = async (req: Request, res: Response) => {
   try {
-    const adminUserId = (req as any).user?.id;
+    const adminUserId = req.user?.userId;
+    if (!adminUserId) {
+      return sendServerError(res, 'User not authenticated');
+    }
     const { requestId } = req.params;
 
     const request = await therapistChangeService.completeTransfer({
@@ -160,17 +145,11 @@ export const completeTransfer = async (req: Request, res: Response) => {
       requestId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Therapist transfer completed successfully',
-      data: request,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, request, 'Therapist transfer completed successfully');
+  } catch (error: unknown) {
     logger.error('Error completing transfer:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to complete transfer',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to complete transfer';
+    return sendServerError(res, errorMessage);
   }
 };
 
@@ -180,7 +159,10 @@ const denyChangeRequestSchema = z.object({
 
 export const denyChangeRequest = async (req: Request, res: Response) => {
   try {
-    const adminUserId = (req as any).user?.id;
+    const adminUserId = req.user?.userId;
+    if (!adminUserId) {
+      return sendServerError(res, 'User not authenticated');
+    }
     const { requestId } = req.params;
     const data = denyChangeRequestSchema.parse(req.body);
 
@@ -190,17 +172,11 @@ export const denyChangeRequest = async (req: Request, res: Response) => {
       denialReason: data.denialReason,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Change request denied',
-      data: request,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, request, 'Change request denied');
+  } catch (error: unknown) {
     logger.error('Error denying change request:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to deny change request',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to deny change request';
+    return sendServerError(res, errorMessage);
   }
 };
 
@@ -212,16 +188,11 @@ export const getChangeRequestStatistics = async (req: Request, res: Response) =>
       clinicianId,
     });
 
-    res.status(200).json({
-      success: true,
-      data: stats,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, stats);
+  } catch (error: unknown) {
     logger.error('Error fetching change request statistics:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch statistics',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch statistics';
+    return sendServerError(res, errorMessage);
   }
 };
 
@@ -235,97 +206,50 @@ export const getAllPortalAccounts = async (req: Request, res: Response) => {
     const offset = parseInt(req.query.offset as string) || 0;
     const isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
 
-    const where: any = {};
-    if (isActive !== undefined) {
-      where.accountStatus = isActive ? 'ACTIVE' : 'INACTIVE';
-    }
-
-    const [accounts, total] = await Promise.all([
-      prisma.portalAccount.findMany({
-        where,
-        skip: offset,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              primaryTherapistId: true,
-            },
-          },
-        },
-      }),
-      prisma.portalAccount.count({ where }),
-    ]);
-
-    res.status(200).json({
-      success: true,
-      data: {
-        accounts,
-        total,
-        limit,
-        offset,
-      },
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const result = await portalAdminService.getAllPortalAccounts({
+      isActive,
+      limit,
+      offset,
     });
-  } catch (error: any) {
+
+    return sendSuccess(res, result);
+  } catch (error: unknown) {
     logger.error('Error fetching portal accounts:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch portal accounts',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch portal accounts';
+    return sendServerError(res, errorMessage);
   }
 };
 
 export const activatePortalAccount = async (req: Request, res: Response) => {
   try {
     const { accountId } = req.params;
+    const adminUserId = req.user?.userId || 'unknown';
 
-    const account = await prisma.portalAccount.update({
-      where: { id: accountId },
-      data: { accountStatus: 'ACTIVE' },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const account = await portalAdminService.activatePortalAccount(accountId, adminUserId);
 
-    logger.info(`Portal account ${accountId} activated by admin ${(req as any).user?.id}`);
-
-    res.status(200).json({
-      success: true,
-      message: 'Portal account activated',
-      data: account,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, account, 'Portal account activated');
+  } catch (error: unknown) {
     logger.error('Error activating portal account:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to activate portal account',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to activate portal account';
+    return sendServerError(res, errorMessage);
   }
 };
 
 export const deactivatePortalAccount = async (req: Request, res: Response) => {
   try {
     const { accountId } = req.params;
+    const adminUserId = req.user?.userId || 'unknown';
 
-    const account = await prisma.portalAccount.update({
-      where: { id: accountId },
-      data: { accountStatus: 'INACTIVE' },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const account = await portalAdminService.deactivatePortalAccount(accountId, adminUserId);
 
-    logger.info(`Portal account ${accountId} deactivated by admin ${(req as any).user?.id}`);
-
-    res.status(200).json({
-      success: true,
-      message: 'Portal account deactivated',
-      data: account,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, account, 'Portal account deactivated');
+  } catch (error: unknown) {
     logger.error('Error deactivating portal account:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to deactivate portal account',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to deactivate portal account';
+    return sendServerError(res, errorMessage);
   }
 };
 
@@ -335,99 +259,13 @@ export const deactivatePortalAccount = async (req: Request, res: Response) => {
 
 export const getPortalAnalytics = async (req: Request, res: Response) => {
   try {
-    // Total portal accounts
-    const totalAccounts = await prisma.portalAccount.count();
-    const activeAccounts = await prisma.portalAccount.count({
-      where: { accountStatus: 'ACTIVE' },
-    });
-    const verifiedAccounts = await prisma.portalAccount.count({
-      where: { emailVerified: true },
-    });
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const analytics = await portalAdminService.getPortalAnalytics();
 
-    // Recent registrations (last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const recentRegistrations = await prisma.portalAccount.count({
-      where: {
-        createdAt: { gte: thirtyDaysAgo },
-      },
-    });
-
-    // Active users (logged in last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const activeUsers = await prisma.portalAccount.count({
-      where: {
-        lastLoginDate: { gte: sevenDaysAgo },
-      },
-    });
-
-    // Session reviews
-    const totalReviews = await prisma.sessionReview.count();
-    const avgRating = await prisma.sessionReview.aggregate({
-      _avg: { rating: true },
-    });
-
-    // Therapist change requests
-    const pendingChangeRequests = await prisma.therapistChangeRequest.count({
-      where: { status: 'PENDING' },
-    });
-    const sensitiveChangeRequests = await prisma.therapistChangeRequest.count({
-      where: { status: 'PENDING', isSensitive: true },
-    });
-
-    // Mood tracking
-    const totalMoodEntries = await prisma.moodEntry.count();
-    const moodEntriesLast30Days = await prisma.moodEntry.count({
-      where: {
-        entryDate: { gte: thirtyDaysAgo },
-      },
-    });
-
-    // Engagement
-    const totalCheckIns = await prisma.engagementStreak.aggregate({
-      _sum: { totalCheckIns: true },
-    });
-
-    const avgStreak = await prisma.engagementStreak.aggregate({
-      _avg: { currentStreak: true },
-    });
-
-    res.status(200).json({
-      success: true,
-      data: {
-        accounts: {
-          total: totalAccounts,
-          active: activeAccounts,
-          verified: verifiedAccounts,
-          recentRegistrations,
-          activeUsers,
-        },
-        reviews: {
-          total: totalReviews,
-          avgRating: avgRating._avg.rating || 0,
-        },
-        changeRequests: {
-          pending: pendingChangeRequests,
-          sensitive: sensitiveChangeRequests,
-        },
-        moodTracking: {
-          total: totalMoodEntries,
-          last30Days: moodEntriesLast30Days,
-        },
-        engagement: {
-          totalCheckIns: totalCheckIns._sum.totalCheckIns || 0,
-          avgStreak: avgStreak._avg.currentStreak || 0,
-        },
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, analytics);
+  } catch (error: unknown) {
     logger.error('Error fetching portal analytics:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch portal analytics',
-    });
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch portal analytics';
+    return sendServerError(res, errorMessage);
   }
 };

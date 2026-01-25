@@ -3,7 +3,9 @@ import authService from '../services/auth.service';
 import sessionService from '../services/session.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ValidationError } from '../utils/errors';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendPaginated, calculatePagination } from '../utils/apiResponse';
 import config from '../config';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 // Cookie names for auth tokens
 const ACCESS_TOKEN_COOKIE = 'access_token';
@@ -63,11 +65,7 @@ export class AuthController {
 
     // Return user data without tokens in body
     const { tokens, ...responseData } = result;
-    res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      data: responseData,
-    });
+    return sendCreated(res, responseData, 'User registered successfully');
   });
 
   /**
@@ -84,13 +82,11 @@ export class AuthController {
 
     // Check if MFA is required
     if (result.requiresMfa) {
-      res.status(200).json({
-        success: true,
-        message: 'MFA verification required',
+      return sendSuccess(res, {
         requiresMfa: true,
         tempToken: result.tempToken,
         user: result.user,
-      });
+      }, 'MFA verification required');
     } else {
       // Set session token as httpOnly cookie (not accessible via JavaScript)
       // The session token is used for authentication on subsequent requests
@@ -103,11 +99,7 @@ export class AuthController {
 
       // Return user data without tokens in body (HIPAA security)
       const { session, ...responseData } = result;
-      res.status(200).json({
-        success: true,
-        message: 'Login successful',
-        data: { ...responseData, session: { sessionId: session?.sessionId } },
-      });
+      return sendSuccess(res, { ...responseData, session: { sessionId: session?.sessionId } }, 'Login successful');
     }
   });
 
@@ -138,11 +130,7 @@ export class AuthController {
 
     // Return user data without tokens in body
     const { session, ...responseData } = result;
-    res.status(200).json({
-      success: true,
-      message: 'MFA verification successful',
-      data: { ...responseData, session: { sessionId: session?.sessionId } },
-    });
+    return sendSuccess(res, { ...responseData, session: { sessionId: session?.sessionId } }, 'MFA verification successful');
   });
 
   /**
@@ -153,10 +141,7 @@ export class AuthController {
     const userId = req.user!.userId;
     const user = await authService.getProfile(userId);
 
-    res.status(200).json({
-      success: true,
-      data: user,
-    });
+    return sendSuccess(res, user);
   });
 
   /**
@@ -169,10 +154,7 @@ export class AuthController {
 
     const result = await authService.changePassword(userId, currentPassword, newPassword);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return sendSuccess(res, null, result.message);
   });
 
   /**
@@ -191,10 +173,7 @@ export class AuthController {
     // Clear auth cookies (HIPAA security - ensure tokens cannot be reused)
     clearAuthCookies(res);
 
-    res.status(200).json({
-      success: true,
-      message: 'Logout successful',
-    });
+    return sendSuccess(res, null, 'Logout successful');
   });
 
   /**
@@ -213,10 +192,7 @@ export class AuthController {
     const sessionToken = req.cookies?.[ACCESS_TOKEN_COOKIE] || req.cookies?.[REFRESH_TOKEN_COOKIE] || req.body?.refreshToken;
 
     if (!sessionToken) {
-      return res.status(401).json({
-        success: false,
-        message: 'Session token is required',
-      });
+      return sendUnauthorized(res, 'Session token is required');
     }
 
     try {
@@ -224,24 +200,15 @@ export class AuthController {
       const sessionResult = await sessionService.validateSession(sessionToken);
 
       if (!sessionResult) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid or expired session',
-        });
+        return sendUnauthorized(res, 'Invalid or expired session');
       }
 
       // Session is valid and has been extended by validateSession()
       // Return success (cookies are already set and still valid)
-      res.status(200).json({
-        success: true,
-        message: 'Session refreshed successfully',
-      });
+      return sendSuccess(res, null, 'Session refreshed successfully');
     } catch (error) {
       // Session validation failed (e.g., account locked, disabled)
-      return res.status(401).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Session validation failed',
-      });
+      return sendUnauthorized(res, error instanceof Error ? getErrorMessage(error) : 'Session validation failed');
     }
   });
 }

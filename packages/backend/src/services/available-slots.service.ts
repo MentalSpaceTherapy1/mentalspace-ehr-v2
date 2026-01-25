@@ -3,6 +3,7 @@ import logger from '../utils/logger';
 import { getEffectiveRules, validateSlot } from './scheduling-rules.service';
 import { addDays, addMinutes, format, parseISO, startOfDay, endOfDay, isWithinInterval, isBefore, isAfter } from 'date-fns';
 import { UserRole } from '@prisma/client';
+import { AppointmentStatus as AppointmentStatusConst, StatusGroups } from '@mentalspace/shared';
 
 /**
  * Module 7: Available Slots Service
@@ -356,7 +357,7 @@ async function getExistingAppointments(
           lte: endDate,
         },
         status: {
-          in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN'],
+          in: [AppointmentStatusConst.SCHEDULED, AppointmentStatusConst.CONFIRMED, AppointmentStatusConst.CHECKED_IN],
         },
       },
       select: {
@@ -447,7 +448,7 @@ export async function canBookSlot(
           lt: slotEndWithBuffer,
         },
         status: {
-          in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN'],
+          in: [AppointmentStatusConst.SCHEDULED, AppointmentStatusConst.CONFIRMED, AppointmentStatusConst.CHECKED_IN],
         },
       },
     });
@@ -472,7 +473,7 @@ export async function canBookSlot(
             lte: dayEnd,
           },
           status: {
-            in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN'],
+            in: [AppointmentStatusConst.SCHEDULED, AppointmentStatusConst.CONFIRMED, AppointmentStatusConst.CHECKED_IN],
           },
         },
       });
@@ -613,4 +614,28 @@ export async function getAvailableClinicians(): Promise<any[]> {
     });
     throw new Error('Failed to retrieve available clinicians');
   }
+}
+
+/**
+ * Phase 3.2: Get appointment types available for online booking
+ */
+export async function getBookableAppointmentTypes() {
+  return prisma.appointmentType.findMany({
+    where: {
+      isActive: true,
+      allowOnlineBooking: true,
+    },
+    select: {
+      id: true,
+      typeName: true,
+      category: true,
+      description: true,
+      defaultDuration: true,
+      colorCode: true,
+      iconName: true,
+    },
+    orderBy: {
+      typeName: 'asc',
+    },
+  });
 }

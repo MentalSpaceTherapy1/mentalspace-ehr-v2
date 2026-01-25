@@ -9,13 +9,14 @@ import {
   deleteInsurance,
   verifyInsurance,
 } from '../controllers/insurance.controller';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
 
-// HIPAA Note: Insurance data contains highly sensitive PHI (SSN, policy numbers).
+// HIPAA Note: Insurance data contains highly sensitive PHI (policy numbers, member IDs).
 // Access is controlled by:
 // - SUPER_ADMIN: Full access
 // - ADMINISTRATOR: Organization-wide access
@@ -26,7 +27,7 @@ router.use(authenticate);
 // RLS: Get all insurance records for a client (requires client access + billing permission)
 router.get(
   '/client/:clientId',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPERVISOR', 'CLINICIAN', 'FRONT_DESK', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, UserRoles.OFFICE_MANAGER, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.FRONT_DESK, UserRoles.SUPER_ADMIN),
   requireClientAccess('clientId', { allowBillingView: true }),
   getClientInsurance
 );
@@ -34,7 +35,7 @@ router.get(
 // RLS: Get insurance by ID (requires billing access)
 router.get(
   '/:id',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPERVISOR', 'CLINICIAN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, UserRoles.OFFICE_MANAGER, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   getInsuranceById
 );
@@ -42,7 +43,7 @@ router.get(
 // Create insurance - billing staff, admin, or front desk
 router.post(
   '/',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'FRONT_DESK', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, UserRoles.OFFICE_MANAGER, UserRoles.FRONT_DESK, UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   createInsurance
 );
@@ -50,7 +51,7 @@ router.post(
 // RLS: Update insurance (requires billing access)
 router.patch(
   '/:id',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, UserRoles.OFFICE_MANAGER, UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   updateInsurance
 );
@@ -58,7 +59,7 @@ router.patch(
 // Delete insurance - admin only
 router.delete(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   deleteInsurance
 );
@@ -66,7 +67,7 @@ router.delete(
 // RLS: Verify insurance (requires billing access)
 router.post(
   '/:id/verify',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'FRONT_DESK', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, UserRoles.OFFICE_MANAGER, UserRoles.FRONT_DESK, UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   verifyInsurance
 );

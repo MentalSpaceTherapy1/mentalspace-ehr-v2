@@ -1,9 +1,11 @@
-import logger, { logControllerError } from '../utils/logger';
+import logger from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as waitlistService from '../services/waitlist.service';
-import { auditLogger } from '../utils/logger';
-import prisma from '../services/database';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import { sendSuccess, sendCreated, sendBadRequest, sendForbidden, sendNotFound, sendServerError, sendUnauthorized, sendValidationError } from '../utils/apiResponse';
 
 // Validation schemas
 const addToWaitlistSchema = z.object({
@@ -47,7 +49,11 @@ const updatePrioritySchema = z.object({
 export const addToWaitlist = async (req: Request, res: Response) => {
   try {
     const validatedData = addToWaitlistSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     // Convert preferredTimes string to array and priority string to number
     const priorityMap: Record<string, number> = { 'Low': 1, 'Normal': 2, 'High': 3, 'Urgent': 4 };
@@ -63,27 +69,20 @@ export const addToWaitlist = async (req: Request, res: Response) => {
       addedBy: userId,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Client added to waitlist successfully',
-      data: entry,
-    });
+    return sendCreated(res, entry, 'Client added to waitlist successfully');
   } catch (error) {
     logger.error('Add to waitlist error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add client to waitlist',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to add client to waitlist');
   }
 };
 
@@ -100,19 +99,11 @@ export const getWaitlistEntries = async (req: Request, res: Response) => {
       priority: priority as string,
     });
 
-    res.status(200).json({
-      success: true,
-      data: entries,
-      count: entries.length,
-    });
+    return sendSuccess(res, { data: entries, count: entries.length });
   } catch (error) {
     logger.error('Get waitlist entries error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve waitlist entries',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve waitlist entries');
   }
 };
 
@@ -128,19 +119,11 @@ export const findAvailableSlots = async (req: Request, res: Response) => {
 
     const slots = await waitlistService.findAvailableSlots(id, daysAhead);
 
-    res.status(200).json({
-      success: true,
-      data: slots,
-      count: slots.length,
-    });
+    return sendSuccess(res, { data: slots, count: slots.length });
   } catch (error) {
     logger.error('Find available slots error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to find available slots',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to find available slots');
   }
 };
 
@@ -151,7 +134,11 @@ export const offerAppointment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const validatedData = offerAppointmentSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const entry = await waitlistService.offerAppointment(
       id,
@@ -165,27 +152,20 @@ export const offerAppointment = async (req: Request, res: Response) => {
       userId
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'Appointment offered to client',
-      data: entry,
-    });
+    return sendSuccess(res, entry, 'Appointment offered to client');
   } catch (error) {
     logger.error('Offer appointment error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to offer appointment',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to offer appointment');
   }
 };
 
@@ -196,7 +176,11 @@ export const bookFromWaitlist = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const validatedData = bookFromWaitlistSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const result = await waitlistService.bookFromWaitlist(
       id,
@@ -214,27 +198,20 @@ export const bookFromWaitlist = async (req: Request, res: Response) => {
       userId
     );
 
-    res.status(201).json({
-      success: true,
-      message: 'Appointment booked successfully from waitlist',
-      data: result,
-    });
+    return sendCreated(res, result, 'Appointment booked successfully from waitlist');
   } catch (error) {
     logger.error('Book from waitlist error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to book appointment from waitlist',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to book appointment from waitlist');
   }
 };
 
@@ -245,30 +222,23 @@ export const removeFromWaitlist = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     if (!reason) {
-      return res.status(400).json({
-        success: false,
-        message: 'Reason is required',
-      });
+      return sendBadRequest(res, 'Reason is required');
     }
 
     const entry = await waitlistService.removeFromWaitlist(id, reason, userId);
 
-    res.status(200).json({
-      success: true,
-      message: 'Client removed from waitlist',
-      data: entry,
-    });
+    return sendSuccess(res, entry, 'Client removed from waitlist');
   } catch (error) {
     logger.error('Remove from waitlist error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to remove client from waitlist',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to remove client from waitlist');
   }
 };
 
@@ -279,7 +249,11 @@ export const updatePriority = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const validatedData = updatePrioritySchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const entry = await waitlistService.updatePriority(
       id,
@@ -287,27 +261,20 @@ export const updatePriority = async (req: Request, res: Response) => {
       userId
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'Waitlist entry priority updated',
-      data: entry,
-    });
+    return sendSuccess(res, entry, 'Waitlist entry priority updated');
   } catch (error) {
     logger.error('Update priority error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update priority',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to update priority');
   }
 };
 
@@ -317,329 +284,132 @@ export const updatePriority = async (req: Request, res: Response) => {
 
 /**
  * Get current client's waitlist entries
+ * Phase 3.2: Refactored to use service method
  */
 export const getMyWaitlistEntries = async (req: Request, res: Response) => {
   try {
     // Get clientId from portalAccount (set by authenticateDual middleware)
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Client ID not found in authentication context',
-      });
+      return sendBadRequest(res, 'Client ID not found in authentication context');
     }
 
-    // Query waitlist entries for this specific client with relationships
-    const entries = await prisma.waitlistEntry.findMany({
-      where: {
-        clientId,
-        status: 'ACTIVE', // Only show active entries
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-      },
-      orderBy: {
-        joinedAt: 'desc',
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const entries = await waitlistService.getClientWaitlistEntries(clientId);
 
-    auditLogger.info('Client retrieved their waitlist entries', {
-      clientId,
-      count: entries.length,
-      action: 'VIEW_MY_WAITLIST_ENTRIES',
-    });
-
-    res.status(200).json({
-      success: true,
-      data: entries,
-      count: entries.length,
-    });
+    return sendSuccess(res, { data: entries, count: entries.length });
   } catch (error) {
     logger.error('Get my waitlist entries error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve your waitlist entries',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve your waitlist entries');
   }
 };
 
 /**
  * Get current client's waitlist offers
+ * Phase 3.2: Refactored to use service method
  */
 export const getMyWaitlistOffers = async (req: Request, res: Response) => {
   try {
     // Get clientId from portalAccount (set by authenticateDual middleware)
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Client ID not found in authentication context',
-      });
+      return sendBadRequest(res, 'Client ID not found in authentication context');
     }
 
-    // Find active waitlist entries for this client
-    const myEntries = await prisma.waitlistEntry.findMany({
-      where: {
-        clientId,
-        status: 'ACTIVE',
-      },
-      select: {
-        id: true,
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const offers = await waitlistService.getClientWaitlistOffers(clientId);
 
-    const entryIds = myEntries.map((e) => e.id);
-
-    if (entryIds.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: [],
-        count: 0,
-      });
-    }
-
-    // Find offers for these entries
-    const offers = await prisma.waitlistOffer.findMany({
-      where: {
-        waitlistEntryId: {
-          in: entryIds,
-        },
-        status: 'PENDING', // Only show pending offers
-        expiresAt: {
-          gte: new Date(), // Not expired
-        },
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-        waitlistEntry: {
-          select: {
-            appointmentType: true,
-          },
-        },
-      },
-      orderBy: {
-        offeredAt: 'desc',
-      },
-    });
-
-    auditLogger.info('Client retrieved their waitlist offers', {
-      clientId,
-      count: offers.length,
-      action: 'VIEW_MY_WAITLIST_OFFERS',
-    });
-
-    res.status(200).json({
-      success: true,
-      data: offers,
-      count: offers.length,
-    });
+    return sendSuccess(res, { data: offers, count: offers.length });
   } catch (error) {
     logger.error('Get my waitlist offers error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve your waitlist offers',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve your waitlist offers');
   }
 };
 
 /**
  * Accept a waitlist offer
+ * Phase 3.2: Refactored to use service method
  */
 export const acceptWaitlistOffer = async (req: Request, res: Response) => {
   try {
     const { entryId, offerId } = req.params;
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Client ID not found in authentication context',
-      });
+      return sendBadRequest(res, 'Client ID not found in authentication context');
     }
 
-    // Verify the entry belongs to this client
-    const entry = await prisma.waitlistEntry.findUnique({
-      where: { id: entryId },
-    });
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const result = await waitlistService.acceptClientWaitlistOffer(entryId, offerId, clientId);
 
-    if (!entry || entry.clientId !== clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized to accept this offer',
-      });
+    if (!result.success) {
+      switch (result.error) {
+        case 'UNAUTHORIZED':
+          return sendForbidden(res, 'Unauthorized to accept this offer');
+        case 'NOT_FOUND':
+          return sendNotFound(res, 'Offer');
+        case 'NOT_AVAILABLE':
+          return sendBadRequest(res, 'Offer is no longer available');
+        case 'EXPIRED':
+          return sendBadRequest(res, 'Offer has expired');
+        default:
+          return sendServerError(res, 'Failed to accept offer');
+      }
     }
 
-    // Get the offer details
-    const offer = await prisma.waitlistOffer.findUnique({
-      where: { id: offerId },
-    });
-
-    if (!offer || offer.waitlistEntryId !== entryId) {
-      return res.status(404).json({
-        success: false,
-        message: 'Offer not found',
-      });
-    }
-
-    if (offer.status !== 'PENDING') {
-      return res.status(400).json({
-        success: false,
-        message: 'Offer is no longer available',
-      });
-    }
-
-    if (offer.expiresAt < new Date()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Offer has expired',
-      });
-    }
-
-    // Update offer status
-    await prisma.waitlistOffer.update({
-      where: { id: offerId },
-      data: {
-        status: 'ACCEPTED',
-        respondedAt: new Date(),
-      },
-    });
-
-    // Update waitlist entry status
-    await prisma.waitlistEntry.update({
-      where: { id: entryId },
-      data: {
-        status: 'MATCHED',
-      },
-    });
-
-    // TODO: Create appointment from the offer (implementation depends on appointment service)
-    // This should be done in a transaction with the above updates
-
-    auditLogger.info('Client accepted waitlist offer', {
-      clientId,
-      entryId,
-      offerId,
-      action: 'ACCEPT_WAITLIST_OFFER',
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Offer accepted successfully',
-      data: { entryId, offerId },
-    });
+    return sendSuccess(res, { entryId, offerId }, 'Offer accepted successfully');
   } catch (error) {
     logger.error('Accept waitlist offer error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to accept offer',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to accept offer');
   }
 };
 
 /**
  * Decline a waitlist offer
+ * Phase 3.2: Refactored to use service method
  */
 export const declineWaitlistOffer = async (req: Request, res: Response) => {
   try {
     const { entryId, offerId } = req.params;
-    const clientId = (req as any).portalAccount?.clientId;
+    const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Client ID not found in authentication context',
-      });
+      return sendBadRequest(res, 'Client ID not found in authentication context');
     }
 
-    // Verify the entry belongs to this client
-    const entry = await prisma.waitlistEntry.findUnique({
-      where: { id: entryId },
-    });
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const result = await waitlistService.declineClientWaitlistOffer(entryId, offerId, clientId);
 
-    if (!entry || entry.clientId !== clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized to decline this offer',
-      });
+    if (!result.success) {
+      switch (result.error) {
+        case 'UNAUTHORIZED':
+          return sendForbidden(res, 'Unauthorized to decline this offer');
+        case 'NOT_FOUND':
+          return sendNotFound(res, 'Offer');
+        case 'NOT_AVAILABLE':
+          return sendBadRequest(res, 'Offer is no longer available');
+        default:
+          return sendServerError(res, 'Failed to decline offer');
+      }
     }
 
-    // Get the offer details
-    const offer = await prisma.waitlistOffer.findUnique({
-      where: { id: offerId },
-    });
-
-    if (!offer || offer.waitlistEntryId !== entryId) {
-      return res.status(404).json({
-        success: false,
-        message: 'Offer not found',
-      });
-    }
-
-    if (offer.status !== 'PENDING') {
-      return res.status(400).json({
-        success: false,
-        message: 'Offer is no longer available',
-      });
-    }
-
-    // Update offer status
-    await prisma.waitlistOffer.update({
-      where: { id: offerId },
-      data: {
-        status: 'DECLINED',
-        respondedAt: new Date(),
-      },
-    });
-
-    auditLogger.info('Client declined waitlist offer', {
-      clientId,
-      entryId,
-      offerId,
-      action: 'DECLINE_WAITLIST_OFFER',
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Offer declined successfully',
-      data: { entryId, offerId },
-    });
+    return sendSuccess(res, { entryId, offerId }, 'Offer declined successfully');
   } catch (error) {
     logger.error('Decline waitlist offer error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to decline offer',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to decline offer');
   }
 };

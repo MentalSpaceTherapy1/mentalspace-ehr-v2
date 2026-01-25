@@ -18,6 +18,7 @@ import {
 } from '../controllers/billing.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireBillingAccess, requireClientAccess } from '../middleware/clientAccess';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.use(authenticate);
 // Get all charges - billing access required, scoped by organization in controller
 router.get(
   '/charges',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPERVISOR', 'CLINICIAN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   getAllCharges
 );
@@ -45,7 +46,7 @@ router.get(
 // Get charge by ID - billing access required
 router.get(
   '/charges/:id',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPERVISOR', 'CLINICIAN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   getChargeById
 );
@@ -53,7 +54,7 @@ router.get(
 // Create charge - billing staff or admin only
 router.post(
   '/charges',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   createCharge
 );
@@ -61,7 +62,7 @@ router.post(
 // Update charge - billing staff or admin only
 router.put(
   '/charges/:id',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   updateCharge
 );
@@ -69,7 +70,7 @@ router.put(
 // Delete charge - admin only
 router.delete(
   '/charges/:id',
-  authorize('ADMINISTRATOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   deleteCharge
 );
@@ -81,7 +82,7 @@ router.delete(
 // Get all payments - billing access required
 router.get(
   '/payments',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   getAllPayments
 );
@@ -89,7 +90,7 @@ router.get(
 // Get payment by ID - billing access required
 router.get(
   '/payments/:id',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   getPaymentById
 );
@@ -97,7 +98,7 @@ router.get(
 // Create payment - billing staff or admin only
 router.post(
   '/payments',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   createPayment
 );
@@ -105,7 +106,7 @@ router.post(
 // Update payment - billing staff or admin only
 router.put(
   '/payments/:id',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   updatePayment
 );
@@ -113,7 +114,7 @@ router.put(
 // Delete payment - admin only
 router.delete(
   '/payments/:id',
-  authorize('ADMINISTRATOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   deletePayment
 );
@@ -125,7 +126,7 @@ router.delete(
 // Aging report - billing/admin access
 router.get(
   '/reports/aging',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   getAgingReport
 );
@@ -133,7 +134,7 @@ router.get(
 // Revenue report - billing/admin access
 router.get(
   '/reports/revenue',
-  authorize('ADMINISTRATOR', 'BILLING_STAFF', 'OFFICE_MANAGER', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, 'OFFICE_MANAGER', UserRoles.SUPER_ADMIN),
   requireBillingAccess(),
   getRevenueReport
 );

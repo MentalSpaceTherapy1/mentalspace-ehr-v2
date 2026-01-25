@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import logger from '../utils/logger';
 
 export interface ValidationRule {
   id: string;
@@ -123,7 +124,7 @@ export async function validateNote(noteType: string, noteData: any): Promise<Val
         }
       } catch (e) {
         // Invalid regex pattern - skip
-        console.error(`Invalid regex pattern for field ${rule.fieldName}: ${rule.validationPattern}`);
+        logger.error('Invalid regex pattern for field', { fieldName: rule.fieldName, pattern: rule.validationPattern });
       }
     }
 

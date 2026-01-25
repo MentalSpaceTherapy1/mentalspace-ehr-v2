@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
+import { UserRoles } from '@mentalspace/shared';
 import { clinicalNoteReminderService } from '../services/clinicalNoteReminder.service';
 import { triggerNoteReminderJob } from '../jobs/processNoteReminders.job';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendForbidden, sendServerError } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Get reminders for a specific clinical note
@@ -13,21 +16,14 @@ export const getRemindersForNote = async (req: Request, res: Response) => {
 
     const reminders = await clinicalNoteReminderService.getRemindersForNote(noteId);
 
-    res.status(200).json({
-      success: true,
-      data: reminders,
-      message: `Retrieved ${reminders.length} reminders for note`,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, reminders, `Retrieved ${reminders.length} reminders for note`);
+  } catch (error) {
     logger.error('Error getting reminders for note', {
-      error: error.message,
+      error: getErrorMessage(error),
       noteId: req.params.noteId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve reminders for note',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve reminders for note');
   }
 };
 
@@ -40,10 +36,7 @@ export const getMyReminders = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated',
-      });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
     const includeCompleted = req.query.includeCompleted === 'true';
@@ -53,21 +46,14 @@ export const getMyReminders = async (req: Request, res: Response) => {
       includeCompleted
     );
 
-    res.status(200).json({
-      success: true,
-      data: reminders,
-      message: `Retrieved ${reminders.length} reminders`,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, reminders, `Retrieved ${reminders.length} reminders`);
+  } catch (error) {
     logger.error('Error getting user reminders', {
-      error: error.message,
+      error: getErrorMessage(error),
       userId: req.user?.id,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve user reminders',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve user reminders');
   }
 };
 
@@ -80,29 +66,19 @@ export const scheduleReminders = async (req: Request, res: Response) => {
     const { noteId, userId } = req.body;
 
     if (!noteId || !userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'noteId and userId are required',
-      });
+      return sendBadRequest(res, 'noteId and userId are required');
     }
 
     const reminders = await clinicalNoteReminderService.scheduleAllReminders(noteId, userId);
 
-    res.status(201).json({
-      success: true,
-      data: reminders,
-      message: `Scheduled ${reminders.length} reminders`,
-    });
-  } catch (error: any) {
+    return sendCreated(res, reminders, `Scheduled ${reminders.length} reminders`);
+  } catch (error) {
     logger.error('Error scheduling reminders', {
-      error: error.message,
+      error: getErrorMessage(error),
       noteId: req.body.noteId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to schedule reminders',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to schedule reminders');
   }
 };
 
@@ -116,21 +92,14 @@ export const cancelReminders = async (req: Request, res: Response) => {
 
     const result = await clinicalNoteReminderService.cancelReminders(noteId);
 
-    res.status(200).json({
-      success: true,
-      data: result,
-      message: `Cancelled ${result.count} reminders`,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, result, `Cancelled ${result.count} reminders`);
+  } catch (error) {
     logger.error('Error cancelling reminders', {
-      error: error.message,
+      error: getErrorMessage(error),
       noteId: req.params.noteId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to cancel reminders',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to cancel reminders');
   }
 };
 
@@ -141,29 +110,19 @@ export const cancelReminders = async (req: Request, res: Response) => {
 export const triggerReminderProcessing = async (req: Request, res: Response) => {
   try {
     // Check if user has admin role
-    if (!req.user?.roles?.includes('ADMINISTRATOR')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only administrators can manually trigger reminder processing',
-      });
+    if (!req.user?.roles?.includes(UserRoles.ADMINISTRATOR)) {
+      return sendForbidden(res, 'Only administrators can manually trigger reminder processing');
     }
 
     const results = await triggerNoteReminderJob();
 
-    res.status(200).json({
-      success: true,
-      data: results,
-      message: 'Reminder processing completed',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, results, 'Reminder processing completed');
+  } catch (error) {
     logger.error('Error manually triggering reminder processing', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to trigger reminder processing',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to trigger reminder processing');
   }
 };
 
@@ -174,28 +133,18 @@ export const triggerReminderProcessing = async (req: Request, res: Response) => 
 export const getPendingReminders = async (req: Request, res: Response) => {
   try {
     // Check if user has admin role
-    if (!req.user?.roles?.includes('ADMINISTRATOR')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only administrators can view all pending reminders',
-      });
+    if (!req.user?.roles?.includes(UserRoles.ADMINISTRATOR)) {
+      return sendForbidden(res, 'Only administrators can view all pending reminders');
     }
 
     const reminders = await clinicalNoteReminderService.getPendingReminders();
 
-    res.status(200).json({
-      success: true,
-      data: reminders,
-      message: `Retrieved ${reminders.length} pending reminders`,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, reminders, `Retrieved ${reminders.length} pending reminders`);
+  } catch (error) {
     logger.error('Error getting pending reminders', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve pending reminders',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve pending reminders');
   }
 };

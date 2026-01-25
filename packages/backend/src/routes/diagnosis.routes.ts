@@ -7,6 +7,7 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import * as diagnosisController from '../controllers/diagnosis.controller';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ router.use(authenticate);
  */
 router.post(
   '/',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   diagnosisController.createDiagnosis
 );
 
@@ -31,7 +32,7 @@ router.post(
  */
 router.put(
   '/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   diagnosisController.updateDiagnosis
 );
 
@@ -42,7 +43,7 @@ router.put(
  */
 router.get(
   '/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF),
   diagnosisController.getDiagnosisById
 );
 
@@ -52,7 +53,7 @@ router.get(
  */
 router.get(
   '/client/:clientId',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF),
   diagnosisController.getClientDiagnoses
 );
 
@@ -62,7 +63,7 @@ router.get(
  */
 router.get(
   '/client/:clientId/stats',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   diagnosisController.getClientDiagnosisStats
 );
 
@@ -72,7 +73,7 @@ router.get(
  */
 router.get(
   '/:id/history',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   diagnosisController.getDiagnosisHistory
 );
 
@@ -83,7 +84,7 @@ router.get(
  */
 router.delete(
   '/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   diagnosisController.deleteDiagnosis
 );
 

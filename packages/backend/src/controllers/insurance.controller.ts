@@ -1,330 +1,191 @@
-import logger, { logControllerError } from '../utils/logger';
+/**
+ * Insurance Controller
+ * Phase 3.2: Refactored to thin controller pattern
+ *
+ * Handles HTTP request/response only - all business logic delegated to insuranceService
+ */
+
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import prisma from '../lib/prisma';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+import { insuranceService } from '../services/insurance.service';
+import { logControllerError } from '../utils/logger';
+import { AppError } from '../utils/errors';
+import {
+  sendSuccess,
+  sendCreated,
+  sendNotFound,
+  sendBadRequest,
+  sendValidationError,
+  sendServerError,
+} from '../utils/apiResponse';
 
-// Insurance validation schema
-const insuranceSchema = z.object({
-  clientId: z.string().uuid('Invalid client ID'),
-  rank: z.string().min(1, 'Rank is required'), // Primary, Secondary, Tertiary
-  insuranceCompany: z.string().min(1, 'Insurance company is required'),
-  insuranceCompanyId: z.string().optional(),
-  planName: z.string().min(1, 'Plan name is required'),
-  planType: z.string().min(1, 'Plan type is required'),
-  memberId: z.string().min(1, 'Member ID is required'),
-  groupNumber: z.string().optional(),
-  effectiveDate: z.string().datetime('Invalid effective date'),
-  terminationDate: z.string().optional(),
-  subscriberFirstName: z.string().optional(),
-  subscriberLastName: z.string().optional(),
-  subscriberDOB: z.string().optional(),
-  subscriberSSN: z.string().optional(),
-  relationshipToSubscriber: z.string().optional(),
-  copay: z.number().optional(),
-  deductible: z.number().optional(),
-  outOfPocketMax: z.number().optional(),
-  lastVerificationDate: z.string().optional(),
-  lastVerifiedBy: z.string().optional(),
-  verificationNotes: z.string().optional(),
-});
-
-const updateInsuranceSchema = insuranceSchema.partial().omit({ clientId: true });
-
-// Get all insurance for a client
+/**
+ * Get all insurance for a client
+ * GET /api/clients/:clientId/insurance
+ */
 export const getClientInsurance = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
 
-    const insurance = await prisma.insuranceInformation.findMany({
-      where: { clientId },
-      orderBy: { rank: 'asc' },
-    });
+    const insurance = await insuranceService.getClientInsurance(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: insurance,
-    });
+    return sendSuccess(res, insurance);
   } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
     const errorId = logControllerError('Get insurance', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve insurance information',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve insurance information', errorId);
   }
 };
 
-// Get single insurance by ID
+/**
+ * Get single insurance by ID
+ * GET /api/insurance/:id
+ */
 export const getInsuranceById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const insurance = await prisma.insuranceInformation.findUnique({
-      where: { id },
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            medicalRecordNumber: true,
-          },
-        },
-      },
-    });
+    const insurance = await insuranceService.getInsuranceById(id);
 
-    if (!insurance) {
-      return res.status(404).json({
-        success: false,
-        message: 'Insurance information not found',
-      });
+    return sendSuccess(res, insurance);
+  } catch (error) {
+    if (error instanceof AppError) {
+      if (getErrorMessage(error).includes('not found')) {
+        return sendNotFound(res, 'Insurance information');
+      }
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
-    res.status(200).json({
-      success: true,
-      data: insurance,
-    });
-  } catch (error) {
     const errorId = logControllerError('Get insurance', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve insurance information',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve insurance information', errorId);
   }
 };
 
-// Create insurance
+/**
+ * Create insurance
+ * POST /api/insurance
+ */
 export const createInsurance = async (req: Request, res: Response) => {
   try {
-    const validatedData = insuranceSchema.parse(req.body);
+    const insurance = await insuranceService.createInsurance(req.body);
 
-    // Check if rank already exists for this client
-    const existingInsurance = await prisma.insuranceInformation.findFirst({
-      where: {
-        clientId: validatedData.clientId,
-        rank: validatedData.rank,
-      },
-    });
-
-    if (existingInsurance) {
-      return res.status(400).json({
-        success: false,
-        message: `Insurance rank ${validatedData.rank} already exists for this client`,
-      });
-    }
-
-    const insurance = await prisma.insuranceInformation.create({
-      data: {
-        clientId: validatedData.clientId,
-        rank: validatedData.rank,
-        insuranceCompany: validatedData.insuranceCompany,
-        insuranceCompanyId: validatedData.insuranceCompanyId === '' ? undefined : validatedData.insuranceCompanyId,
-        planName: validatedData.planName,
-        planType: validatedData.planType,
-        memberId: validatedData.memberId,
-        groupNumber: validatedData.groupNumber === '' ? undefined : validatedData.groupNumber,
-        effectiveDate: new Date(validatedData.effectiveDate),
-        terminationDate: validatedData.terminationDate && validatedData.terminationDate !== '' ? new Date(validatedData.terminationDate) : null,
-        subscriberFirstName: validatedData.subscriberFirstName === '' ? undefined : validatedData.subscriberFirstName,
-        subscriberLastName: validatedData.subscriberLastName === '' ? undefined : validatedData.subscriberLastName,
-        subscriberDOB: validatedData.subscriberDOB && validatedData.subscriberDOB !== '' ? new Date(validatedData.subscriberDOB) : null,
-        subscriberSSN: validatedData.subscriberSSN === '' ? undefined : validatedData.subscriberSSN,
-        relationshipToSubscriber: validatedData.relationshipToSubscriber === '' ? undefined : validatedData.relationshipToSubscriber,
-        copay: validatedData.copay,
-        deductible: validatedData.deductible,
-        outOfPocketMax: validatedData.outOfPocketMax,
-        lastVerificationDate: validatedData.lastVerificationDate && validatedData.lastVerificationDate !== '' ? new Date(validatedData.lastVerificationDate) : null,
-        lastVerifiedBy: validatedData.lastVerifiedBy === '' ? undefined : validatedData.lastVerifiedBy,
-        verificationNotes: validatedData.verificationNotes,
-      },
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Insurance information created successfully',
-      data: insurance,
-    });
+    return sendCreated(res, insurance, 'Insurance information created successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
+    }
+
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
     const errorId = logControllerError('Create insurance', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create insurance information',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to create insurance information', errorId);
   }
 };
 
-// Update insurance
+/**
+ * Update insurance
+ * PUT /api/insurance/:id
+ */
 export const updateInsurance = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const validatedData = updateInsuranceSchema.parse(req.body);
 
-    const existingInsurance = await prisma.insuranceInformation.findUnique({
-      where: { id },
-    });
+    const insurance = await insuranceService.updateInsurance(id, req.body);
 
-    if (!existingInsurance) {
-      return res.status(404).json({
-        success: false,
-        message: 'Insurance information not found',
-      });
-    }
-
-    // If rank is being updated, check for conflicts
-    if (validatedData.rank && validatedData.rank !== existingInsurance.rank) {
-      const conflictingInsurance = await prisma.insuranceInformation.findFirst({
-        where: {
-          clientId: existingInsurance.clientId,
-          rank: validatedData.rank,
-          id: { not: id },
-        },
-      });
-
-      if (conflictingInsurance) {
-        return res.status(400).json({
-          success: false,
-          message: `Insurance rank ${validatedData.rank} already exists for this client`,
-        });
-      }
-    }
-
-    const updateData: any = { ...validatedData };
-
-    // Convert date strings to Date objects
-    if (validatedData.effectiveDate) {
-      updateData.effectiveDate = new Date(validatedData.effectiveDate);
-    }
-    if (validatedData.terminationDate) {
-      updateData.terminationDate = new Date(validatedData.terminationDate);
-    }
-    if (validatedData.subscriberDOB) {
-      updateData.subscriberDOB = new Date(validatedData.subscriberDOB);
-    }
-    if (validatedData.lastVerificationDate) {
-      updateData.lastVerificationDate = new Date(validatedData.lastVerificationDate);
-    }
-
-    const insurance = await prisma.insuranceInformation.update({
-      where: { id },
-      data: updateData,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Insurance information updated successfully',
-      data: insurance,
-    });
+    return sendSuccess(res, insurance, 'Insurance information updated successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
+    }
+
+    if (error instanceof AppError) {
+      if (getErrorMessage(error).includes('not found')) {
+        return sendNotFound(res, 'Insurance information');
+      }
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
     const errorId = logControllerError('Update insurance', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update insurance information',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to update insurance information', errorId);
   }
 };
 
-// Delete insurance
+/**
+ * Delete insurance
+ * DELETE /api/insurance/:id
+ */
 export const deleteInsurance = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const existingInsurance = await prisma.insuranceInformation.findUnique({
-      where: { id },
-    });
+    await insuranceService.deleteInsurance(id);
 
-    if (!existingInsurance) {
-      return res.status(404).json({
-        success: false,
-        message: 'Insurance information not found',
-      });
+    return sendSuccess(res, null, 'Insurance information deleted successfully');
+  } catch (error) {
+    if (error instanceof AppError) {
+      if (getErrorMessage(error).includes('not found')) {
+        return sendNotFound(res, 'Insurance information');
+      }
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
-    await prisma.insuranceInformation.delete({
-      where: { id },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Insurance information deleted successfully',
-    });
-  } catch (error) {
     const errorId = logControllerError('Delete insurance', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete insurance information',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to delete insurance information', errorId);
   }
 };
 
-// Verify insurance
+/**
+ * Verify insurance
+ * POST /api/insurance/:id/verify
+ */
 export const verifyInsurance = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
+    const notes = req.body?.notes;
 
-    const existingInsurance = await prisma.insuranceInformation.findUnique({
-      where: { id },
-    });
+    const insurance = await insuranceService.verifyInsurance(id, userId, notes);
 
-    if (!existingInsurance) {
-      return res.status(404).json({
-        success: false,
-        message: 'Insurance information not found',
-      });
+    return sendSuccess(res, insurance, 'Insurance verified successfully');
+  } catch (error) {
+    if (error instanceof AppError) {
+      if (getErrorMessage(error).includes('not found')) {
+        return sendNotFound(res, 'Insurance information');
+      }
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
-    const insurance = await prisma.insuranceInformation.update({
-      where: { id },
-      data: {
-        lastVerificationDate: new Date(),
-        lastVerifiedBy: userId,
-        verificationNotes: 'Verified',
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Insurance verified successfully',
-      data: insurance,
-    });
-  } catch (error) {
     const errorId = logControllerError('Verify insurance', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to verify insurance',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to verify insurance', errorId);
   }
 };

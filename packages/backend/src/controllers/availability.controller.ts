@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import * as availabilityService from '../services/providerAvailability.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Module 3 Phase 2.3: Provider Availability Controller
@@ -10,7 +12,7 @@ import logger from '../utils/logger';
  * Create provider availability
  * POST /api/v1/provider-availability
  */
-export async function createAvailability(req: Request, res: Response): Promise<void> {
+export async function createAvailability(req: Request, res: Response) {
   try {
     const availability = await availabilityService.createProviderAvailability(req.body);
 
@@ -20,16 +22,10 @@ export async function createAvailability(req: Request, res: Response): Promise<v
       dayOfWeek: availability.dayOfWeek,
     });
 
-    res.status(201).json({
-      success: true,
-      data: availability,
-    });
-  } catch (error: any) {
-    logger.error('Error creating provider availability', { error: error.message });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to create provider availability',
-    });
+    return sendCreated(res, availability);
+  } catch (error) {
+    logger.error('Error creating provider availability', { error: getErrorMessage(error) });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to create provider availability');
   }
 }
 
@@ -37,7 +33,7 @@ export async function createAvailability(req: Request, res: Response): Promise<v
  * Update provider availability
  * PUT /api/v1/provider-availability/:id
  */
-export async function updateAvailability(req: Request, res: Response): Promise<void> {
+export async function updateAvailability(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const availability = await availabilityService.updateProviderAvailability(id, req.body);
@@ -47,16 +43,10 @@ export async function updateAvailability(req: Request, res: Response): Promise<v
       providerId: availability.providerId,
     });
 
-    res.json({
-      success: true,
-      data: availability,
-    });
-  } catch (error: any) {
-    logger.error('Error updating provider availability', { error: error.message });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to update provider availability',
-    });
+    return sendSuccess(res, availability);
+  } catch (error) {
+    logger.error('Error updating provider availability', { error: getErrorMessage(error) });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to update provider availability');
   }
 }
 
@@ -64,7 +54,7 @@ export async function updateAvailability(req: Request, res: Response): Promise<v
  * Delete provider availability
  * DELETE /api/v1/provider-availability/:id
  */
-export async function deleteAvailability(req: Request, res: Response): Promise<void> {
+export async function deleteAvailability(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const availability = await availabilityService.deleteProviderAvailability(id);
@@ -74,17 +64,10 @@ export async function deleteAvailability(req: Request, res: Response): Promise<v
       providerId: availability.providerId,
     });
 
-    res.json({
-      success: true,
-      message: 'Provider availability deleted successfully',
-      data: availability,
-    });
-  } catch (error: any) {
-    logger.error('Error deleting provider availability', { error: error.message });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to delete provider availability',
-    });
+    return sendSuccess(res, availability, 'Provider availability deleted successfully');
+  } catch (error) {
+    logger.error('Error deleting provider availability', { error: getErrorMessage(error) });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to delete provider availability');
   }
 }
 
@@ -92,29 +75,20 @@ export async function deleteAvailability(req: Request, res: Response): Promise<v
  * Get provider availability by ID
  * GET /api/v1/provider-availability/:id
  */
-export async function getAvailabilityById(req: Request, res: Response): Promise<void> {
+export async function getAvailabilityById(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const availability = await availabilityService.getProviderAvailabilityById(id);
 
     if (!availability) {
-      res.status(404).json({
-        success: false,
-        message: 'Provider availability not found',
-      });
+      sendNotFound(res, 'Provider availability');
       return;
     }
 
-    res.json({
-      success: true,
-      data: availability,
-    });
-  } catch (error: any) {
-    logger.error('Error getting provider availability', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get provider availability',
-    });
+    sendSuccess(res, availability);
+  } catch (error) {
+    logger.error('Error getting provider availability', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to get provider availability');
   }
 }
 
@@ -122,7 +96,7 @@ export async function getAvailabilityById(req: Request, res: Response): Promise<
  * Get all provider availabilities with filters
  * GET /api/v1/provider-availability
  */
-export async function getAllAvailabilities(req: Request, res: Response): Promise<void> {
+export async function getAllAvailabilities(req: Request, res: Response) {
   try {
     const filters = {
       providerId: req.query.providerId as string | undefined,
@@ -133,17 +107,10 @@ export async function getAllAvailabilities(req: Request, res: Response): Promise
 
     const availabilities = await availabilityService.getAllProviderAvailabilities(filters);
 
-    res.json({
-      success: true,
-      count: availabilities.length,
-      data: availabilities,
-    });
-  } catch (error: any) {
-    logger.error('Error getting provider availabilities', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get provider availabilities',
-    });
+    sendSuccess(res, { count: availabilities.length, data: availabilities });
+  } catch (error) {
+    logger.error('Error getting provider availabilities', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to get provider availabilities');
   }
 }
 
@@ -151,22 +118,15 @@ export async function getAllAvailabilities(req: Request, res: Response): Promise
  * Get provider's weekly schedule
  * GET /api/v1/provider-availability/provider/:providerId/schedule
  */
-export async function getProviderSchedule(req: Request, res: Response): Promise<void> {
+export async function getProviderSchedule(req: Request, res: Response) {
   try {
     const { providerId } = req.params;
     const schedule = await availabilityService.getProviderWeeklySchedule(providerId);
 
-    res.json({
-      success: true,
-      count: schedule.length,
-      data: schedule,
-    });
-  } catch (error: any) {
-    logger.error('Error getting provider schedule', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get provider schedule',
-    });
+    sendSuccess(res, { count: schedule.length, data: schedule });
+  } catch (error) {
+    logger.error('Error getting provider schedule', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to get provider schedule');
   }
 }
 
@@ -174,15 +134,12 @@ export async function getProviderSchedule(req: Request, res: Response): Promise<
  * Check provider availability for specific date/time
  * POST /api/v1/provider-availability/check
  */
-export async function checkAvailability(req: Request, res: Response): Promise<void> {
+export async function checkAvailability(req: Request, res: Response) {
   try {
     const { providerId, date, startTime, endTime } = req.body;
 
     if (!providerId || !date || !startTime || !endTime) {
-      res.status(400).json({
-        success: false,
-        message: 'Missing required fields: providerId, date, startTime, endTime',
-      });
+      sendBadRequest(res, 'Missing required fields: providerId, date, startTime, endTime');
       return;
     }
 
@@ -193,16 +150,10 @@ export async function checkAvailability(req: Request, res: Response): Promise<vo
       endTime
     );
 
-    res.json({
-      success: true,
-      data: availability,
-    });
-  } catch (error: any) {
-    logger.error('Error checking provider availability', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to check provider availability',
-    });
+    sendSuccess(res, availability);
+  } catch (error) {
+    logger.error('Error checking provider availability', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to check provider availability');
   }
 }
 
@@ -210,15 +161,12 @@ export async function checkAvailability(req: Request, res: Response): Promise<vo
  * Find available providers for specific date/time
  * POST /api/v1/provider-availability/find-available
  */
-export async function findAvailableProviders(req: Request, res: Response): Promise<void> {
+export async function findAvailableProviders(req: Request, res: Response) {
   try {
     const { date, startTime, endTime, specialty, telehealthRequired, officeLocationId } = req.body;
 
     if (!date || !startTime || !endTime) {
-      res.status(400).json({
-        success: false,
-        message: 'Missing required fields: date, startTime, endTime',
-      });
+      sendBadRequest(res, 'Missing required fields: date, startTime, endTime');
       return;
     }
 
@@ -233,17 +181,10 @@ export async function findAvailableProviders(req: Request, res: Response): Promi
       }
     );
 
-    res.json({
-      success: true,
-      count: providers.length,
-      data: providers,
-    });
-  } catch (error: any) {
-    logger.error('Error finding available providers', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to find available providers',
-    });
+    sendSuccess(res, { count: providers.length, data: providers });
+  } catch (error) {
+    logger.error('Error finding available providers', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to find available providers');
   }
 }
 
@@ -251,15 +192,12 @@ export async function findAvailableProviders(req: Request, res: Response): Promi
  * Validate schedule conflicts
  * POST /api/v1/provider-availability/validate
  */
-export async function validateSchedule(req: Request, res: Response): Promise<void> {
+export async function validateSchedule(req: Request, res: Response) {
   try {
     const { providerId, dayOfWeek, startTime, endTime, excludeId } = req.body;
 
     if (!providerId || dayOfWeek === undefined || !startTime || !endTime) {
-      res.status(400).json({
-        success: false,
-        message: 'Missing required fields: providerId, dayOfWeek, startTime, endTime',
-      });
+      sendBadRequest(res, 'Missing required fields: providerId, dayOfWeek, startTime, endTime');
       return;
     }
 
@@ -271,15 +209,9 @@ export async function validateSchedule(req: Request, res: Response): Promise<voi
       excludeId
     );
 
-    res.json({
-      success: true,
-      data: result,
-    });
-  } catch (error: any) {
-    logger.error('Error validating schedule', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to validate schedule',
-    });
+    sendSuccess(res, result);
+  } catch (error) {
+    logger.error('Error validating schedule', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to validate schedule');
   }
 }

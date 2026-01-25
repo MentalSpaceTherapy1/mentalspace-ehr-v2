@@ -19,6 +19,7 @@ import { auditLogger } from '../utils/logger';
 import prisma from './database';
 import sgMail from '@sendgrid/mail';
 import twilio from 'twilio';
+import { AppointmentStatus as AppointmentStatusConst } from '@mentalspace/shared';
 
 /**
  * Service configuration state
@@ -173,7 +174,7 @@ export async function getAppointmentsNeedingReminders() {
         gte: now,
         lte: futureDate,
       },
-      status: 'SCHEDULED',
+      status: AppointmentStatusConst.SCHEDULED,
     },
     include: {
       client: {

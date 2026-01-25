@@ -6,8 +6,12 @@
  */
 
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as crisisResourceService from '../services/crisisResource.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 /**
  * GET /api/v1/crisis-resources
@@ -37,21 +41,13 @@ export async function getCrisisResources(req: Request, res: Response) {
 
     const resources = await crisisResourceService.getCrisisResources(filter);
 
-    res.json({
-      success: true,
-      data: resources,
-      count: resources.length,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { data: resources, count: resources.length });
+  } catch (error) {
     logger.error('Error getting crisis resources', {
-      error: error.message,
+      error: getErrorMessage(error),
       query: req.query,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve crisis resources',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve crisis resources');
   }
 }
 
@@ -70,22 +66,13 @@ export async function getCrisisResourcesForEmergency(req: Request, res: Response
       city as string | undefined
     );
 
-    res.json({
-      success: true,
-      data: resources,
-      count: resources.length,
-      emergencyType,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { data: resources, count: resources.length, emergencyType });
+  } catch (error) {
     logger.error('Error getting crisis resources for emergency', {
-      error: error.message,
+      error: getErrorMessage(error),
       emergencyType: req.params.emergencyType,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve crisis resources for emergency',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve crisis resources for emergency');
   }
 }
 
@@ -99,28 +86,18 @@ export async function getCrisisResourceById(req: Request, res: Response) {
 
     const resource = await crisisResourceService.getCrisisResourceById(id);
 
-    res.json({
-      success: true,
-      data: resource,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, resource);
+  } catch (error) {
     logger.error('Error getting crisis resource', {
-      error: error.message,
+      error: getErrorMessage(error),
       id: req.params.id,
     });
 
-    if (error.message === 'Crisis resource not found') {
-      return res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+    if (getErrorMessage(error) === 'Crisis resource not found') {
+      return sendNotFound(res, 'Crisis resource');
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve crisis resource',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve crisis resource');
   }
 }
 
@@ -131,13 +108,10 @@ export async function getCrisisResourceById(req: Request, res: Response) {
  */
 export async function createCrisisResource(req: Request, res: Response) {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated',
-      });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
     // Validate required fields
@@ -161,27 +135,12 @@ export async function createCrisisResource(req: Request, res: Response) {
       !serviceType ||
       !geographicScope
     ) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields',
-        required: [
-          'name',
-          'phone',
-          'description',
-          'category',
-          'availability',
-          'serviceType',
-          'geographicScope',
-        ],
-      });
+      return sendBadRequest(res, 'Missing required fields: name, phone, description, category, availability, serviceType, geographicScope');
     }
 
     // Validate phone number format
     if (!crisisResourceService.validatePhoneNumber(phone)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid phone number format',
-      });
+      return sendBadRequest(res, 'Invalid phone number format');
     }
 
     const resourceData = {
@@ -192,21 +151,13 @@ export async function createCrisisResource(req: Request, res: Response) {
 
     const resource = await crisisResourceService.createCrisisResource(resourceData);
 
-    res.status(201).json({
-      success: true,
-      message: 'Crisis resource created successfully',
-      data: resource,
-    });
-  } catch (error: any) {
+    return sendCreated(res, resource, 'Crisis resource created successfully');
+  } catch (error) {
     logger.error('Error creating crisis resource', {
-      error: error.message,
+      error: getErrorMessage(error),
       body: req.body,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create crisis resource',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to create crisis resource');
   }
 }
 
@@ -218,21 +169,15 @@ export async function createCrisisResource(req: Request, res: Response) {
 export async function updateCrisisResource(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.id;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated',
-      });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
     // Validate phone number if provided
     if (req.body.phone && !crisisResourceService.validatePhoneNumber(req.body.phone)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid phone number format',
-      });
+      return sendBadRequest(res, 'Invalid phone number format');
     }
 
     const updateData = {
@@ -242,21 +187,13 @@ export async function updateCrisisResource(req: Request, res: Response) {
 
     const resource = await crisisResourceService.updateCrisisResource(id, updateData);
 
-    res.json({
-      success: true,
-      message: 'Crisis resource updated successfully',
-      data: resource,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, resource, 'Crisis resource updated successfully');
+  } catch (error) {
     logger.error('Error updating crisis resource', {
-      error: error.message,
+      error: getErrorMessage(error),
       id: req.params.id,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update crisis resource',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to update crisis resource');
   }
 }
 
@@ -268,32 +205,21 @@ export async function updateCrisisResource(req: Request, res: Response) {
 export async function deleteCrisisResource(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.id;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated',
-      });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
     const resource = await crisisResourceService.deleteCrisisResource(id, userId);
 
-    res.json({
-      success: true,
-      message: 'Crisis resource deleted successfully',
-      data: resource,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, resource, 'Crisis resource deleted successfully');
+  } catch (error) {
     logger.error('Error deleting crisis resource', {
-      error: error.message,
+      error: getErrorMessage(error),
       id: req.params.id,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete crisis resource',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to delete crisis resource');
   }
 }
 
@@ -304,39 +230,25 @@ export async function deleteCrisisResource(req: Request, res: Response) {
  */
 export async function reorderCrisisResources(req: Request, res: Response) {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.userId;
     const { updates } = req.body;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated',
-      });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
     if (!Array.isArray(updates)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Updates must be an array',
-      });
+      return sendBadRequest(res, 'Updates must be an array');
     }
 
     const results = await crisisResourceService.reorderCrisisResources(updates, userId);
 
-    res.json({
-      success: true,
-      message: 'Crisis resources reordered successfully',
-      data: results,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, results, 'Crisis resources reordered successfully');
+  } catch (error) {
     logger.error('Error reordering crisis resources', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to reorder crisis resources',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to reorder crisis resources');
   }
 }
 
@@ -348,19 +260,12 @@ export async function getCrisisResourceCategories(req: Request, res: Response) {
   try {
     const categories = await crisisResourceService.getCrisisResourceCategories();
 
-    res.json({
-      success: true,
-      data: categories,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, categories);
+  } catch (error) {
     logger.error('Error getting crisis resource categories', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve crisis resource categories',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve crisis resource categories');
   }
 }
 
@@ -373,29 +278,17 @@ export async function searchCrisisResources(req: Request, res: Response) {
     const { q } = req.query;
 
     if (!q || typeof q !== 'string') {
-      return res.status(400).json({
-        success: false,
-        message: 'Search term (q) is required',
-      });
+      return sendBadRequest(res, 'Search term (q) is required');
     }
 
     const resources = await crisisResourceService.searchCrisisResources(q);
 
-    res.json({
-      success: true,
-      data: resources,
-      count: resources.length,
-      searchTerm: q,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { data: resources, count: resources.length, searchTerm: q });
+  } catch (error) {
     logger.error('Error searching crisis resources', {
-      error: error.message,
+      error: getErrorMessage(error),
       searchTerm: req.query.q,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to search crisis resources',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to search crisis resources');
   }
 }

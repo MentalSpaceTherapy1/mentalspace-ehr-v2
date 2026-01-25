@@ -637,6 +637,19 @@ class UserService {
   }
 
   /**
+   * Get basic user info (for use by other services)
+   * Phase 3.2: Added to support thin controller pattern
+   */
+  async getUserBasicInfo(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+
+    return user;
+  }
+
+  /**
    * Force password change (for first login)
    * Sets permanent password with 6-month expiration
    */

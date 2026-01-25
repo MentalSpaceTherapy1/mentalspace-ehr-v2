@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 import * as ClientDiagnosisController from '../controllers/client-diagnosis.controller';
 
 const router = Router();
@@ -25,7 +26,7 @@ router.use(authenticate);
  */
 router.get(
   '/icd10/search',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF),
   ClientDiagnosisController.searchICD10Codes
 );
 
@@ -40,7 +41,7 @@ router.get(
  */
 router.post(
   '/clients/:clientId/diagnoses',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   ClientDiagnosisController.addDiagnosis
 );
 
@@ -52,7 +53,7 @@ router.post(
  */
 router.get(
   '/clients/:clientId/diagnoses',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF),
   ClientDiagnosisController.getClientDiagnoses
 );
 
@@ -63,7 +64,7 @@ router.get(
  */
 router.get(
   '/clients/:clientId/diagnoses/stats',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   ClientDiagnosisController.getClientDiagnosisStats
 );
 
@@ -78,7 +79,7 @@ router.get(
  */
 router.get(
   '/diagnoses/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF),
   ClientDiagnosisController.getDiagnosisById
 );
 
@@ -89,7 +90,7 @@ router.get(
  */
 router.patch(
   '/diagnoses/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   ClientDiagnosisController.updateDiagnosis
 );
 
@@ -100,7 +101,7 @@ router.patch(
  */
 router.patch(
   '/diagnoses/:id/status',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   ClientDiagnosisController.updateDiagnosisStatus
 );
 
@@ -111,7 +112,7 @@ router.patch(
  */
 router.delete(
   '/diagnoses/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   ClientDiagnosisController.deleteDiagnosis
 );
 

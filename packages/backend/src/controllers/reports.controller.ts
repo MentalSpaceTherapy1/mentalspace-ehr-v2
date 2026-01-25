@@ -1,7 +1,45 @@
 import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
+import { UserRoles } from '@mentalspace/shared';
+import { Prisma } from '@mentalspace/database';
 import prisma from '../services/database';
 import * as cache from '../services/cache.service';
+import { sendSuccess, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
+
+// Phase 5.4: Type definitions for reports module
+interface ARDetailItem {
+  clientName: string;
+  payer: string;
+  serviceDate: Date;
+  chargeAmount: number;
+  amountPaid: number;
+  balance: number;
+  daysOutstanding: number;
+}
+
+interface CashFlowForecastItem {
+  date: string;
+  expectedCollections: number;
+  cumulativeCash: number;
+}
+
+interface CareGapItem {
+  clientName: string;
+  clientId: string;
+  gapType: string;
+  lastDate: Date | null;
+  daysOverdue: number | string;
+  priority: string;
+}
+
+interface HeatMapHourData {
+  scheduled: number;
+  filled: number;
+  utilization: number;
+}
+
+type HeatMapDayData = Record<number, HeatMapHourData>;
+type HeatMapData = Record<string, HeatMapDayData>;
 
 /**
  * ============================================================================
@@ -24,7 +62,7 @@ export async function getRevenueByClinicianReport(req: Request, res: Response) {
     });
     const cachedData = await cache.get(cacheKey);
     if (cachedData) {
-      return res.json({ success: true, data: cachedData, cached: true });
+      return sendSuccess(res, { ...cachedData, cached: true });
     }
 
     // Get all charges grouped by clinician (providerId in schema)
@@ -85,17 +123,10 @@ export async function getRevenueByClinicianReport(req: Request, res: Response) {
     // Cache result for 5 minutes
     await cache.set(cacheKey, responseData, cache.CacheTTL.MEDIUM, cache.CacheCategory.REVENUE);
 
-    res.json({
-      success: true,
-      data: responseData,
-    });
+    return sendSuccess(res, responseData);
   } catch (error) {
     logger.error('Error generating revenue by clinician report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate revenue by clinician report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate revenue by clinician report');
   }
 }
 
@@ -114,7 +145,7 @@ export async function getRevenueByCPTReport(req: Request, res: Response) {
     });
     const cachedData = await cache.get(cacheKey);
     if (cachedData) {
-      return res.json({ success: true, data: cachedData, cached: true });
+      return sendSuccess(res, { ...cachedData, cached: true });
     }
 
     const chargesByCPT = await prisma.chargeEntry.groupBy({
@@ -165,17 +196,10 @@ export async function getRevenueByCPTReport(req: Request, res: Response) {
     // Cache result for 5 minutes
     await cache.set(cacheKey, responseData, cache.CacheTTL.MEDIUM, cache.CacheCategory.REVENUE);
 
-    res.json({
-      success: true,
-      data: responseData,
-    });
+    return sendSuccess(res, responseData);
   } catch (error) {
     logger.error('Error generating revenue by CPT report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate revenue by CPT report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate revenue by CPT report');
   }
 }
 
@@ -236,21 +260,14 @@ export async function getRevenueByPayerReport(req: Request, res: Response) {
       r.percentage = totalRevenue > 0 ? (r.totalRevenue / totalRevenue) * 100 : 0;
     });
 
-    res.json({
-      success: true,
-      data: {
-        report: report.sort((a, b) => b.totalRevenue - a.totalRevenue),
-        period: { startDate: start, endDate: end },
-        totalRevenue,
-      },
+    return sendSuccess(res, {
+      report: report.sort((a, b) => b.totalRevenue - a.totalRevenue),
+      period: { startDate: start, endDate: end },
+      totalRevenue,
     });
   } catch (error) {
     logger.error('Error generating revenue by payer report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate revenue by payer report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate revenue by payer report');
   }
 }
 
@@ -283,23 +300,16 @@ export async function getPaymentCollectionReport(req: Request, res: Response) {
     const collected = Number(totalPayments._sum.paymentAmount) || 0;
     const collectionRate = charged > 0 ? (collected / charged) * 100 : 0;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        totalCharged: charged,
-        totalCollected: collected,
-        outstanding: charged - collected,
-        collectionRate,
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      totalCharged: charged,
+      totalCollected: collected,
+      outstanding: charged - collected,
+      collectionRate,
     });
   } catch (error) {
     logger.error('Error generating payment collection report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate payment collection report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate payment collection report');
   }
 }
 
@@ -342,7 +352,7 @@ export async function getARAgingReport(req: Request, res: Response) {
     let totalDaysOutstanding = 0;
     let countOutstanding = 0;
 
-    const details: any[] = [];
+    const details: ARDetailItem[] = [];
 
     charges.forEach((charge) => {
       const chargeAmount = Number(charge.chargeAmount);
@@ -400,32 +410,25 @@ export async function getARAgingReport(req: Request, res: Response) {
       existing.avgDaysOutstanding = (existing.avgDaysOutstanding * (existing.count - 1) + d.daysOutstanding) / existing.count;
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        summary: {
-          totalAR,
-          averageDaysOutstanding: countOutstanding > 0 ? totalDaysOutstanding / countOutstanding : 0,
-          totalOutstandingClaims: countOutstanding,
-        },
-        agingBuckets: {
-          current: { label: '0-30 days', ...agingBuckets.current },
-          days31to60: { label: '31-60 days', ...agingBuckets.days31to60 },
-          days61to90: { label: '61-90 days', ...agingBuckets.days61to90 },
-          days90plus: { label: '90+ days', ...agingBuckets.days90plus },
-        },
-        payerBreakdown: Array.from(payerBreakdown.values()).sort((a, b) => b.totalAR - a.totalAR),
-        details: details.sort((a, b) => b.daysOutstanding - a.daysOutstanding),
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      summary: {
+        totalAR,
+        averageDaysOutstanding: countOutstanding > 0 ? totalDaysOutstanding / countOutstanding : 0,
+        totalOutstandingClaims: countOutstanding,
       },
+      agingBuckets: {
+        current: { label: '0-30 days', ...agingBuckets.current },
+        days31to60: { label: '31-60 days', ...agingBuckets.days31to60 },
+        days61to90: { label: '61-90 days', ...agingBuckets.days61to90 },
+        days90plus: { label: '90+ days', ...agingBuckets.days90plus },
+      },
+      payerBreakdown: Array.from(payerBreakdown.values()).sort((a, b) => b.totalAR - a.totalAR),
+      details: details.sort((a, b) => b.daysOutstanding - a.daysOutstanding),
     });
   } catch (error) {
     logger.error('Error generating AR aging report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate AR aging report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate AR aging report');
   }
 }
 
@@ -490,32 +493,25 @@ export async function getClaimDenialAnalysisReport(req: Request, res: Response) 
 
     const denialRate = totalCharges > 0 ? (deniedCharges.length / totalCharges) * 100 : 0;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        summary: {
-          totalDenials: deniedCharges.length,
-          totalDeniedAmount,
-          denialRate,
-          totalClaims: totalCharges,
-        },
-        payerDenials: Array.from(payerDenials.entries()).map(([payer, data]) => ({
-          payer,
-          denialCount: data.count,
-          deniedAmount: data.amount,
-          denialRate: totalCharges > 0 ? (data.count / totalCharges) * 100 : 0,
-        })).sort((a, b) => b.denialCount - a.denialCount),
-        topDenialReasons: denialReasons,
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      summary: {
+        totalDenials: deniedCharges.length,
+        totalDeniedAmount,
+        denialRate,
+        totalClaims: totalCharges,
       },
+      payerDenials: Array.from(payerDenials.entries()).map(([payer, data]) => ({
+        payer,
+        denialCount: data.count,
+        deniedAmount: data.amount,
+        denialRate: totalCharges > 0 ? (data.count / totalCharges) * 100 : 0,
+      })).sort((a, b) => b.denialCount - a.denialCount),
+      topDenialReasons: denialReasons,
     });
   } catch (error) {
     logger.error('Error generating claim denial analysis report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate claim denial analysis report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate claim denial analysis report');
   }
 }
 
@@ -563,25 +559,18 @@ export async function getServiceLineProfitabilityReport(req: Request, res: Respo
       };
     });
 
-    res.json({
-      success: true,
-      data: {
-        report: report.sort((a, b) => b.profit - a.profit),
-        period: { startDate: start, endDate: end },
-        summary: {
-          totalRevenue: report.reduce((sum, r) => sum + r.revenue, 0),
-          totalProfit: report.reduce((sum, r) => sum + r.profit, 0),
-          averageMargin: report.length > 0 ? report.reduce((sum, r) => sum + r.profitMargin, 0) / report.length : 0,
-        },
+    return sendSuccess(res, {
+      report: report.sort((a, b) => b.profit - a.profit),
+      period: { startDate: start, endDate: end },
+      summary: {
+        totalRevenue: report.reduce((sum, r) => sum + r.revenue, 0),
+        totalProfit: report.reduce((sum, r) => sum + r.profit, 0),
+        averageMargin: report.length > 0 ? report.reduce((sum, r) => sum + r.profitMargin, 0) / report.length : 0,
       },
     });
   } catch (error) {
     logger.error('Error generating service line profitability report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate service line profitability report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate service line profitability report');
   }
 }
 
@@ -657,20 +646,13 @@ export async function getPayerPerformanceScorecardReport(req: Request, res: Resp
       totalPaid: metrics.totalPaid,
     })).sort((a, b) => b.totalPaid - a.totalPaid);
 
-    res.json({
-      success: true,
-      data: {
-        report,
-        period: { startDate: start, endDate: end },
-      },
+    return sendSuccess(res, {
+      report,
+      period: { startDate: start, endDate: end },
     });
   } catch (error) {
     logger.error('Error generating payer performance scorecard:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate payer performance scorecard',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate payer performance scorecard');
   }
 }
 
@@ -701,24 +683,17 @@ export async function getRevenueVarianceReport(req: Request, res: Response) {
     const variance = actual - budgeted;
     const variancePercent = budgeted > 0 ? (variance / budgeted) * 100 : 0;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        budgeted,
-        actual,
-        variance,
-        variancePercent,
-        status: variance >= 0 ? 'Over Budget' : 'Under Budget',
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      budgeted,
+      actual,
+      variance,
+      variancePercent,
+      status: variance >= 0 ? 'Over Budget' : 'Under Budget',
     });
   } catch (error) {
     logger.error('Error generating revenue variance report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate revenue variance report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate revenue variance report');
   }
 }
 
@@ -762,7 +737,7 @@ export async function getCashFlowForecastReport(req: Request, res: Response) {
       : 0;
 
     // Forecast next 90 days
-    const forecast: any[] = [];
+    const forecast: CashFlowForecastItem[] = [];
     let cumulativeCash = 0;
 
     for (let i = 0; i < 90; i++) {
@@ -778,25 +753,18 @@ export async function getCashFlowForecastReport(req: Request, res: Response) {
       });
     }
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        summary: {
-          currentAR: totalOutstanding,
-          avgDailyCollections,
-          forecasted90DayCollections: avgDailyCollections * 90,
-        },
-        forecast,
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      summary: {
+        currentAR: totalOutstanding,
+        avgDailyCollections,
+        forecasted90DayCollections: avgDailyCollections * 90,
       },
+      forecast,
     });
   } catch (error) {
     logger.error('Error generating cash flow forecast:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate cash flow forecast',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate cash flow forecast');
   }
 }
 
@@ -835,24 +803,17 @@ export async function getWriteOffAnalysisReport(req: Request, res: Response) {
       { reason: 'Client Hardship', amount: totalWrittenOff * 0.1, count: Math.floor(writtenOffCharges.length * 0.1) },
     ];
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        summary: {
-          totalWrittenOff,
-          totalCount: writtenOffCharges.length,
-        },
-        reasonBreakdown,
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      summary: {
+        totalWrittenOff,
+        totalCount: writtenOffCharges.length,
       },
+      reasonBreakdown,
     });
   } catch (error) {
     logger.error('Error generating write-off analysis:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate write-off analysis',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate write-off analysis');
   }
 }
 
@@ -861,20 +822,17 @@ export async function getFeeScheduleComplianceReport(req: Request, res: Response
   try {
     const serviceCodes = await prisma.serviceCode.findMany();
 
-    res.json({
-      success: true,
-      data: {
-        report: serviceCodes.map(code => ({
-          cptCode: code.code,
-          description: code.description,
-          standardRate: Number(code.defaultRate),
-          compliant: true,
-        })),
-      },
+    return sendSuccess(res, {
+      report: serviceCodes.map(code => ({
+        cptCode: code.code,
+        description: code.description,
+        standardRate: Number(code.defaultRate),
+        compliant: true,
+      })),
     });
   } catch (error) {
     logger.error('Error generating fee schedule compliance report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -888,21 +846,18 @@ export async function getRevenueCycleMetricsReport(req: Request, res: Response) 
       where: { serviceDate: { gte: start, lte: end }, chargeStatus: { not: 'VOIDED' } },
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        metrics: {
-          totalClaims: charges,
-          avgDaysToPayment: 28,
-          cleanClaimRate: 92.5,
-          firstPassResolutionRate: 87.3,
-        },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      metrics: {
+        totalClaims: charges,
+        avgDaysToPayment: 28,
+        cleanClaimRate: 92.5,
+        firstPassResolutionRate: 87.3,
       },
     });
   } catch (error) {
     logger.error('Error generating revenue cycle metrics:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -922,20 +877,17 @@ export async function getFinancialSummaryDashboardReport(req: Request, res: Resp
       _sum: { paymentAmount: true },
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        summary: {
-          totalRevenue: Number(revenue._sum.chargeAmount || 0),
-          totalCollections: Number(collections._sum.paymentAmount || 0),
-          netRevenue: Number(revenue._sum.chargeAmount || 0) * 0.95,
-        },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      summary: {
+        totalRevenue: Number(revenue._sum.chargeAmount || 0),
+        totalCollections: Number(collections._sum.paymentAmount || 0),
+        netRevenue: Number(revenue._sum.chargeAmount || 0) * 0.95,
       },
     });
   } catch (error) {
     logger.error('Error generating financial summary:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -946,21 +898,18 @@ export async function getBadDebtAnalysisReport(req: Request, res: Response) {
       include: { client: true },
     });
 
-    res.json({
-      success: true,
-      data: {
-        totalBadDebt: badDebt.reduce((sum, c) => sum + Number(c.chargeAmount), 0),
-        count: badDebt.length,
-        report: badDebt.map(c => ({
-          clientName: `${c.client.firstName} ${c.client.lastName}`,
-          amount: Number(c.chargeAmount),
-          serviceDate: c.serviceDate,
-        })),
-      },
+    return sendSuccess(res, {
+      totalBadDebt: badDebt.reduce((sum, c) => sum + Number(c.chargeAmount), 0),
+      count: badDebt.length,
+      report: badDebt.map(c => ({
+        clientName: `${c.client.firstName} ${c.client.lastName}`,
+        amount: Number(c.chargeAmount),
+        serviceDate: c.serviceDate,
+      })),
     });
   } catch (error) {
     logger.error('Error generating bad debt analysis:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -970,19 +919,16 @@ export async function getContractualAdjustmentsReport(req: Request, res: Respons
     const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = endDate ? new Date(endDate as string) : new Date();
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        summary: {
-          totalAdjustments: 12500,
-          adjustmentRate: 8.5,
-        },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      summary: {
+        totalAdjustments: 12500,
+        adjustmentRate: 8.5,
       },
     });
   } catch (error) {
     logger.error('Error generating contractual adjustments report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1005,20 +951,17 @@ export async function getRevenueByLocationReport(req: Request, res: Response) {
       locationMap.set(loc, (locationMap.get(loc) || 0) + 1);
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        report: Array.from(locationMap.entries()).map(([location, count]) => ({
-          location,
-          sessionCount: count,
-          estimatedRevenue: count * 150,
-        })),
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      report: Array.from(locationMap.entries()).map(([location, count]) => ({
+        location,
+        sessionCount: count,
+        estimatedRevenue: count * 150,
+      })),
     });
   } catch (error) {
     logger.error('Error generating revenue by location report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1056,20 +999,17 @@ export async function getRevenueByDiagnosisReport(req: Request, res: Response) {
       existing.count++;
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        report: Array.from(diagnosisMap.entries()).map(([diagnosis, data]) => ({
-          diagnosis,
-          sessionCount: data.count,
-          totalRevenue: data.revenue,
-        })).sort((a, b) => b.totalRevenue - a.totalRevenue),
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      report: Array.from(diagnosisMap.entries()).map(([diagnosis, data]) => ({
+        diagnosis,
+        sessionCount: data.count,
+        totalRevenue: data.revenue,
+      })).sort((a, b) => b.totalRevenue - a.totalRevenue),
     });
   } catch (error) {
     logger.error('Error generating revenue by diagnosis report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1084,20 +1024,17 @@ export async function getFinancialBenchmarkingReport(req: Request, res: Response
       _sum: { chargeAmount: true },
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        benchmarks: {
-          yourRevenue: Number(revenue._sum.chargeAmount || 0),
-          industryAverage: 85000,
-          percentile: 72,
-        },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      benchmarks: {
+        yourRevenue: Number(revenue._sum.chargeAmount || 0),
+        industryAverage: 85000,
+        percentile: 72,
       },
     });
   } catch (error) {
     logger.error('Error generating financial benchmarking report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1118,7 +1055,7 @@ export async function getKVRAnalysisReport(req: Request, res: Response) {
     // Get all clinicians
     const clinicians = await prisma.user.findMany({
       where: {
-        roles: { hasSome: ['CLINICIAN', 'SUPERVISOR', 'ASSOCIATE'] },
+        roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ASSOCIATE] },
       },
     });
 
@@ -1151,21 +1088,14 @@ export async function getKVRAnalysisReport(req: Request, res: Response) {
       })
     );
 
-    res.json({
-      success: true,
-      data: {
-        report: report.sort((a, b) => b.kvr - a.kvr),
-        period: { startDate: start, endDate: end },
-        averageKVR: report.length > 0 ? report.reduce((sum, r) => sum + r.kvr, 0) / report.length : 0,
-      },
+    return sendSuccess(res, {
+      report: report.sort((a, b) => b.kvr - a.kvr),
+      period: { startDate: start, endDate: end },
+      averageKVR: report.length > 0 ? report.reduce((sum, r) => sum + r.kvr, 0) / report.length : 0,
     });
   } catch (error) {
     logger.error('Error generating KVR analysis report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate KVR analysis report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate KVR analysis report');
   }
 }
 
@@ -1177,7 +1107,7 @@ export async function getSessionsPerDayReport(req: Request, res: Response) {
     const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = endDate ? new Date(endDate as string) : new Date();
 
-    const where: any = {
+    const where: Prisma.AppointmentWhereInput = {
       appointmentDate: { gte: start, lte: end },
       status: 'COMPLETED',
     };
@@ -1203,23 +1133,16 @@ export async function getSessionsPerDayReport(req: Request, res: Response) {
     const daysWorked = dateMap.size;
     const averagePerDay = daysWorked > 0 ? totalSessions / daysWorked : 0;
 
-    res.json({
-      success: true,
-      data: {
-        report,
-        period: { startDate: start, endDate: end },
-        totalSessions,
-        daysWorked,
-        averagePerDay,
-      },
+    return sendSuccess(res, {
+      report,
+      period: { startDate: start, endDate: end },
+      totalSessions,
+      daysWorked,
+      averagePerDay,
     });
   } catch (error) {
     logger.error('Error generating sessions per day report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate sessions per day report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate sessions per day report');
   }
 }
 
@@ -1262,23 +1185,20 @@ export async function getTreatmentOutcomeTrendsReport(req: Request, res: Respons
       });
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        trendsByType: Array.from(trendsByType.entries()).map(([type, data]) => ({
-          measureType: type,
-          dataPoints: data,
-          averageScore: data.reduce((sum, d) => sum + d.score, 0) / data.length,
-          improvement: data.length > 1
-            ? ((data[0].score - data[data.length - 1].score) / data[0].score) * 100
-            : 0,
-        })),
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      trendsByType: Array.from(trendsByType.entries()).map(([type, data]) => ({
+        measureType: type,
+        dataPoints: data,
+        averageScore: data.reduce((sum, d) => sum + d.score, 0) / data.length,
+        improvement: data.length > 1
+          ? ((data[0].score - data[data.length - 1].score) / data[0].score) * 100
+          : 0,
+      })),
     });
   } catch (error) {
     logger.error('Error generating treatment outcome trends:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1319,23 +1239,20 @@ export async function getDiagnosisDistributionReport(req: Request, res: Response
 
     const comorbidityCount = clientsWithMultipleDiagnoses.filter(c => c.clientDiagnoses.length > 1).length;
 
-    res.json({
-      success: true,
-      data: {
-        distribution: Array.from(diagnosisMap.entries()).map(([diagnosis, data]) => ({
-          diagnosis,
-          clientCount: data.count,
-          percentage: (data.count / clientDiagnoses.length) * 100,
-        })).sort((a, b) => b.clientCount - a.clientCount),
-        comorbidity: {
-          clientsWithMultipleDiagnoses: comorbidityCount,
-          percentage: (comorbidityCount / clientsWithMultipleDiagnoses.length) * 100,
-        },
+    return sendSuccess(res, {
+      distribution: Array.from(diagnosisMap.entries()).map(([diagnosis, data]) => ({
+        diagnosis,
+        clientCount: data.count,
+        percentage: (data.count / clientDiagnoses.length) * 100,
+      })).sort((a, b) => b.clientCount - a.clientCount),
+      comorbidity: {
+        clientsWithMultipleDiagnoses: comorbidityCount,
+        percentage: (comorbidityCount / clientsWithMultipleDiagnoses.length) * 100,
       },
     });
   } catch (error) {
     logger.error('Error generating diagnosis distribution report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1376,21 +1293,18 @@ export async function getTreatmentModalityEffectivenessReport(req: Request, res:
       data.clients.add(note.clientId);
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        report: Array.from(modalityMap.entries()).map(([modality, data]) => ({
-          modality,
-          sessionCount: data.sessionCount,
-          uniqueClients: data.clients.size,
-          avgSessionsPerClient: data.clients.size > 0 ? data.sessionCount / data.clients.size : 0,
-        })).sort((a, b) => b.sessionCount - a.sessionCount),
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      report: Array.from(modalityMap.entries()).map(([modality, data]) => ({
+        modality,
+        sessionCount: data.sessionCount,
+        uniqueClients: data.clients.size,
+        avgSessionsPerClient: data.clients.size > 0 ? data.sessionCount / data.clients.size : 0,
+      })).sort((a, b) => b.sessionCount - a.sessionCount),
     });
   } catch (error) {
     logger.error('Error generating treatment modality effectiveness:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1416,7 +1330,7 @@ export async function getCareGapIdentificationReport(req: Request, res: Response
       },
     });
 
-    const gaps: any[] = [];
+    const gaps: CareGapItem[] = [];
     const now = new Date();
 
     activeClients.forEach(client => {
@@ -1477,21 +1391,18 @@ export async function getCareGapIdentificationReport(req: Request, res: Response
       }
     });
 
-    res.json({
-      success: true,
-      data: {
-        totalGaps: gaps.length,
-        criticalCount: gaps.filter(g => g.priority === 'Critical').length,
-        highCount: gaps.filter(g => g.priority === 'High').length,
-        gaps: gaps.sort((a, b) => {
-          const priorityOrder = { Critical: 3, High: 2, Medium: 1 };
-          return priorityOrder[b.priority as keyof typeof priorityOrder] - priorityOrder[a.priority as keyof typeof priorityOrder];
-        }),
-      },
+    return sendSuccess(res, {
+      totalGaps: gaps.length,
+      criticalCount: gaps.filter(g => g.priority === 'Critical').length,
+      highCount: gaps.filter(g => g.priority === 'High').length,
+      gaps: gaps.sort((a, b) => {
+        const priorityOrder = { Critical: 3, High: 2, Medium: 1 };
+        return priorityOrder[b.priority as keyof typeof priorityOrder] - priorityOrder[a.priority as keyof typeof priorityOrder];
+      }),
     });
   } catch (error) {
     logger.error('Error generating care gap identification:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1529,22 +1440,19 @@ export async function getClinicalQualityMetricsReport(req: Request, res: Respons
 
     const documentationTimeliness = notes.length > 0 ? (timelyNotes / notes.length) * 100 : 0;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        metrics: {
-          treatmentPlanCompletionRate: planCompletionRate,
-          documentationTimeliness,
-          totalTreatmentPlans: treatmentPlans.length,
-          totalNotes: notes.length,
-          timelyNotes,
-        },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      metrics: {
+        treatmentPlanCompletionRate: planCompletionRate,
+        documentationTimeliness,
+        totalTreatmentPlans: treatmentPlans.length,
+        totalNotes: notes.length,
+        timelyNotes,
       },
     });
   } catch (error) {
     logger.error('Error generating clinical quality metrics:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1567,16 +1475,13 @@ export async function getPopulationHealthRiskStratificationReport(req: Request, 
       low: clients.filter(c => c.clientDiagnoses.length === 0).length,
     };
 
-    res.json({
-      success: true,
-      data: {
-        totalClients: clients.length,
-        riskLevels,
-      },
+    return sendSuccess(res, {
+      totalClients: clients.length,
+      riskLevels,
     });
   } catch (error) {
     logger.error('Error generating population health risk stratification:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1587,7 +1492,7 @@ export async function getProviderPerformanceComparisonReport(req: Request, res: 
     const end = endDate ? new Date(endDate as string) : new Date();
 
     const clinicians = await prisma.user.findMany({
-      where: { roles: { hasSome: ['CLINICIAN', 'SUPERVISOR', 'ASSOCIATE'] } },
+      where: { roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ASSOCIATE] } },
     });
 
     const report = await Promise.all(clinicians.map(async (clinician) => {
@@ -1615,16 +1520,13 @@ export async function getProviderPerformanceComparisonReport(req: Request, res: 
       };
     }));
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        report: report.sort((a, b) => b.sessionCount - a.sessionCount),
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      report: report.sort((a, b) => b.sessionCount - a.sessionCount),
     });
   } catch (error) {
     logger.error('Error generating provider performance comparison:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1633,7 +1535,7 @@ export async function getClientProgressTrackingReport(req: Request, res: Respons
     const { clientId } = req.query;
 
     if (!clientId) {
-      return res.status(400).json({ success: false, message: 'Client ID required' });
+      return sendBadRequest(res, 'Client ID required');
     }
 
     const outcomes = await prisma.outcomeMeasure.findMany({
@@ -1648,22 +1550,19 @@ export async function getClientProgressTrackingReport(req: Request, res: Respons
       },
     });
 
-    res.json({
-      success: true,
-      data: {
-        clientId,
-        totalSessions: sessions,
-        outcomes: outcomes.map(o => ({
-          date: o.administeredDate,
-          measureType: o.measureType,
-          score: o.totalScore,
-          severity: o.severityLabel,
-        })),
-      },
+    return sendSuccess(res, {
+      clientId,
+      totalSessions: sessions,
+      outcomes: outcomes.map(o => ({
+        date: o.administeredDate,
+        measureType: o.measureType,
+        score: o.totalScore,
+        severity: o.severityLabel,
+      })),
     });
   } catch (error) {
     logger.error('Error generating client progress tracking:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1687,16 +1586,13 @@ export async function getAssessmentScoreTrendsReport(req: Request, res: Response
       count: 1,
     }));
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        trends,
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      trends,
     });
   } catch (error) {
     logger.error('Error generating assessment score trends:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1724,18 +1620,15 @@ export async function getSupervisionHoursReport(req: Request, res: Response) {
       type: s.sessionType,
     }));
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        totalHours: sessions.reduce((sum, s) => sum + s.sessionDuration, 0),
-        totalSessions: sessions.length,
-        report,
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      totalHours: sessions.reduce((sum, s) => sum + s.sessionDuration, 0),
+      totalSessions: sessions.length,
+      report,
     });
   } catch (error) {
     logger.error('Error generating supervision hours report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1759,7 +1652,7 @@ export async function getSchedulingUtilizationHeatMapReport(req: Request, res: R
     });
 
     // Create heat map data structure: day of week x hour of day
-    const heatMap: any = {};
+    const heatMap: HeatMapData = {};
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     days.forEach(day => {
@@ -1784,22 +1677,20 @@ export async function getSchedulingUtilizationHeatMapReport(req: Request, res: R
 
     // Calculate utilization percentages
     Object.keys(heatMap).forEach(day => {
-      Object.keys(heatMap[day]).forEach(hour => {
+      Object.keys(heatMap[day]).forEach(hourStr => {
+        const hour = Number(hourStr);
         const data = heatMap[day][hour];
         data.utilization = data.scheduled > 0 ? (data.filled / data.scheduled) * 100 : 0;
       });
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        heatMap,
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      heatMap,
     });
   } catch (error) {
     logger.error('Error generating scheduling utilization heat map:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1859,33 +1750,30 @@ export async function getNoShowPatternAnalysisReport(req: Request, res: Response
     const avgSessionCost = 150;
     const costImpact = noShows.length * avgSessionCost;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        summary: {
-          totalAppointments: total,
-          noShowCount: noShows.length,
-          noShowRate,
-          costImpact,
-        },
-        dayPattern: Array.from(dayPattern.entries()).map(([day, data]) => ({
-          day,
-          total: data.total,
-          noShows: data.noShows,
-          rate: data.total > 0 ? (data.noShows / data.total) * 100 : 0,
-        })),
-        timePattern: Array.from(timePattern.entries()).map(([slot, data]) => ({
-          timeSlot: slot,
-          total: data.total,
-          noShows: data.noShows,
-          rate: data.total > 0 ? (data.noShows / data.total) * 100 : 0,
-        })),
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      summary: {
+        totalAppointments: total,
+        noShowCount: noShows.length,
+        noShowRate,
+        costImpact,
       },
+      dayPattern: Array.from(dayPattern.entries()).map(([day, data]) => ({
+        day,
+        total: data.total,
+        noShows: data.noShows,
+        rate: data.total > 0 ? (data.noShows / data.total) * 100 : 0,
+      })),
+      timePattern: Array.from(timePattern.entries()).map(([slot, data]) => ({
+        timeSlot: slot,
+        total: data.total,
+        noShows: data.noShows,
+        rate: data.total > 0 ? (data.noShows / data.total) * 100 : 0,
+      })),
     });
   } catch (error) {
     logger.error('Error generating no-show pattern analysis:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1926,28 +1814,25 @@ export async function getWaitTimeAnalyticsReport(req: Request, res: Response) {
       ? waitTimes.sort((a, b) => a - b)[Math.floor(waitTimes.length / 2)]
       : 0;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        summary: {
-          totalNewClients: clients.length,
-          averageWaitTime: avgWaitTime,
-          medianWaitTime,
-          maxWaitTime: waitTimes.length > 0 ? Math.max(...waitTimes) : 0,
-          minWaitTime: waitTimes.length > 0 ? Math.min(...waitTimes) : 0,
-        },
-        distribution: {
-          under7Days: waitTimes.filter(t => t < 7).length,
-          days7to14: waitTimes.filter(t => t >= 7 && t < 14).length,
-          days14to30: waitTimes.filter(t => t >= 14 && t < 30).length,
-          over30Days: waitTimes.filter(t => t >= 30).length,
-        },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      summary: {
+        totalNewClients: clients.length,
+        averageWaitTime: avgWaitTime,
+        medianWaitTime,
+        maxWaitTime: waitTimes.length > 0 ? Math.max(...waitTimes) : 0,
+        minWaitTime: waitTimes.length > 0 ? Math.min(...waitTimes) : 0,
+      },
+      distribution: {
+        under7Days: waitTimes.filter(t => t < 7).length,
+        days7to14: waitTimes.filter(t => t >= 7 && t < 14).length,
+        days14to30: waitTimes.filter(t => t >= 14 && t < 30).length,
+        over30Days: waitTimes.filter(t => t >= 30).length,
       },
     });
   } catch (error) {
     logger.error('Error generating wait time analytics:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -1997,21 +1882,18 @@ export async function getWorkflowEfficiencyMetricsReport(req: Request, res: Resp
       ? noteCompletionTimes.reduce((sum, t) => sum + t, 0) / noteCompletionTimes.length
       : 0;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        metrics: {
-          averageIntakeTime: avgIntakeTime,
-          averageNoteCompletionTime: avgNoteTime,
-          intakeBottlenecks: intakeTimes.filter(t => t > 14).length,
-          noteBottlenecks: noteCompletionTimes.filter(t => t > 7).length,
-        },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      metrics: {
+        averageIntakeTime: avgIntakeTime,
+        averageNoteCompletionTime: avgNoteTime,
+        intakeBottlenecks: intakeTimes.filter(t => t > 14).length,
+        noteBottlenecks: noteCompletionTimes.filter(t => t > 7).length,
       },
     });
   } catch (error) {
     logger.error('Error generating workflow efficiency metrics:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2019,7 +1901,7 @@ export async function getWorkflowEfficiencyMetricsReport(req: Request, res: Resp
 export async function getResourceUtilizationTrackingReport(req: Request, res: Response) {
   try {
     const clinicians = await prisma.user.findMany({
-      where: { roles: { hasSome: ['CLINICIAN', 'SUPERVISOR', 'ASSOCIATE'] } },
+      where: { roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ASSOCIATE] } },
     });
 
     const report = await Promise.all(clinicians.map(async (c) => {
@@ -2039,10 +1921,10 @@ export async function getResourceUtilizationTrackingReport(req: Request, res: Re
       };
     }));
 
-    res.json({ success: true, data: { report } });
+    return sendSuccess(res, { report });
   } catch (error) {
     logger.error('Error generating resource utilization tracking:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2064,10 +1946,10 @@ export async function getClientFlowAnalysisReport(req: Request, res: Response) {
       dischargedClients: clients.filter(c => c.status === 'DISCHARGED').length,
     };
 
-    res.json({ success: true, data: { flowMetrics } });
+    return sendSuccess(res, { flowMetrics });
   } catch (error) {
     logger.error('Error generating client flow analysis:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2092,18 +1974,15 @@ export async function getRetentionRateTrackingReport(req: Request, res: Response
 
     const retentionRate = clients.length > 0 ? (retained / clients.length) * 100 : 0;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        totalClients: clients.length,
-        retainedClients: retained,
-        retentionRate,
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      totalClients: clients.length,
+      retainedClients: retained,
+      retentionRate,
     });
   } catch (error) {
     logger.error('Error generating retention rate tracking:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2125,17 +2004,17 @@ export async function getReferralSourceAnalyticsReport(req: Request, res: Respon
       { source: 'Other', count: Math.floor(clients.length * 0.1) },
     ];
 
-    res.json({ success: true, data: { sources } });
+    return sendSuccess(res, { sources });
   } catch (error) {
     logger.error('Error generating referral source analytics:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
 export async function getCapacityPlanningReport(req: Request, res: Response) {
   try {
     const clinicians = await prisma.user.findMany({
-      where: { roles: { hasSome: ['CLINICIAN', 'SUPERVISOR', 'ASSOCIATE'] } },
+      where: { roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ASSOCIATE] } },
     });
 
     const capacityReport = await Promise.all(clinicians.map(async (c) => {
@@ -2159,10 +2038,10 @@ export async function getCapacityPlanningReport(req: Request, res: Response) {
       };
     }));
 
-    res.json({ success: true, data: { capacityReport } });
+    return sendSuccess(res, { capacityReport });
   } catch (error) {
     logger.error('Error generating capacity planning report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2206,10 +2085,10 @@ export async function getBottleneckIdentificationReport(req: Request, res: Respo
       });
     }
 
-    res.json({ success: true, data: { bottlenecks } });
+    return sendSuccess(res, { bottlenecks });
   } catch (error) {
     logger.error('Error generating bottleneck identification:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2263,21 +2142,14 @@ export async function getUnsignedNotesReport(req: Request, res: Response) {
       };
     });
 
-    res.json({
-      success: true,
-      data: {
-        report,
-        totalUnsigned: unsignedNotes.length,
-        criticalCount: report.filter((r) => r.daysOverdue !== null && r.daysOverdue > 7).length, // Georgia 7-day rule
-      },
+    return sendSuccess(res, {
+      report,
+      totalUnsigned: unsignedNotes.length,
+      criticalCount: report.filter((r) => r.daysOverdue !== null && r.daysOverdue > 7).length, // Georgia 7-day rule
     });
   } catch (error) {
     logger.error('Error generating unsigned notes report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate unsigned notes report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate unsigned notes report');
   }
 }
 
@@ -2320,21 +2192,14 @@ export async function getMissingTreatmentPlansReport(req: Request, res: Response
           : 'Never',
       }));
 
-    res.json({
-      success: true,
-      data: {
-        report,
-        totalMissing: report.length,
-        criticalCount: report.filter((r) => typeof r.daysOverdue === 'number' && r.daysOverdue > 30).length,
-      },
+    return sendSuccess(res, {
+      report,
+      totalMissing: report.length,
+      criticalCount: report.filter((r) => typeof r.daysOverdue === 'number' && r.daysOverdue > 30).length,
     });
   } catch (error) {
     logger.error('Error generating missing treatment plans report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate missing treatment plans report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate missing treatment plans report');
   }
 }
 
@@ -2345,12 +2210,12 @@ export async function getAuditTrailReportLegacy(req: Request, res: Response) {
     const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
     const end = endDate ? new Date(endDate as string) : new Date();
 
-    const where: any = {
+    const where: Prisma.AuditLogWhereInput = {
       timestamp: { gte: start, lte: end },
     };
 
-    if (userId) where.userId = userId;
-    if (action) where.action = action;
+    if (userId) where.userId = userId as string;
+    if (action) where.action = action as string;
 
     const auditLogs = await prisma.auditLog.findMany({
       where,
@@ -2374,28 +2239,25 @@ export async function getAuditTrailReportLegacy(req: Request, res: Response) {
       actionSummary.set(log.action, (actionSummary.get(log.action) || 0) + 1);
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        totalEvents: auditLogs.length,
-        actionSummary: Array.from(actionSummary.entries()).map(([action, count]) => ({
-          action,
-          count,
-        })),
-        logs: auditLogs.map(log => ({
-          timestamp: log.timestamp,
-          userId: log.userId || 'System', // TODO: No user relation, showing userId instead
-          action: log.action,
-          entity: log.entityType,
-          entityId: log.entityId,
-          ipAddress: log.ipAddress,
-        })),
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      totalEvents: auditLogs.length,
+      actionSummary: Array.from(actionSummary.entries()).map(([action, count]) => ({
+        action,
+        count,
+      })),
+      logs: auditLogs.map(log => ({
+        timestamp: log.timestamp,
+        userId: log.userId || 'System', // TODO: No user relation, showing userId instead
+        action: log.action,
+        entity: log.entityType,
+        entityId: log.entityId,
+        ipAddress: log.ipAddress,
+      })),
     });
   } catch (error) {
     logger.error('Error generating audit trail report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2424,28 +2286,25 @@ export async function getIncidentReportingReport(req: Request, res: Response) {
       incidentsByType.set(incident.action, (incidentsByType.get(incident.action) || 0) + 1);
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        totalIncidents: securityIncidents.length,
-        incidentsByType: Array.from(incidentsByType.entries()).map(([type, count]) => ({
-          type,
-          count,
-          severity: type === 'DATA_BREACH' ? 'Critical' : type === 'UNAUTHORIZED_ACCESS' ? 'High' : 'Medium',
-        })),
-        incidents: securityIncidents.map(i => ({
-          timestamp: i.timestamp,
-          type: i.action,
-          userId: i.userId || 'Unknown', // TODO: No user relation, showing userId instead
-          ipAddress: i.ipAddress,
-          details: i.changes, // AuditLog has 'changes' field, not 'metadata'
-        })),
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      totalIncidents: securityIncidents.length,
+      incidentsByType: Array.from(incidentsByType.entries()).map(([type, count]) => ({
+        type,
+        count,
+        severity: type === 'DATA_BREACH' ? 'Critical' : type === 'UNAUTHORIZED_ACCESS' ? 'High' : 'Medium',
+      })),
+      incidents: securityIncidents.map(i => ({
+        timestamp: i.timestamp,
+        type: i.action,
+        userId: i.userId || 'Unknown', // TODO: No user relation, showing userId instead
+        ipAddress: i.ipAddress,
+        details: i.changes, // AuditLog has 'changes' field, not 'metadata'
+      })),
     });
   } catch (error) {
     logger.error('Error generating incident reporting:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2453,19 +2312,16 @@ export async function getIncidentReportingReport(req: Request, res: Response) {
 export async function getGrantReportingTemplatesReport(req: Request, res: Response) {
   try {
     // Mock grant reporting template data
-    res.json({
-      success: true,
-      data: {
-        templates: [
-          { name: 'SAMHSA Grant Report', dueDate: '2025-03-31', status: 'In Progress' },
-          { name: 'State Mental Health Funding', dueDate: '2025-06-30', status: 'Not Started' },
-          { name: 'County Services Report', dueDate: '2025-12-31', status: 'Completed' },
-        ],
-      },
+    return sendSuccess(res, {
+      templates: [
+        { name: 'SAMHSA Grant Report', dueDate: '2025-03-31', status: 'In Progress' },
+        { name: 'State Mental Health Funding', dueDate: '2025-06-30', status: 'Not Started' },
+        { name: 'County Services Report', dueDate: '2025-12-31', status: 'Completed' },
+      ],
     });
   } catch (error) {
     logger.error('Error generating grant reporting templates:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2478,16 +2334,13 @@ export async function getAccreditationReportsReport(req: Request, res: Response)
       qualityMetrics: 91.2,
     };
 
-    res.json({
-      success: true,
-      data: {
-        metrics,
-        overallScore: Object.values(metrics).reduce((sum, v) => sum + v, 0) / Object.keys(metrics).length,
-      },
+    return sendSuccess(res, {
+      metrics,
+      overallScore: Object.values(metrics).reduce((sum, v) => sum + v, 0) / Object.keys(metrics).length,
     });
   } catch (error) {
     logger.error('Error generating accreditation reports:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2507,21 +2360,18 @@ export async function getComplianceScorecardReport(req: Request, res: Response) 
 
     const documentationScore = totalNotes > 0 ? ((totalNotes - unsignedNotes) / totalNotes) * 100 : 100;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        scores: {
-          documentationCompliance: documentationScore,
-          treatmentPlanCompliance: 92.5,
-          consentFormCompliance: 98.7,
-          overallCompliance: (documentationScore + 92.5 + 98.7) / 3,
-        },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      scores: {
+        documentationCompliance: documentationScore,
+        treatmentPlanCompliance: 92.5,
+        consentFormCompliance: 98.7,
+        overallCompliance: (documentationScore + 92.5 + 98.7) / 3,
       },
     });
   } catch (error) {
     logger.error('Error generating compliance scorecard:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2565,21 +2415,14 @@ export async function getClientDemographicsReport(req: Request, res: Response) {
       unknown: clients.filter((c) => !c.gender).length,
     };
 
-    res.json({
-      success: true,
-      data: {
-        totalActive: clients.length,
-        ageGroups,
-        genderDistribution,
-      },
+    return sendSuccess(res, {
+      totalActive: clients.length,
+      ageGroups,
+      genderDistribution,
     });
   } catch (error) {
     logger.error('Error generating client demographics report:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate client demographics report',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to generate client demographics report');
   }
 }
 
@@ -2623,25 +2466,22 @@ export async function getClientDemographicsDeepDiveReport(req: Request, res: Res
       geoMap.set(zip, (geoMap.get(zip) || 0) + 1);
     });
 
-    res.json({
-      success: true,
-      data: {
-        totalActive: clients.length,
-        ageGroups,
-        raceDistribution: Array.from(raceMap.entries()).map(([race, count]) => ({
-          race,
-          count,
-          percentage: (count / clients.length) * 100,
-        })),
-        topZipCodes: Array.from(geoMap.entries())
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 10)
-          .map(([zip, count]) => ({ zip, count })),
-      },
+    return sendSuccess(res, {
+      totalActive: clients.length,
+      ageGroups,
+      raceDistribution: Array.from(raceMap.entries()).map(([race, count]) => ({
+        race,
+        count,
+        percentage: (count / clients.length) * 100,
+      })),
+      topZipCodes: Array.from(geoMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([zip, count]) => ({ zip, count })),
     });
   } catch (error) {
     logger.error('Error generating demographics deep dive:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2690,24 +2530,21 @@ export async function getPayerMixAnalysisReport(req: Request, res: Response) {
       revenueMap.set(payer, (revenueMap.get(payer) || 0) + Number(c.chargeAmount));
     });
 
-    res.json({
-      success: true,
-      data: {
-        clientsByPayer: Array.from(payerMap.entries()).map(([payer, count]) => ({
-          payer,
-          clientCount: count,
-          percentage: (count / clients.length) * 100,
-        })).sort((a, b) => b.clientCount - a.clientCount),
-        revenueByPayer: Array.from(revenueMap.entries()).map(([payer, revenue]) => ({
-          payer,
-          revenue,
-          percentage: (revenue / Array.from(revenueMap.values()).reduce((sum, r) => sum + r, 0)) * 100,
-        })).sort((a, b) => b.revenue - a.revenue),
-      },
+    return sendSuccess(res, {
+      clientsByPayer: Array.from(payerMap.entries()).map(([payer, count]) => ({
+        payer,
+        clientCount: count,
+        percentage: (count / clients.length) * 100,
+      })).sort((a, b) => b.clientCount - a.clientCount),
+      revenueByPayer: Array.from(revenueMap.entries()).map(([payer, revenue]) => ({
+        payer,
+        revenue,
+        percentage: (revenue / Array.from(revenueMap.values()).reduce((sum, r) => sum + r, 0)) * 100,
+      })).sort((a, b) => b.revenue - a.revenue),
     });
   } catch (error) {
     logger.error('Error generating payer mix analysis:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2721,10 +2558,10 @@ export async function getMarketingCampaignROIReport(req: Request, res: Response)
       { name: 'Referral Program', cost: 500, newClients: 12, roi: 500 },
     ];
 
-    res.json({ success: true, data: { campaigns } });
+    return sendSuccess(res, { campaigns });
   } catch (error) {
     logger.error('Error generating marketing campaign ROI:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2748,47 +2585,41 @@ export async function getClientSatisfactionAnalysisReport(req: Request, res: Res
       ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
       : 0;
 
-    res.json({
-      success: true,
-      data: {
-        totalRatings: ratings.length,
-        averageRating: avgRating,
-        distribution: {
-          5: ratings.filter(r => r.rating === 5).length,
-          4: ratings.filter(r => r.rating === 4).length,
-          3: ratings.filter(r => r.rating === 3).length,
-          2: ratings.filter(r => r.rating === 2).length,
-          1: ratings.filter(r => r.rating === 1).length,
-        },
+    return sendSuccess(res, {
+      totalRatings: ratings.length,
+      averageRating: avgRating,
+      distribution: {
+        5: ratings.filter(r => r.rating === 5).length,
+        4: ratings.filter(r => r.rating === 4).length,
+        3: ratings.filter(r => r.rating === 3).length,
+        2: ratings.filter(r => r.rating === 2).length,
+        1: ratings.filter(r => r.rating === 1).length,
       },
     });
   } catch (error) {
     logger.error('Error generating client satisfaction analysis:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
 export async function getMarketShareAnalysisReport(req: Request, res: Response) {
   try {
     // Mock market share data
-    res.json({
-      success: true,
-      data: {
-        yourPractice: {
-          activeClients: 250,
-          marketShare: 12.5,
-        },
-        marketSize: 2000,
-        competitors: [
-          { name: 'Competitor A', estimatedClients: 300, marketShare: 15 },
-          { name: 'Competitor B', estimatedClients: 250, marketShare: 12.5 },
-          { name: 'Competitor C', estimatedClients: 200, marketShare: 10 },
-        ],
+    return sendSuccess(res, {
+      yourPractice: {
+        activeClients: 250,
+        marketShare: 12.5,
       },
+      marketSize: 2000,
+      competitors: [
+        { name: 'Competitor A', estimatedClients: 300, marketShare: 15 },
+        { name: 'Competitor B', estimatedClients: 250, marketShare: 12.5 },
+        { name: 'Competitor C', estimatedClients: 200, marketShare: 10 },
+      ],
     });
   } catch (error) {
     logger.error('Error generating market share analysis:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2806,7 +2637,7 @@ export async function getStaffPerformanceDashboardReport(req: Request, res: Resp
     const end = endDate ? new Date(endDate as string) : new Date();
 
     const clinicians = await prisma.user.findMany({
-      where: { roles: { hasSome: ['CLINICIAN', 'SUPERVISOR', 'ASSOCIATE'] } },
+      where: { roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ASSOCIATE] } },
     });
 
     const report = await Promise.all(clinicians.map(async (c) => {
@@ -2834,16 +2665,13 @@ export async function getStaffPerformanceDashboardReport(req: Request, res: Resp
       };
     }));
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        report: report.sort((a, b) => b.productivityScore - a.productivityScore),
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      report: report.sort((a, b) => b.productivityScore - a.productivityScore),
     });
   } catch (error) {
     logger.error('Error generating staff performance dashboard:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2881,25 +2709,22 @@ export async function getTelehealthUtilizationReport(req: Request, res: Response
         }, 0) / telehealthSessions.length
       : 0;
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        totalTelehealthSessions: telehealthSessions.length,
-        totalAppointments,
-        telehealthUtilizationRate: telehealthRate,
-        averageDuration: avgDuration,
-        statusDistribution: {
-          completed: telehealthSessions.filter(s => s.status === 'COMPLETED').length,
-          inProgress: telehealthSessions.filter(s => s.status === 'IN_PROGRESS').length,
-          cancelled: telehealthSessions.filter(s => s.status === 'CANCELLED').length,
-          noShow: telehealthSessions.filter(s => s.status === 'NO_SHOW').length,
-        },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      totalTelehealthSessions: telehealthSessions.length,
+      totalAppointments,
+      telehealthUtilizationRate: telehealthRate,
+      averageDuration: avgDuration,
+      statusDistribution: {
+        completed: telehealthSessions.filter(s => s.status === 'COMPLETED').length,
+        inProgress: telehealthSessions.filter(s => s.status === 'IN_PROGRESS').length,
+        cancelled: telehealthSessions.filter(s => s.status === 'CANCELLED').length,
+        noShow: telehealthSessions.filter(s => s.status === 'NO_SHOW').length,
       },
     });
   } catch (error) {
     logger.error('Error generating telehealth utilization report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2925,26 +2750,23 @@ export async function getCrisisInterventionReport(req: Request, res: Response) {
       severityMap.set(log.severity, (severityMap.get(log.severity) || 0) + 1);
     });
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        totalCrisisEvents: crisisLogs.length,
-        severityDistribution: Array.from(severityMap.entries()).map(([severity, count]) => ({
-          severity,
-          count,
-        })),
-        recentEvents: crisisLogs.slice(0, 10).map(log => ({
-          userId: log.userId, // TODO: No client relation, only userId field
-          severity: log.severity,
-          detectedAt: log.detectedAt,
-          reviewed: !!log.reviewedBy, // Use reviewedBy to indicate if responded to
-        })),
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      totalCrisisEvents: crisisLogs.length,
+      severityDistribution: Array.from(severityMap.entries()).map(([severity, count]) => ({
+        severity,
+        count,
+      })),
+      recentEvents: crisisLogs.slice(0, 10).map(log => ({
+        userId: log.userId, // TODO: No client relation, only userId field
+        severity: log.severity,
+        detectedAt: log.detectedAt,
+        reviewed: !!log.reviewedBy, // Use reviewedBy to indicate if responded to
+      })),
     });
   } catch (error) {
     logger.error('Error generating crisis intervention report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -2972,24 +2794,21 @@ export async function getMedicationManagementTrackingReport(req: Request, res: R
       ? (adherenceLogs.filter(l => l.taken).length / adherenceLogs.length) * 100
       : 0;
 
-    res.json({
-      success: true,
-      data: {
-        activeMedications: medications.length,
-        uniqueClients: new Set(medications.map(m => m.clientId)).size,
-        averageAdherence: avgAdherence,
-        medicationList: medications.map(m => ({
-          clientName: `${m.client.firstName} ${m.client.lastName}`,
-          medication: m.medicationName,
-          dosage: m.dosage,
-          frequency: m.frequency,
-          prescribedDate: m.startDate,
-        })),
-      },
+    return sendSuccess(res, {
+      activeMedications: medications.length,
+      uniqueClients: new Set(medications.map(m => m.clientId)).size,
+      averageAdherence: avgAdherence,
+      medicationList: medications.map(m => ({
+        clientName: `${m.client.firstName} ${m.client.lastName}`,
+        medication: m.medicationName,
+        dosage: m.dosage,
+        frequency: m.frequency,
+        prescribedDate: m.startDate,
+      })),
     });
   } catch (error) {
     logger.error('Error generating medication management tracking:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -3021,20 +2840,17 @@ export async function getGroupTherapyAttendanceReport(req: Request, res: Respons
       attendanceRate: 0,
     }));
 
-    res.json({
-      success: true,
-      data: {
-        period: { startDate: start, endDate: end },
-        totalSessions: groupSessions.length,
-        averageAttendanceRate: report.length > 0
-          ? report.reduce((sum, r) => sum + r.attendanceRate, 0) / report.length
-          : 0,
-        report,
-      },
+    return sendSuccess(res, {
+      period: { startDate: start, endDate: end },
+      totalSessions: groupSessions.length,
+      averageAttendanceRate: report.length > 0
+        ? report.reduce((sum, r) => sum + r.attendanceRate, 0) / report.length
+        : 0,
+      report,
     });
   } catch (error) {
     logger.error('Error generating group therapy attendance report:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate report' });
+    return sendServerError(res, 'Failed to generate report');
   }
 }
 
@@ -3080,22 +2896,15 @@ export async function getReportQuickStats(req: Request, res: Response) {
       where: { status: 'ACTIVE' },
     });
 
-    res.json({
-      success: true,
-      data: {
-        totalRevenue: Number(revenueData._sum.chargeAmount) || 0,
-        avgKVR: Math.round(avgKVR * 10) / 10,
-        unsignedNotes: unsignedCount,
-        activeClients: activeCount,
-      },
+    return sendSuccess(res, {
+      totalRevenue: Number(revenueData._sum.chargeAmount) || 0,
+      avgKVR: Math.round(avgKVR * 10) / 10,
+      unsignedNotes: unsignedCount,
+      activeClients: activeCount,
     });
   } catch (error) {
     logger.error('Error fetching quick stats:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch quick stats',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to fetch quick stats');
   }
 }
 
@@ -3139,14 +2948,10 @@ export async function getCredentialingReport(req: Request, res: Response) {
       daysUntilExpiration: daysUntilExpiration ? parseInt(daysUntilExpiration as string) : undefined
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getCredentialingReport', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate credentialing report',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate credentialing report');
   }
 }
 
@@ -3173,14 +2978,10 @@ export async function getTrainingComplianceReport(req: Request, res: Response) {
       includeExpired: includeExpired === 'true'
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getTrainingComplianceReport', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate training compliance report',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate training compliance report');
   }
 }
 
@@ -3197,14 +2998,10 @@ export async function getPolicyComplianceReport(req: Request, res: Response) {
       department: department as string
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getPolicyComplianceReport', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate policy compliance report',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate policy compliance report');
   }
 }
 
@@ -3229,14 +3026,10 @@ export async function getIncidentAnalysisReport(req: Request, res: Response) {
       department: department as string
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getIncidentAnalysisReport', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate incident analysis report',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate incident analysis report');
   }
 }
 
@@ -3253,14 +3046,10 @@ export async function getPerformanceReport(req: Request, res: Response) {
       metricType: metricType as string
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getPerformanceReport', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate performance report',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate performance report');
   }
 }
 
@@ -3276,14 +3065,10 @@ export async function getAttendanceReport(req: Request, res: Response) {
       clientId: clientId as string
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getAttendanceReport', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate attendance report',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate attendance report');
   }
 }
 
@@ -3299,14 +3084,10 @@ export async function getFinancialReport(req: Request, res: Response) {
       category: category as string
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getFinancialReport', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate financial report',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate financial report');
   }
 }
 
@@ -3321,14 +3102,10 @@ export async function getVendorReport(req: Request, res: Response) {
       includePerformance: includePerformance !== 'false'
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getVendorReport', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate vendor report',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate vendor report');
   }
 }
 
@@ -3342,14 +3119,10 @@ export async function getPracticeManagementDashboard(req: Request, res: Response
       endDate: endDate ? new Date(endDate as string) : undefined
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getPracticeManagementDashboard', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate practice management dashboard',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate practice management dashboard');
   }
 }
 
@@ -3367,13 +3140,9 @@ export async function getAuditTrailReport(req: Request, res: Response) {
       ipAddress: ipAddress as string
     });
 
-    res.json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('getAuditTrailReport', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate audit trail report',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return sendServerError(res, 'Failed to generate audit trail report');
   }
 }

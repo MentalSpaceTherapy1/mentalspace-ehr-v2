@@ -217,7 +217,6 @@ describe('Client Controller', () => {
         lastName: 'Doe',
         email: 'john@example.com',
         dateOfBirth: new Date('1990-01-15'),
-        ssn: 'encrypted-ssn', // Should be decrypted in response
       };
 
       (accessControl.assertCanAccessClient as jest.Mock).mockResolvedValue(undefined);
@@ -327,7 +326,7 @@ describe('Client Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
     });
 
-    it('should create client with SSN field', async () => {
+    it('should create client with all required fields', async () => {
       mockReq.body = createValidClientBody({
         email: 'test@example.com',
       });
@@ -688,19 +687,6 @@ describe('Input Validation', () => {
 
     // Should either sanitize or reject
     expect(mockRes.status).toHaveBeenCalled();
-  });
-
-  it('should validate SSN format', async () => {
-    mockReq.body = {
-      firstName: 'Test',
-      lastName: 'User',
-      email: 'test@example.com',
-      ssn: 'not-an-ssn',
-    };
-
-    await createClient(mockReq as Request, mockRes as Response, mockNext);
-
-    expect(mockRes.status).toHaveBeenCalledWith(400);
   });
 
   it('should reject future date of birth', async () => {

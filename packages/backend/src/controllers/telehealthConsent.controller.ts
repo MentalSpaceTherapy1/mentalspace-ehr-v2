@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { getErrorMessage, getErrorCode, getErrorName, getErrorStack, getErrorStatusCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as telehealthConsentService from '../services/telehealthConsent.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendBadRequest, sendUnauthorized } from '../utils/apiResponse';
 
 const createConsentSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
@@ -33,7 +37,11 @@ const validateConsentSchema = z.object({
 export const getOrCreateConsent = async (req: Request, res: Response) => {
   try {
     const validatedData = createConsentSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const consent = await telehealthConsentService.getOrCreateTelehealthConsent({
       clientId: validatedData.clientId,
@@ -41,58 +49,56 @@ export const getOrCreateConsent = async (req: Request, res: Response) => {
       createdBy: userId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Telehealth consent retrieved',
-      data: consent,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, consent, 'Telehealth consent retrieved');
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to get/create telehealth consent';
+    const errorName = error instanceof Error ? getErrorName(error) : 'UnknownError';
     logger.error('Error getting/creating telehealth consent', {
-      errorMessage: error.message,
-      errorName: error.name,
+      errorMessage,
+      errorName,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to get/create telehealth consent',
-    });
+    return sendBadRequest(res, errorMessage);
   }
 };
 
 export const signConsent = async (req: Request, res: Response) => {
   try {
     const validatedData = signConsentSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     // Extract consentId and consent data
     const { consentId, ...consentData } = validatedData;
 
     const consent = await telehealthConsentService.signTelehealthConsent(
       consentId,
-      consentData as any,
+      consentData,
       userId
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'Telehealth consent signed successfully',
-      data: consent,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, consent, 'Telehealth consent signed successfully');
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to sign telehealth consent';
+    const errorName = error instanceof Error ? getErrorName(error) : 'UnknownError';
     logger.error('Error signing telehealth consent', {
-      errorMessage: error.message,
-      errorName: error.name,
+      errorMessage,
+      errorName,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to sign telehealth consent',
-    });
+    return sendBadRequest(res, errorMessage);
   }
 };
 
 export const withdrawConsent = async (req: Request, res: Response) => {
   try {
     const validatedData = withdrawConsentSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const consent = await telehealthConsentService.withdrawTelehealthConsent(
       validatedData.consentId,
@@ -100,20 +106,15 @@ export const withdrawConsent = async (req: Request, res: Response) => {
       userId
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'Telehealth consent withdrawn successfully',
-      data: consent,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, consent, 'Telehealth consent withdrawn successfully');
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to withdraw telehealth consent';
+    const errorName = error instanceof Error ? getErrorName(error) : 'UnknownError';
     logger.error('Error withdrawing telehealth consent', {
-      errorMessage: error.message,
-      errorName: error.name,
+      errorMessage,
+      errorName,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to withdraw telehealth consent',
-    });
+    return sendBadRequest(res, errorMessage);
   }
 };
 
@@ -126,24 +127,20 @@ export const validateConsent = async (req: Request, res: Response) => {
       validatedData.consentType
     );
 
-    res.status(200).json({
-      success: true,
-      data: {
-        hasValidConsent,
-        message: hasValidConsent
-          ? 'Client has valid telehealth consent'
-          : 'Client does not have valid telehealth consent',
-      },
+    return sendSuccess(res, {
+      hasValidConsent,
+      message: hasValidConsent
+        ? 'Client has valid telehealth consent'
+        : 'Client does not have valid telehealth consent',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to validate telehealth consent';
+    const errorName = error instanceof Error ? getErrorName(error) : 'UnknownError';
     logger.error('Error validating telehealth consent', {
-      errorMessage: error.message,
-      errorName: error.name,
+      errorMessage,
+      errorName,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to validate telehealth consent',
-    });
+    return sendBadRequest(res, errorMessage);
   }
 };
 
@@ -152,26 +149,19 @@ export const getClientConsents = async (req: Request, res: Response) => {
     const { clientId } = req.params;
 
     if (!clientId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Client ID is required',
-      });
+      return sendBadRequest(res, 'Client ID is required');
     }
 
     const consents = await telehealthConsentService.getClientTelehealthConsents(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: consents,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, consents);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to get client telehealth consents';
+    const errorName = error instanceof Error ? getErrorName(error) : 'UnknownError';
     logger.error('Error getting client telehealth consents', {
-      errorMessage: error.message,
-      errorName: error.name,
+      errorMessage,
+      errorName,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to get client telehealth consents',
-    });
+    return sendBadRequest(res, errorMessage);
   }
 };

@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Create a new mood entry
@@ -20,26 +21,17 @@ export const createMoodEntry = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate required fields
     if (moodScore === undefined || moodScore === null) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mood score is required',
-      });
+      return sendBadRequest(res, 'Mood score is required');
     }
 
     // Validate mood score range (1-10)
     if (moodScore < 1 || moodScore > 10) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mood score must be between 1 and 10',
-      });
+      return sendBadRequest(res, 'Mood score must be between 1 and 10');
     }
 
     // Create mood entry
@@ -57,25 +49,18 @@ export const createMoodEntry = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Mood entry created for client ${clientId}: score ${moodScore}`);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Mood entry created successfully',
-      data: {
-        id: moodEntry.id,
-        moodScore: moodEntry.moodScore,
-        entryDate: moodEntry.entryDate,
-        timeOfDay: moodEntry.timeOfDay,
-        notes: moodEntry.notes,
-        symptoms: moodEntry.symptoms,
-        customMetrics: moodEntry.customMetrics,
-      },
-    });
-  } catch (error: any) {
+    return sendCreated(res, {
+      id: moodEntry.id,
+      moodScore: moodEntry.moodScore,
+      entryDate: moodEntry.entryDate,
+      timeOfDay: moodEntry.timeOfDay,
+      notes: moodEntry.notes,
+      symptoms: moodEntry.symptoms,
+      customMetrics: moodEntry.customMetrics,
+    }, 'Mood entry created successfully');
+  } catch (error) {
     logger.error('Error creating mood entry:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create mood entry',
-    });
+    return sendServerError(res, 'Failed to create mood entry');
   }
 };
 
@@ -89,10 +74,7 @@ export const getMoodEntries = async (req: PortalRequest, res: Response) => {
     const { days } = req.query;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Calculate date filter
@@ -125,16 +107,10 @@ export const getMoodEntries = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${formattedEntries.length} mood entries for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: formattedEntries,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, formattedEntries);
+  } catch (error) {
     logger.error('Error fetching mood entries:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch mood entries',
-    });
+    return sendServerError(res, 'Failed to fetch mood entries');
   }
 };
 
@@ -147,10 +123,7 @@ export const getMoodTrends = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get mood entries from last 30 days
@@ -166,15 +139,12 @@ export const getMoodTrends = async (req: PortalRequest, res: Response) => {
     });
 
     if (moodEntries.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          averageMood: 0,
-          moodTrend: 'stable',
-          totalEntries: 0,
-          streakDays: 0,
-          weeklyAverage: [],
-        },
+      return sendSuccess(res, {
+        averageMood: 0,
+        moodTrend: 'stable',
+        totalEntries: 0,
+        streakDays: 0,
+        weeklyAverage: [],
       });
     }
 
@@ -240,21 +210,15 @@ export const getMoodTrends = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Calculated mood trends for client ${clientId}: ${moodTrend}`);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        averageMood: Math.round(averageMood * 10) / 10,
-        moodTrend,
-        totalEntries: moodEntries.length,
-        streakDays,
-        weeklyAverage,
-      },
+    return sendSuccess(res, {
+      averageMood: Math.round(averageMood * 10) / 10,
+      moodTrend,
+      totalEntries: moodEntries.length,
+      streakDays,
+      weeklyAverage,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error calculating mood trends:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to calculate mood trends',
-    });
+    return sendServerError(res, 'Failed to calculate mood trends');
   }
 };

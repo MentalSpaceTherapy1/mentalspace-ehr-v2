@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as portalAuthService from '../services/portalAuth.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendServerError } from '../utils/apiResponse';
 
 const registerSchema = z.object({
   clientId: z.string().uuid('Invalid client ID'),
@@ -49,7 +53,7 @@ const changePasswordSchema = z.object({
 export const register = async (req: Request, res: Response) => {
   try {
     const validatedData = registerSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     // Require valid staff authentication for HIPAA compliance audit trail
     if (!userId) {
@@ -58,10 +62,7 @@ export const register = async (req: Request, res: Response) => {
         email: validatedData.email,
         ip: req.ip,
       });
-      return res.status(401).json({
-        success: false,
-        message: 'Staff authentication required to create portal accounts.',
-      });
+      return sendUnauthorized(res, 'Staff authentication required to create portal accounts.');
     }
 
     const result = await portalAuthService.registerPortalAccount({
@@ -71,19 +72,12 @@ export const register = async (req: Request, res: Response) => {
       createdBy: userId,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Portal account created successfully. Please verify your email.',
-      data: result,
-    });
-  } catch (error: any) {
+    return sendCreated(res, result, 'Portal account created successfully. Please verify your email.');
+  } catch (error) {
     logger.error('Portal registration failed', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to create portal account',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to create portal account');
   }
 };
 
@@ -96,19 +90,12 @@ export const login = async (req: Request, res: Response) => {
       password: validatedData.password,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      data: result,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, result, 'Login successful');
+  } catch (error) {
     logger.error('Portal login failed', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(401).json({
-      success: false,
-      message: error.message || 'Invalid credentials',
-    });
+    return sendUnauthorized(res, getErrorMessage(error) || 'Invalid credentials');
   }
 };
 
@@ -118,18 +105,12 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     await portalAuthService.verifyEmail(validatedData.token);
 
-    res.status(200).json({
-      success: true,
-      message: 'Email verified successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Email verified successfully');
+  } catch (error) {
     logger.error('Email verification failed', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to verify email',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to verify email');
   }
 };
 
@@ -139,19 +120,12 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     const result = await portalAuthService.requestPasswordReset(validatedData.email);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-      data: { resetToken: result.resetToken }, // Remove in production
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { resetToken: result.resetToken }, result.message); // Remove resetToken in production
+  } catch (error) {
     logger.error('Password reset request failed', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(400).json({
-      success: false,
-      message: 'Failed to process password reset request',
-    });
+    return sendBadRequest(res, 'Failed to process password reset request');
   }
 };
 
@@ -161,18 +135,12 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     await portalAuthService.resetPassword(validatedData.token, validatedData.password);
 
-    res.status(200).json({
-      success: true,
-      message: 'Password reset successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Password reset successfully');
+  } catch (error) {
     logger.error('Password reset failed', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to reset password',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to reset password');
   }
 };
 
@@ -183,13 +151,10 @@ export const resetPassword = async (req: Request, res: Response) => {
 export const changePassword = async (req: Request, res: Response) => {
   try {
     const validatedData = changePasswordSchema.parse(req.body);
-    const portalAccountId = (req as any).user?.portalAccountId;
+    const portalAccountId = req.portalAccount?.portalAccountId;
 
     if (!portalAccountId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const result = await portalAuthService.changePortalPassword(
@@ -198,20 +163,11 @@ export const changePassword = async (req: Request, res: Response) => {
       validatedData.newPassword
     );
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-      data: {
-        passwordExpiresAt: result.passwordExpiresAt,
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { passwordExpiresAt: result.passwordExpiresAt }, result.message);
+  } catch (error) {
     logger.error('Portal password change failed', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to change password',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to change password');
   }
 };

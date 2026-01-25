@@ -1,6 +1,8 @@
 import prisma from './database';
 import bcrypt from 'bcryptjs';
 import logger from '../utils/logger';
+import { withTransaction, TransactionClient } from '../utils/transaction';
+import { UserRoles } from '@mentalspace/shared';
 
 export interface SignatureAuthRequest {
   userId: string;
@@ -42,10 +44,10 @@ export async function getApplicableAttestation(
     }
 
     // Determine role for attestation lookup
-    let attestationRole = 'CLINICIAN';
+    let attestationRole: string = UserRoles.CLINICIAN;
     if (signatureType === 'COSIGN') {
-      attestationRole = 'SUPERVISOR';
-    } else if (user.roles.includes('ADMINISTRATOR')) {
+      attestationRole = UserRoles.SUPERVISOR;
+    } else if (user.roles.includes(UserRoles.ADMINISTRATOR)) {
       attestationRole = 'ADMIN';
     }
 
@@ -283,10 +285,11 @@ export async function revokeSignature(
 
 /**
  * Sign a clinical note - comprehensive workflow
+ * Uses transaction to ensure signature event and note update are atomic
  */
 export async function signNote(request: CreateSignatureEventRequest) {
   try {
-    // Verify note exists and user has permission
+    // Verify note exists and user has permission (outside transaction for validation)
     const note = await prisma.clinicalNote.findUnique({
       where: { id: request.noteId },
       select: {
@@ -319,29 +322,68 @@ export async function signNote(request: CreateSignatureEventRequest) {
       throw new Error('Only the assigned supervisor can co-sign this note');
     }
 
-    // Create signature event
-    const signatureEvent = await createSignatureEvent(request);
+    // Get attestation before transaction (read-only lookup)
+    const attestation = await getApplicableAttestation(
+      request.userId,
+      note.noteType,
+      request.signatureType
+    );
 
-    // Update note status based on signature type
-    if (request.signatureType === 'AUTHOR') {
-      await prisma.clinicalNote.update({
-        where: { id: request.noteId },
-        data: {
-          signedBy: request.userId,
-          signedDate: new Date(),
-          status: note.requiresCosign ? 'PENDING_COSIGN' : 'SIGNED',
-        },
-      });
-    } else if (request.signatureType === 'COSIGN') {
-      await prisma.clinicalNote.update({
-        where: { id: request.noteId },
-        data: {
-          cosignedBy: request.userId,
-          cosignedDate: new Date(),
-          status: 'COSIGNED',
-        },
-      });
-    }
+    // Execute signature creation and note update in a transaction
+    const signatureEvent = await withTransaction(
+      async (tx) => {
+        // Create signature event within transaction
+        const event = await tx.signatureEvent.create({
+          data: {
+            noteId: request.noteId,
+            userId: request.userId,
+            signatureType: request.signatureType,
+            attestationId: attestation.id,
+            ipAddress: request.ipAddress,
+            userAgent: request.userAgent,
+            authMethod: request.authMethod,
+            signatureData: request.signatureData,
+            isValid: true,
+          },
+          include: {
+            attestation: true,
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                credentials: true,
+                licenseNumber: true,
+              },
+            },
+          },
+        });
+
+        // Update note status based on signature type
+        if (request.signatureType === 'AUTHOR') {
+          await tx.clinicalNote.update({
+            where: { id: request.noteId },
+            data: {
+              signedBy: request.userId,
+              signedDate: new Date(),
+              status: note.requiresCosign ? 'PENDING_COSIGN' : 'SIGNED',
+            },
+          });
+        } else if (request.signatureType === 'COSIGN') {
+          await tx.clinicalNote.update({
+            where: { id: request.noteId },
+            data: {
+              cosignedBy: request.userId,
+              cosignedDate: new Date(),
+              status: 'COSIGNED',
+            },
+          });
+        }
+
+        return event;
+      },
+      { label: 'SignNote', maxRetries: 1 }
+    );
 
     logger.info('Note signed successfully', {
       noteId: request.noteId,
@@ -419,4 +461,96 @@ export async function setSignaturePassword(userId: string, password: string): Pr
     logger.error('Error setting signature password', { error, userId });
     throw error;
   }
+}
+
+// ============================================================================
+// Phase 3.2: Additional service methods moved from controller
+// ============================================================================
+
+/**
+ * Get user's password for verification (for signature PIN/password setting)
+ */
+export async function getUserPasswordForVerification(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { password: true },
+  });
+}
+
+/**
+ * Get note with access check info for signature verification
+ */
+export async function getNoteWithAccessInfo(noteId: string) {
+  return prisma.clinicalNote.findUnique({
+    where: { id: noteId },
+    select: {
+      id: true,
+      clinicianId: true,
+      cosignedBy: true,
+      appointment: {
+        select: { clientId: true },
+      },
+    },
+  });
+}
+
+/**
+ * Get user roles for permission checking
+ */
+export async function getUserRoles(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { roles: true },
+  });
+}
+
+/**
+ * Get user for signing verification
+ */
+export async function getUserForSigning(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      roles: true,
+    },
+  });
+}
+
+/**
+ * Get user signature status (PIN and password configuration)
+ */
+export async function getSignatureStatus(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      signaturePin: true,
+      signaturePassword: true,
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    hasPinConfigured: !!user.signaturePin,
+    hasPasswordConfigured: !!user.signaturePassword,
+  };
+}
+
+/**
+ * Verify user password (for PIN/password setting authorization)
+ */
+export async function verifyUserPassword(userId: string, password: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { password: true },
+  });
+
+  if (!user) {
+    return false;
+  }
+
+  return bcrypt.compare(password, user.password);
 }

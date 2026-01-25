@@ -4,6 +4,8 @@ import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
 import * as telehealthService from '../../services/telehealth.service';
+import { sendSuccess, sendCreated, sendUnauthorized, sendServerError } from '../../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../../utils/errorHelpers';
 
 // ============================================================================
 // PORTAL TELEHEALTH CONTROLLER
@@ -20,10 +22,7 @@ export const getSession = async (req: PortalRequest, res: Response) => {
     const { appointmentId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify appointment belongs to this client
@@ -102,28 +101,22 @@ export const getSession = async (req: PortalRequest, res: Response) => {
       sessionId: telehealthSession.id,
     });
 
-    res.status(200).json({
-      success: true,
-      data: {
-        appointment: {
-          id: appointment.id,
-          appointmentDate: appointment.appointmentDate,
-          startTime: appointment.startTime,
-          endTime: appointment.endTime,
-          duration: appointment.duration,
-          status: appointment.status,
-          appointmentType: appointment.appointmentType,
-        },
-        clinician: appointment.clinician,
-        session: telehealthSession,
+    return sendSuccess(res, {
+      appointment: {
+        id: appointment.id,
+        appointmentDate: appointment.appointmentDate,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+        duration: appointment.duration,
+        status: appointment.status,
+        appointmentType: appointment.appointmentType,
       },
+      clinician: appointment.clinician,
+      session: telehealthSession,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching telehealth session:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch telehealth session',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch telehealth session');
   }
 };
 
@@ -138,10 +131,7 @@ export const joinSession = async (req: PortalRequest, res: Response) => {
     const { appointmentId } = req.params;
 
     if (!clientId || !portalAccountId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify appointment belongs to this client
@@ -194,26 +184,19 @@ export const joinSession = async (req: PortalRequest, res: Response) => {
       identity: joinResult.twilioIdentity,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Successfully joined session',
-      data: {
-        token: joinResult.twilioToken,
-        roomName: joinResult.twilioRoomName,
-        identity: joinResult.twilioIdentity,
-        session: {
-          id: joinResult.session.id,
-          status: joinResult.session.status,
-          clientInWaitingRoom: joinResult.session.clientInWaitingRoom,
-        },
+    return sendSuccess(res, {
+      token: joinResult.twilioToken,
+      roomName: joinResult.twilioRoomName,
+      identity: joinResult.twilioIdentity,
+      session: {
+        id: joinResult.session.id,
+        status: joinResult.session.status,
+        clientInWaitingRoom: joinResult.session.clientInWaitingRoom,
       },
-    });
-  } catch (error: any) {
+    }, 'Successfully joined session');
+  } catch (error) {
     logger.error('Error joining telehealth session:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to join telehealth session',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to join telehealth session');
   }
 };
 
@@ -227,10 +210,7 @@ export const leaveSession = async (req: PortalRequest, res: Response) => {
     const { appointmentId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify appointment belongs to this client
@@ -268,16 +248,10 @@ export const leaveSession = async (req: PortalRequest, res: Response) => {
       sessionId: appointment.telehealthSession.id,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Successfully left session',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Successfully left session');
+  } catch (error) {
     logger.error('Error leaving telehealth session:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to leave telehealth session',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to leave telehealth session');
   }
 };
 
@@ -290,31 +264,22 @@ export const getConsentStatus = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Check consent status
     const consentValidation = await telehealthService.verifyClientConsent(clientId, 'Georgia_Telehealth');
 
-    res.status(200).json({
-      success: true,
-      data: {
-        hasValidConsent: consentValidation.isValid,
-        requiresRenewal: consentValidation.requiresRenewal,
-        expirationDate: consentValidation.expirationDate,
-        daysTillExpiration: consentValidation.daysTillExpiration,
-        message: consentValidation.message,
-      },
+    return sendSuccess(res, {
+      hasValidConsent: consentValidation.isValid,
+      requiresRenewal: consentValidation.requiresRenewal,
+      expirationDate: consentValidation.expirationDate,
+      daysTillExpiration: consentValidation.daysTillExpiration,
+      message: consentValidation.message,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error checking telehealth consent:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to check consent status',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to check consent status');
   }
 };
 
@@ -329,10 +294,7 @@ export const rateSession = async (req: PortalRequest, res: Response) => {
     const { rating, comments, shareWithTherapist, shareWithAdmin } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate rating
@@ -373,22 +335,15 @@ export const rateSession = async (req: PortalRequest, res: Response) => {
       shareWithAdmin,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Rating submitted successfully',
-      data: {
-        id: sessionRating.id,
-        rating: sessionRating.rating,
-        shareWithTherapist: sessionRating.shareWithTherapist,
-        shareWithAdmin: sessionRating.shareWithAdmin,
-        submittedAt: sessionRating.submittedAt,
-      },
-    });
-  } catch (error: any) {
+    return sendCreated(res, {
+      id: sessionRating.id,
+      rating: sessionRating.rating,
+      shareWithTherapist: sessionRating.shareWithTherapist,
+      shareWithAdmin: sessionRating.shareWithAdmin,
+      submittedAt: sessionRating.submittedAt,
+    }, 'Rating submitted successfully');
+  } catch (error) {
     logger.error('Error submitting session rating:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to submit rating',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to submit rating');
   }
 };

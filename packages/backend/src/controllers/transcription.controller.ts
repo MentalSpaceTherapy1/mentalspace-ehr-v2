@@ -6,8 +6,12 @@
 
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { getErrorMessage, getErrorCode, getErrorName, getErrorStack } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as transcriptionService from '../services/transcription.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendBadRequest, sendUnauthorized, sendServerError } from '../utils/apiResponse';
 
 // Validation schemas
 const startTranscriptionSchema = z.object({
@@ -44,13 +48,10 @@ const getTranscriptsSchema = z.object({
 export const startTranscription = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate session ID
@@ -58,23 +59,16 @@ export const startTranscription = async (req: Request, res: Response) => {
 
     const result = await transcriptionService.startTranscription(sessionId, userId);
 
-    res.status(200).json({
-      success: true,
-      message: 'Transcription started successfully',
-      data: result,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, result, 'Transcription started successfully');
+  } catch (error) {
     logger.error('Error starting transcription', {
-      errorMessage: error.message,
-      errorName: error.name,
-      errorStack: error.stack,
+      errorMessage: getErrorMessage(error),
+      errorName: getErrorName(error),
+      errorStack: getErrorStack(error),
       sessionId: req.params.sessionId,
     });
 
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to start transcription',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to start transcription');
   }
 };
 
@@ -85,13 +79,10 @@ export const startTranscription = async (req: Request, res: Response) => {
 export const stopTranscription = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate session ID
@@ -99,22 +90,15 @@ export const stopTranscription = async (req: Request, res: Response) => {
 
     const result = await transcriptionService.stopTranscription(sessionId, userId);
 
-    res.status(200).json({
-      success: true,
-      message: 'Transcription stopped successfully',
-      data: result,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, result, 'Transcription stopped successfully');
+  } catch (error) {
     logger.error('Error stopping transcription', {
-      errorMessage: error.message,
-      errorName: error.name,
-      errorStack: error.stack,
+      errorMessage: getErrorMessage(error),
+      errorName: getErrorName(error),
+      errorStack: getErrorStack(error),
       sessionId: req.params.sessionId,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to stop transcription',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to stop transcription');
   }
 };
 
@@ -128,19 +112,13 @@ export const getTranscripts = async (req: Request, res: Response) => {
 
     // Validate sessionId is present and is a valid UUID
     if (!sessionId || sessionId.trim() === '') {
-      return res.status(400).json({
-        success: false,
-        message: 'Session ID is required',
-      });
+      return sendBadRequest(res, 'Session ID is required');
     }
 
     // Check UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(sessionId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid session ID format',
-      });
+      return sendBadRequest(res, 'Invalid session ID format');
     }
 
     const query = getTranscriptsSchema.parse(req.query);
@@ -151,22 +129,15 @@ export const getTranscripts = async (req: Request, res: Response) => {
       offset: query.offset,
     });
 
-    res.status(200).json({
-      success: true,
-      data: transcripts,
-      count: transcripts.length,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { data: transcripts, count: transcripts.length });
+  } catch (error) {
     logger.error('Error getting transcripts', {
-      errorMessage: error.message,
-      errorName: error.name,
-      errorStack: error.stack,
+      errorMessage: getErrorMessage(error),
+      errorName: getErrorName(error),
+      errorStack: getErrorStack(error),
       sessionId: req.params.sessionId,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to get transcripts',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to get transcripts');
   }
 };
 
@@ -180,37 +151,25 @@ export const getTranscriptionStatus = async (req: Request, res: Response) => {
 
     // Validate sessionId is present and valid
     if (!sessionId || sessionId.trim() === '') {
-      return res.status(400).json({
-        success: false,
-        message: 'Session ID is required',
-      });
+      return sendBadRequest(res, 'Session ID is required');
     }
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(sessionId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid session ID format',
-      });
+      return sendBadRequest(res, 'Invalid session ID format');
     }
 
     const status = await transcriptionService.getTranscriptionStatus(sessionId);
 
-    res.status(200).json({
-      success: true,
-      data: status,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, status);
+  } catch (error) {
     logger.error('Error getting transcription status', {
-      errorMessage: error.message,
-      errorName: error.name,
-      errorStack: error.stack,
+      errorMessage: getErrorMessage(error),
+      errorName: getErrorName(error),
+      errorStack: getErrorStack(error),
       sessionId: req.params.sessionId,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to get transcription status',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to get transcription status');
   }
 };
 
@@ -224,23 +183,15 @@ export const getFormattedTranscript = async (req: Request, res: Response) => {
 
     const transcript = await transcriptionService.getFormattedTranscript(sessionId);
 
-    res.status(200).json({
-      success: true,
-      data: {
-        transcript,
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { transcript });
+  } catch (error) {
     logger.error('Error getting formatted transcript', {
-      errorMessage: error.message,
-      errorName: error.name,
-      errorStack: error.stack,
+      errorMessage: getErrorMessage(error),
+      errorName: getErrorName(error),
+      errorStack: getErrorStack(error),
       sessionId: req.params.sessionId,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to get formatted transcript',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to get formatted transcript');
   }
 };
 
@@ -261,18 +212,15 @@ export const exportTranscript = async (req: Request, res: Response) => {
       `attachment; filename="transcript-${sessionId}-${Date.now()}.txt"`
     );
 
-    res.status(200).send(exportContent);
-  } catch (error: any) {
+    return res.status(200).send(exportContent);
+  } catch (error) {
     logger.error('Error exporting transcript', {
-      errorMessage: error.message,
-      errorName: error.name,
-      errorStack: error.stack,
+      errorMessage: getErrorMessage(error),
+      errorName: getErrorName(error),
+      errorStack: getErrorStack(error),
       sessionId: req.params.sessionId,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to export transcript',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to export transcript');
   }
 };
 
@@ -283,13 +231,10 @@ export const exportTranscript = async (req: Request, res: Response) => {
 export const updateTranscriptionConsent = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const validatedData = transcriptConsentSchema.parse({
@@ -303,22 +248,15 @@ export const updateTranscriptionConsent = async (req: Request, res: Response) =>
       validatedData.consent
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'Transcription consent updated successfully',
-      data: session,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, session, 'Transcription consent updated successfully');
+  } catch (error) {
     logger.error('Error updating transcription consent', {
-      errorMessage: error.message,
-      errorName: error.name,
-      errorStack: error.stack,
+      errorMessage: getErrorMessage(error),
+      errorName: getErrorName(error),
+      errorStack: getErrorStack(error),
       sessionId: req.params.sessionId,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to update transcription consent',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to update transcription consent');
   }
 };
 
@@ -329,32 +267,22 @@ export const updateTranscriptionConsent = async (req: Request, res: Response) =>
 export const deleteTranscripts = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const result = await transcriptionService.deleteTranscripts(sessionId, userId);
 
-    res.status(200).json({
-      success: true,
-      message: 'Transcripts deleted successfully',
-      data: result,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, result, 'Transcripts deleted successfully');
+  } catch (error) {
     logger.error('Error deleting transcripts', {
-      errorMessage: error.message,
-      errorName: error.name,
-      errorStack: error.stack,
+      errorMessage: getErrorMessage(error),
+      errorName: getErrorName(error),
+      errorStack: getErrorStack(error),
       sessionId: req.params.sessionId,
     });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to delete transcripts',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to delete transcripts');
   }
 };

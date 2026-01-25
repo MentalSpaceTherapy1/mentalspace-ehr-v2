@@ -9,6 +9,7 @@
 
 import prisma from './database';
 import logger from '../utils/logger';
+import { UserRoles } from '@mentalspace/shared';
 import {
   CRISIS_KEYWORDS_BY_SEVERITY,
   CrisisSeverity,
@@ -98,7 +99,7 @@ async function getAdminUsers(): Promise<string[]> {
     const admins = await prisma.user.findMany({
       where: {
         roles: {
-          hasSome: ['SUPER_ADMIN', 'ADMINISTRATOR'],
+          hasSome: [UserRoles.SUPER_ADMIN, UserRoles.ADMINISTRATOR],
         },
       },
       select: {
@@ -137,14 +138,15 @@ async function sendNotification(
       severity,
     });
 
-    // For now, log to console for development
-    console.log(`\n⚠️  CRISIS ALERT - ${severity} SEVERITY ⚠️`);
-    console.log(`Detection ID: ${detectionLog.id}`);
-    console.log(`Message ID: ${detectionLog.messageId}`);
-    console.log(`User ID: ${detectionLog.userId}`);
-    console.log(`Keywords: ${detectionLog.keywords.join(', ')}`);
-    console.log(`Snippet: ${detectionLog.messageSnippet}`);
-    console.log(`Notifying: ${userId}\n`);
+    // Log crisis alert - use structured logging
+    logger.warn('CRISIS ALERT detected', {
+      severity,
+      detectionId: detectionLog.id,
+      messageId: detectionLog.messageId,
+      userId: detectionLog.userId,
+      keywords: detectionLog.keywords,
+      notifying: userId,
+    });
   } catch (error) {
     logger.error('Error sending crisis notification', { error, userId });
   }

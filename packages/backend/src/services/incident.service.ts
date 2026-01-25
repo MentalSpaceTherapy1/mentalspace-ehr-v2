@@ -7,6 +7,7 @@
  */
 
 import { PrismaClient, Incident, IncidentType, Severity, InvestigationStatus } from '@prisma/client';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -164,16 +165,16 @@ export class IncidentService {
         }
       });
 
-      console.log(`✅ Incident created: ${incident.incidentNumber} - ${incident.incidentType}`);
+      logger.info(`✅ Incident created: ${incident.incidentNumber} - ${incident.incidentType}`);
 
       // If severity is HIGH or CRITICAL, automatically log for urgent attention
       if (incident.severity === Severity.HIGH || incident.severity === Severity.CRITICAL) {
-        console.log(`🚨 HIGH/CRITICAL SEVERITY INCIDENT: ${incident.incidentNumber}`);
+        logger.info(`🚨 HIGH/CRITICAL SEVERITY INCIDENT: ${incident.incidentNumber}`);
       }
 
       return incident;
     } catch (error) {
-      console.error('❌ Error creating incident:', error);
+      logger.error(' Error creating incident:', error);
       throw error;
     }
   }
@@ -211,7 +212,7 @@ export class IncidentService {
 
       return incident;
     } catch (error) {
-      console.error('❌ Error fetching incident:', error);
+      logger.error(' Error fetching incident:', error);
       throw error;
     }
   }
@@ -233,7 +234,7 @@ export class IncidentService {
 
       return incident;
     } catch (error) {
-      console.error('❌ Error fetching incident by number:', error);
+      logger.error(' Error fetching incident by number:', error);
       throw error;
     }
   }
@@ -311,7 +312,7 @@ export class IncidentService {
 
       return incidents;
     } catch (error) {
-      console.error('❌ Error listing incidents:', error);
+      logger.error(' Error listing incidents:', error);
       throw error;
     }
   }
@@ -353,10 +354,10 @@ export class IncidentService {
         }
       });
 
-      console.log(`✅ Incident updated: ${incident.incidentNumber}`);
+      logger.info(`✅ Incident updated: ${incident.incidentNumber}`);
       return incident;
     } catch (error) {
-      console.error('❌ Error updating incident:', error);
+      logger.error(' Error updating incident:', error);
       throw error;
     }
   }
@@ -374,10 +375,10 @@ export class IncidentService {
         investigationStatus: InvestigationStatus.IN_PROGRESS
       });
 
-      console.log(`👤 Incident ${incident.incidentNumber} assigned to investigator`);
+      logger.info(`👤 Incident ${incident.incidentNumber} assigned to investigator`);
       return incident;
     } catch (error) {
-      console.error('❌ Error assigning investigator:', error);
+      logger.error(' Error assigning investigator:', error);
       throw error;
     }
   }
@@ -395,10 +396,10 @@ export class IncidentService {
         investigationStatus: InvestigationStatus.IN_PROGRESS
       });
 
-      console.log(`📝 Investigation notes updated for ${incident.incidentNumber}`);
+      logger.info(`📝 Investigation notes updated for ${incident.incidentNumber}`);
       return incident;
     } catch (error) {
-      console.error('❌ Error updating investigation notes:', error);
+      logger.error(' Error updating investigation notes:', error);
       throw error;
     }
   }
@@ -416,10 +417,10 @@ export class IncidentService {
         investigationStatus: InvestigationStatus.UNDER_REVIEW
       });
 
-      console.log(`🔍 Root cause identified for ${incident.incidentNumber}`);
+      logger.info(`🔍 Root cause identified for ${incident.incidentNumber}`);
       return incident;
     } catch (error) {
-      console.error('❌ Error adding root cause:', error);
+      logger.error(' Error adding root cause:', error);
       throw error;
     }
   }
@@ -451,10 +452,10 @@ export class IncidentService {
         correctiveActions: updatedActions
       });
 
-      console.log(`✅ ${actions.length} corrective action(s) added to ${incident.incidentNumber}`);
+      logger.info(`✅ ${actions.length} corrective action(s) added to ${incident.incidentNumber}`);
       return updatedIncident;
     } catch (error) {
-      console.error('❌ Error adding corrective actions:', error);
+      logger.error(' Error adding corrective actions:', error);
       throw error;
     }
   }
@@ -486,10 +487,10 @@ export class IncidentService {
         preventiveActions: updatedActions
       });
 
-      console.log(`✅ ${actions.length} preventive action(s) added to ${incident.incidentNumber}`);
+      logger.info(`✅ ${actions.length} preventive action(s) added to ${incident.incidentNumber}`);
       return updatedIncident;
     } catch (error) {
-      console.error('❌ Error adding preventive actions:', error);
+      logger.error(' Error adding preventive actions:', error);
       throw error;
     }
   }
@@ -533,10 +534,10 @@ export class IncidentService {
         correctiveActions: actions
       });
 
-      console.log(`✅ Corrective action status updated to ${status}`);
+      logger.info(`✅ Corrective action status updated to ${status}`);
       return updatedIncident;
     } catch (error) {
-      console.error('❌ Error updating corrective action status:', error);
+      logger.error(' Error updating corrective action status:', error);
       throw error;
     }
   }
@@ -560,10 +561,10 @@ export class IncidentService {
 
       const incident = await this.updateIncident(incidentId, updates);
 
-      console.log(`✅ Incident ${incident.incidentNumber} resolved`);
+      logger.info(`✅ Incident ${incident.incidentNumber} resolved`);
       return incident;
     } catch (error) {
-      console.error('❌ Error resolving incident:', error);
+      logger.error(' Error resolving incident:', error);
       throw error;
     }
   }
@@ -579,10 +580,10 @@ export class IncidentService {
         investigationStatus: InvestigationStatus.CLOSED
       });
 
-      console.log(`✅ Incident ${incident.incidentNumber} closed`);
+      logger.info(`✅ Incident ${incident.incidentNumber} closed`);
       return incident;
     } catch (error) {
-      console.error('❌ Error closing incident:', error);
+      logger.error(' Error closing incident:', error);
       throw error;
     }
   }
@@ -704,7 +705,7 @@ export class IncidentService {
         recentIncidents: incidents.slice(-10).reverse()
       };
     } catch (error) {
-      console.error('❌ Error generating trend analysis:', error);
+      logger.error(' Error generating trend analysis:', error);
       throw error;
     }
   }
@@ -753,7 +754,7 @@ export class IncidentService {
 
       return incidents;
     } catch (error) {
-      console.error('❌ Error getting incidents requiring follow-up:', error);
+      logger.error(' Error getting incidents requiring follow-up:', error);
       throw error;
     }
   }
@@ -799,7 +800,7 @@ export class IncidentService {
 
       return incidents;
     } catch (error) {
-      console.error('❌ Error getting high severity incidents:', error);
+      logger.error(' Error getting high severity incidents:', error);
       throw error;
     }
   }
@@ -899,10 +900,10 @@ export class IncidentService {
         overdueInvestigations
       };
 
-      console.log('📊 Incident stats generated:', stats);
+      logger.info('📊 Incident stats generated:', stats);
       return stats;
     } catch (error) {
-      console.error('❌ Error generating incident stats:', error);
+      logger.error(' Error generating incident stats:', error);
       throw error;
     }
   }

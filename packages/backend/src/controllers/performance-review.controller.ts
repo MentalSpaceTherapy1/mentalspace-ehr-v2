@@ -1,15 +1,22 @@
 import { Request, Response } from 'express';
+import { UserRoles, type UserRole } from '@mentalspace/shared';
 import performanceReviewService from '../services/performance-review.service';
 import { ReviewStatus } from '@prisma/client';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendForbidden, sendPaginated } from '../utils/apiResponse';
 
 // Helper function to check if user has admin/supervisor role
 const hasAdminOrSupervisorRole = (roles: string[] = []): boolean => {
-  return roles.some(role => ['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR'].includes(role));
+  const adminSupervisorRoles: string[] = [UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR];
+  return roles.some(role => adminSupervisorRoles.includes(role));
 };
 
 // Helper function to check if user has admin role only
 const hasAdminRole = (roles: string[] = []): boolean => {
-  return roles.some(role => ['ADMINISTRATOR', 'SUPER_ADMIN'].includes(role));
+  const adminRoles: string[] = [UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN];
+  return roles.some(role => adminRoles.includes(role));
 };
 
 export class PerformanceReviewController {
@@ -20,16 +27,10 @@ export class PerformanceReviewController {
   async createReview(req: Request, res: Response) {
     try {
       const review = await performanceReviewService.createReview(req.body);
-      res.status(201).json({
-        success: true,
-        data: review,
-        message: 'Performance review created successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to create performance review',
-      });
+      return sendCreated(res, review, 'Performance review created successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to create performance review';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -40,7 +41,7 @@ export class PerformanceReviewController {
    */
   async getAllReviews(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
 
       const {
@@ -54,23 +55,21 @@ export class PerformanceReviewController {
         limit,
       } = req.query;
 
-      const filters: any = {};
+      const filters: Record<string, string | Date | number | ReviewStatus> = {};
 
       // Non-admin users can only see reviews where they are the employee or reviewer
       if (!hasAdminOrSupervisorRole(currentUser?.roles)) {
+        // Authentication required for non-admin users
+        if (!currentUserId) {
+          return sendUnauthorized(res, 'Authentication required');
+        }
         // If no specific filter, show both own reviews and reviews they're conducting
         if (!userId && !reviewerId) {
           filters.userId = currentUserId; // Default to showing their own reviews
         } else if (userId && userId !== currentUserId) {
-          return res.status(403).json({
-            success: false,
-            message: 'Not authorized to view other employees\' reviews',
-          });
+          return sendForbidden(res, 'Not authorized to view other employees\' reviews');
         } else if (reviewerId && reviewerId !== currentUserId) {
-          return res.status(403).json({
-            success: false,
-            message: 'Not authorized to view other reviewers\' assigned reviews',
-          });
+          return sendForbidden(res, 'Not authorized to view other reviewers\' assigned reviews');
         } else {
           if (userId) filters.userId = userId as string;
           if (reviewerId) filters.reviewerId = reviewerId as string;
@@ -88,16 +87,10 @@ export class PerformanceReviewController {
       if (limit) filters.limit = parseInt(limit as string);
 
       const result = await performanceReviewService.getAllReviews(filters);
-      res.status(200).json({
-        success: true,
-        data: result.reviews,
-        pagination: result.pagination,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch performance reviews',
-      });
+      return sendPaginated(res, result.reviews, result.pagination);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch performance reviews';
+      return sendServerError(res, errorMessage);
     }
   }
 
@@ -108,7 +101,7 @@ export class PerformanceReviewController {
    */
   async getReviewById(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
 
@@ -120,21 +113,12 @@ export class PerformanceReviewController {
       const isAdmin = hasAdminOrSupervisorRole(currentUser?.roles);
 
       if (!isOwner && !isReviewer && !isAdmin) {
-        return res.status(403).json({
-          success: false,
-          message: 'Not authorized to view this performance review',
-        });
+        return sendForbidden(res, 'Not authorized to view this performance review');
       }
 
-      res.status(200).json({
-        success: true,
-        data: review,
-      });
-    } catch (error: any) {
-      res.status(404).json({
-        success: false,
-        message: error.message || 'Performance review not found',
-      });
+      return sendSuccess(res, review);
+    } catch (error: unknown) {
+      return sendNotFound(res, 'Performance review');
     }
   }
 
@@ -145,7 +129,7 @@ export class PerformanceReviewController {
    */
   async updateReview(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
 
@@ -157,23 +141,14 @@ export class PerformanceReviewController {
       const isAdmin = hasAdminRole(currentUser?.roles);
 
       if (!isReviewer && !isAdmin) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only the assigned reviewer or admin can update this review',
-        });
+        return sendForbidden(res, 'Only the assigned reviewer or admin can update this review');
       }
 
       const review = await performanceReviewService.updateReview(id, req.body);
-      res.status(200).json({
-        success: true,
-        data: review,
-        message: 'Performance review updated successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to update performance review',
-      });
+      return sendSuccess(res, review, 'Performance review updated successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to update performance review';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -184,7 +159,7 @@ export class PerformanceReviewController {
    */
   async submitSelfEvaluation(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
 
@@ -193,23 +168,14 @@ export class PerformanceReviewController {
 
       // Only the employee being reviewed can submit self-evaluation
       if (existingReview.userId !== currentUserId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only the employee being reviewed can submit a self-evaluation',
-        });
+        return sendForbidden(res, 'Only the employee being reviewed can submit a self-evaluation');
       }
 
       const review = await performanceReviewService.submitSelfEvaluation(id, req.body);
-      res.status(200).json({
-        success: true,
-        data: review,
-        message: 'Self-evaluation submitted successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to submit self-evaluation',
-      });
+      return sendSuccess(res, review, 'Self-evaluation submitted successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to submit self-evaluation';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -220,7 +186,7 @@ export class PerformanceReviewController {
    */
   async submitManagerReview(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
 
@@ -229,23 +195,14 @@ export class PerformanceReviewController {
 
       // Only the assigned reviewer can submit manager review
       if (existingReview.reviewerId !== currentUserId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only the assigned reviewer can submit a manager review',
-        });
+        return sendForbidden(res, 'Only the assigned reviewer can submit a manager review');
       }
 
       const review = await performanceReviewService.submitManagerReview(id, req.body);
-      res.status(200).json({
-        success: true,
-        data: review,
-        message: 'Manager review submitted successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to submit manager review',
-      });
+      return sendSuccess(res, review, 'Manager review submitted successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to submit manager review';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -256,7 +213,7 @@ export class PerformanceReviewController {
    */
   async employeeSignature(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
 
@@ -265,23 +222,14 @@ export class PerformanceReviewController {
 
       // Only the employee being reviewed can sign
       if (existingReview.userId !== currentUserId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only the employee being reviewed can sign the review',
-        });
+        return sendForbidden(res, 'Only the employee being reviewed can sign the review');
       }
 
       const review = await performanceReviewService.employeeSignature(id, req.body);
-      res.status(200).json({
-        success: true,
-        data: review,
-        message: 'Performance review signed successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to sign performance review',
-      });
+      return sendSuccess(res, review, 'Performance review signed successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to sign performance review';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -293,15 +241,10 @@ export class PerformanceReviewController {
     try {
       const { id } = req.params;
       const result = await performanceReviewService.deleteReview(id);
-      res.status(200).json({
-        success: true,
-        message: result.message,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to delete performance review',
-      });
+      return sendSuccess(res, null, result.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to delete performance review';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -312,15 +255,10 @@ export class PerformanceReviewController {
   async getUpcomingReviews(req: Request, res: Response) {
     try {
       const reviews = await performanceReviewService.getUpcomingReviews();
-      res.status(200).json({
-        success: true,
-        data: reviews,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch upcoming reviews',
-      });
+      return sendSuccess(res, reviews);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch upcoming reviews';
+      return sendServerError(res, errorMessage);
     }
   }
 
@@ -331,28 +269,20 @@ export class PerformanceReviewController {
    */
   async getReviewsByEmployee(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { userId } = req.params;
 
       // Ownership validation: users can only view their own reviews
       if (userId !== currentUserId && !hasAdminOrSupervisorRole(currentUser?.roles)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Not authorized to view this employee\'s reviews',
-        });
+        return sendForbidden(res, 'Not authorized to view this employee\'s reviews');
       }
 
       const reviews = await performanceReviewService.getReviewsByEmployee(userId);
-      res.status(200).json({
-        success: true,
-        data: reviews,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch employee reviews',
-      });
+      return sendSuccess(res, reviews);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch employee reviews';
+      return sendServerError(res, errorMessage);
     }
   }
 
@@ -363,28 +293,20 @@ export class PerformanceReviewController {
    */
   async getReviewsByReviewer(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { reviewerId } = req.params;
 
       // Ownership validation: reviewers can only view their own assigned reviews
       if (reviewerId !== currentUserId && !hasAdminOrSupervisorRole(currentUser?.roles)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Not authorized to view this reviewer\'s assigned reviews',
-        });
+        return sendForbidden(res, 'Not authorized to view this reviewer\'s assigned reviews');
       }
 
       const reviews = await performanceReviewService.getReviewsByReviewer(reviewerId);
-      res.status(200).json({
-        success: true,
-        data: reviews,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch reviewer reviews',
-      });
+      return sendSuccess(res, reviews);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch reviewer reviews';
+      return sendServerError(res, errorMessage);
     }
   }
 
@@ -396,21 +318,16 @@ export class PerformanceReviewController {
     try {
       const { startDate, endDate, reviewPeriod } = req.query;
 
-      const filters: any = {};
+      const filters: Record<string, Date | string> = {};
       if (startDate) filters.startDate = new Date(startDate as string);
       if (endDate) filters.endDate = new Date(endDate as string);
       if (reviewPeriod) filters.reviewPeriod = reviewPeriod as string;
 
       const stats = await performanceReviewService.getReviewStatistics(filters);
-      res.status(200).json({
-        success: true,
-        data: stats,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch statistics',
-      });
+      return sendSuccess(res, stats);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch statistics';
+      return sendServerError(res, errorMessage);
     }
   }
 }

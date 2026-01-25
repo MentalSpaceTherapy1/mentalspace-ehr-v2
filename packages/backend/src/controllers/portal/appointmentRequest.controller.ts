@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendConflict, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Get therapist availability for calendar view
@@ -14,10 +15,7 @@ export const getTherapistAvailability = async (req: PortalRequest, res: Response
     const { clinicianId, startDate, endDate } = req.query;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get client's assigned therapist if no clinicianId provided
@@ -30,10 +28,7 @@ export const getTherapistAvailability = async (req: PortalRequest, res: Response
       });
 
       if (!client?.primaryTherapistId) {
-        return res.status(404).json({
-          success: false,
-          message: 'No therapist assigned',
-        });
+        return sendNotFound(res, 'Therapist');
       }
 
       targetClinicianId = client.primaryTherapistId;
@@ -84,21 +79,15 @@ export const getTherapistAvailability = async (req: PortalRequest, res: Response
       ? generateTimeSlots(clinicianSchedule.weeklyScheduleJson, startDate as string, endDate as string, existingAppointments)
       : [];
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        availableSlots,
-        bookedSlots: existingAppointments,
-        clinicianId: targetClinicianId,
-        hasSchedule: !!clinicianSchedule,
-      },
+    return sendSuccess(res, {
+      availableSlots,
+      bookedSlots: existingAppointments,
+      clinicianId: targetClinicianId,
+      hasSchedule: !!clinicianSchedule,
     });
   } catch (error) {
     logger.error('Error fetching therapist availability:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch availability',
-    });
+    return sendServerError(res, 'Failed to fetch availability');
   }
 };
 
@@ -121,18 +110,12 @@ export const requestAppointment = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate required fields
     if (!appointmentDate || !startTime || !appointmentType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields',
-      });
+      return sendBadRequest(res, 'Missing required fields');
     }
 
     // Get client's primary therapist if no clinicianId provided
@@ -145,10 +128,7 @@ export const requestAppointment = async (req: PortalRequest, res: Response) => {
       });
 
       if (!client?.primaryTherapistId) {
-        return res.status(404).json({
-          success: false,
-          message: 'No therapist assigned',
-        });
+        return sendNotFound(res, 'Therapist');
       }
 
       targetClinicianId = client.primaryTherapistId;
@@ -167,10 +147,7 @@ export const requestAppointment = async (req: PortalRequest, res: Response) => {
     });
 
     if (conflictingAppointment) {
-      return res.status(409).json({
-        success: false,
-        message: 'This time slot is no longer available',
-      });
+      return sendConflict(res, 'This time slot is no longer available');
     }
 
     // Create appointment with REQUESTED status
@@ -202,17 +179,10 @@ export const requestAppointment = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Client ${clientId} requested appointment for ${appointmentDate} at ${startTime}`);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Appointment request submitted successfully',
-      data: appointment,
-    });
+    return sendCreated(res, appointment, 'Appointment request submitted successfully');
   } catch (error) {
     logger.error('Error requesting appointment:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to request appointment',
-    });
+    return sendServerError(res, 'Failed to request appointment');
   }
 };
 
@@ -225,10 +195,7 @@ export const getRequestedAppointments = async (req: PortalRequest, res: Response
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const requestedAppointments = await prisma.appointment.findMany({
@@ -251,16 +218,10 @@ export const getRequestedAppointments = async (req: PortalRequest, res: Response
 
     logger.info(`Retrieved ${requestedAppointments.length} requested appointments for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: requestedAppointments,
-    });
+    return sendSuccess(res, requestedAppointments);
   } catch (error) {
     logger.error('Error fetching requested appointments:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch requested appointments',
-    });
+    return sendServerError(res, 'Failed to fetch requested appointments');
   }
 };
 
@@ -274,10 +235,7 @@ export const cancelRequestedAppointment = async (req: PortalRequest, res: Respon
     const { appointmentId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify the appointment belongs to this client and is in REQUESTED status
@@ -290,10 +248,7 @@ export const cancelRequestedAppointment = async (req: PortalRequest, res: Respon
     });
 
     if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Requested appointment not found',
-      });
+      return sendNotFound(res, 'Requested appointment');
     }
 
     // Delete the appointment request
@@ -303,16 +258,10 @@ export const cancelRequestedAppointment = async (req: PortalRequest, res: Respon
 
     logger.info(`Client ${clientId} cancelled appointment request ${appointmentId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Appointment request cancelled',
-    });
+    return sendSuccess(res, null, 'Appointment request cancelled');
   } catch (error) {
     logger.error('Error cancelling appointment request:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to cancel appointment request',
-    });
+    return sendServerError(res, 'Failed to cancel appointment request');
   }
 };
 
@@ -325,10 +274,7 @@ export const getAppointmentTypes = async (req: PortalRequest, res: Response) => 
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Return the EXACT same appointment types used in the EHR system
@@ -342,16 +288,10 @@ export const getAppointmentTypes = async (req: PortalRequest, res: Response) => 
       { value: 'Crisis Intervention', label: 'Crisis Intervention', duration: 60 },
     ];
 
-    return res.status(200).json({
-      success: true,
-      data: appointmentTypes,
-    });
+    return sendSuccess(res, appointmentTypes);
   } catch (error) {
     logger.error('Error fetching appointment types:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch appointment types',
-    });
+    return sendServerError(res, 'Failed to fetch appointment types');
   }
 };
 

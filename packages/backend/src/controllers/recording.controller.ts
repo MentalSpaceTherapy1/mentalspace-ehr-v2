@@ -11,10 +11,13 @@
  */
 
 import { Request, Response } from 'express';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as recordingService from '../services/recording.service';
 import * as storageService from '../services/storage.service';
-import prisma from '../services/database';
+// Phase 3.2: Removed unused prisma import - model not implemented
 import logger from '../utils/logger';
+import { sendError } from '../utils/apiResponse';
 
 /**
  * Start recording a telehealth session
@@ -25,14 +28,10 @@ import logger from '../utils/logger';
 export async function startRecording(req: Request, res: Response) {
   logger.warn('Session recording feature requested but sessionRecording model not available', {
     sessionId: req.params.sessionId,
-    userId: (req as any).user?.id,
+    userId: req.user?.userId,
   });
 
-  return res.status(501).json({
-    success: false,
-    error: 'Session recording feature is currently unavailable. Please contact support.',
-    message: 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED',
-  });
+  return sendError(res, 501, 'Session recording feature is currently unavailable. Please contact support.', 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED');
 }
 
 /**
@@ -44,14 +43,10 @@ export async function startRecording(req: Request, res: Response) {
 export async function stopRecording(req: Request, res: Response) {
   logger.warn('Session recording feature requested but sessionRecording model not available', {
     sessionId: req.params.sessionId,
-    userId: (req as any).user?.id,
+    userId: req.user?.userId,
   });
 
-  return res.status(501).json({
-    success: false,
-    error: 'Session recording feature is currently unavailable. Please contact support.',
-    message: 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED',
-  });
+  return sendError(res, 501, 'Session recording feature is currently unavailable. Please contact support.', 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED');
 }
 
 /**
@@ -61,11 +56,7 @@ export async function stopRecording(req: Request, res: Response) {
  * TODO: Re-enable when sessionRecording model is added to schema
  */
 export async function getRecording(req: Request, res: Response) {
-  return res.status(501).json({
-    success: false,
-    error: 'Session recording feature is currently unavailable. Please contact support.',
-    message: 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED',
-  });
+  return sendError(res, 501, 'Session recording feature is currently unavailable. Please contact support.', 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED');
 }
 
 /**
@@ -75,11 +66,7 @@ export async function getRecording(req: Request, res: Response) {
  * TODO: Re-enable when sessionRecording model is added to schema
  */
 export async function getPlaybackUrl(req: Request, res: Response) {
-  return res.status(501).json({
-    success: false,
-    error: 'Session recording feature is currently unavailable. Please contact support.',
-    message: 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED',
-  });
+  return sendError(res, 501, 'Session recording feature is currently unavailable. Please contact support.', 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED');
 }
 
 /**
@@ -89,11 +76,7 @@ export async function getPlaybackUrl(req: Request, res: Response) {
  * TODO: Re-enable when sessionRecording model is added to schema
  */
 export async function downloadRecording(req: Request, res: Response) {
-  return res.status(501).json({
-    success: false,
-    error: 'Session recording feature is currently unavailable. Please contact support.',
-    message: 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED',
-  });
+  return sendError(res, 501, 'Session recording feature is currently unavailable. Please contact support.', 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED');
 }
 
 /**
@@ -103,11 +86,7 @@ export async function downloadRecording(req: Request, res: Response) {
  * TODO: Re-enable when sessionRecording model is added to schema
  */
 export async function deleteRecording(req: Request, res: Response) {
-  return res.status(501).json({
-    success: false,
-    error: 'Session recording feature is currently unavailable. Please contact support.',
-    message: 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED',
-  });
+  return sendError(res, 501, 'Session recording feature is currently unavailable. Please contact support.', 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED');
 }
 
 /**
@@ -117,11 +96,7 @@ export async function deleteRecording(req: Request, res: Response) {
  * TODO: Re-enable when sessionRecording model is added to schema
  */
 export async function listRecordings(req: Request, res: Response) {
-  return res.status(501).json({
-    success: false,
-    error: 'Session recording feature is currently unavailable. Please contact support.',
-    message: 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED',
-  });
+  return sendError(res, 501, 'Session recording feature is currently unavailable. Please contact support.', 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED');
 }
 
 /**
@@ -146,9 +121,5 @@ export async function handleRecordingWebhook(req: Request, res: Response) {
  * TODO: Re-enable when sessionRecording model is added to schema
  */
 export async function getRecordingStatus(req: Request, res: Response) {
-  return res.status(501).json({
-    success: false,
-    error: 'Session recording feature is currently unavailable. Please contact support.',
-    message: 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED',
-  });
+  return sendError(res, 501, 'Session recording feature is currently unavailable. Please contact support.', 'SESSION_RECORDING_MODEL_NOT_IMPLEMENTED');
 }

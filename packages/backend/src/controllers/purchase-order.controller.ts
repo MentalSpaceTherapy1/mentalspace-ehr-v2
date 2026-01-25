@@ -8,8 +8,10 @@
 
 import { Request, Response } from 'express';
 import { logControllerError } from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
 import * as poService from '../services/purchase-order.service';
 import { POStatus } from '@prisma/client';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * POST /api/purchase-orders
@@ -18,10 +20,10 @@ import { POStatus } from '@prisma/client';
 export async function createPurchaseOrder(req: Request, res: Response): Promise<void> {
   try {
     const purchaseOrder = await poService.createPurchaseOrder(req.body);
-    res.status(201).json(purchaseOrder);
-  } catch (error: any) {
+    sendCreated(res, purchaseOrder, 'Purchase order created successfully');
+  } catch (error) {
     logControllerError('Error creating purchase order', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -35,14 +37,14 @@ export async function getPurchaseOrder(req: Request, res: Response): Promise<voi
     const purchaseOrder = await poService.getPurchaseOrderById(id);
 
     if (!purchaseOrder) {
-      res.status(404).json({ error: 'Purchase order not found' });
+      sendNotFound(res, 'Purchase order');
       return;
     }
 
-    res.json(purchaseOrder);
-  } catch (error: any) {
+    sendSuccess(res, purchaseOrder);
+  } catch (error) {
     logControllerError('Error fetching purchase order', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -56,14 +58,14 @@ export async function getPurchaseOrderByNumber(req: Request, res: Response): Pro
     const purchaseOrder = await poService.getPurchaseOrderByNumber(poNumber);
 
     if (!purchaseOrder) {
-      res.status(404).json({ error: 'Purchase order not found' });
+      sendNotFound(res, 'Purchase order');
       return;
     }
 
-    res.json(purchaseOrder);
-  } catch (error: any) {
+    sendSuccess(res, purchaseOrder);
+  } catch (error) {
     logControllerError('Error fetching purchase order', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -105,10 +107,10 @@ export async function listPurchaseOrders(req: Request, res: Response): Promise<v
       limit: limit ? parseInt(limit as string) : undefined,
     });
 
-    res.json(result);
-  } catch (error: any) {
+    sendSuccess(res, result);
+  } catch (error) {
     logControllerError('Error listing purchase orders', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -120,10 +122,10 @@ export async function updatePurchaseOrder(req: Request, res: Response): Promise<
   try {
     const { id } = req.params;
     const purchaseOrder = await poService.updatePurchaseOrder(id, req.body);
-    res.json(purchaseOrder);
-  } catch (error: any) {
+    sendSuccess(res, purchaseOrder, 'Purchase order updated successfully');
+  } catch (error) {
     logControllerError('Error updating purchase order', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -137,15 +139,15 @@ export async function approvePurchaseOrder(req: Request, res: Response): Promise
     const { approvedById } = req.body;
 
     if (!approvedById) {
-      res.status(400).json({ error: 'Approver ID is required' });
+      sendBadRequest(res, 'Approver ID is required');
       return;
     }
 
     const purchaseOrder = await poService.approvePurchaseOrder(id, approvedById);
-    res.json(purchaseOrder);
-  } catch (error: any) {
+    sendSuccess(res, purchaseOrder, 'Purchase order approved successfully');
+  } catch (error) {
     logControllerError('Error approving purchase order', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -157,10 +159,10 @@ export async function markPurchaseOrderOrdered(req: Request, res: Response): Pro
   try {
     const { id } = req.params;
     const purchaseOrder = await poService.markPurchaseOrderOrdered(id);
-    res.json(purchaseOrder);
-  } catch (error: any) {
+    sendSuccess(res, purchaseOrder, 'Purchase order marked as ordered');
+  } catch (error) {
     logControllerError('Error marking purchase order as ordered', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -178,10 +180,10 @@ export async function markPurchaseOrderReceived(req: Request, res: Response): Pr
       receivedDate ? new Date(receivedDate) : undefined
     );
 
-    res.json(purchaseOrder);
-  } catch (error: any) {
+    sendSuccess(res, purchaseOrder, 'Purchase order marked as received');
+  } catch (error) {
     logControllerError('Error marking purchase order as received', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -195,10 +197,10 @@ export async function cancelPurchaseOrder(req: Request, res: Response): Promise<
     const { reason } = req.body;
 
     const purchaseOrder = await poService.cancelPurchaseOrder(id, reason);
-    res.json(purchaseOrder);
-  } catch (error: any) {
+    sendSuccess(res, purchaseOrder, 'Purchase order cancelled successfully');
+  } catch (error) {
     logControllerError('Error cancelling purchase order', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -217,10 +219,10 @@ export async function getPurchaseOrderSummary(req: Request, res: Response): Prom
       vendorId: vendorId as string,
     });
 
-    res.json(summary);
-  } catch (error: any) {
+    sendSuccess(res, summary);
+  } catch (error) {
     logControllerError('Error fetching purchase order summary', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -231,10 +233,10 @@ export async function getPurchaseOrderSummary(req: Request, res: Response): Prom
 export async function getOverduePurchaseOrders(req: Request, res: Response): Promise<void> {
   try {
     const purchaseOrders = await poService.getOverduePurchaseOrders();
-    res.json(purchaseOrders);
-  } catch (error: any) {
+    sendSuccess(res, purchaseOrders);
+  } catch (error) {
     logControllerError('Error fetching overdue purchase orders', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -248,9 +250,9 @@ export async function getPendingApprovals(req: Request, res: Response): Promise<
     const purchaseOrders = await poService.getPendingApprovals(
       limit ? parseInt(limit as string) : undefined
     );
-    res.json(purchaseOrders);
-  } catch (error: any) {
+    sendSuccess(res, purchaseOrders);
+  } catch (error) {
     logControllerError('Error fetching pending approvals', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }

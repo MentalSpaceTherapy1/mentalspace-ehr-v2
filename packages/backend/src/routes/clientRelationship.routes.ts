@@ -6,6 +6,7 @@
 
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 import * as clientRelationshipController from '../controllers/clientRelationship.controller';
 
 const router = Router();
@@ -24,7 +25,7 @@ router.use(authenticate);
  */
 router.post(
   '/',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK),
   clientRelationshipController.createRelationship
 );
 
@@ -34,7 +35,7 @@ router.post(
  */
 router.get(
   '/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK, UserRoles.BILLING_STAFF),
   clientRelationshipController.getRelationshipById
 );
 
@@ -44,7 +45,7 @@ router.get(
  */
 router.put(
   '/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK),
   clientRelationshipController.updateRelationship
 );
 
@@ -54,7 +55,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   clientRelationshipController.deleteRelationship
 );
 
@@ -65,7 +66,7 @@ router.delete(
  */
 router.get(
   '/client/:clientId/family-tree',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK, UserRoles.BILLING_STAFF),
   clientRelationshipController.getFamilyTree
 );
 
@@ -75,7 +76,7 @@ router.get(
  */
 router.get(
   '/client/:clientId',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK, UserRoles.BILLING_STAFF),
   clientRelationshipController.getClientRelationships
 );
 
@@ -89,7 +90,7 @@ router.get(
  */
 router.post(
   '/providers',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK),
   clientRelationshipController.addProvider
 );
 
@@ -99,7 +100,7 @@ router.post(
  */
 router.get(
   '/providers/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK, UserRoles.BILLING_STAFF),
   clientRelationshipController.getProviderById
 );
 
@@ -109,7 +110,7 @@ router.get(
  */
 router.put(
   '/providers/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK),
   clientRelationshipController.updateProvider
 );
 
@@ -119,7 +120,7 @@ router.put(
  */
 router.delete(
   '/providers/:id',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR),
   clientRelationshipController.deleteProvider
 );
 
@@ -130,7 +131,7 @@ router.delete(
  */
 router.get(
   '/providers/client/:clientId/care-team',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK, UserRoles.BILLING_STAFF),
   clientRelationshipController.getCareTeam
 );
 
@@ -140,7 +141,7 @@ router.get(
  */
 router.get(
   '/providers/client/:clientId',
-  authorize('CLINICIAN', 'SUPERVISOR', 'ADMINISTRATOR', 'FRONT_DESK', 'BILLING_STAFF'),
+  authorize(UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.FRONT_DESK, UserRoles.BILLING_STAFF),
   clientRelationshipController.getClientProviders
 );
 

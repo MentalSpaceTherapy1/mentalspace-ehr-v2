@@ -5,6 +5,7 @@ import trainingController from '../controllers/training.controller';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roleCheck';
 import { auditLog } from '../middleware/auditLogger';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -19,32 +20,32 @@ router.use(authenticate);
 // Statistics routes (must come before :id routes)
 router.get(
   '/statistics',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   staffManagementController.getStaffStatistics
 );
 
 router.get(
   '/organization/hierarchy',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   staffManagementController.getOrganizationalHierarchy
 );
 
 // Alias for org chart - frontend calls this endpoint
 router.get(
   '/org-chart',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   staffManagementController.getOrganizationalHierarchy
 );
 
 router.get(
   '/departments/:department/statistics',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   staffManagementController.getDepartmentStatistics
 );
 
 router.get(
   '/managers/:managerId/subordinates',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR]),
   staffManagementController.getStaffByManager
 );
 
@@ -52,7 +53,7 @@ router.get(
 // Must come before /:id routes to avoid conflicts
 router.get(
   '/:id/credentials',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR]),
   (req: Request, res: Response, next: NextFunction) => {
     // Rewrite params to match credentialing controller expectation
     req.params.userId = req.params.id;
@@ -62,7 +63,7 @@ router.get(
 
 router.post(
   '/:id/credentials',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   auditLog({ entityType: 'Credential', action: 'CREATE' }),
   (req: Request, res: Response, next: NextFunction) => {
     // Set userId from path param if not in body
@@ -76,7 +77,7 @@ router.post(
 // Staff training routes (proxy to training controller)
 router.get(
   '/:id/training',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR]),
   (req: Request, res: Response, next: NextFunction) => {
     // Rewrite params to match training controller expectation
     req.params.userId = req.params.id;
@@ -86,7 +87,7 @@ router.get(
 
 router.post(
   '/:id/training',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   auditLog({ entityType: 'Training', action: 'CREATE' }),
   (req: Request, res: Response, next: NextFunction) => {
     // Set userId from path param if not in body
@@ -98,30 +99,30 @@ router.post(
 );
 
 // CRUD routes for staff members
-router.post('/', requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']), auditLog({ entityType: 'Staff', action: 'CREATE' }), staffManagementController.createStaffMember);
+router.post('/', requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]), auditLog({ entityType: 'Staff', action: 'CREATE' }), staffManagementController.createStaffMember);
 
-router.get('/', requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']), staffManagementController.getStaffMembers);
+router.get('/', requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]), staffManagementController.getStaffMembers);
 
 router.get(
   '/:id',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR]),
   auditLog({ entityType: 'Staff', action: 'VIEW' }),
   staffManagementController.getStaffMemberById
 );
 
-router.put('/:id', requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']), auditLog({ entityType: 'Staff', action: 'UPDATE' }), staffManagementController.updateStaffMember);
+router.put('/:id', requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]), auditLog({ entityType: 'Staff', action: 'UPDATE' }), staffManagementController.updateStaffMember);
 
 // Employment status management
 router.post(
   '/:id/terminate',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   auditLog({ entityType: 'Staff', action: 'UPDATE' }),
   staffManagementController.terminateEmployment
 );
 
 router.post(
   '/:id/reactivate',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   auditLog({ entityType: 'Staff', action: 'UPDATE' }),
   staffManagementController.reactivateStaffMember
 );
@@ -129,14 +130,14 @@ router.post(
 // Manager assignment
 router.post(
   '/:id/assign-manager',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   auditLog({ entityType: 'Staff', action: 'UPDATE' }),
   staffManagementController.assignManager
 );
 
 router.delete(
   '/:id/manager',
-  requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]),
   auditLog({ entityType: 'Staff', action: 'UPDATE' }),
   staffManagementController.removeManager
 );

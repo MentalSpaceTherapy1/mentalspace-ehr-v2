@@ -2,6 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 import { ValidationError } from '../utils/errors';
 import logger from '../utils/logger';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+
+// Extend ValidationError to include errors array
+interface ValidationErrorWithDetails extends ValidationError {
+  errors?: { path: string; message: string; code?: string; received?: string }[];
+}
 
 /**
  * Middleware to validate request body against Zod schema
@@ -24,11 +31,11 @@ export const validateBody = (schema: ZodSchema) => {
           path: req.originalUrl,
           method: req.method,
           errors,
-          userId: (req as any).user?.userId,
+          userId: req.user?.userId,
         });
 
-        const err = new ValidationError('Validation failed');
-        (err as any).errors = errors;
+        const err = new ValidationError('Validation failed') as ValidationErrorWithDetails;
+        err.errors = errors;
         next(err);
       } else {
         next(error);
@@ -56,11 +63,11 @@ export const validateQuery = (schema: ZodSchema) => {
           path: req.originalUrl,
           method: req.method,
           errors,
-          userId: (req as any).user?.userId,
+          userId: req.user?.userId,
         });
 
-        const err = new ValidationError('Query validation failed');
-        (err as any).errors = errors;
+        const err = new ValidationError('Query validation failed') as ValidationErrorWithDetails;
+        err.errors = errors;
         next(err);
       } else {
         next(error);
@@ -88,11 +95,11 @@ export const validateParams = (schema: ZodSchema) => {
           path: req.originalUrl,
           method: req.method,
           errors,
-          userId: (req as any).user?.userId,
+          userId: req.user?.userId,
         });
 
-        const err = new ValidationError('Parameter validation failed');
-        (err as any).errors = errors;
+        const err = new ValidationError('Parameter validation failed') as ValidationErrorWithDetails;
+        err.errors = errors;
         next(err);
       } else {
         next(error);

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as portalAdminController from '../controllers/portalAdmin.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -13,14 +14,14 @@ const router = Router();
 router.get(
   '/admin/portal/reviews',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.getAllReviews
 );
 
 router.get(
   '/admin/portal/reviews/statistics',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.getReviewStatistics
 );
 
@@ -28,42 +29,42 @@ router.get(
 router.get(
   '/admin/therapist-change-requests',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.getAllChangeRequests
 );
 
 router.put(
   '/admin/therapist-change-requests/:requestId/review',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.reviewChangeRequest
 );
 
 router.post(
   '/admin/therapist-change-requests/:requestId/assign',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.assignNewTherapist
 );
 
 router.post(
   '/admin/therapist-change-requests/:requestId/complete',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.completeTransfer
 );
 
 router.post(
   '/admin/therapist-change-requests/:requestId/deny',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.denyChangeRequest
 );
 
 router.get(
   '/admin/therapist-change-requests/statistics',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.getChangeRequestStatistics
 );
 
@@ -71,21 +72,21 @@ router.get(
 router.get(
   '/admin/portal/accounts',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.getAllPortalAccounts
 );
 
 router.post(
   '/admin/portal/accounts/:accountId/activate',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.activatePortalAccount
 );
 
 router.post(
   '/admin/portal/accounts/:accountId/deactivate',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.deactivatePortalAccount
 );
 
@@ -93,7 +94,7 @@ router.post(
 router.get(
   '/admin/portal/analytics',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   portalAdminController.getPortalAnalytics
 );
 

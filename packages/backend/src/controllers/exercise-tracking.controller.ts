@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import exerciseTrackingService from '../services/exercise-tracking.service';
 import { ValidationError } from '../utils/errors';
 import logger, { logControllerError } from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendServerError, sendPaginated } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Create a new exercise log entry
@@ -13,15 +15,15 @@ export const createExerciseLog = async (req: Request, res: Response) => {
 
     // Validate required fields
     if (!data.activityType) {
-      throw new ValidationError('Activity type is required');
+      return sendBadRequest(res, 'Activity type is required');
     }
 
     if (!data.duration || data.duration <= 0) {
-      throw new ValidationError('Duration must be greater than 0');
+      return sendBadRequest(res, 'Duration must be greater than 0');
     }
 
     if (!data.intensity) {
-      throw new ValidationError('Intensity is required');
+      return sendBadRequest(res, 'Intensity is required');
     }
 
     const log = await exerciseTrackingService.logExercise(
@@ -30,17 +32,10 @@ export const createExerciseLog = async (req: Request, res: Response) => {
       req.user!.id
     );
 
-    res.status(201).json({
-      success: true,
-      data: log,
-      message: 'Exercise log created successfully',
-    });
+    return sendCreated(res, log, 'Exercise log created successfully');
   } catch (error) {
     logControllerError('createExerciseLog', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create exercise log',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to create exercise log');
   }
 };
 
@@ -63,17 +58,10 @@ export const getExerciseLogs = async (req: Request, res: Response) => {
 
     const result = await exerciseTrackingService.getExerciseLogs(clientId, filters);
 
-    res.status(200).json({
-      success: true,
-      data: result.logs,
-      pagination: result.pagination,
-    });
+    return sendPaginated(res, result.logs, result.pagination);
   } catch (error) {
     logControllerError('getExerciseLogs', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch exercise logs',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch exercise logs');
   }
 };
 
@@ -86,16 +74,10 @@ export const getExerciseLogById = async (req: Request, res: Response) => {
 
     const log = await exerciseTrackingService.getExerciseLogById(id);
 
-    res.status(200).json({
-      success: true,
-      data: log,
-    });
+    return sendSuccess(res, log);
   } catch (error) {
     logControllerError('getExerciseLogById', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch exercise log',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch exercise log');
   }
 };
 
@@ -117,17 +99,10 @@ export const updateExerciseLog = async (req: Request, res: Response) => {
       req.user!.id
     );
 
-    res.status(200).json({
-      success: true,
-      data: log,
-      message: 'Exercise log updated successfully',
-    });
+    return sendSuccess(res, log, 'Exercise log updated successfully');
   } catch (error) {
     logControllerError('updateExerciseLog', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update exercise log',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to update exercise log');
   }
 };
 
@@ -140,13 +115,10 @@ export const deleteExerciseLog = async (req: Request, res: Response) => {
 
     const result = await exerciseTrackingService.deleteExerciseLog(id, req.user!.id);
 
-    res.status(200).json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('deleteExerciseLog', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete exercise log',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to delete exercise log');
   }
 };
 
@@ -182,16 +154,10 @@ export const getExerciseStats = async (req: Request, res: Response) => {
 
     const stats = await exerciseTrackingService.getExerciseStats(clientId, dateRange);
 
-    res.status(200).json({
-      success: true,
-      data: stats,
-    });
+    return sendSuccess(res, stats);
   } catch (error) {
     logControllerError('getExerciseStats', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch exercise stats',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch exercise stats');
   }
 };
 
@@ -204,7 +170,7 @@ export const getExerciseTrends = async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
-      throw new ValidationError('Start date and end date are required');
+      return sendBadRequest(res, 'Start date and end date are required');
     }
 
     const dateRange = {
@@ -214,15 +180,9 @@ export const getExerciseTrends = async (req: Request, res: Response) => {
 
     const trends = await exerciseTrackingService.getExerciseTrends(clientId, dateRange);
 
-    res.status(200).json({
-      success: true,
-      data: trends,
-    });
+    return sendSuccess(res, trends);
   } catch (error) {
     logControllerError('getExerciseTrends', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch exercise trends',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch exercise trends');
   }
 };

@@ -4,7 +4,9 @@ import dataExportService from '../services/data-export.service';
 import trackingRemindersService from '../services/tracking-reminders.service';
 import { ValidationError } from '../utils/errors';
 import logger, { logControllerError } from '../utils/logger';
-import prisma from '../services/database';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import { sendSuccess, sendCreated, sendBadRequest, sendServerError } from '../utils/apiResponse';
 
 /**
  * Get combined analytics across all tracking domains
@@ -25,16 +27,10 @@ export const getCombinedAnalytics = async (req: Request, res: Response) => {
 
     const analytics = await progressAnalyticsService.getCombinedAnalytics(clientId, dateRange);
 
-    res.status(200).json({
-      success: true,
-      data: analytics,
-    });
+    return sendSuccess(res, analytics);
   } catch (error) {
     logControllerError('getCombinedAnalytics', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch combined analytics',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch combined analytics');
   }
 };
 
@@ -57,16 +53,10 @@ export const generateProgressReport = async (req: Request, res: Response) => {
 
     const report = await progressAnalyticsService.generateProgressReport(clientId, dateRange);
 
-    res.status(200).json({
-      success: true,
-      data: report,
-    });
+    return sendSuccess(res, report);
   } catch (error) {
     logControllerError('generateProgressReport', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate progress report',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to generate progress report');
   }
 };
 
@@ -89,16 +79,10 @@ export const compareToGoals = async (req: Request, res: Response) => {
 
     const comparison = await progressAnalyticsService.compareToGoals(clientId, dateRange);
 
-    res.status(200).json({
-      success: true,
-      data: comparison,
-    });
+    return sendSuccess(res, comparison);
   } catch (error) {
     logControllerError('compareToGoals', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to compare to goals',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to compare to goals');
   }
 };
 
@@ -128,16 +112,10 @@ export const exportToCSV = async (req: Request, res: Response) => {
 
     const exports = await dataExportService.exportToCSV(clientId, dateRange, options);
 
-    res.status(200).json({
-      success: true,
-      data: exports,
-    });
+    return sendSuccess(res, exports);
   } catch (error) {
     logControllerError('exportToCSV', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to export to CSV',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to export to CSV');
   }
 };
 
@@ -167,16 +145,10 @@ export const exportToJSON = async (req: Request, res: Response) => {
 
     const exportData = await dataExportService.exportToJSON(clientId, dateRange, options);
 
-    res.status(200).json({
-      success: true,
-      data: exportData,
-    });
+    return sendSuccess(res, exportData);
   } catch (error) {
     logControllerError('exportToJSON', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to export to JSON',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to export to JSON');
   }
 };
 
@@ -199,16 +171,10 @@ export const generatePDFData = async (req: Request, res: Response) => {
 
     const pdfData = await dataExportService.generatePDFData(clientId, dateRange);
 
-    res.status(200).json({
-      success: true,
-      data: pdfData,
-    });
+    return sendSuccess(res, pdfData);
   } catch (error) {
     logControllerError('generatePDFData', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate PDF data',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to generate PDF data');
   }
 };
 
@@ -221,16 +187,10 @@ export const getReminderPreferences = async (req: Request, res: Response) => {
 
     const preferences = await trackingRemindersService.getReminderPreferences(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: preferences,
-    });
+    return sendSuccess(res, preferences);
   } catch (error) {
     logControllerError('getReminderPreferences', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch reminder preferences',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch reminder preferences');
   }
 };
 
@@ -248,17 +208,10 @@ export const updateReminderPreferences = async (req: Request, res: Response) => 
       req.user!.id
     );
 
-    res.status(200).json({
-      success: true,
-      data: result,
-      message: 'Reminder preferences updated successfully',
-    });
+    return sendSuccess(res, result, 'Reminder preferences updated successfully');
   } catch (error) {
     logControllerError('updateReminderPreferences', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update reminder preferences',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to update reminder preferences');
   }
 };
 
@@ -271,16 +224,10 @@ export const getLoggingStreak = async (req: Request, res: Response) => {
 
     const streak = await trackingRemindersService.getLoggingStreak(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: streak,
-    });
+    return sendSuccess(res, streak);
   } catch (error) {
     logControllerError('getLoggingStreak', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch logging streak',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch logging streak');
   }
 };
 
@@ -296,19 +243,13 @@ export const getEngagementScore = async (req: Request, res: Response) => {
 
     const score = await trackingRemindersService.calculateEngagementScore(clientId, daysParam);
 
-    res.status(200).json({
-      success: true,
-      data: {
-        engagementScore: score,
-        period: `Last ${daysParam} days`,
-      },
+    return sendSuccess(res, {
+      engagementScore: score,
+      period: `Last ${daysParam} days`,
     });
   } catch (error) {
     logControllerError('getEngagementScore', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch engagement score',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch engagement score');
   }
 };
 
@@ -321,38 +262,11 @@ export const getClinicianNotes = async (req: Request, res: Response) => {
     const { clientId } = req.params;
     const { startDate, endDate, limit = '20' } = req.query;
 
-    const where: any = {
-      clientId,
-      status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] }, // Only show signed notes
-    };
-
-    if (startDate && endDate) {
-      where.sessionDate = {
-        gte: new Date(startDate as string),
-        lte: new Date(endDate as string),
-      };
-    }
-
-    const notes = await prisma.clinicalNote.findMany({
-      where,
-      orderBy: { sessionDate: 'desc' },
-      take: parseInt(limit as string),
-      select: {
-        id: true,
-        noteType: true,
-        sessionDate: true,
-        assessment: true,
-        plan: true,
-        progressTowardGoals: true,
-        createdAt: true,
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
+    // Phase 3.2: Use service method instead of direct prisma call
+    const notes = await progressAnalyticsService.getClinicianNotesForClient(clientId, {
+      startDate: startDate ? new Date(startDate as string) : undefined,
+      endDate: endDate ? new Date(endDate as string) : undefined,
+      limit: parseInt(limit as string),
     });
 
     // Transform to simplified format expected by frontend
@@ -364,16 +278,10 @@ export const getClinicianNotes = async (req: Request, res: Response) => {
       noteType: note.noteType,
     }));
 
-    res.status(200).json({
-      success: true,
-      data: formattedNotes,
-    });
+    return sendSuccess(res, formattedNotes);
   } catch (error) {
     logControllerError('getClinicianNotes', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch clinician notes',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch clinician notes');
   }
 };
 
@@ -391,43 +299,21 @@ export const createProgressNote = async (req: Request, res: Response) => {
       throw new ValidationError('Note content is required');
     }
 
-    // Create a simple progress note as a clinical note
-    const note = await prisma.clinicalNote.create({
-      data: {
-        clientId,
-        clinicianId,
-        noteType: 'PROGRESS_OBSERVATION',
-        sessionDate: new Date(),
-        progressTowardGoals: content.trim(),
-        status: 'SIGNED', // Auto-sign simple observations
-        signedDate: new Date(),
-        signedBy: clinicianId,
-        lastModifiedBy: clinicianId,
-      },
-    });
+    // Phase 3.2: Use service methods instead of direct prisma calls
+    const note = await progressAnalyticsService.createProgressNote(clientId, clinicianId, content);
 
     // Get clinician info for response
-    const clinician = await prisma.user.findUnique({
-      where: { id: clinicianId },
-      select: { id: true, firstName: true, lastName: true },
-    });
+    const clinician = await progressAnalyticsService.getClinicianInfo(clinicianId);
 
-    res.status(201).json({
-      success: true,
-      data: {
-        id: note.id,
-        content: note.progressTowardGoals,
-        createdAt: note.sessionDate?.toISOString() || note.createdAt.toISOString(),
-        clinicianName: clinician ? `${clinician.firstName} ${clinician.lastName}` : 'Unknown',
-        noteType: note.noteType,
-      },
-      message: 'Progress note created successfully',
-    });
+    return sendCreated(res, {
+      id: note.id,
+      content: note.progressTowardGoals,
+      createdAt: note.sessionDate?.toISOString() || note.createdAt.toISOString(),
+      clinicianName: clinician ? `${clinician.firstName} ${clinician.lastName}` : 'Unknown',
+      noteType: note.noteType,
+    }, 'Progress note created successfully');
   } catch (error) {
     logControllerError('createProgressNote', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create progress note',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to create progress note');
   }
 };

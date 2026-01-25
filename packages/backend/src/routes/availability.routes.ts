@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as availabilityController from '../controllers/availability.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -40,7 +41,7 @@ router.get(
 router.post(
   '/',
   authenticate,
-  authorize('ADMINISTRATOR', 'THERAPIST'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN),
   availabilityController.createAvailability
 );
 
@@ -59,14 +60,14 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  authorize('ADMINISTRATOR', 'THERAPIST'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN),
   availabilityController.updateAvailability
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('ADMINISTRATOR', 'THERAPIST'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN),
   availabilityController.deleteAvailability
 );
 

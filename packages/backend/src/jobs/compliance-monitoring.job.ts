@@ -15,6 +15,7 @@ import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { sendEmail, EmailTemplates, isResendConfigured } from '../services/resend.service';
 import config from '../config';
+import { UserRoles } from '@mentalspace/shared';
 
 const prisma = new PrismaClient();
 
@@ -230,7 +231,7 @@ export const highSeverityIncidentMonitor = cron.schedule('0 */4 * * *', async ()
       if (isResendConfigured()) {
         const complianceTeam = await prisma.user.findMany({
           where: {
-            roles: { hasSome: ['ADMINISTRATOR', 'SUPER_ADMIN'] },
+            roles: { hasSome: [UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN] },
             employmentStatus: 'ACTIVE',
           },
           select: { email: true, firstName: true },

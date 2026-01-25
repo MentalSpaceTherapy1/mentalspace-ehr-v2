@@ -7,6 +7,7 @@
  */
 
 import { PrismaClient, Policy, PolicyAcknowledgment, PolicyCategory, PolicyStatus } from '@prisma/client';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -129,10 +130,10 @@ export class PolicyService {
         }
       });
 
-      console.log(`✅ Policy created: ${policy.policyNumber} - ${policy.policyName}`);
+      logger.info(`✅ Policy created: ${policy.policyNumber} - ${policy.policyName}`);
       return policy;
     } catch (error) {
-      console.error('❌ Error creating policy:', error);
+      logger.error(' Error creating policy:', error);
       throw error;
     }
   }
@@ -185,7 +186,7 @@ export class PolicyService {
 
       return policy;
     } catch (error) {
-      console.error('❌ Error fetching policy:', error);
+      logger.error(' Error fetching policy:', error);
       throw error;
     }
   }
@@ -212,7 +213,7 @@ export class PolicyService {
 
       return policy;
     } catch (error) {
-      console.error('❌ Error fetching policy by number:', error);
+      logger.error(' Error fetching policy by number:', error);
       throw error;
     }
   }
@@ -295,7 +296,7 @@ export class PolicyService {
 
       return policies;
     } catch (error) {
-      console.error('❌ Error listing policies:', error);
+      logger.error(' Error listing policies:', error);
       throw error;
     }
   }
@@ -335,16 +336,16 @@ export class PolicyService {
         }
       });
 
-      console.log(`✅ Policy updated: ${policy.policyNumber} - ${policy.policyName}`);
+      logger.info(`✅ Policy updated: ${policy.policyNumber} - ${policy.policyName}`);
 
       // If publishing for the first time, log distribution
       if (shouldDistribute && policy.distributionList.length > 0) {
-        console.log(`📧 Policy distributed to ${policy.distributionList.length} users`);
+        logger.info(`📧 Policy distributed to ${policy.distributionList.length} users`);
       }
 
       return policy;
     } catch (error) {
-      console.error('❌ Error updating policy:', error);
+      logger.error(' Error updating policy:', error);
       throw error;
     }
   }
@@ -364,10 +365,10 @@ export class PolicyService {
         }
       });
 
-      console.log(`🗑️ Policy archived: ${policy.policyNumber}`);
+      logger.info(`🗑️ Policy archived: ${policy.policyNumber}`);
       return policy;
     } catch (error) {
-      console.error('❌ Error deleting policy:', error);
+      logger.error(' Error deleting policy:', error);
       throw error;
     }
   }
@@ -413,10 +414,10 @@ export class PolicyService {
         status: PolicyStatus.DRAFT // New versions start as draft
       });
 
-      console.log(`📝 New version created: ${newPolicy.policyNumber} v${newVersion}`);
+      logger.info(`📝 New version created: ${newPolicy.policyNumber} v${newVersion}`);
       return newPolicy;
     } catch (error) {
-      console.error('❌ Error creating new version:', error);
+      logger.error(' Error creating new version:', error);
       throw error;
     }
   }
@@ -441,10 +442,10 @@ export class PolicyService {
         }
       });
 
-      console.log(`📧 Policy ${policy.policyNumber} distributed to ${userIds.length} users`);
+      logger.info(`📧 Policy ${policy.policyNumber} distributed to ${userIds.length} users`);
       return policy;
     } catch (error) {
-      console.error('❌ Error distributing policy:', error);
+      logger.error(' Error distributing policy:', error);
       throw error;
     }
   }
@@ -509,10 +510,10 @@ export class PolicyService {
         }
       });
 
-      console.log(`✅ Policy ${policy.policyNumber} acknowledged by ${user.firstName} ${user.lastName}`);
+      logger.info(`✅ Policy ${policy.policyNumber} acknowledged by ${user.firstName} ${user.lastName}`);
       return acknowledgment;
     } catch (error) {
-      console.error('❌ Error acknowledging policy:', error);
+      logger.error(' Error acknowledging policy:', error);
       throw error;
     }
   }
@@ -556,7 +557,7 @@ export class PolicyService {
 
       return policies;
     } catch (error) {
-      console.error('❌ Error getting pending acknowledgments:', error);
+      logger.error(' Error getting pending acknowledgments:', error);
       throw error;
     }
   }
@@ -679,7 +680,7 @@ export class PolicyService {
         recentAcknowledgments: acknowledgments.slice(0, 10)
       };
     } catch (error) {
-      console.error('❌ Error generating compliance report:', error);
+      logger.error(' Error generating compliance report:', error);
       throw error;
     }
   }
@@ -716,7 +717,7 @@ export class PolicyService {
 
       return policies;
     } catch (error) {
-      console.error('❌ Error getting policies due for review:', error);
+      logger.error(' Error getting policies due for review:', error);
       throw error;
     }
   }
@@ -742,10 +743,10 @@ export class PolicyService {
         }
       });
 
-      console.log(`✅ Policy ${policy.policyNumber} approved`);
+      logger.info(`✅ Policy ${policy.policyNumber} approved`);
       return policy;
     } catch (error) {
-      console.error('❌ Error approving policy:', error);
+      logger.error(' Error approving policy:', error);
       throw error;
     }
   }

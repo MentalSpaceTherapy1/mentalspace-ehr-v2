@@ -19,6 +19,7 @@
 
 import { PrismaClient, Appointment, AppointmentStatus } from '@prisma/client';
 import { AdvancedMDAPIClient, advancedMDAPI } from './api-client';
+import logger from '../../utils/logger';
 import {
   VisitData,
   AddVisitRequest,
@@ -130,7 +131,7 @@ export class AdvancedMDAppointmentSyncService {
 
     const response = await this.apiClient.makeRequest('GETDATEVISITS', request.ppmdmsg);
 
-    console.log('[Appointment Sync] Response:', JSON.stringify(response, null, 2));
+    logger.debug('[Appointment Sync] Response:', JSON.stringify(response, null, 2));
 
     if (!response.success || !response.data) {
       const errorMsg = response.error

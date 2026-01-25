@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -285,7 +287,7 @@ export async function getTopCompatibleProviders(
   // Get all active providers
   const providers = await prisma.user.findMany({
     where: {
-      roles: { hasSome: ['CLINICIAN', 'SUPERVISOR'] },
+      roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR] },
       isActive: true,
       availableForScheduling: true,
       acceptsNewClients: true
@@ -302,7 +304,7 @@ export async function getTopCompatibleProviders(
           ...result
         };
       } catch (error) {
-        console.error(`Error calculating compatibility for provider ${provider.id}:`, error);
+        logger.error('Error calculating compatibility for provider', { providerId: provider.id, error });
         return null;
       }
     })
@@ -327,13 +329,13 @@ export async function recalculateAllCompatibilityScores(): Promise<void> {
 
   const activeProviders = await prisma.user.findMany({
     where: {
-      roles: { hasSome: ['CLINICIAN', 'SUPERVISOR'] },
+      roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR] },
       isActive: true
     },
     select: { id: true }
   });
 
-  console.log(`Recalculating compatibility scores for ${activeClients.length} clients and ${activeProviders.length} providers...`);
+  logger.info(`Recalculating compatibility scores for ${activeClients.length} clients and ${activeProviders.length} providers...`);
 
   let processed = 0;
   const total = activeClients.length * activeProviders.length;
@@ -344,13 +346,13 @@ export async function recalculateAllCompatibilityScores(): Promise<void> {
         await calculateCompatibilityScore(provider.id, client.id);
         processed++;
         if (processed % 100 === 0) {
-          console.log(`Processed ${processed}/${total} compatibility calculations`);
+          logger.info(`Processed ${processed}/${total} compatibility calculations`);
         }
       } catch (error) {
-        console.error(`Error calculating compatibility for provider ${provider.id} and client ${client.id}:`, error);
+        logger.error('Error calculating compatibility for provider and client', { providerId: provider.id, clientId: client.id, error });
       }
     }
   }
 
-  console.log(`Completed ${processed} compatibility score calculations`);
+  logger.info(`Completed ${processed} compatibility score calculations`);
 }

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import * as PayerService from '../services/payer.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Phase 2.1: Payer Controller
@@ -21,18 +23,10 @@ export const getPayers = async (req: Request, res: Response) => {
 
     const payers = await PayerService.getPayers(filters);
 
-    return res.json({
-      success: true,
-      data: payers,
-      total: payers.length,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching payers', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch payers',
-      error: error.message,
-    });
+    return sendSuccess(res, { payers, total: payers.length });
+  } catch (error) {
+    logger.error('Error fetching payers', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch payers');
   }
 };
 
@@ -44,17 +38,10 @@ export const getPayerStats = async (req: Request, res: Response) => {
   try {
     const stats = await PayerService.getPayerStats();
 
-    return res.json({
-      success: true,
-      data: stats,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching payer stats', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch payer statistics',
-      error: error.message,
-    });
+    return sendSuccess(res, stats);
+  } catch (error) {
+    logger.error('Error fetching payer stats', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch payer statistics');
   }
 };
 
@@ -68,23 +55,13 @@ export const getPayerById = async (req: Request, res: Response) => {
     const payer = await PayerService.getPayerById(id);
 
     if (!payer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payer not found',
-      });
+      return sendNotFound(res, 'Payer');
     }
 
-    return res.json({
-      success: true,
-      data: payer,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching payer', { error: error.message, payerId: req.params.id });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch payer',
-      error: error.message,
-    });
+    return sendSuccess(res, payer);
+  } catch (error) {
+    logger.error('Error fetching payer', { error: getErrorMessage(error), payerId: req.params.id });
+    return sendServerError(res, 'Failed to fetch payer');
   }
 };
 
@@ -98,18 +75,12 @@ export const createPayer = async (req: Request, res: Response) => {
 
     // Validation
     if (!name || !payerType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name and payer type are required',
-      });
+      return sendBadRequest(res, 'Name and payer type are required');
     }
 
     const validPayerTypes = ['COMMERCIAL', 'MEDICAID', 'MEDICARE', 'EAP', 'SELF_PAY'];
     if (!validPayerTypes.includes(payerType)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid payer type. Must be one of: ${validPayerTypes.join(', ')}`,
-      });
+      return sendBadRequest(res, `Invalid payer type. Must be one of: ${validPayerTypes.join(', ')}`);
     }
 
     const payer = await PayerService.createPayer({
@@ -119,18 +90,10 @@ export const createPayer = async (req: Request, res: Response) => {
       isActive,
     });
 
-    return res.status(201).json({
-      success: true,
-      message: 'Payer created successfully',
-      data: payer,
-    });
-  } catch (error: any) {
-    logger.error('Error creating payer', { error: error.message, body: req.body });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create payer',
-      error: error.message,
-    });
+    return sendCreated(res, payer, 'Payer created successfully');
+  } catch (error) {
+    logger.error('Error creating payer', { error: getErrorMessage(error), body: req.body });
+    return sendServerError(res, 'Failed to create payer');
   }
 };
 
@@ -145,18 +108,10 @@ export const updatePayer = async (req: Request, res: Response) => {
 
     const payer = await PayerService.updatePayer(id, updates);
 
-    return res.json({
-      success: true,
-      message: 'Payer updated successfully',
-      data: payer,
-    });
-  } catch (error: any) {
-    logger.error('Error updating payer', { error: error.message, payerId: req.params.id });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update payer',
-      error: error.message,
-    });
+    return sendSuccess(res, payer, 'Payer updated successfully');
+  } catch (error) {
+    logger.error('Error updating payer', { error: getErrorMessage(error), payerId: req.params.id });
+    return sendServerError(res, 'Failed to update payer');
   }
 };
 
@@ -169,17 +124,9 @@ export const deletePayer = async (req: Request, res: Response) => {
     const { id } = req.params;
     const payer = await PayerService.deletePayer(id);
 
-    return res.json({
-      success: true,
-      message: 'Payer deleted successfully',
-      data: payer,
-    });
-  } catch (error: any) {
-    logger.error('Error deleting payer', { error: error.message, payerId: req.params.id });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to delete payer',
-      error: error.message,
-    });
+    return sendSuccess(res, payer, 'Payer deleted successfully');
+  } catch (error) {
+    logger.error('Error deleting payer', { error: getErrorMessage(error), payerId: req.params.id });
+    return sendServerError(res, 'Failed to delete payer');
   }
 };

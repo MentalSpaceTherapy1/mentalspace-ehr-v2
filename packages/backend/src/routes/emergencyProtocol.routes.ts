@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import * as emergencyProtocolController from '../controllers/emergencyProtocol.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -32,21 +33,21 @@ router.get(
 router.post(
   '/',
   authenticate,
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   emergencyProtocolController.createEmergencyProtocol
 );
 
 router.put(
   '/:id',
   authenticate,
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   emergencyProtocolController.updateEmergencyProtocol
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   emergencyProtocolController.deleteEmergencyProtocol
 );
 

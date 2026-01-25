@@ -5,9 +5,13 @@
  */
 
 import { Request, Response } from 'express';
-import * as aiNoteService from '../services/aiNoteGeneration.service';
-import prisma from '../services/database';
+import { UserRoles } from '@mentalspace/shared';
+import * as aiNoteGenerationService from '../services/aiNoteGeneration.service';
+import { getErrorMessage, getErrorCode, getErrorName, getErrorStack, getErrorStatusCode } from '../utils/errorHelpers';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import * as aiNoteService from '../services/aiNote.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendForbidden, sendConflict } from '../utils/apiResponse';
 import {
   GenerateNoteRequest,
   RegenerateNoteRequest,
@@ -16,20 +20,22 @@ import {
   AIGeneratedNoteStatus,
   AuditEventType,
   ClinicianEdit,
+  SOAPNote,
+  RiskAssessment,
+  ClinicianEdits,
 } from '../types/aiNote.types';
 
 /**
  * POST /api/v1/telehealth/sessions/:sessionId/generate-note
  * Generate AI note from session transcript
  */
-export async function generateNote(req: Request, res: Response): Promise<void> {
+export async function generateNote(req: Request, res: Response) {
   try {
     const { sessionId } = req.params;
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const {
@@ -42,53 +48,39 @@ export async function generateNote(req: Request, res: Response): Promise<void> {
 
     // Validate required fields
     if (!transcriptText) {
-      res.status(400).json({ error: 'Transcript text is required' });
-      return;
+      return sendBadRequest(res, 'Transcript text is required');
     }
 
     if (!sessionMetadata) {
-      res.status(400).json({ error: 'Session metadata is required' });
-      return;
+      return sendBadRequest(res, 'Session metadata is required');
     }
 
+    // Phase 3.2: Use service methods instead of direct prisma calls
     // Verify session exists and user has access
-    const session = await prisma.telehealthSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        appointment: {
-          include: {
-            clinician: true,
-          },
-        },
-      },
-    });
+    const session = await aiNoteService.findTelehealthSessionWithAppointment(sessionId);
 
     if (!session) {
-      res.status(404).json({ error: 'Session not found' });
-      return;
+      return sendNotFound(res, 'Session');
     }
 
     // Check if user is the clinician or has admin rights
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await aiNoteService.getUserById(userId);
     const isAuthorized =
       session.appointment.clinicianId === userId ||
-      user?.roles.includes('ADMINISTRATOR') ||
-      user?.roles.includes('SUPERVISOR');
+      user?.roles.includes(UserRoles.ADMINISTRATOR) ||
+      user?.roles.includes(UserRoles.SUPERVISOR);
 
     if (!isAuthorized) {
-      res.status(403).json({ error: 'Not authorized to generate note for this session' });
-      return;
+      return sendForbidden(res, 'Not authorized to generate note for this session');
     }
 
     // Check if AI note already exists
-    const existingNote = await aiNoteService.getAINoteBySession(sessionId);
+    const existingNote = await aiNoteGenerationService.getAINoteBySession(sessionId);
     if (existingNote && existingNote.status !== AIGeneratedNoteStatus.FAILED) {
-      res.status(409).json({
-        error: 'AI note already exists for this session',
+      return sendConflict(res, 'AI note already exists for this session', {
         aiNoteId: existingNote.id,
         status: existingNote.status,
       });
-      return;
     }
 
     const request: GenerateNoteRequest = {
@@ -106,24 +98,20 @@ export async function generateNote(req: Request, res: Response): Promise<void> {
       transcriptLength: transcriptText.length,
     });
 
-    const result = await aiNoteService.generateSOAPNote(request, userId);
+    const result = await aiNoteGenerationService.generateSOAPNote(request, userId);
 
-    res.status(201).json({
-      success: true,
-      data: result,
-    });
-  } catch (error: any) {
+    return sendCreated(res, result);
+  } catch (error) {
     logger.error('Failed to generate AI note', {
-      error: error.message,
-      stack: error.stack,
+      error: getErrorMessage(error),
+      stack: getErrorStack(error),
       sessionId: req.params.sessionId,
     });
 
-    res.status(error.code === 'TRANSCRIPT_TOO_SHORT' ? 400 : 500).json({
-      error: error.message || 'Failed to generate AI note',
-      code: error.code,
-      details: error.details,
-    });
+    if (getErrorCode(error) === 'TRANSCRIPT_TOO_SHORT') {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to generate AI note', getErrorCode(error));
+    }
+    return sendServerError(res, getErrorMessage(error) || 'Failed to generate AI note');
   }
 }
 
@@ -131,48 +119,41 @@ export async function generateNote(req: Request, res: Response): Promise<void> {
  * GET /api/v1/telehealth/sessions/:sessionId/ai-note
  * Get AI-generated note for a session
  */
-export async function getAINote(req: Request, res: Response): Promise<void> {
+export async function getAINote(req: Request, res: Response) {
   try {
     const { sessionId } = req.params;
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
-    const aiNote = await aiNoteService.getAINoteBySession(sessionId);
+    // Phase 3.2: Use service method instead of direct prisma call
+    const aiNote = await aiNoteGenerationService.getAINoteBySession(sessionId);
 
     if (!aiNote) {
-      res.status(404).json({ error: 'AI note not found for this session' });
-      return;
+      return sendNotFound(res, 'AI note');
     }
 
     // Check authorization
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await aiNoteService.getUserById(userId);
     const isAuthorized =
       aiNote.clinicianId === userId ||
-      user?.roles.includes('ADMINISTRATOR') ||
-      user?.roles.includes('SUPERVISOR');
+      user?.roles.includes(UserRoles.ADMINISTRATOR) ||
+      user?.roles.includes(UserRoles.SUPERVISOR);
 
     if (!isAuthorized) {
-      res.status(403).json({ error: 'Not authorized to view this note' });
-      return;
+      return sendForbidden(res, 'Not authorized to view this note');
     }
 
-    res.json({
-      success: true,
-      data: aiNote,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, aiNote);
+  } catch (error) {
     logger.error('Failed to get AI note', {
-      error: error.message,
+      error: getErrorMessage(error),
       sessionId: req.params.sessionId,
     });
 
-    res.status(500).json({
-      error: 'Failed to retrieve AI note',
-    });
+    return sendServerError(res, 'Failed to retrieve AI note');
   }
 }
 
@@ -180,33 +161,31 @@ export async function getAINote(req: Request, res: Response): Promise<void> {
  * PUT /api/v1/telehealth/sessions/:sessionId/ai-note/review
  * Clinician review and approval of AI-generated note
  */
-export async function reviewNote(req: Request, res: Response): Promise<void> {
+export async function reviewNote(req: Request, res: Response) {
   try {
     const { sessionId } = req.params;
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const { approved, edits, reviewComments }: ReviewNoteRequest = req.body;
 
-    const aiNote = await aiNoteService.getAINoteBySession(sessionId);
+    // Phase 3.2: Use service method instead of direct prisma call
+    const aiNote = await aiNoteGenerationService.getAINoteBySession(sessionId);
 
     if (!aiNote) {
-      res.status(404).json({ error: 'AI note not found' });
-      return;
+      return sendNotFound(res, 'AI note');
     }
 
     // Verify clinician is authorized
     if (aiNote.clinicianId !== userId) {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      const isAdmin = user?.roles.includes('ADMINISTRATOR') || user?.roles.includes('SUPERVISOR');
+      const user = await aiNoteService.getUserById(userId);
+      const isAdmin = user?.roles.includes(UserRoles.ADMINISTRATOR) || user?.roles.includes(UserRoles.SUPERVISOR);
 
       if (!isAdmin) {
-        res.status(403).json({ error: 'Only the treating clinician can review this note' });
-        return;
+        return sendForbidden(res, 'Only the treating clinician can review this note');
       }
     }
 
@@ -257,23 +236,17 @@ export async function reviewNote(req: Request, res: Response): Promise<void> {
     });
 
     // TODO: Return actual updated note data when aIGeneratedNote model is added
-    res.json({
-      success: true,
-      message: 'AI note review feature temporarily unavailable',
-      data: {
-        id: aiNote.id,
-        status: approved ? 'APPROVED' : 'REVIEWED',
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, {
+      id: aiNote.id,
+      status: approved ? 'APPROVED' : 'REVIEWED',
+    }, 'AI note review feature temporarily unavailable');
+  } catch (error) {
     logger.error('Failed to review AI note', {
-      error: error.message,
+      error: getErrorMessage(error),
       sessionId: req.params.sessionId,
     });
 
-    res.status(500).json({
-      error: 'Failed to review AI note',
-    });
+    return sendServerError(res, 'Failed to review AI note');
   }
 }
 
@@ -281,38 +254,35 @@ export async function reviewNote(req: Request, res: Response): Promise<void> {
  * POST /api/v1/telehealth/sessions/:sessionId/ai-note/regenerate
  * Regenerate AI note with clinician feedback
  */
-export async function regenerateNote(req: Request, res: Response): Promise<void> {
+export async function regenerateNote(req: Request, res: Response) {
   try {
     const { sessionId } = req.params;
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const { feedback, preserveSections, focusAreas } = req.body;
 
     if (!feedback) {
-      res.status(400).json({ error: 'Feedback is required for regeneration' });
-      return;
+      return sendBadRequest(res, 'Feedback is required for regeneration');
     }
 
-    const aiNote = await aiNoteService.getAINoteBySession(sessionId);
+    // Phase 3.2: Use service method instead of direct prisma call
+    const aiNote = await aiNoteGenerationService.getAINoteBySession(sessionId);
 
     if (!aiNote) {
-      res.status(404).json({ error: 'AI note not found' });
-      return;
+      return sendNotFound(res, 'AI note');
     }
 
     // Verify clinician is authorized
     if (aiNote.clinicianId !== userId) {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      const isAdmin = user?.roles.includes('ADMINISTRATOR') || user?.roles.includes('SUPERVISOR');
+      const user = await aiNoteService.getUserById(userId);
+      const isAdmin = user?.roles.includes(UserRoles.ADMINISTRATOR) || user?.roles.includes(UserRoles.SUPERVISOR);
 
       if (!isAdmin) {
-        res.status(403).json({ error: 'Only the treating clinician can regenerate this note' });
-        return;
+        return sendForbidden(res, 'Only the treating clinician can regenerate this note');
       }
     }
 
@@ -329,21 +299,16 @@ export async function regenerateNote(req: Request, res: Response): Promise<void>
       feedback: feedback.substring(0, 100),
     });
 
-    const result = await aiNoteService.regenerateNote(request, userId);
+    const result = await aiNoteGenerationService.regenerateNote(request, userId);
 
-    res.json({
-      success: true,
-      data: result,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, result);
+  } catch (error) {
     logger.error('Failed to regenerate AI note', {
-      error: error.message,
+      error: getErrorMessage(error),
       sessionId: req.params.sessionId,
     });
 
-    res.status(500).json({
-      error: 'Failed to regenerate AI note',
-    });
+    return sendServerError(res, 'Failed to regenerate AI note');
   }
 }
 
@@ -351,42 +316,36 @@ export async function regenerateNote(req: Request, res: Response): Promise<void>
  * POST /api/v1/telehealth/sessions/:sessionId/ai-note/export
  * Export AI note to clinical note (final step after approval)
  */
-export async function exportToClinicalNote(req: Request, res: Response): Promise<void> {
+export async function exportToClinicalNote(req: Request, res: Response) {
   try {
     const { sessionId } = req.params;
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const { noteType, includeEdits }: ExportToNoteRequest = req.body;
 
-    const aiNote = await aiNoteService.getAINoteBySession(sessionId);
+    // Phase 3.2: Use service method instead of direct prisma call
+    const aiNote = await aiNoteGenerationService.getAINoteBySession(sessionId);
 
     if (!aiNote) {
-      res.status(404).json({ error: 'AI note not found' });
-      return;
+      return sendNotFound(res, 'AI note');
     }
 
     // Verify note is approved
     if (aiNote.status !== AIGeneratedNoteStatus.APPROVED) {
-      res.status(400).json({
-        error: 'AI note must be approved before exporting to clinical note',
-        currentStatus: aiNote.status,
-      });
-      return;
+      return sendBadRequest(res, 'AI note must be approved before exporting to clinical note');
     }
 
     // Verify clinician is authorized
     if (aiNote.clinicianId !== userId) {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      const isAdmin = user?.roles.includes('ADMINISTRATOR') || user?.roles.includes('SUPERVISOR');
+      const user = await aiNoteService.getUserById(userId);
+      const isAdmin = user?.roles.includes(UserRoles.ADMINISTRATOR) || user?.roles.includes(UserRoles.SUPERVISOR);
 
       if (!isAdmin) {
-        res.status(403).json({ error: 'Only the treating clinician can export this note' });
-        return;
+        return sendForbidden(res, 'Only the treating clinician can export this note');
       }
     }
 
@@ -407,39 +366,36 @@ export async function exportToClinicalNote(req: Request, res: Response): Promise
     //   return;
     // }
 
-    const soapNote = aiNote.soapNote as any;
-    const riskAssessment = aiNote.riskAssessment as any;
+    const soapNote = aiNote.soapNote as SOAPNote;
+    const riskAssessment = aiNote.riskAssessment as RiskAssessment;
 
     // Apply clinician edits if requested
     let finalSOAP = soapNote;
     if (includeEdits && aiNote.clinicianEdits) {
-      finalSOAP = applyClinicianEdits(soapNote, aiNote.clinicianEdits as any);
+      finalSOAP = applyClinicianEdits(soapNote, aiNote.clinicianEdits as ClinicianEdits);
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Create clinical note from AI note
-    const clinicalNote = await prisma.clinicalNote.create({
-      data: {
-        clientId: aiNote.clientId,
-        clinicianId: aiNote.clinicianId,
-        appointmentId: aiNote.appointmentId,
-        noteType: noteType || 'Progress Note',
-        sessionDate: aiNote.session.sessionStartedAt || new Date(),
-        sessionDuration: aiNote.session.actualDuration,
-        subjective: finalSOAP.subjective?.chiefComplaint || '',
-        objective: finalSOAP.objective?.appearance || '',
-        assessment: finalSOAP.assessment?.clinicalImpressions || '',
-        plan: finalSOAP.plan?.nextSessionFocus || '',
-        suicidalIdeation: riskAssessment?.suicidalIdeation || false,
-        suicidalPlan: riskAssessment?.suicidalPlan || false,
-        homicidalIdeation: riskAssessment?.homicidalIdeation || false,
-        selfHarm: riskAssessment?.selfHarm || false,
-        riskLevel: riskAssessment?.riskLevel,
-        riskAssessmentDetails: JSON.stringify(riskAssessment),
-        interventionsUsed: finalSOAP.plan?.interventionsUsed || [],
-        status: 'DRAFT',
-        aiGenerated: true,
-        lastModifiedBy: aiNote.clinicianId,
-      },
+    const clinicalNote = await aiNoteService.createClinicalNoteFromAI({
+      clientId: aiNote.clientId,
+      clinicianId: aiNote.clinicianId,
+      appointmentId: aiNote.appointmentId,
+      noteType: noteType || 'Progress Note',
+      sessionDate: aiNote.session.sessionStartedAt || new Date(),
+      sessionDuration: aiNote.session.actualDuration,
+      subjective: finalSOAP.subjective?.chiefComplaint || '',
+      objective: finalSOAP.objective?.appearance || '',
+      assessment: finalSOAP.assessment?.clinicalImpressions || '',
+      plan: finalSOAP.plan?.nextSessionFocus || '',
+      suicidalIdeation: riskAssessment?.suicidalIdeation || false,
+      suicidalPlan: riskAssessment?.suicidalPlan || false,
+      homicidalIdeation: riskAssessment?.homicidalIdeation || false,
+      selfHarm: riskAssessment?.selfHarm || false,
+      riskLevel: riskAssessment?.riskLevel,
+      riskAssessmentDetails: JSON.stringify(riskAssessment),
+      interventionsUsed: finalSOAP.plan?.interventionsUsed || [],
+      lastModifiedBy: aiNote.clinicianId,
     });
 
     // TODO: Re-enable when aIGenerationAuditLog model is added to schema
@@ -463,22 +419,17 @@ export async function exportToClinicalNote(req: Request, res: Response): Promise
       userId,
     });
 
-    res.status(201).json({
-      success: true,
-      data: {
-        clinicalNoteId: clinicalNote.id,
-        aiNoteId: aiNote.id,
-      },
+    return sendCreated(res, {
+      clinicalNoteId: clinicalNote.id,
+      aiNoteId: aiNote.id,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to export AI note', {
-      error: error.message,
+      error: getErrorMessage(error),
       sessionId: req.params.sessionId,
     });
 
-    res.status(500).json({
-      error: 'Failed to export AI note to clinical note',
-    });
+    return sendServerError(res, 'Failed to export AI note to clinical note');
   }
 }
 
@@ -486,70 +437,53 @@ export async function exportToClinicalNote(req: Request, res: Response): Promise
  * POST /api/v1/telehealth/sessions/:sessionId/risk-assessment
  * Generate standalone risk assessment
  */
-export async function generateRiskAssessment(req: Request, res: Response): Promise<void> {
+export async function generateRiskAssessment(req: Request, res: Response) {
   try {
     const { sessionId } = req.params;
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const { transcriptText } = req.body;
 
     if (!transcriptText) {
-      res.status(400).json({ error: 'Transcript text is required' });
-      return;
+      return sendBadRequest(res, 'Transcript text is required');
     }
 
+    // Phase 3.2: Use service methods instead of direct prisma calls
     // Verify session exists and user has access
-    const session = await prisma.telehealthSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        appointment: {
-          include: {
-            clinician: true,
-          },
-        },
-      },
-    });
+    const session = await aiNoteService.findTelehealthSessionWithAppointment(sessionId);
 
     if (!session) {
-      res.status(404).json({ error: 'Session not found' });
-      return;
+      return sendNotFound(res, 'Session');
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await aiNoteService.getUserById(userId);
     const isAuthorized =
       session.appointment.clinicianId === userId ||
-      user?.roles.includes('ADMINISTRATOR') ||
-      user?.roles.includes('SUPERVISOR');
+      user?.roles.includes(UserRoles.ADMINISTRATOR) ||
+      user?.roles.includes(UserRoles.SUPERVISOR);
 
     if (!isAuthorized) {
-      res.status(403).json({ error: 'Not authorized' });
-      return;
+      return sendForbidden(res, 'Not authorized');
     }
 
-    const riskAssessment = await aiNoteService.generateRiskAssessment(
+    const riskAssessment = await aiNoteGenerationService.generateRiskAssessment(
       transcriptText,
       sessionId,
       userId
     );
 
-    res.json({
-      success: true,
-      data: riskAssessment,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, riskAssessment);
+  } catch (error) {
     logger.error('Failed to generate risk assessment', {
-      error: error.message,
+      error: getErrorMessage(error),
       sessionId: req.params.sessionId,
     });
 
-    res.status(500).json({
-      error: 'Failed to generate risk assessment',
-    });
+    return sendServerError(res, 'Failed to generate risk assessment');
   }
 }
 
@@ -557,50 +491,43 @@ export async function generateRiskAssessment(req: Request, res: Response): Promi
  * GET /api/v1/telehealth/ai-notes/:aiNoteId/audit-logs
  * Get audit logs for an AI note
  */
-export async function getAuditLogs(req: Request, res: Response): Promise<void> {
+export async function getAuditLogs(req: Request, res: Response) {
   try {
     const { aiNoteId } = req.params;
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const aiNote = await aiNoteService.getAINote(aiNoteId);
 
     if (!aiNote) {
-      res.status(404).json({ error: 'AI note not found' });
-      return;
+      return sendNotFound(res, 'AI note');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Check authorization
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await aiNoteService.getUserById(userId);
     const isAuthorized =
       aiNote.clinicianId === userId ||
-      user?.roles.includes('ADMINISTRATOR') ||
-      user?.roles.includes('SUPERVISOR');
+      user?.roles.includes(UserRoles.ADMINISTRATOR) ||
+      user?.roles.includes(UserRoles.SUPERVISOR);
 
     if (!isAuthorized) {
-      res.status(403).json({ error: 'Not authorized' });
-      return;
+      return sendForbidden(res, 'Not authorized');
     }
 
     const auditLogs = await aiNoteService.getAINoteAuditLogs(aiNoteId);
 
-    res.json({
-      success: true,
-      data: auditLogs,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, auditLogs);
+  } catch (error) {
     logger.error('Failed to get audit logs', {
-      error: error.message,
+      error: getErrorMessage(error),
       aiNoteId: req.params.aiNoteId,
     });
 
-    res.status(500).json({
-      error: 'Failed to retrieve audit logs',
-    });
+    return sendServerError(res, 'Failed to retrieve audit logs');
   }
 }
 
@@ -608,8 +535,8 @@ export async function getAuditLogs(req: Request, res: Response): Promise<void> {
 // HELPER FUNCTIONS
 // ============================================================================
 
-function applyClinicianEdits(soapNote: any, clinicianEdits: any): any {
-  const editedNote = JSON.parse(JSON.stringify(soapNote)); // Deep clone
+function applyClinicianEdits(soapNote: SOAPNote, clinicianEdits: ClinicianEdits): SOAPNote {
+  const editedNote = JSON.parse(JSON.stringify(soapNote)) as SOAPNote; // Deep clone
 
   if (!clinicianEdits.changes || !Array.isArray(clinicianEdits.changes)) {
     return editedNote;
@@ -617,14 +544,14 @@ function applyClinicianEdits(soapNote: any, clinicianEdits: any): any {
 
   clinicianEdits.changes.forEach((edit: ClinicianEdit) => {
     const pathParts = edit.fieldPath.split('.');
-    let current = editedNote;
+    let current: Record<string, unknown> = editedNote as unknown as Record<string, unknown>;
 
     // Navigate to the field
     for (let i = 0; i < pathParts.length - 1; i++) {
       if (!current[pathParts[i]]) {
         current[pathParts[i]] = {};
       }
-      current = current[pathParts[i]];
+      current = current[pathParts[i]] as Record<string, unknown>;
     }
 
     // Apply the edit

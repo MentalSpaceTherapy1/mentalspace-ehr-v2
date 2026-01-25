@@ -725,6 +725,87 @@ export class ProgressAnalyticsService {
       overallGoalsMet: 0, // Calculated below
     };
   }
+
+  /**
+   * Phase 3.2: Get clinician notes for a client (signed notes only)
+   */
+  async getClinicianNotesForClient(
+    clientId: string,
+    options: {
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+    } = {}
+  ) {
+    const { startDate, endDate, limit = 20 } = options;
+
+    const where: any = {
+      clientId,
+      status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] },
+    };
+
+    if (startDate && endDate) {
+      where.sessionDate = {
+        gte: startDate,
+        lte: endDate,
+      };
+    }
+
+    return prisma.clinicalNote.findMany({
+      where,
+      orderBy: { sessionDate: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        noteType: true,
+        sessionDate: true,
+        assessment: true,
+        plan: true,
+        progressTowardGoals: true,
+        createdAt: true,
+        clinician: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Phase 3.2: Create a progress observation note
+   */
+  async createProgressNote(
+    clientId: string,
+    clinicianId: string,
+    content: string
+  ) {
+    return prisma.clinicalNote.create({
+      data: {
+        clientId,
+        clinicianId,
+        noteType: 'PROGRESS_OBSERVATION',
+        sessionDate: new Date(),
+        progressTowardGoals: content.trim(),
+        status: 'SIGNED',
+        signedDate: new Date(),
+        signedBy: clinicianId,
+        lastModifiedBy: clinicianId,
+      },
+    });
+  }
+
+  /**
+   * Phase 3.2: Get user (clinician) info by ID
+   */
+  async getClinicianInfo(clinicianId: string) {
+    return prisma.user.findUnique({
+      where: { id: clinicianId },
+      select: { id: true, firstName: true, lastName: true },
+    });
+  }
 }
 
 export default new ProgressAnalyticsService();

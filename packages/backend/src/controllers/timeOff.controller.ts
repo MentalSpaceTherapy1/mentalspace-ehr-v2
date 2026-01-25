@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import * as timeOffService from '../services/timeOff.service';
 import logger from '../utils/logger';
-import prisma from '../services/database';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 /**
  * Module 3 Phase 2.3: Time-Off Request Controller
@@ -22,16 +24,10 @@ export async function createTimeOffRequest(req: Request, res: Response): Promise
       endDate: timeOffRequest.endDate,
     });
 
-    res.status(201).json({
-      success: true,
-      data: timeOffRequest,
-    });
-  } catch (error: any) {
-    logger.error('Error creating time-off request', { error: error.message });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to create time-off request',
-    });
+    sendCreated(res, timeOffRequest);
+  } catch (error) {
+    logger.error('Error creating time-off request', { error: getErrorMessage(error) });
+    sendBadRequest(res, getErrorMessage(error) || 'Failed to create time-off request');
   }
 }
 
@@ -49,16 +45,10 @@ export async function updateTimeOffRequest(req: Request, res: Response): Promise
       providerId: timeOffRequest.providerId,
     });
 
-    res.json({
-      success: true,
-      data: timeOffRequest,
-    });
-  } catch (error: any) {
-    logger.error('Error updating time-off request', { error: error.message });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to update time-off request',
-    });
+    sendSuccess(res, timeOffRequest);
+  } catch (error) {
+    logger.error('Error updating time-off request', { error: getErrorMessage(error) });
+    sendBadRequest(res, getErrorMessage(error) || 'Failed to update time-off request');
   }
 }
 
@@ -77,17 +67,10 @@ export async function approveTimeOffRequest(req: Request, res: Response): Promis
       approvedBy: timeOffRequest.approvedBy,
     });
 
-    res.json({
-      success: true,
-      message: 'Time-off request approved successfully',
-      data: timeOffRequest,
-    });
-  } catch (error: any) {
-    logger.error('Error approving time-off request', { error: error.message });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to approve time-off request',
-    });
+    sendSuccess(res, timeOffRequest, 'Time-off request approved successfully');
+  } catch (error) {
+    logger.error('Error approving time-off request', { error: getErrorMessage(error) });
+    sendBadRequest(res, getErrorMessage(error) || 'Failed to approve time-off request');
   }
 }
 
@@ -106,17 +89,10 @@ export async function denyTimeOffRequest(req: Request, res: Response): Promise<v
       approvedBy: timeOffRequest.approvedBy,
     });
 
-    res.json({
-      success: true,
-      message: 'Time-off request denied',
-      data: timeOffRequest,
-    });
-  } catch (error: any) {
-    logger.error('Error denying time-off request', { error: error.message });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to deny time-off request',
-    });
+    sendSuccess(res, timeOffRequest, 'Time-off request denied');
+  } catch (error) {
+    logger.error('Error denying time-off request', { error: getErrorMessage(error) });
+    sendBadRequest(res, getErrorMessage(error) || 'Failed to deny time-off request');
   }
 }
 
@@ -134,17 +110,10 @@ export async function deleteTimeOffRequest(req: Request, res: Response): Promise
       providerId: timeOffRequest.providerId,
     });
 
-    res.json({
-      success: true,
-      message: 'Time-off request deleted successfully',
-      data: timeOffRequest,
-    });
-  } catch (error: any) {
-    logger.error('Error deleting time-off request', { error: error.message });
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to delete time-off request',
-    });
+    sendSuccess(res, timeOffRequest, 'Time-off request deleted successfully');
+  } catch (error) {
+    logger.error('Error deleting time-off request', { error: getErrorMessage(error) });
+    sendBadRequest(res, getErrorMessage(error) || 'Failed to delete time-off request');
   }
 }
 
@@ -158,23 +127,14 @@ export async function getTimeOffRequestById(req: Request, res: Response): Promis
     const timeOffRequest = await timeOffService.getTimeOffRequestById(id);
 
     if (!timeOffRequest) {
-      res.status(404).json({
-        success: false,
-        message: 'Time-off request not found',
-      });
+      sendNotFound(res, 'Time-off request');
       return;
     }
 
-    res.json({
-      success: true,
-      data: timeOffRequest,
-    });
-  } catch (error: any) {
-    logger.error('Error getting time-off request', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get time-off request',
-    });
+    sendSuccess(res, timeOffRequest);
+  } catch (error) {
+    logger.error('Error getting time-off request', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to get time-off request');
   }
 }
 
@@ -184,30 +144,12 @@ export async function getTimeOffRequestById(req: Request, res: Response): Promis
  */
 export async function getAllTimeOffRequests(req: Request, res: Response): Promise<void> {
   try {
-    // Check if the time_off_requests table exists
-    let tableExists = false;
-    try {
-      const result: any = await prisma.$queryRaw`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.tables
-          WHERE table_schema = 'public'
-          AND table_name = 'time_off_requests'
-        ) as exists
-      `;
-      tableExists = result[0]?.exists || false;
-    } catch (error) {
-      logger.error('Error checking table existence:', error);
-      tableExists = false;
-    }
+    // Phase 3.2: Use service method instead of direct prisma call
+    const tableExists = await timeOffService.checkTimeOffTableExists();
 
     // If table doesn't exist, return empty array
     if (!tableExists) {
-      res.json({
-        success: true,
-        count: 0,
-        data: [],
-        featureStatus: 'NOT_ENABLED'
-      });
+      sendSuccess(res, { count: 0, data: [], featureStatus: 'NOT_ENABLED' });
       return;
     }
 
@@ -222,34 +164,18 @@ export async function getAllTimeOffRequests(req: Request, res: Response): Promis
     let timeOffRequests;
     try {
       timeOffRequests = await timeOffService.getAllTimeOffRequests(filters);
-    } catch (error: any) {
+    } catch (error) {
       // If service call fails, return empty array
       logger.error('Error querying time-off requests:', error);
-      res.json({
-        success: true,
-        count: 0,
-        data: [],
-        featureStatus: 'NOT_ENABLED',
-        error: error.message
-      });
+      sendSuccess(res, { count: 0, data: [], featureStatus: 'NOT_ENABLED', error: getErrorMessage(error) });
       return;
     }
 
-    res.json({
-      success: true,
-      count: timeOffRequests.length,
-      data: timeOffRequests,
-    });
-  } catch (error: any) {
-    logger.error('Error getting time-off requests', { error: error.message });
+    sendSuccess(res, { count: timeOffRequests.length, data: timeOffRequests });
+  } catch (error) {
+    logger.error('Error getting time-off requests', { error: getErrorMessage(error) });
     // Return graceful fallback instead of 500 error
-    res.json({
-      success: true,
-      count: 0,
-      data: [],
-      featureStatus: 'NOT_ENABLED',
-      error: error.message
-    });
+    sendSuccess(res, { count: 0, data: [], featureStatus: 'NOT_ENABLED', error: getErrorMessage(error) });
   }
 }
 
@@ -262,10 +188,7 @@ export async function getAffectedAppointments(req: Request, res: Response): Prom
     const { providerId, startDate, endDate } = req.query;
 
     if (!providerId || !startDate || !endDate) {
-      res.status(400).json({
-        success: false,
-        message: 'Missing required fields: providerId, startDate, endDate',
-      });
+      sendBadRequest(res, 'Missing required fields: providerId, startDate, endDate');
       return;
     }
 
@@ -275,17 +198,10 @@ export async function getAffectedAppointments(req: Request, res: Response): Prom
       new Date(endDate as string)
     );
 
-    res.json({
-      success: true,
-      count: affectedAppointments.length,
-      data: affectedAppointments,
-    });
-  } catch (error: any) {
-    logger.error('Error getting affected appointments', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get affected appointments',
-    });
+    sendSuccess(res, { count: affectedAppointments.length, data: affectedAppointments });
+  } catch (error) {
+    logger.error('Error getting affected appointments', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to get affected appointments');
   }
 }
 
@@ -298,10 +214,7 @@ export async function suggestCoverageProviders(req: Request, res: Response): Pro
     const { originalProviderId, date, startTime, endTime } = req.body;
 
     if (!originalProviderId || !date || !startTime || !endTime) {
-      res.status(400).json({
-        success: false,
-        message: 'Missing required fields: originalProviderId, date, startTime, endTime',
-      });
+      sendBadRequest(res, 'Missing required fields: originalProviderId, date, startTime, endTime');
       return;
     }
 
@@ -312,17 +225,10 @@ export async function suggestCoverageProviders(req: Request, res: Response): Pro
       endTime
     );
 
-    res.json({
-      success: true,
-      count: providers.length,
-      data: providers,
-    });
-  } catch (error: any) {
-    logger.error('Error suggesting coverage providers', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to suggest coverage providers',
-    });
+    sendSuccess(res, { count: providers.length, data: providers });
+  } catch (error) {
+    logger.error('Error suggesting coverage providers', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to suggest coverage providers');
   }
 }
 
@@ -335,15 +241,9 @@ export async function getTimeOffStats(req: Request, res: Response): Promise<void
     const providerId = req.query.providerId as string | undefined;
     const stats = await timeOffService.getTimeOffStats(providerId);
 
-    res.json({
-      success: true,
-      data: stats,
-    });
-  } catch (error: any) {
-    logger.error('Error getting time-off stats', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get time-off statistics',
-    });
+    sendSuccess(res, stats);
+  } catch (error) {
+    logger.error('Error getting time-off stats', { error: getErrorMessage(error) });
+    sendServerError(res, 'Failed to get time-off statistics');
   }
 }

@@ -11,6 +11,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
 import { AdvancedMDClaimsService } from '../services/advancedmd/claims.service';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -37,7 +39,7 @@ const requireClaimsAccess = (req: Request, res: Response, next: NextFunction) =>
   const userRoles = user.roles || (user.role ? [user.role] : []);
 
   // Use actual UserRole enum values - claims are billing-sensitive
-  const allowedRoles = ['ADMINISTRATOR', 'BILLING_STAFF', 'SUPER_ADMIN'];
+  const allowedRoles: readonly string[] = [UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, UserRoles.SUPER_ADMIN];
   const hasAllowedRole = userRoles.some((role: string) => allowedRoles.includes(role));
 
   if (!hasAllowedRole) {
@@ -89,7 +91,7 @@ router.post('/', requireClaimsAccess, async (req: Request, res: Response) => {
       });
     }
   } catch (error: any) {
-    console.error('[Claims Routes] Error creating claim:', error);
+    logger.error('Claims Routes: Error creating claim:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create claim',
@@ -121,7 +123,7 @@ router.post('/:claimId/submit', requireClaimsAccess, async (req: Request, res: R
       });
     }
   } catch (error: any) {
-    console.error('[Claims Routes] Error submitting claim:', error);
+    logger.error('Claims Routes: Error submitting claim:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to submit claim',
@@ -168,7 +170,7 @@ router.post('/batch-submit', requireClaimsAccess, async (req: Request, res: Resp
       results,
     });
   } catch (error: any) {
-    console.error('[Claims Routes] Error batch submitting claims:', error);
+    logger.error('Claims Routes: Error batch submitting claims:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to batch submit claims',
@@ -201,7 +203,7 @@ router.post('/:claimId/resubmit', requireClaimsAccess, async (req: Request, res:
       });
     }
   } catch (error: any) {
-    console.error('[Claims Routes] Error resubmitting claim:', error);
+    logger.error('Claims Routes: Error resubmitting claim:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to resubmit claim',
@@ -236,7 +238,7 @@ router.get('/:claimId/status', requireClaimsAccess, async (req: Request, res: Re
       });
     }
   } catch (error: any) {
-    console.error('[Claims Routes] Error checking claim status:', error);
+    logger.error('Claims Routes: Error checking claim status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to check claim status',
@@ -274,7 +276,7 @@ router.post('/batch-status', requireClaimsAccess, async (req: Request, res: Resp
       data: result,
     });
   } catch (error: any) {
-    console.error('[Claims Routes] Error batch checking claim status:', error);
+    logger.error('Claims Routes: Error batch checking claim status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to batch check claim status',
@@ -297,7 +299,7 @@ router.post('/check-all-pending', requireClaimsAccess, async (req: Request, res:
       data: result,
     });
   } catch (error: any) {
-    console.error('[Claims Routes] Error checking all pending claims:', error);
+    logger.error('Claims Routes: Error checking all pending claims:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to check pending claims',
@@ -337,7 +339,7 @@ router.get('/', requireClaimsAccess, async (req: Request, res: Response) => {
       data: claims,
     });
   } catch (error: any) {
-    console.error('[Claims Routes] Error getting claims:', error);
+    logger.error('Claims Routes: Error getting claims:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get claims',
@@ -364,7 +366,7 @@ router.get('/stats', requireClaimsAccess, async (req: Request, res: Response) =>
       data: stats,
     });
   } catch (error: any) {
-    console.error('[Claims Routes] Error getting claim statistics:', error);
+    logger.error('Claims Routes: Error getting claim statistics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get claim statistics',

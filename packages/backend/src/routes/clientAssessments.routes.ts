@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireClientAccess } from '../middleware/clientAccess';
+import { UserRoles } from '@mentalspace/shared';
 import * as clientAssessmentsController from '../controllers/clientAssessments.controller';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
-router.use(authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'));
+router.use(authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN));
 
 /**
  * Assessment Assignment Routes (EHR-side for clinicians)
@@ -24,4 +25,3 @@ router.get('/:clientId/assessments/history', clientAssessmentsController.getAsse
 router.get('/:clientId/assessments/:assessmentId/export', clientAssessmentsController.exportAssessmentPDF);
 
 export default router;
-

@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import * as GroupSessionService from '../services/groupSession.service';
 import * as GroupMemberService from '../services/groupMember.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Module 3 Phase 2.1: Group Session Controller
@@ -24,18 +26,10 @@ export const getAllGroupSessions = async (req: Request, res: Response) => {
 
     const groupSessions = await GroupSessionService.getAllGroupSessions(filters);
 
-    return res.json({
-      success: true,
-      data: groupSessions,
-      total: groupSessions.length,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching group sessions', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch group sessions',
-      error: error.message,
-    });
+    return sendSuccess(res, { data: groupSessions, total: groupSessions.length });
+  } catch (error) {
+    logger.error('Error fetching group sessions', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch group sessions');
   }
 };
 
@@ -47,18 +41,10 @@ export const getActiveGroupSessions = async (req: Request, res: Response) => {
   try {
     const groupSessions = await GroupSessionService.getActiveGroupSessions();
 
-    return res.json({
-      success: true,
-      data: groupSessions,
-      total: groupSessions.length,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching active group sessions', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch active group sessions',
-      error: error.message,
-    });
+    return sendSuccess(res, { data: groupSessions, total: groupSessions.length });
+  } catch (error) {
+    logger.error('Error fetching active group sessions', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch active group sessions');
   }
 };
 
@@ -73,26 +59,16 @@ export const getGroupSessionById = async (req: Request, res: Response) => {
     const groupSession = await GroupSessionService.getGroupSessionById(id);
 
     if (!groupSession) {
-      return res.status(404).json({
-        success: false,
-        message: 'Group session not found',
-      });
+      return sendNotFound(res, 'Group session');
     }
 
-    return res.json({
-      success: true,
-      data: groupSession,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, groupSession);
+  } catch (error) {
     logger.error('Error fetching group session', {
-      error: error.message,
+      error: getErrorMessage(error),
       groupSessionId: req.params.id,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch group session',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to fetch group session');
   }
 };
 
@@ -110,21 +86,13 @@ export const createGroupSession = async (req: Request, res: Response) => {
       createdBy: req.user?.id,
     });
 
-    return res.status(201).json({
-      success: true,
-      message: 'Group session created successfully',
-      data: groupSession,
-    });
-  } catch (error: any) {
+    return sendCreated(res, groupSession, 'Group session created successfully');
+  } catch (error) {
     logger.error('Error creating group session', {
-      error: error.message,
+      error: getErrorMessage(error),
       body: req.body,
     });
-    return res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to create group session',
-      error: error.message,
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to create group session');
   }
 };
 
@@ -143,21 +111,13 @@ export const updateGroupSession = async (req: Request, res: Response) => {
       updatedBy: req.user?.id,
     });
 
-    return res.json({
-      success: true,
-      message: 'Group session updated successfully',
-      data: groupSession,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, groupSession, 'Group session updated successfully');
+  } catch (error) {
     logger.error('Error updating group session', {
-      error: error.message,
+      error: getErrorMessage(error),
       groupSessionId: req.params.id,
     });
-    return res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to update group session',
-      error: error.message,
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to update group session');
   }
 };
 
@@ -176,21 +136,13 @@ export const deleteGroupSession = async (req: Request, res: Response) => {
       deletedBy: req.user?.id,
     });
 
-    return res.json({
-      success: true,
-      message: 'Group session deleted successfully',
-      data: groupSession,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, groupSession, 'Group session deleted successfully');
+  } catch (error) {
     logger.error('Error deleting group session', {
-      error: error.message,
+      error: getErrorMessage(error),
       groupSessionId: req.params.id,
     });
-    return res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to delete group session',
-      error: error.message,
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to delete group session');
   }
 };
 
@@ -216,17 +168,11 @@ export const generateRecurringSessions = async (req: Request, res: Response) => 
         groupSessionId: id,
         ip: req.ip,
       });
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required. Please log in to generate recurring sessions.',
-      });
+      return sendUnauthorized(res, 'Authentication required. Please log in to generate recurring sessions.');
     }
 
     if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date and end date are required',
-      });
+      return sendBadRequest(res, 'Start date and end date are required');
     }
 
     const appointments = await GroupSessionService.generateRecurringSessions({
@@ -242,22 +188,13 @@ export const generateRecurringSessions = async (req: Request, res: Response) => 
       createdBy: req.user?.id,
     });
 
-    return res.json({
-      success: true,
-      message: `Generated ${appointments.length} recurring sessions`,
-      data: appointments,
-      total: appointments.length,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { data: appointments, total: appointments.length }, `Generated ${appointments.length} recurring sessions`);
+  } catch (error) {
     logger.error('Error generating recurring sessions', {
-      error: error.message,
+      error: getErrorMessage(error),
       groupSessionId: req.params.id,
     });
-    return res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to generate recurring sessions',
-      error: error.message,
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to generate recurring sessions');
   }
 };
 
@@ -269,17 +206,10 @@ export const getGroupSessionStats = async (req: Request, res: Response) => {
   try {
     const stats = await GroupSessionService.getGroupSessionStats();
 
-    return res.json({
-      success: true,
-      data: stats,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching group session stats', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch group session statistics',
-      error: error.message,
-    });
+    return sendSuccess(res, stats);
+  } catch (error) {
+    logger.error('Error fetching group session stats', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch group session statistics');
   }
 };
 
@@ -297,21 +227,13 @@ export const getGroupMembers = async (req: Request, res: Response) => {
 
     const members = await GroupMemberService.getMembersByGroup(id);
 
-    return res.json({
-      success: true,
-      data: members,
-      total: members.length,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { data: members, total: members.length });
+  } catch (error) {
     logger.error('Error fetching group members', {
-      error: error.message,
+      error: getErrorMessage(error),
       groupSessionId: req.params.id,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch group members',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to fetch group members');
   }
 };
 
@@ -335,21 +257,13 @@ export const enrollMember = async (req: Request, res: Response) => {
       enrolledBy: req.user?.id,
     });
 
-    return res.status(201).json({
-      success: true,
-      message: 'Member enrolled successfully',
-      data: member,
-    });
-  } catch (error: any) {
+    return sendCreated(res, member, 'Member enrolled successfully');
+  } catch (error) {
     logger.error('Error enrolling member', {
-      error: error.message,
+      error: getErrorMessage(error),
       groupSessionId: req.params.id,
     });
-    return res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to enroll member',
-      error: error.message,
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to enroll member');
   }
 };
 
@@ -368,21 +282,13 @@ export const updateMember = async (req: Request, res: Response) => {
       updatedBy: req.user?.id,
     });
 
-    return res.json({
-      success: true,
-      message: 'Member updated successfully',
-      data: member,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, member, 'Member updated successfully');
+  } catch (error) {
     logger.error('Error updating member', {
-      error: error.message,
+      error: getErrorMessage(error),
       memberId: req.params.memberId,
     });
-    return res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to update member',
-      error: error.message,
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to update member');
   }
 };
 
@@ -402,21 +308,13 @@ export const removeMember = async (req: Request, res: Response) => {
       removedBy: req.user?.id,
     });
 
-    return res.json({
-      success: true,
-      message: 'Member removed successfully',
-      data: member,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, member, 'Member removed successfully');
+  } catch (error) {
     logger.error('Error removing member', {
-      error: error.message,
+      error: getErrorMessage(error),
       memberId: req.params.memberId,
     });
-    return res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to remove member',
-      error: error.message,
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to remove member');
   }
 };
 
@@ -431,26 +329,16 @@ export const getMemberById = async (req: Request, res: Response) => {
     const member = await GroupMemberService.getMemberById(memberId);
 
     if (!member) {
-      return res.status(404).json({
-        success: false,
-        message: 'Group member not found',
-      });
+      return sendNotFound(res, 'Group member');
     }
 
-    return res.json({
-      success: true,
-      data: member,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, member);
+  } catch (error) {
     logger.error('Error fetching group member', {
-      error: error.message,
+      error: getErrorMessage(error),
       memberId: req.params.memberId,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch group member',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to fetch group member');
   }
 };
 
@@ -474,21 +362,13 @@ export const markAttendance = async (req: Request, res: Response) => {
       markedBy: req.user?.id,
     });
 
-    return res.json({
-      success: true,
-      message: 'Attendance marked successfully',
-      data: attendance,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, attendance, 'Attendance marked successfully');
+  } catch (error) {
     logger.error('Error marking attendance', {
-      error: error.message,
+      error: getErrorMessage(error),
       body: req.body,
     });
-    return res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to mark attendance',
-      error: error.message,
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to mark attendance');
   }
 };
 
@@ -506,22 +386,13 @@ export const markBatchAttendance = async (req: Request, res: Response) => {
       markedBy: req.user?.id,
     });
 
-    return res.json({
-      success: true,
-      message: `Attendance marked for ${attendanceRecords.length} members`,
-      data: attendanceRecords,
-      total: attendanceRecords.length,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { data: attendanceRecords, total: attendanceRecords.length }, `Attendance marked for ${attendanceRecords.length} members`);
+  } catch (error) {
     logger.error('Error marking batch attendance', {
-      error: error.message,
+      error: getErrorMessage(error),
       body: req.body,
     });
-    return res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to mark batch attendance',
-      error: error.message,
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to mark batch attendance');
   }
 };
 
@@ -535,21 +406,13 @@ export const getAttendanceByAppointment = async (req: Request, res: Response) =>
 
     const attendance = await GroupMemberService.getAttendanceByAppointment(appointmentId);
 
-    return res.json({
-      success: true,
-      data: attendance,
-      total: attendance.length,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { data: attendance, total: attendance.length });
+  } catch (error) {
     logger.error('Error fetching attendance by appointment', {
-      error: error.message,
+      error: getErrorMessage(error),
       appointmentId: req.params.appointmentId,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch attendance',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to fetch attendance');
   }
 };
 
@@ -563,21 +426,13 @@ export const getAttendanceByMember = async (req: Request, res: Response) => {
 
     const attendance = await GroupMemberService.getAttendanceByMember(memberId);
 
-    return res.json({
-      success: true,
-      data: attendance,
-      total: attendance.length,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { data: attendance, total: attendance.length });
+  } catch (error) {
     logger.error('Error fetching attendance by member', {
-      error: error.message,
+      error: getErrorMessage(error),
       memberId: req.params.memberId,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch attendance',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to fetch attendance');
   }
 };
 
@@ -590,16 +445,9 @@ export const getMemberStats = async (req: Request, res: Response) => {
     const groupId = req.query.groupId as string | undefined;
     const stats = await GroupMemberService.getMemberStats(groupId);
 
-    return res.json({
-      success: true,
-      data: stats,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching member stats', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch member statistics',
-      error: error.message,
-    });
+    return sendSuccess(res, stats);
+  } catch (error) {
+    logger.error('Error fetching member stats', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch member statistics');
   }
 };

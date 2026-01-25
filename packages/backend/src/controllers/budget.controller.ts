@@ -10,6 +10,8 @@ import { Request, Response } from 'express';
 import { logControllerError } from '../utils/logger';
 import * as budgetService from '../services/budget.service';
 import { BudgetCategory } from '@prisma/client';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * POST /api/budgets
@@ -18,10 +20,12 @@ import { BudgetCategory } from '@prisma/client';
 export async function createBudget(req: Request, res: Response): Promise<void> {
   try {
     const budget = await budgetService.createBudget(req.body);
-    res.status(201).json(budget);
-  } catch (error: any) {
+    sendCreated(res, budget);
+    return;
+  } catch (error) {
     logControllerError('Error creating budget', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
+    return;
   }
 }
 
@@ -38,14 +42,16 @@ export async function getBudget(req: Request, res: Response): Promise<void> {
     const budget = await budgetService.getBudgetById(id, includeExpenses, includePurchaseOrders);
 
     if (!budget) {
-      res.status(404).json({ error: 'Budget not found' });
+      sendNotFound(res, 'Budget');
       return;
     }
 
-    res.json(budget);
-  } catch (error: any) {
+    sendSuccess(res, budget);
+    return;
+  } catch (error) {
     logControllerError('Error fetching budget', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
+    return;
   }
 }
 
@@ -77,10 +83,12 @@ export async function listBudgets(req: Request, res: Response): Promise<void> {
       limit: limit ? parseInt(limit as string) : undefined,
     });
 
-    res.json(result);
-  } catch (error: any) {
+    sendSuccess(res, result);
+    return;
+  } catch (error) {
     logControllerError('Error listing budgets', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
+    return;
   }
 }
 
@@ -92,10 +100,12 @@ export async function updateBudget(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const budget = await budgetService.updateBudget(id, req.body);
-    res.json(budget);
-  } catch (error: any) {
+    sendSuccess(res, budget);
+    return;
+  } catch (error) {
     logControllerError('Error updating budget', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
+    return;
   }
 }
 
@@ -107,10 +117,12 @@ export async function getBudgetUtilization(req: Request, res: Response): Promise
   try {
     const { id } = req.params;
     const utilization = await budgetService.getBudgetUtilization(id);
-    res.json(utilization);
-  } catch (error: any) {
+    sendSuccess(res, utilization);
+    return;
+  } catch (error) {
     logControllerError('Error fetching budget utilization', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
+    return;
   }
 }
 
@@ -124,7 +136,7 @@ export async function getDepartmentSummary(req: Request, res: Response): Promise
     const { fiscalYear } = req.query;
 
     if (!fiscalYear) {
-      res.status(400).json({ error: 'Fiscal year is required' });
+      sendBadRequest(res, 'Fiscal year is required');
       return;
     }
 
@@ -133,10 +145,12 @@ export async function getDepartmentSummary(req: Request, res: Response): Promise
       parseInt(fiscalYear as string)
     );
 
-    res.json(summary);
-  } catch (error: any) {
+    sendSuccess(res, summary);
+    return;
+  } catch (error) {
     logControllerError('Error fetching department summary', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
+    return;
   }
 }
 
@@ -149,7 +163,7 @@ export async function getOrganizationSummary(req: Request, res: Response): Promi
     const { fiscalYear } = req.query;
 
     if (!fiscalYear) {
-      res.status(400).json({ error: 'Fiscal year is required' });
+      sendBadRequest(res, 'Fiscal year is required');
       return;
     }
 
@@ -157,10 +171,12 @@ export async function getOrganizationSummary(req: Request, res: Response): Promi
       parseInt(fiscalYear as string)
     );
 
-    res.json(summary);
-  } catch (error: any) {
+    sendSuccess(res, summary);
+    return;
+  } catch (error) {
     logControllerError('Error fetching organization summary', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
+    return;
   }
 }
 
@@ -174,14 +190,16 @@ export async function checkBudgetAvailability(req: Request, res: Response): Prom
     const { requestedAmount } = req.body;
 
     if (!requestedAmount || requestedAmount <= 0) {
-      res.status(400).json({ error: 'Valid requested amount is required' });
+      sendBadRequest(res, 'Valid requested amount is required');
       return;
     }
 
     const result = await budgetService.checkBudgetAvailability(id, requestedAmount);
-    res.json(result);
-  } catch (error: any) {
+    sendSuccess(res, result);
+    return;
+  } catch (error) {
     logControllerError('Error checking budget availability', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
+    return;
   }
 }

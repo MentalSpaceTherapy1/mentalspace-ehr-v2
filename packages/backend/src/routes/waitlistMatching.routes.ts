@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as waitlistMatchingController from '../controllers/waitlistMatching.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 /**
  * Module 3 Phase 2.2: Waitlist Automation Routes
@@ -19,14 +20,14 @@ router.use(authenticate);
 // Calculate priority score for specific entry
 router.get(
   '/:id/priority-score',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'FRONT_DESK'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.FRONT_DESK),
   waitlistMatchingController.calculatePriorityScore
 );
 
 // Update all priority scores
 router.post(
   '/update-all-scores',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   waitlistMatchingController.updateAllPriorityScores
 );
 
@@ -37,14 +38,14 @@ router.post(
 // Find matching slots for specific entry
 router.get(
   '/:id/matches',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'FRONT_DESK', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.FRONT_DESK, UserRoles.CLINICIAN),
   waitlistMatchingController.findMatchingSlots
 );
 
 // Run matching algorithm for all entries
 router.post(
   '/match-all',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   waitlistMatchingController.matchAllEntries
 );
 
@@ -55,14 +56,14 @@ router.post(
 // Send slot offer to waitlist member
 router.post(
   '/:id/send-offer',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'FRONT_DESK'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.FRONT_DESK),
   waitlistMatchingController.sendSlotOffer
 );
 
 // Record offer response (accepted/declined)
 router.post(
   '/:id/offer-response',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'FRONT_DESK'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.FRONT_DESK),
   waitlistMatchingController.recordOfferResponse
 );
 
@@ -73,14 +74,14 @@ router.post(
 // Get matching statistics
 router.get(
   '/stats',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   waitlistMatchingController.getMatchingStats
 );
 
 // Get job status
 router.get(
   '/job-status',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   waitlistMatchingController.getJobStatus
 );
 
@@ -91,7 +92,7 @@ router.get(
 // Manually trigger waitlist processing
 router.post(
   '/process-now',
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   waitlistMatchingController.triggerManualProcessing
 );
 

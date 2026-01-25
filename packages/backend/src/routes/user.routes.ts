@@ -8,6 +8,7 @@ import {
   updateUserAdminSchema,
   resetPasswordSchema,
 } from '../utils/validation';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.use(authenticate);
  */
 router.get(
   '/stats',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   userController.getUserStats
 );
 
@@ -32,7 +33,7 @@ router.get(
  */
 router.get(
   '/',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   userController.getUsers
 );
 
@@ -43,7 +44,7 @@ router.get(
  */
 router.get(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   userController.getUserById
 );
 
@@ -54,7 +55,7 @@ router.get(
  */
 router.post(
   '/',
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   validateBody(createUserSchema),
   userController.createUser
 );
@@ -66,7 +67,7 @@ router.post(
  */
 router.put(
   '/:id',
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   validateBody(updateUserAdminSchema),
   userController.updateUser
 );
@@ -78,7 +79,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   userController.deactivateUser
 );
 
@@ -89,7 +90,7 @@ router.delete(
  */
 router.post(
   '/:id/activate',
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   userController.activateUser
 );
 
@@ -100,7 +101,7 @@ router.post(
  */
 router.post(
   '/:id/unlock',
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   userController.unlockAccount
 );
 
@@ -111,7 +112,7 @@ router.post(
  */
 router.post(
   '/:id/reset-password',
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   validateBody(resetPasswordSchema),
   userController.resetPassword
 );
@@ -123,7 +124,7 @@ router.post(
  */
 router.post(
   '/invite',
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   validateBody(createUserSchema),
   userController.inviteUser
 );
@@ -135,7 +136,7 @@ router.post(
  */
 router.post(
   '/:id/resend-invitation',
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   userController.resendInvitation
 );
 

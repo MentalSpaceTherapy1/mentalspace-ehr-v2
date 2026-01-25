@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import { outcomeMeasureService } from '../services/outcomeMeasure.service';
 import { OutcomeMeasureType } from '@prisma/client';
 import { logControllerError } from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 /**
  * Outcome Measure Controller
@@ -17,26 +21,15 @@ export async function getQuestionnaireDefinition(req: Request, res: Response) {
     const { type } = req.params;
 
     if (!['PHQ9', 'GAD7', 'PCL5'].includes(type)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid measure type. Must be one of: PHQ9, GAD7, PCL5`,
-      });
+      return sendBadRequest(res, 'Invalid measure type. Must be one of: PHQ9, GAD7, PCL5');
     }
 
     const definition = outcomeMeasureService.getQuestionnaireDefinition(type as OutcomeMeasureType);
 
-    res.json({
-      success: true,
-      message: 'Questionnaire definition retrieved successfully',
-      data: definition,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, definition, 'Questionnaire definition retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting questionnaire definition', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get questionnaire definition',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to get questionnaire definition');
   }
 }
 
@@ -62,21 +55,15 @@ export async function administerOutcomeMeasure(req: Request, res: Response) {
 
     // Validation
     if (!clientId || !measureType || !responses) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: clientId, measureType, responses',
-      });
+      return sendBadRequest(res, 'Missing required fields: clientId, measureType, responses');
     }
 
     if (!['PHQ9', 'GAD7', 'PCL5'].includes(measureType)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid measure type. Must be one of: PHQ9, GAD7, PCL5`,
-      });
+      return sendBadRequest(res, 'Invalid measure type. Must be one of: PHQ9, GAD7, PCL5');
     }
 
     // Get administeredById from authenticated user
-    const administeredById = (req as any).user.userId;
+    const administeredById = req.user!.userId;
 
     const outcomeMeasure = await outcomeMeasureService.administerOutcomeMeasure({
       clientId,
@@ -89,18 +76,10 @@ export async function administerOutcomeMeasure(req: Request, res: Response) {
       completionTime,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Outcome measure administered successfully',
-      data: outcomeMeasure,
-    });
-  } catch (error: any) {
+    return sendCreated(res, outcomeMeasure, 'Outcome measure administered successfully');
+  } catch (error) {
     logControllerError('Error administering outcome measure', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to administer outcome measure',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to administer outcome measure');
   }
 }
 
@@ -123,10 +102,7 @@ export async function getClientOutcomeMeasures(req: Request, res: Response) {
 
     if (measureType) {
       if (!['PHQ9', 'GAD7', 'PCL5'].includes(measureType as string)) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid measure type. Must be one of: PHQ9, GAD7, PCL5`,
-        });
+        return sendBadRequest(res, 'Invalid measure type. Must be one of: PHQ9, GAD7, PCL5');
       }
       filters.measureType = measureType as OutcomeMeasureType;
     }
@@ -145,22 +121,14 @@ export async function getClientOutcomeMeasures(req: Request, res: Response) {
 
     const measures = await outcomeMeasureService.getClientOutcomeMeasures(clientId, filters);
 
-    res.json({
-      success: true,
-      message: 'Client outcome measures retrieved successfully',
-      data: {
-        clientId,
-        count: measures.length,
-        measures,
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, {
+      clientId,
+      count: measures.length,
+      measures,
+    }, 'Client outcome measures retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting client outcome measures', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get client outcome measures',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to get client outcome measures');
   }
 }
 
@@ -174,26 +142,15 @@ export async function getOutcomeMeasureById(req: Request, res: Response) {
 
     const measure = await outcomeMeasureService.getOutcomeMeasureById(id);
 
-    res.json({
-      success: true,
-      message: 'Outcome measure retrieved successfully',
-      data: measure,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, measure, 'Outcome measure retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting outcome measure', error);
 
-    if (error.message.includes('not found')) {
-      return res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+    if (getErrorMessage(error).includes('not found')) {
+      return sendNotFound(res, 'Outcome measure');
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get outcome measure',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to get outcome measure');
   }
 }
 
@@ -211,10 +168,7 @@ export async function getProgressData(req: Request, res: Response) {
     const { startDate, endDate } = req.query;
 
     if (!['PHQ9', 'GAD7', 'PCL5'].includes(measureType)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid measure type. Must be one of: PHQ9, GAD7, PCL5`,
-      });
+      return sendBadRequest(res, 'Invalid measure type. Must be one of: PHQ9, GAD7, PCL5');
     }
 
     const start = startDate ? new Date(startDate as string) : undefined;
@@ -227,18 +181,10 @@ export async function getProgressData(req: Request, res: Response) {
       end
     );
 
-    res.json({
-      success: true,
-      message: 'Progress data retrieved successfully',
-      data: progressData,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, progressData, 'Progress data retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting progress data', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get progress data',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to get progress data');
   }
 }
 
@@ -252,18 +198,10 @@ export async function getClientStatistics(req: Request, res: Response) {
 
     const statistics = await outcomeMeasureService.getClientStatistics(clientId);
 
-    res.json({
-      success: true,
-      message: 'Client statistics retrieved successfully',
-      data: statistics,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, statistics, 'Client statistics retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting client statistics', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get client statistics',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to get client statistics');
   }
 }
 
@@ -282,26 +220,15 @@ export async function updateClinicalNotes(req: Request, res: Response) {
     const { clinicalNotes } = req.body;
 
     if (!clinicalNotes) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required field: clinicalNotes',
-      });
+      return sendBadRequest(res, 'Missing required field: clinicalNotes');
     }
 
     const updated = await outcomeMeasureService.updateClinicalNotes(id, clinicalNotes);
 
-    res.json({
-      success: true,
-      message: 'Clinical notes updated successfully',
-      data: updated,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, updated, 'Clinical notes updated successfully');
+  } catch (error) {
     logControllerError('Error updating clinical notes', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update clinical notes',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to update clinical notes');
   }
 }
 
@@ -320,26 +247,15 @@ export async function linkToClinicalNote(req: Request, res: Response) {
     const { clinicalNoteId } = req.body;
 
     if (!clinicalNoteId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required field: clinicalNoteId',
-      });
+      return sendBadRequest(res, 'Missing required field: clinicalNoteId');
     }
 
     const updated = await outcomeMeasureService.linkToClinicalNote(id, clinicalNoteId);
 
-    res.json({
-      success: true,
-      message: 'Outcome measure linked to clinical note successfully',
-      data: updated,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, updated, 'Outcome measure linked to clinical note successfully');
+  } catch (error) {
     logControllerError('Error linking to clinical note', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to link to clinical note',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to link to clinical note');
   }
 }
 
@@ -353,16 +269,9 @@ export async function deleteOutcomeMeasure(req: Request, res: Response) {
 
     await outcomeMeasureService.deleteOutcomeMeasure(id);
 
-    res.json({
-      success: true,
-      message: 'Outcome measure deleted successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Outcome measure deleted successfully');
+  } catch (error) {
     logControllerError('Error deleting outcome measure', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete outcome measure',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to delete outcome measure');
   }
 }

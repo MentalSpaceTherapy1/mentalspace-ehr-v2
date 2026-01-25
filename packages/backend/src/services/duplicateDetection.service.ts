@@ -574,3 +574,33 @@ function normalizeString(str: string): string {
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, ''); // Remove all non-digit characters
 }
+
+// ============================================================================
+// Phase 3.2: Additional service methods for controller refactoring
+// ============================================================================
+
+/**
+ * Get duplicate detection statistics
+ */
+export async function getDuplicateStats() {
+  const [pending, dismissed, merged, total] = await Promise.all([
+    prisma.potentialDuplicate.count({ where: { status: 'PENDING' } }),
+    prisma.potentialDuplicate.count({ where: { status: 'DISMISSED' } }),
+    prisma.potentialDuplicate.count({ where: { status: 'MERGED' } }),
+    prisma.potentialDuplicate.count(),
+  ]);
+
+  const byMatchType = await prisma.potentialDuplicate.groupBy({
+    by: ['matchType'],
+    _count: true,
+    where: { status: 'PENDING' },
+  });
+
+  return {
+    total,
+    pending,
+    dismissed,
+    merged,
+    byMatchType,
+  };
+}

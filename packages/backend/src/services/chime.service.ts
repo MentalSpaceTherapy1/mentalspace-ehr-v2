@@ -52,12 +52,13 @@ export async function createChimeMeeting(externalMeetingId: string) {
 
     return response.Meeting;
   } catch (error: any) {
-    console.error('===== CHIME ERROR =====');
-    console.error('Error Name:', error.name);
-    console.error('Error Message:', error.message);
-    console.error('Error Code:', error.code);
-    console.error('HTTP Status:', error.$metadata?.httpStatusCode);
-    console.error('=======================');
+    logger.error('Chime meeting creation failed', {
+      errorName: error.name,
+      errorMessage: error.message,
+      errorCode: error.code,
+      httpStatus: error.$metadata?.httpStatusCode,
+      externalMeetingId,
+    });
     throw error;
   }
 }

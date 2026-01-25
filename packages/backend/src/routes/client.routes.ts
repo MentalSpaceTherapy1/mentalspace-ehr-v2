@@ -9,6 +9,7 @@ import {
   deleteClient,
   getClientStats,
 } from '../controllers/client.controller';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -20,34 +21,34 @@ router.use(authenticate);
 
 router.get(
   '/',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'FRONT_DESK', 'BILLING_STAFF', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, UserRoles.FRONT_DESK, UserRoles.BILLING_STAFF, UserRoles.SUPER_ADMIN),
   getAllClients
 );
 
 router.get(
   '/stats',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'BILLING_STAFF', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.BILLING_STAFF, UserRoles.CLINICAL_DIRECTOR, UserRoles.SUPER_ADMIN),
   getClientStats
 );
 
 // RLS: User must have access to this specific client
 router.get(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'BILLING_STAFF', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, UserRoles.BILLING_STAFF, UserRoles.SUPER_ADMIN),
   requireClientAccess('id', { allowBillingView: true }),
   getClientById
 );
 
 router.post(
   '/',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICAL_DIRECTOR, UserRoles.SUPER_ADMIN),
   createClient
 );
 
 // RLS: User must have access to this specific client
 router.patch(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICAL_DIRECTOR, UserRoles.SUPER_ADMIN),
   requireClientAccess('id'),
   updateClient
 );
@@ -55,7 +56,7 @@ router.patch(
 // RLS: User must have access to this specific client
 router.delete(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.SUPER_ADMIN),
   requireClientAccess('id'),
   deleteClient
 );

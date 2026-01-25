@@ -8,8 +8,10 @@
 
 import { Request, Response } from 'express';
 import { logControllerError } from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
 import * as vendorService from '../services/vendor.service';
 import { VendorCategory } from '@prisma/client';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * POST /api/vendors
@@ -18,10 +20,10 @@ import { VendorCategory } from '@prisma/client';
 export async function createVendor(req: Request, res: Response): Promise<void> {
   try {
     const vendor = await vendorService.createVendor(req.body);
-    res.status(201).json(vendor);
-  } catch (error: any) {
+    sendCreated(res, vendor, 'Vendor created successfully');
+  } catch (error) {
     logControllerError('Error creating vendor', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -38,14 +40,14 @@ export async function getVendor(req: Request, res: Response): Promise<void> {
     const vendor = await vendorService.getVendorById(id, includeExpenses, includePurchaseOrders);
 
     if (!vendor) {
-      res.status(404).json({ error: 'Vendor not found' });
+      sendNotFound(res, 'Vendor');
       return;
     }
 
-    res.json(vendor);
-  } catch (error: any) {
+    sendSuccess(res, vendor);
+  } catch (error) {
     logControllerError('Error fetching vendor', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -75,10 +77,10 @@ export async function listVendors(req: Request, res: Response): Promise<void> {
       limit: limit ? parseInt(limit as string) : undefined,
     });
 
-    res.json(result);
-  } catch (error: any) {
+    sendSuccess(res, result);
+  } catch (error) {
     logControllerError('Error listing vendors', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -90,10 +92,10 @@ export async function updateVendor(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const vendor = await vendorService.updateVendor(id, req.body);
-    res.json(vendor);
-  } catch (error: any) {
+    sendSuccess(res, vendor, 'Vendor updated successfully');
+  } catch (error) {
     logControllerError('Error updating vendor', error);
-    res.status(400).json({ error: error.message });
+    sendBadRequest(res, getErrorMessage(error));
   }
 }
 
@@ -105,10 +107,10 @@ export async function deactivateVendor(req: Request, res: Response): Promise<voi
   try {
     const { id } = req.params;
     const vendor = await vendorService.deactivateVendor(id);
-    res.json(vendor);
-  } catch (error: any) {
+    sendSuccess(res, vendor, 'Vendor deactivated successfully');
+  } catch (error) {
     logControllerError('Error deactivating vendor', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -120,10 +122,10 @@ export async function getVendorPerformance(req: Request, res: Response): Promise
   try {
     const { id } = req.params;
     const metrics = await vendorService.getVendorPerformanceMetrics(id);
-    res.json(metrics);
-  } catch (error: any) {
+    sendSuccess(res, metrics);
+  } catch (error) {
     logControllerError('Error fetching vendor performance', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -134,10 +136,10 @@ export async function getVendorPerformance(req: Request, res: Response): Promise
 export async function getVendorsRequiringAttention(req: Request, res: Response): Promise<void> {
   try {
     const result = await vendorService.getVendorsRequiringAttention();
-    res.json(result);
-  } catch (error: any) {
+    sendSuccess(res, result);
+  } catch (error) {
     logControllerError('Error fetching vendors requiring attention', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }
 
@@ -155,9 +157,9 @@ export async function getVendorSpending(req: Request, res: Response): Promise<vo
       fiscalYear ? parseInt(fiscalYear as string) : undefined
     );
 
-    res.json(summary);
-  } catch (error: any) {
+    sendSuccess(res, summary);
+  } catch (error) {
     logControllerError('Error fetching vendor spending', error);
-    res.status(500).json({ error: error.message });
+    sendServerError(res, getErrorMessage(error));
   }
 }

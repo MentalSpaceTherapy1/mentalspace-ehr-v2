@@ -2,26 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import guardianRelationshipService from '../services/guardian-relationship.service';
 import logger from '../utils/logger';
 import prisma from '../services/database';
-
-// Extend Express Request to include guardian context
-declare global {
-  namespace Express {
-    interface Request {
-      guardianContext?: {
-        isGuardian: boolean;
-        guardianId: string;
-        minorId: string;
-        relationshipId: string;
-        accessLevel: string;
-        permissions: {
-          canScheduleAppointments: boolean;
-          canViewRecords: boolean;
-          canCommunicateWithClinician: boolean;
-        };
-      };
-    }
-  }
-}
+// Phase 5.4: Import consolidated Express types (guardianContext is defined there)
+import '../types/express.d';
 
 /**
  * Middleware to check if user is accessing as a guardian
@@ -33,7 +15,7 @@ export const checkGuardianContext = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const minorId = req.params.minorId || req.body.minorId;
 
     if (!userId || !minorId) {
@@ -93,7 +75,7 @@ export const requireGuardianAccess = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const minorId = req.params.minorId || req.body.minorId;
 
     if (!userId) {
@@ -139,7 +121,7 @@ export const requireGuardianPermission = (
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.userId;
+      const userId = req.user?.userId;
       const minorId = req.params.minorId || req.body.minorId;
 
       if (!userId || !minorId) {
@@ -351,7 +333,7 @@ export const allowClientOrGuardian = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const clientId = req.params.clientId || req.params.minorId || req.body.clientId;
 
     if (!userId || !clientId) {

@@ -3,6 +3,8 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 import * as waitlistMatchingService from '../services/waitlistMatching.service';
 import * as waitlistJobService from '../jobs/processWaitlist.job';
+import { sendSuccess, sendServerError, sendValidationError } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Module 3 Phase 2.2: Waitlist Automation Controller
@@ -33,24 +35,17 @@ export const calculatePriorityScore = async (req: Request, res: Response) => {
 
     const score = await waitlistMatchingService.calculatePriorityScore(id);
 
-    res.status(200).json({
-      success: true,
-      data: {
-        waitlistEntryId: id,
-        priorityScore: score,
-      },
+    return sendSuccess(res, {
+      waitlistEntryId: id,
+      priorityScore: score,
     });
   } catch (error) {
     logger.error('Calculate priority score error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to calculate priority score',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to calculate priority score');
   }
 };
 
@@ -62,21 +57,14 @@ export const updateAllPriorityScores = async (req: Request, res: Response) => {
   try {
     await waitlistMatchingService.updateAllPriorityScores();
 
-    res.status(200).json({
-      success: true,
-      message: 'All priority scores updated successfully',
-    });
+    return sendSuccess(res, null, 'All priority scores updated successfully');
   } catch (error) {
     logger.error('Update all priority scores error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update priority scores',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to update priority scores');
   }
 };
 
@@ -93,22 +81,14 @@ export const findMatchingSlots = async (req: Request, res: Response) => {
 
     const matches = await waitlistMatchingService.findMatchingSlots(id, daysAhead);
 
-    res.status(200).json({
-      success: true,
-      data: matches,
-      count: matches.length,
-    });
+    return sendSuccess(res, { data: matches, count: matches.length });
   } catch (error) {
     logger.error('Find matching slots error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to find matching slots',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to find matching slots');
   }
 };
 
@@ -120,25 +100,17 @@ export const matchAllEntries = async (req: Request, res: Response) => {
   try {
     const result = await waitlistMatchingService.matchWaitlistToSlots();
 
-    res.status(200).json({
-      success: true,
-      message: 'Waitlist matching completed',
-      data: {
-        matched: result.matched,
-        stats: result.stats,
-      },
-    });
+    return sendSuccess(res, {
+      matched: result.matched,
+      stats: result.stats,
+    }, 'Waitlist matching completed');
   } catch (error) {
     logger.error('Match all entries error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to match waitlist entries',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to match waitlist entries');
   }
 };
 
@@ -167,29 +139,23 @@ export const sendSlotOffer = async (req: Request, res: Response) => {
       validatedData.notificationMethod
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'Slot offer sent successfully',
-    });
+    return sendSuccess(res, null, 'Slot offer sent successfully');
   } catch (error) {
     logger.error('Send slot offer error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
     });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send slot offer',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to send slot offer');
   }
 };
 
@@ -208,29 +174,23 @@ export const recordOfferResponse = async (req: Request, res: Response) => {
       validatedData.notes
     );
 
-    res.status(200).json({
-      success: true,
-      message: `Offer ${validatedData.accepted ? 'accepted' : 'declined'} successfully`,
-    });
+    return sendSuccess(res, null, `Offer ${validatedData.accepted ? 'accepted' : 'declined'} successfully`);
   } catch (error) {
     logger.error('Record offer response error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
     });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to record offer response',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to record offer response');
   }
 };
 
@@ -252,21 +212,14 @@ export const getMatchingStats = async (req: Request, res: Response) => {
       endDate
     );
 
-    res.status(200).json({
-      success: true,
-      data: stats,
-    });
+    return sendSuccess(res, stats);
   } catch (error) {
     logger.error('Get matching stats error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get matching statistics',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to get matching statistics');
   }
 };
 
@@ -278,22 +231,14 @@ export const triggerManualProcessing = async (req: Request, res: Response) => {
   try {
     const results = await waitlistJobService.triggerWaitlistProcessing();
 
-    res.status(200).json({
-      success: true,
-      message: 'Waitlist processing completed',
-      data: results,
-    });
+    return sendSuccess(res, results, 'Waitlist processing completed');
   } catch (error) {
     logger.error('Trigger manual processing error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to process waitlist',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to process waitlist');
   }
 };
 
@@ -305,20 +250,13 @@ export const getJobStatus = async (req: Request, res: Response) => {
   try {
     const status = waitlistJobService.getWaitlistJobStatus();
 
-    res.status(200).json({
-      success: true,
-      data: status,
-    });
+    return sendSuccess(res, status);
   } catch (error) {
     logger.error('Get job status error:', {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? getErrorMessage(error) : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get job status',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to get job status');
   }
 };

@@ -2,9 +2,12 @@ import rateLimit, { Options } from 'express-rate-limit';
 import { Request } from 'express';
 import { logSecurity } from '../utils/logger';
 import logger from '../utils/logger';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 
 // Redis store for distributed rate limiting (optional)
-let redisStore: any = null;
+// Using Store type from express-rate-limit when available, otherwise null
+let redisStore: Options['store'] | null = null;
 
 /**
  * Initialize Redis store for rate limiting
@@ -46,9 +49,10 @@ async function initializeRedisStore(): Promise<void> {
     });
 
     logger.info('Redis-backed rate limiting initialized for distributed deployment');
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { message?: string };
     logger.error('Failed to initialize Redis rate limiter, falling back to in-memory', {
-      error: error.message,
+      error: err.message,
     });
   }
 }
@@ -129,7 +133,7 @@ function createRateLimiter(config: {
         return true;
       }
       // Skip authenticated users if configured
-      if (config.skipAuthenticated && (req as any).user) {
+      if (config.skipAuthenticated && req.user) {
         return true;
       }
       return false;

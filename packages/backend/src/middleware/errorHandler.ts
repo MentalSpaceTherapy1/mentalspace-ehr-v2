@@ -2,6 +2,22 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
 import config from '../config';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+
+// Type definitions for external library errors to avoid `as any` casts
+interface PrismaClientError extends Error {
+  code?: string;
+  meta?: { target?: string | string[] };
+}
+
+interface ZodValidationError extends Error {
+  errors: Array<{
+    path: (string | number)[];
+    message: string;
+    code: string;
+  }>;
+}
 
 // Generate unique error ID for tracking
 const generateErrorId = () => {
@@ -33,7 +49,7 @@ export const errorHandler = (
 
   // Handle Prisma errors with comprehensive coverage
   if (err.constructor.name === 'PrismaClientKnownRequestError') {
-    const prismaError = err as any;
+    const prismaError = err as PrismaClientError;
     errorCode = 'DATABASE_ERROR';
 
     switch (prismaError.code) {
@@ -96,11 +112,11 @@ export const errorHandler = (
 
   // Handle Zod validation errors with detailed field-level errors
   if (err.constructor.name === 'ZodError') {
-    const zodError = err as any;
+    const zodError = err as ZodValidationError;
     statusCode = 400;
     message = 'Validation error';
     errorCode = 'VALIDATION_ERROR';
-    errors = zodError.errors.map((e: any) => ({
+    errors = zodError.errors.map((e) => ({
       path: e.path,
       field: e.path.join('.'),
       message: e.message,
@@ -129,8 +145,8 @@ export const errorHandler = (
   }
 
   // Extract user information for logging
-  const userId = (req as any).user?.userId;
-  const userRole = (req as any).user?.role;
+  const userId = req.user?.userId;
+  const userRole = req.user?.roles?.join(',');
 
   // Comprehensive error logging
   const logContext = {

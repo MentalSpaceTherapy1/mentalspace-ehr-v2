@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { parse, addDays, addWeeks, addMonths, setHours, setMinutes, startOfDay, isBefore, isAfter } from 'date-fns';
+import { UserRoles } from '@mentalspace/shared';
 import * as schedulingSuggestionsService from './schedulingSuggestions.service';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -201,7 +203,7 @@ async function extractProvider(text: string): Promise<{ id: string; name: string
           { firstName: { contains: name, mode: 'insensitive' } },
           { lastName: { contains: name, mode: 'insensitive' } }
         ],
-        roles: { hasSome: ['CLINICIAN', 'SUPERVISOR'] },
+        roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR] },
         isActive: true
       },
       select: { id: true, firstName: true, lastName: true }
@@ -227,7 +229,7 @@ async function extractProvider(text: string): Promise<{ id: string; name: string
           { firstName: { contains: name, mode: 'insensitive' } },
           { lastName: { contains: name, mode: 'insensitive' } }
         ],
-        roles: { hasSome: ['CLINICIAN', 'SUPERVISOR'] },
+        roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR] },
         isActive: true
       },
       select: { id: true, firstName: true, lastName: true }
@@ -597,7 +599,7 @@ async function logParsingAttempt(
       }
     });
   } catch (error) {
-    console.error('Error logging NLP parsing attempt:', error);
+    logger.error('Error logging NLP parsing attempt', { error });
   }
 }
 
@@ -699,7 +701,7 @@ export async function executeSchedulingRequest(
 
     return result;
   } catch (error) {
-    console.error('Error executing scheduling request:', error);
+    logger.error('Error executing scheduling request', { error });
     throw error;
   }
 }

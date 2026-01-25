@@ -7,6 +7,7 @@ import {
   getCapacityPlanning,
 } from '../controllers/analytics.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -16,35 +17,35 @@ router.use(authenticate);
 // Provider utilization analytics
 router.get(
   '/provider-utilization',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   getProviderUtilization
 );
 
 // No-show rates analysis
 router.get(
   '/no-show-rates',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   getNoShowRates
 );
 
 // Revenue per hour analysis
 router.get(
   '/revenue-analysis',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   getRevenueAnalysis
 );
 
 // Cancellation pattern analysis
 router.get(
   '/cancellation-patterns',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   getCancellationPatterns
 );
 
 // Capacity planning projections
 router.get(
   '/capacity-planning',
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   getCapacityPlanning
 );
 

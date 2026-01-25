@@ -3,12 +3,14 @@ import { z } from 'zod';
 import { AppError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
+import { getErrorMessage, getErrorCode } from '../../utils/errorHelpers';
 import {
   billingService,
   moodTrackingService,
 } from '../../services/portal';
 import { PortalRequest } from '../../types/express.d';
 import { PAGINATION } from '../../services/portal/constants';
+import { sendSuccess, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../../utils/apiResponse';
 
 // ============================================================================
 // DASHBOARD OVERVIEW
@@ -19,10 +21,7 @@ export const getDashboard = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get upcoming appointments
@@ -126,26 +125,20 @@ export const getDashboard = async (req: PortalRequest, res: Response) => {
       logger.warn('Could not fetch goals count');
     }
 
-    res.status(200).json({
-      success: true,
-      data: {
-        upcomingAppointments,
-        unreadMessages,
-        balance,
-        recentMoods,
-        engagementStreak,
-        pendingTasks: {
-          homework: pendingHomework,
-          activeGoals,
-        },
+    return sendSuccess(res, {
+      upcomingAppointments,
+      unreadMessages,
+      balance,
+      recentMoods,
+      engagementStreak,
+      pendingTasks: {
+        homework: pendingHomework,
+        activeGoals,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching dashboard:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch dashboard',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch dashboard');
   }
 };
 
@@ -185,16 +178,10 @@ export const getUpcomingAppointments = async (req: PortalRequest, res: Response)
       },
     });
 
-    res.status(200).json({
-      success: true,
-      data: appointments,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, appointments);
+  } catch (error) {
     logger.error('Error fetching upcoming appointments:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch appointments',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch appointments');
   }
 };
 
@@ -229,16 +216,10 @@ export const getPastAppointments = async (req: PortalRequest, res: Response) => 
       },
     });
 
-    res.status(200).json({
-      success: true,
-      data: appointments,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, appointments);
+  } catch (error) {
     logger.error('Error fetching past appointments:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch appointments',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch appointments');
   }
 };
 
@@ -275,16 +256,10 @@ export const getAppointmentDetails = async (req: PortalRequest, res: Response) =
       throw new AppError('Appointment not found', 404);
     }
 
-    res.status(200).json({
-      success: true,
-      data: appointment,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, appointment);
+  } catch (error) {
     logger.error('Error fetching appointment details:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch appointment details',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch appointment details');
   }
 };
 
@@ -342,22 +317,15 @@ export const cancelAppointment = async (req: PortalRequest, res: Response) => {
       `Appointment ${appointmentId} cancelled by client ${clientId}. Late cancellation: ${isLateCancellation}`
     );
 
-    res.status(200).json({
-      success: true,
-      message: isLateCancellation
-        ? 'Appointment cancelled. Note: This is a late cancellation (less than 24 hours notice).'
-        : 'Appointment cancelled successfully.',
-      data: {
-        appointment: updated,
-        isLateCancellation,
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, {
+      appointment: updated,
+      isLateCancellation,
+    }, isLateCancellation
+      ? 'Appointment cancelled. Note: This is a late cancellation (less than 24 hours notice).'
+      : 'Appointment cancelled successfully.');
+  } catch (error) {
     logger.error('Error cancelling appointment:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to cancel appointment',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to cancel appointment');
   }
 };
 

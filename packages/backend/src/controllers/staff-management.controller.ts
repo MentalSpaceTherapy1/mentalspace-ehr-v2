@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
+import { EmploymentStatus, EmploymentType, UserRole } from '@prisma/client';
 import staffManagementService from '../services/staff-management.service';
 import { BadRequestError } from '../utils/errors';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendPaginated, calculatePagination } from '../utils/apiResponse';
 
 /**
  * Module 9: Staff Management Controller
@@ -78,11 +80,7 @@ class StaffManagementController {
         taxId,
       });
 
-      res.status(201).json({
-        success: true,
-        message: 'Staff member created successfully',
-        data: staffMember,
-      });
+      return sendCreated(res, staffMember, 'Staff member created successfully');
     } catch (error) {
       next(error);
     }
@@ -98,10 +96,7 @@ class StaffManagementController {
 
       const staffMember = await staffManagementService.getStaffMemberById(id);
 
-      res.status(200).json({
-        success: true,
-        data: staffMember,
-      });
+      return sendSuccess(res, staffMember);
     } catch (error) {
       next(error);
     }
@@ -127,10 +122,10 @@ class StaffManagementController {
 
       const filters = {
         department: department as string,
-        employmentStatus: employmentStatus as any,
-        employmentType: employmentType as any,
+        employmentStatus: employmentStatus as EmploymentStatus | undefined,
+        employmentType: employmentType as EmploymentType | undefined,
         managerId: managerId as string,
-        role: role as any,
+        role: role as UserRole | undefined,
         isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
         search: search as string,
         page: page ? parseInt(page as string) : undefined,
@@ -139,11 +134,7 @@ class StaffManagementController {
 
       const result = await staffManagementService.getStaffMembers(filters);
 
-      res.status(200).json({
-        success: true,
-        data: result.staffMembers,
-        pagination: result.pagination,
-      });
+      return sendPaginated(res, result.staffMembers, result.pagination);
     } catch (error) {
       next(error);
     }
@@ -160,11 +151,7 @@ class StaffManagementController {
 
       const updatedStaff = await staffManagementService.updateStaffMember(id, updateData);
 
-      res.status(200).json({
-        success: true,
-        message: 'Staff member updated successfully',
-        data: updatedStaff,
-      });
+      return sendSuccess(res, updatedStaff, 'Staff member updated successfully');
     } catch (error) {
       next(error);
     }
@@ -190,11 +177,7 @@ class StaffManagementController {
         notes,
       });
 
-      res.status(200).json({
-        success: true,
-        message: 'Employment terminated successfully',
-        data: result,
-      });
+      return sendSuccess(res, result, 'Employment terminated successfully');
     } catch (error) {
       next(error);
     }
@@ -214,11 +197,7 @@ class StaffManagementController {
         hireDate ? new Date(hireDate) : undefined
       );
 
-      res.status(200).json({
-        success: true,
-        message: 'Staff member reactivated successfully',
-        data: reactivatedStaff,
-      });
+      return sendSuccess(res, reactivatedStaff, 'Staff member reactivated successfully');
     } catch (error) {
       next(error);
     }
@@ -232,10 +211,7 @@ class StaffManagementController {
     try {
       const hierarchy = await staffManagementService.getOrganizationalHierarchy();
 
-      res.status(200).json({
-        success: true,
-        data: hierarchy,
-      });
+      return sendSuccess(res, hierarchy);
     } catch (error) {
       next(error);
     }
@@ -251,10 +227,7 @@ class StaffManagementController {
 
       const statistics = await staffManagementService.getDepartmentStatistics(department);
 
-      res.status(200).json({
-        success: true,
-        data: statistics,
-      });
+      return sendSuccess(res, statistics);
     } catch (error) {
       next(error);
     }
@@ -268,10 +241,7 @@ class StaffManagementController {
     try {
       const statistics = await staffManagementService.getStaffStatistics();
 
-      res.status(200).json({
-        success: true,
-        data: statistics,
-      });
+      return sendSuccess(res, statistics);
     } catch (error) {
       next(error);
     }
@@ -287,10 +257,7 @@ class StaffManagementController {
 
       const result = await staffManagementService.getStaffByManager(managerId);
 
-      res.status(200).json({
-        success: true,
-        data: result,
-      });
+      return sendSuccess(res, result);
     } catch (error) {
       next(error);
     }
@@ -311,11 +278,7 @@ class StaffManagementController {
 
       const updatedStaff = await staffManagementService.assignManager(id, managerId);
 
-      res.status(200).json({
-        success: true,
-        message: 'Manager assigned successfully',
-        data: updatedStaff,
-      });
+      return sendSuccess(res, updatedStaff, 'Manager assigned successfully');
     } catch (error) {
       next(error);
     }
@@ -331,11 +294,7 @@ class StaffManagementController {
 
       const updatedStaff = await staffManagementService.removeManager(id);
 
-      res.status(200).json({
-        success: true,
-        message: 'Manager removed successfully',
-        data: updatedStaff,
-      });
+      return sendSuccess(res, updatedStaff, 'Manager removed successfully');
     } catch (error) {
       next(error);
     }

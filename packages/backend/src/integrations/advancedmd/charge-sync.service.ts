@@ -18,6 +18,7 @@
 import { PrismaClient, ChargeEntry, Appointment } from '@prisma/client';
 import { advancedMDAPI } from './api-client';
 import { advancedMDLookup } from './lookup.service';
+import logger from '../../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -193,7 +194,7 @@ export class AdvancedMDChargeSyncService {
         };
       }
     } catch (error: any) {
-      console.error(`[Charge Sync] Error submitting charge ${chargeId}:`, error.message);
+      logger.error('Charge Sync: Error submitting charge', { chargeId, error: error.message });
       await this.updateChargeSyncStatus(chargeId, 'error', error.message);
       return {
         success: false,
@@ -327,7 +328,7 @@ export class AdvancedMDChargeSyncService {
         };
       }
     } catch (error: any) {
-      console.error(`[Charge Sync] Error updating charge ${chargeId}:`, error.message);
+      logger.error('Charge Sync: Error updating charge', { chargeId, error: error.message });
       await this.updateChargeSyncStatus(chargeId, 'error', error.message);
       return {
         success: false,
@@ -408,7 +409,7 @@ export class AdvancedMDChargeSyncService {
         };
       }
     } catch (error: any) {
-      console.error(`[Charge Sync] Error voiding charge ${chargeId}:`, error.message);
+      logger.error('Charge Sync: Error voiding charge', { chargeId, error: error.message });
       return {
         success: false,
         chargeId,
@@ -467,7 +468,7 @@ export class AdvancedMDChargeSyncService {
         error: typeof error === 'string' ? error : error.message,
       };
     } catch (error: any) {
-      console.error('[Charge Sync] Error calling SaveCharges API:', error.message);
+      logger.error('Charge Sync: Error calling SaveCharges API', { error: error.message });
       return {
         success: false,
         error: error.message,
@@ -560,7 +561,7 @@ export class AdvancedMDChargeSyncService {
 
       return [];
     } catch (error) {
-      console.error('[Charge Sync] Error parsing diagnosis codes:', error);
+      logger.error('Charge Sync: Error parsing diagnosis codes', { error });
       return [];
     }
   }
@@ -601,7 +602,7 @@ export class AdvancedMDChargeSyncService {
       });
 
       if (!response.success || !response.data?.ppmdmsg?.charges) {
-        console.log(`[Charge Sync] No charges found for visit ${visitId}`);
+        logger.debug(`[Charge Sync] No charges found for visit ${visitId}`);
         return;
       }
 
@@ -639,7 +640,7 @@ export class AdvancedMDChargeSyncService {
         }
       }
     } catch (error: any) {
-      console.error(`[Charge Sync] Error syncing charges for visit ${visitId}:`, error.message);
+      logger.error('Charge Sync: Error syncing charges for visit', { visitId, error: error.message });
     }
   }
 

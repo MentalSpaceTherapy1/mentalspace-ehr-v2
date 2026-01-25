@@ -1,6 +1,6 @@
 import prisma from './database';
 import * as cron from 'node-cron';
-import { auditLogger } from '../utils/logger';
+import logger, { auditLogger } from '../utils/logger';
 
 interface ReminderPreferences {
   symptomReminders: boolean;
@@ -148,7 +148,7 @@ export class TrackingRemindersService {
 
     // Skip if already logged
     if (existingLog) {
-      console.log(`Skipping symptom reminder for client ${clientId} - already logged today`);
+      auditLogger.info(`Skipping symptom reminder for client ${clientId} - already logged today`);
       return;
     }
 
@@ -166,7 +166,7 @@ export class TrackingRemindersService {
 
     // In a real implementation, send notification via email/SMS/push
     // For now, we'll create a notification record
-    console.log(`Sending symptom reminder to ${client.firstName} (${client.email})`);
+    auditLogger.info(`Sending symptom reminder to ${client.firstName} (${client.email})`);
 
     // TODO: Integrate with notification service
     // await notificationService.send({
@@ -207,7 +207,7 @@ export class TrackingRemindersService {
     });
 
     if (existingLog) {
-      console.log(`Skipping sleep reminder for client ${clientId} - already logged`);
+      auditLogger.info(`Skipping sleep reminder for client ${clientId} - already logged`);
       return;
     }
 
@@ -222,7 +222,7 @@ export class TrackingRemindersService {
 
     if (!client) return;
 
-    console.log(`Sending sleep reminder to ${client.firstName} (${client.email})`);
+    auditLogger.info(`Sending sleep reminder to ${client.firstName} (${client.email})`);
 
     // TODO: Send notification
     // await notificationService.send({
@@ -262,7 +262,7 @@ export class TrackingRemindersService {
     });
 
     if (existingLog) {
-      console.log(`Skipping exercise reminder for client ${clientId} - already logged today`);
+      auditLogger.info(`Skipping exercise reminder for client ${clientId} - already logged today`);
       return;
     }
 
@@ -277,7 +277,7 @@ export class TrackingRemindersService {
 
     if (!client) return;
 
-    console.log(`Sending exercise reminder to ${client.firstName} (${client.email})`);
+    auditLogger.info(`Sending exercise reminder to ${client.firstName} (${client.email})`);
 
     // TODO: Send notification
     // await notificationService.send({
@@ -495,18 +495,18 @@ export class TrackingRemindersService {
       },
     });
 
-    console.log(`Initializing reminders for ${clients.length} clients`);
+    auditLogger.info(`Initializing reminders for ${clients.length} clients`);
 
     for (const client of clients) {
       try {
         const preferences = await this.getReminderPreferences(client.id);
         await this.scheduleRemindersForClient(client.id, preferences);
       } catch (error) {
-        console.error(`Error initializing reminders for client ${client.id}:`, error);
+        logger.error('Error initializing reminders for client', { clientId: client.id, error });
       }
     }
 
-    console.log('All reminders initialized');
+    auditLogger.info('All reminders initialized');
 
     return {
       success: true,
@@ -520,7 +520,7 @@ export class TrackingRemindersService {
   async cleanup() {
     this.scheduledJobs.forEach((job) => job.stop());
     this.scheduledJobs.clear();
-    console.log('All reminder jobs stopped');
+    auditLogger.info('All reminder jobs stopped');
   }
 }
 

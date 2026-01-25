@@ -262,21 +262,23 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
       // Create async audio chunk generator
       const audioGenerator = createAudioChunkGenerator(sessionId);
 
-      // Start processing audio stream in background
-      transcriptionService.processAudioStream(sessionId, audioGenerator, sampleRate)
-        .then(() => {
+      // Start processing audio stream in background (fire-and-forget)
+      (async () => {
+        try {
+          await transcriptionService.processAudioStream(sessionId, audioGenerator, sampleRate);
           logger.info('Audio stream processing completed', { sessionId });
-        })
-        .catch((error: any) => {
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           logger.error('Audio stream processing failed', {
             sessionId,
-            error: error.message,
+            error: errorMessage,
           });
           socket.emit('transcription:error', {
             sessionId,
-            message: 'Audio stream processing failed: ' + error.message,
+            message: 'Audio stream processing failed: ' + errorMessage,
           });
-        });
+        }
+      })();
 
       socket.emit('transcription:audio-started', {
         sessionId,

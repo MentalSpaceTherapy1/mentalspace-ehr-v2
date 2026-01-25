@@ -8,6 +8,7 @@
 
 import swaggerJsdoc from 'swagger-jsdoc';
 import config from '../config';
+import { UserRoles, AppointmentStatus, NoteStatus } from '@mentalspace/shared';
 
 const swaggerDefinition = {
   openapi: '3.0.3',
@@ -189,18 +190,7 @@ All responses include security headers:
           },
           role: {
             type: 'string',
-            enum: [
-              'SUPER_ADMIN',
-              'ADMINISTRATOR',
-              'CLINICAL_DIRECTOR',
-              'SUPERVISOR',
-              'CLINICIAN',
-              'INTERN',
-              'BILLING_STAFF',
-              'OFFICE_MANAGER',
-              'FRONT_DESK',
-              'SCHEDULER',
-            ],
+            enum: Object.values(UserRoles),
           },
           isActive: {
             type: 'boolean',
@@ -243,10 +233,6 @@ All responses include security headers:
             format: 'date',
             description: 'PHI - Date of birth',
           },
-          ssn: {
-            type: 'string',
-            description: 'PHI - SSN (masked in responses unless authorized)',
-          },
           status: {
             type: 'string',
             enum: ['ACTIVE', 'INACTIVE', 'DISCHARGED', 'ON_HOLD'],
@@ -288,10 +274,6 @@ All responses include security headers:
           dateOfBirth: {
             type: 'string',
             format: 'date',
-          },
-          ssn: {
-            type: 'string',
-            pattern: '^\\d{3}-\\d{2}-\\d{4}$',
           },
         },
         required: ['firstName', 'lastName'],
@@ -357,7 +339,7 @@ All responses include security headers:
           },
           status: {
             type: 'string',
-            enum: ['DRAFT', 'PENDING_SIGNATURE', 'SIGNED', 'AMENDED'],
+            enum: Object.values(NoteStatus),
           },
           authorId: {
             type: 'string',
@@ -408,15 +390,7 @@ All responses include security headers:
           },
           status: {
             type: 'string',
-            enum: [
-              'SCHEDULED',
-              'CONFIRMED',
-              'CHECKED_IN',
-              'IN_PROGRESS',
-              'COMPLETED',
-              'CANCELLED',
-              'NO_SHOW',
-            ],
+            enum: Object.values(AppointmentStatus),
           },
           locationId: {
             type: 'string',

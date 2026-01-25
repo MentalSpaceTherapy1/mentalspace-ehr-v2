@@ -1,4 +1,7 @@
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import {
   generateSchedulingSuggestions,
   acceptSuggestion
@@ -24,10 +27,10 @@ import {
   ignorePattern,
   getPatternStatistics
 } from '../services/patternRecognition.service';
-import { PrismaClient } from '@prisma/client';
+// Phase 3.2: Removed direct PrismaClient import - using service methods instead
+import * as aiSchedulingService from '../services/aiScheduling.service';
 import { logControllerError } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 /**
  * Generate scheduling suggestions for a client
@@ -47,71 +50,44 @@ export async function generateSuggestions(req: Request, res: Response) {
 
     // Validation
     if (!clientId || !appointmentTypeId) {
-      return res.status(400).json({
-        error: 'Missing required fields',
-        details: 'clientId and appointmentTypeId are required'
-      });
+      return sendBadRequest(res, 'Missing required fields: clientId and appointmentTypeId are required');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify client exists
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
-      select: { id: true, firstName: true, lastName: true, status: true }
-    });
+    const client = await aiSchedulingService.findClientForScheduling(clientId);
 
     if (!client) {
-      return res.status(404).json({
-        error: 'Client not found',
-        details: `No client found with ID: ${clientId}`
-      });
+      return sendNotFound(res, 'Client');
     }
 
     if (client.status !== 'ACTIVE') {
-      return res.status(400).json({
-        error: 'Client is not active',
-        details: `Client status: ${client.status}`
-      });
+      return sendBadRequest(res, `Client is not active. Status: ${client.status}`);
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify appointment type exists
-    const appointmentType = await prisma.appointmentType.findUnique({
-      where: { id: appointmentTypeId },
-      select: { id: true, typeName: true, isActive: true }
-    });
+    const appointmentType = await aiSchedulingService.findAppointmentType(appointmentTypeId);
 
     if (!appointmentType) {
-      return res.status(404).json({
-        error: 'Appointment type not found',
-        details: `No appointment type found with ID: ${appointmentTypeId}`
-      });
+      return sendNotFound(res, 'Appointment type');
     }
 
     if (!appointmentType.isActive) {
-      return res.status(400).json({
-        error: 'Appointment type is not active',
-        details: `Appointment type: ${appointmentType.typeName}`
-      });
+      return sendBadRequest(res, `Appointment type is not active: ${appointmentType.typeName}`);
     }
 
     // If provider specified, verify they exist
     if (providerId) {
-      const provider = await prisma.user.findUnique({
-        where: { id: providerId },
-        select: { id: true, isActive: true, availableForScheduling: true }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const provider = await aiSchedulingService.findProviderForScheduling(providerId);
 
       if (!provider) {
-        return res.status(404).json({
-          error: 'Provider not found',
-          details: `No provider found with ID: ${providerId}`
-        });
+        return sendNotFound(res, 'Provider');
       }
 
       if (!provider.isActive || !provider.availableForScheduling) {
-        return res.status(400).json({
-          error: 'Provider is not available',
-          details: 'Provider is not active or not available for scheduling'
-        });
+        return sendBadRequest(res, 'Provider is not active or not available for scheduling');
       }
     }
 
@@ -127,8 +103,7 @@ export async function generateSuggestions(req: Request, res: Response) {
     });
 
     if (suggestions.length === 0) {
-      return res.status(200).json({
-        message: 'No available slots found',
+      return sendSuccess(res, {
         suggestions: [],
         searchCriteria: {
           clientId,
@@ -138,11 +113,10 @@ export async function generateSuggestions(req: Request, res: Response) {
           requestedTime,
           flexibility: flexibility || 7
         }
-      });
+      }, 'No available slots found');
     }
 
-    res.status(200).json({
-      message: 'Suggestions generated successfully',
+    return sendSuccess(res, {
       count: suggestions.length,
       suggestions,
       client: {
@@ -153,13 +127,10 @@ export async function generateSuggestions(req: Request, res: Response) {
         id: appointmentType.id,
         name: appointmentType.typeName
       }
-    });
-  } catch (error: any) {
+    }, 'Suggestions generated successfully');
+  } catch (error) {
     logControllerError('Error generating scheduling suggestions', error);
-    res.status(500).json({
-      error: 'Failed to generate scheduling suggestions',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to generate scheduling suggestions');
   }
 }
 
@@ -170,51 +141,32 @@ export async function generateSuggestions(req: Request, res: Response) {
 export async function acceptSchedulingSuggestion(req: Request, res: Response) {
   try {
     const { suggestionId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        details: 'User authentication required'
-      });
+      return sendUnauthorized(res, 'User authentication required');
     }
 
     if (!suggestionId) {
-      return res.status(400).json({
-        error: 'Missing suggestion ID',
-        details: 'suggestionId parameter is required'
-      });
+      return sendBadRequest(res, 'Missing suggestion ID: suggestionId parameter is required');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify suggestion exists
-    const suggestion = await prisma.schedulingSuggestion.findUnique({
-      where: { id: suggestionId },
-      include: {
-        client: { select: { id: true, firstName: true, lastName: true } },
-        suggestedProvider: { select: { id: true, firstName: true, lastName: true } }
-      }
-    });
+    const suggestion = await aiSchedulingService.findSuggestionWithDetails(suggestionId);
 
     if (!suggestion) {
-      return res.status(404).json({
-        error: 'Suggestion not found',
-        details: `No suggestion found with ID: ${suggestionId}`
-      });
+      return sendNotFound(res, 'Suggestion');
     }
 
     if (suggestion.wasAccepted) {
-      return res.status(400).json({
-        error: 'Suggestion already accepted',
-        details: `This suggestion was accepted on ${suggestion.acceptedAt}`,
-        appointmentId: suggestion.createdAppointmentId
-      });
+      return sendBadRequest(res, `Suggestion already accepted on ${suggestion.acceptedAt}. Appointment ID: ${suggestion.createdAppointmentId}`);
     }
 
     // Accept suggestion and create appointment
     const appointment = await acceptSuggestion(suggestionId, userId);
 
-    res.status(201).json({
-      message: 'Appointment created successfully',
+    return sendCreated(res, {
       appointment: {
         id: appointment.id,
         clientId: appointment.clientId,
@@ -231,13 +183,10 @@ export async function acceptSchedulingSuggestion(req: Request, res: Response) {
         overallScore: suggestion.overallScore,
         confidenceLevel: suggestion.confidenceLevel
       }
-    });
-  } catch (error: any) {
+    }, 'Appointment created successfully');
+  } catch (error) {
     logControllerError('Error accepting scheduling suggestion', error);
-    res.status(500).json({
-      error: 'Failed to accept scheduling suggestion',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to accept scheduling suggestion');
   }
 }
 
@@ -250,43 +199,25 @@ export async function getCompatibilityScore(req: Request, res: Response) {
     const { providerId, clientId } = req.params;
 
     if (!providerId || !clientId) {
-      return res.status(400).json({
-        error: 'Missing required parameters',
-        details: 'providerId and clientId are required'
-      });
+      return sendBadRequest(res, 'Missing required parameters: providerId and clientId are required');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify provider and client exist
-    const [provider, client] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: providerId },
-        select: { id: true, firstName: true, lastName: true }
-      }),
-      prisma.client.findUnique({
-        where: { id: clientId },
-        select: { id: true, firstName: true, lastName: true }
-      })
-    ]);
+    const [provider, client] = await aiSchedulingService.findProviderAndClient(providerId, clientId);
 
     if (!provider) {
-      return res.status(404).json({
-        error: 'Provider not found',
-        details: `No provider found with ID: ${providerId}`
-      });
+      return sendNotFound(res, 'Provider');
     }
 
     if (!client) {
-      return res.status(404).json({
-        error: 'Client not found',
-        details: `No client found with ID: ${clientId}`
-      });
+      return sendNotFound(res, 'Client');
     }
 
     // Calculate compatibility score
     const result = await calculateCompatibilityScore(providerId, clientId);
 
-    res.status(200).json({
-      message: 'Compatibility score calculated successfully',
+    return sendSuccess(res, {
       provider: {
         id: provider.id,
         name: `${provider.firstName} ${provider.lastName}`
@@ -296,13 +227,10 @@ export async function getCompatibilityScore(req: Request, res: Response) {
         name: `${client.firstName} ${client.lastName}`
       },
       compatibility: result
-    });
-  } catch (error: any) {
+    }, 'Compatibility score calculated successfully');
+  } catch (error) {
     logControllerError('Error calculating compatibility score', error);
-    res.status(500).json({
-      error: 'Failed to calculate compatibility score',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to calculate compatibility score');
   }
 }
 
@@ -316,31 +244,22 @@ export async function getCompatibleProviders(req: Request, res: Response) {
     const { limit } = req.query;
 
     if (!clientId) {
-      return res.status(400).json({
-        error: 'Missing required parameter',
-        details: 'clientId is required'
-      });
+      return sendBadRequest(res, 'Missing required parameter: clientId is required');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify client exists
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
-      select: { id: true, firstName: true, lastName: true, status: true }
-    });
+    const client = await aiSchedulingService.findClientForScheduling(clientId);
 
     if (!client) {
-      return res.status(404).json({
-        error: 'Client not found',
-        details: `No client found with ID: ${clientId}`
-      });
+      return sendNotFound(res, 'Client');
     }
 
     // Get top compatible providers
     const limitNum = limit ? parseInt(limit as string) : 5;
     const providers = await getTopCompatibleProviders(clientId, limitNum);
 
-    res.status(200).json({
-      message: 'Compatible providers retrieved successfully',
+    return sendSuccess(res, {
       client: {
         id: client.id,
         name: `${client.firstName} ${client.lastName}`
@@ -358,13 +277,10 @@ export async function getCompatibleProviders(req: Request, res: Response) {
         factors: p.factors,
         details: p.details
       }))
-    });
-  } catch (error: any) {
+    }, 'Compatible providers retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting compatible providers', error);
-    res.status(500).json({
-      error: 'Failed to get compatible providers',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get compatible providers');
   }
 }
 
@@ -378,58 +294,27 @@ export async function getSuggestionsHistory(req: Request, res: Response) {
     const { limit, offset } = req.query;
 
     if (!clientId) {
-      return res.status(400).json({
-        error: 'Missing required parameter',
-        details: 'clientId is required'
-      });
+      return sendBadRequest(res, 'Missing required parameter: clientId is required');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify client exists
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
-      select: { id: true, firstName: true, lastName: true }
-    });
+    const client = await aiSchedulingService.findClientForScheduling(clientId);
 
     if (!client) {
-      return res.status(404).json({
-        error: 'Client not found',
-        details: `No client found with ID: ${clientId}`
-      });
+      return sendNotFound(res, 'Client');
     }
 
     const limitNum = limit ? parseInt(limit as string) : 20;
     const offsetNum = offset ? parseInt(offset as string) : 0;
 
+    // Phase 3.2: Use service methods instead of direct prisma calls
     // Get suggestions history
-    const suggestions = await prisma.schedulingSuggestion.findMany({
-      where: { clientId },
-      include: {
-        suggestedProvider: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true
-          }
-        },
-        appointmentType: {
-          select: {
-            id: true,
-            typeName: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limitNum,
-      skip: offsetNum
-    });
+    const suggestions = await aiSchedulingService.getSuggestionsHistory(clientId, limitNum, offsetNum);
 
-    const total = await prisma.schedulingSuggestion.count({
-      where: { clientId }
-    });
+    const total = await aiSchedulingService.countClientSuggestions(clientId);
 
-    res.status(200).json({
-      message: 'Suggestions history retrieved successfully',
+    return sendSuccess(res, {
       client: {
         id: client.id,
         name: `${client.firstName} ${client.lastName}`
@@ -439,13 +324,10 @@ export async function getSuggestionsHistory(req: Request, res: Response) {
       limit: limitNum,
       offset: offsetNum,
       suggestions
-    });
-  } catch (error: any) {
+    }, 'Suggestions history retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting suggestions history', error);
-    res.status(500).json({
-      error: 'Failed to get suggestions history',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get suggestions history');
   }
 }
 
@@ -455,26 +337,13 @@ export async function getSuggestionsHistory(req: Request, res: Response) {
  */
 export async function getSchedulingStats(req: Request, res: Response) {
   try {
-    // Check if the scheduling_suggestions table exists by attempting a simple query
-    let tableExists = false;
-    try {
-      const result: any = await prisma.$queryRaw`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.tables
-          WHERE table_schema = 'public'
-          AND table_name = 'scheduling_suggestions'
-        ) as exists
-      `;
-      tableExists = result[0]?.exists || false;
-    } catch (error) {
-      logControllerError('Error checking table existence', error);
-      tableExists = false;
-    }
+    // Phase 3.2: Use service method instead of direct prisma call
+    // Check if the scheduling_suggestions table exists
+    const tableExists = await aiSchedulingService.checkSchedulingSuggestionsTableExists();
 
     // If table doesn't exist, return empty stats
     if (!tableExists) {
-      return res.status(200).json({
-        message: 'AI Scheduling feature not yet enabled',
+      return sendSuccess(res, {
         stats: {
           totalSuggestions: 0,
           acceptedSuggestions: 0,
@@ -483,53 +352,19 @@ export async function getSchedulingStats(req: Request, res: Response) {
           topSuggestedProviders: []
         },
         featureStatus: 'NOT_ENABLED'
-      });
+      }, 'AI Scheduling feature not yet enabled');
     }
 
     // Wrap Prisma model calls in try-catch in case table/model doesn't exist
-    let totalSuggestions = 0;
-    let acceptedSuggestions = 0;
-    let averageScore: { _avg: { overallScore: number | null } } = { _avg: { overallScore: null } };
-    let topProviders: any[] = [];
+    let stats;
 
     try {
-      const [
-        total,
-        accepted,
-        avgScore,
-        top
-      ] = await Promise.all([
-        // Total suggestions generated
-        prisma.schedulingSuggestion.count(),
-
-        // Accepted suggestions
-        prisma.schedulingSuggestion.count({
-          where: { wasAccepted: true }
-        }),
-
-        // Average overall score
-        prisma.schedulingSuggestion.aggregate({
-          _avg: { overallScore: true }
-        }),
-
-        // Top suggested providers
-        prisma.schedulingSuggestion.groupBy({
-          by: ['suggestedProviderId'],
-          _count: { id: true },
-          orderBy: { _count: { id: 'desc' } },
-          take: 5
-        })
-      ]);
-
-      totalSuggestions = total;
-      acceptedSuggestions = accepted;
-      averageScore = avgScore;
-      topProviders = top;
-    } catch (error: any) {
+      // Phase 3.2: Use service method instead of direct prisma calls
+      stats = await aiSchedulingService.getSchedulingStatistics();
+    } catch (error) {
       // If Prisma model calls fail, return empty stats
       logControllerError('Error querying scheduling suggestions', error);
-      return res.status(200).json({
-        message: 'AI Scheduling feature not yet enabled',
+      return sendSuccess(res, {
         stats: {
           totalSuggestions: 0,
           acceptedSuggestions: 0,
@@ -538,44 +373,37 @@ export async function getSchedulingStats(req: Request, res: Response) {
           topSuggestedProviders: []
         },
         featureStatus: 'NOT_ENABLED',
-        error: error.message
-      });
+        error: getErrorMessage(error)
+      }, 'AI Scheduling feature not yet enabled');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma calls
     // Get provider details for top providers
-    const providerDetails = await Promise.all(
-      topProviders.map(async (tp) => {
-        const provider = await prisma.user.findUnique({
-          where: { id: tp.suggestedProviderId },
-          select: { id: true, firstName: true, lastName: true, title: true }
-        });
-        return {
-          provider,
-          suggestionCount: tp._count.id
-        };
-      })
-    );
+    const providerIds = stats.topProviders.map(tp => tp.suggestedProviderId);
+    const providers = await aiSchedulingService.getProviderDetailsForStats(providerIds);
+    const providerDetails = stats.topProviders.map((tp, idx) => ({
+      provider: providers[idx],
+      suggestionCount: tp._count.id,
+    }));
 
-    const acceptanceRate = totalSuggestions > 0
-      ? (acceptedSuggestions / totalSuggestions) * 100
+    const acceptanceRate = stats.totalSuggestions > 0
+      ? (stats.acceptedSuggestions / stats.totalSuggestions) * 100
       : 0;
 
-    res.status(200).json({
-      message: 'Scheduling statistics retrieved successfully',
+    return sendSuccess(res, {
       stats: {
-        totalSuggestions,
-        acceptedSuggestions,
+        totalSuggestions: stats.totalSuggestions,
+        acceptedSuggestions: stats.acceptedSuggestions,
         acceptanceRate: acceptanceRate.toFixed(2) + '%',
-        averageScore: averageScore._avg.overallScore?.toFixed(2) || 0,
+        averageScore: stats.averageScore._avg.overallScore?.toFixed(2) || 0,
         topSuggestedProviders: providerDetails
       }
-    });
-  } catch (error: any) {
+    }, 'Scheduling statistics retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting scheduling stats', error);
 
     // Return graceful fallback for any database errors
-    res.status(200).json({
-      message: 'AI Scheduling feature not yet enabled',
+    return sendSuccess(res, {
       stats: {
         totalSuggestions: 0,
         acceptedSuggestions: 0,
@@ -584,8 +412,8 @@ export async function getSchedulingStats(req: Request, res: Response) {
         topSuggestedProviders: []
       },
       featureStatus: 'NOT_ENABLED',
-      error: error.message
-    });
+      error: getErrorMessage(error)
+    }, 'AI Scheduling feature not yet enabled');
   }
 }
 
@@ -596,42 +424,27 @@ export async function getSchedulingStats(req: Request, res: Response) {
 export async function parseNaturalLanguageRequest(req: Request, res: Response) {
   try {
     const { requestText } = req.body;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        details: 'User authentication required'
-      });
+      return sendUnauthorized(res, 'User authentication required');
     }
 
     if (!requestText || typeof requestText !== 'string') {
-      return res.status(400).json({
-        error: 'Missing or invalid request text',
-        details: 'requestText field is required and must be a string'
-      });
+      return sendBadRequest(res, 'Missing or invalid request text: requestText field is required and must be a string');
     }
 
     if (requestText.length > 500) {
-      return res.status(400).json({
-        error: 'Request text too long',
-        details: 'Request text must be 500 characters or less'
-      });
+      return sendBadRequest(res, 'Request text too long: must be 500 characters or less');
     }
 
     // Parse the request
     const parseResult = await parseSchedulingRequest(requestText, userId);
 
-    res.status(200).json({
-      message: parseResult.success ? 'Request parsed successfully' : 'Could not fully parse request',
-      ...parseResult
-    });
-  } catch (error: any) {
+    return sendSuccess(res, parseResult, parseResult.success ? 'Request parsed successfully' : 'Could not fully parse request');
+  } catch (error) {
     logControllerError('Error parsing natural language request', error);
-    res.status(500).json({
-      error: 'Failed to parse natural language request',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to parse natural language request');
   }
 }
 
@@ -642,49 +455,27 @@ export async function parseNaturalLanguageRequest(req: Request, res: Response) {
 export async function executeNaturalLanguageRequest(req: Request, res: Response) {
   try {
     const { requestText } = req.body;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        details: 'User authentication required'
-      });
+      return sendUnauthorized(res, 'User authentication required');
     }
 
     if (!requestText || typeof requestText !== 'string') {
-      return res.status(400).json({
-        error: 'Missing or invalid request text',
-        details: 'requestText field is required and must be a string'
-      });
+      return sendBadRequest(res, 'Missing or invalid request text: requestText field is required and must be a string');
     }
 
     if (requestText.length > 500) {
-      return res.status(400).json({
-        error: 'Request text too long',
-        details: 'Request text must be 500 characters or less'
-      });
+      return sendBadRequest(res, 'Request text too long: must be 500 characters or less');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Check if AI scheduling features are enabled (table exists)
-    let tableExists = false;
-    try {
-      const result: any = await prisma.$queryRaw`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.tables
-          WHERE table_schema = 'public'
-          AND table_name = 'scheduling_suggestions'
-        ) as exists
-      `;
-      tableExists = result[0]?.exists || false;
-    } catch (error) {
-      logControllerError('Error checking table existence', error);
-      tableExists = false;
-    }
+    const tableExists = await aiSchedulingService.checkSchedulingSuggestionsTableExists();
 
     // If table doesn't exist, return feature not enabled message
     if (!tableExists) {
-      return res.status(200).json({
-        message: 'AI Scheduling feature not yet enabled. Please use the manual scheduling interface.',
+      return sendSuccess(res, {
         parseResult: {
           intent: 'UNKNOWN',
           entities: {},
@@ -696,25 +487,20 @@ export async function executeNaturalLanguageRequest(req: Request, res: Response)
           message: 'Natural language scheduling is not yet available. Please use the manual scheduling interface.'
         },
         featureStatus: 'NOT_ENABLED'
-      });
+      }, 'AI Scheduling feature not yet enabled. Please use the manual scheduling interface.');
     }
 
     // Parse the request
     const parseResult = await parseSchedulingRequest(requestText, userId);
 
     if (!parseResult.success) {
-      return res.status(400).json({
-        error: 'Could not parse request',
-        details: parseResult.clarificationNeeded || 'Unable to understand the scheduling request',
-        parseResult
-      });
+      return sendBadRequest(res, parseResult.clarificationNeeded || 'Unable to understand the scheduling request');
     }
 
     // Execute the parsed request
     const executionResult = await executeSchedulingRequest(parseResult, userId);
 
-    res.status(200).json({
-      message: 'Request executed successfully',
+    return sendSuccess(res, {
       parseResult: {
         intent: parseResult.intent,
         entities: parseResult.entities,
@@ -722,26 +508,25 @@ export async function executeNaturalLanguageRequest(req: Request, res: Response)
         reasoning: parseResult.reasoning
       },
       result: executionResult
-    });
-  } catch (error: any) {
+    }, 'Request executed successfully');
+  } catch (error) {
     logControllerError('Error executing natural language request', error);
 
     // Return graceful fallback for any errors
-    res.status(200).json({
-      message: 'AI Scheduling feature not yet enabled',
+    return sendSuccess(res, {
       parseResult: {
         intent: 'UNKNOWN',
         entities: {},
         confidence: 0,
-        reasoning: ['AI Scheduling feature encountered an error: ' + error.message]
+        reasoning: ['AI Scheduling feature encountered an error: ' + getErrorMessage(error)]
       },
       result: {
         suggestions: [],
         message: 'Natural language scheduling is not yet available. Please use the manual scheduling interface.'
       },
       featureStatus: 'NOT_ENABLED',
-      error: error.message
-    });
+      error: getErrorMessage(error)
+    }, 'AI Scheduling feature not yet enabled');
   }
 }
 
@@ -754,37 +539,23 @@ export async function getProviderLoadMetrics(req: Request, res: Response) {
     const { providerId } = req.params;
 
     if (!providerId) {
-      return res.status(400).json({
-        error: 'Missing required parameter',
-        details: 'providerId is required'
-      });
+      return sendBadRequest(res, 'Missing required parameter: providerId is required');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify provider exists
-    const provider = await prisma.user.findUnique({
-      where: { id: providerId },
-      select: { id: true, firstName: true, lastName: true }
-    });
+    const provider = await aiSchedulingService.findProviderWithName(providerId);
 
     if (!provider) {
-      return res.status(404).json({
-        error: 'Provider not found',
-        details: `No provider found with ID: ${providerId}`
-      });
+      return sendNotFound(res, 'Provider');
     }
 
     const metrics = await calculateProviderLoadMetrics(providerId);
 
-    res.status(200).json({
-      message: 'Provider load metrics retrieved successfully',
-      metrics
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { metrics }, 'Provider load metrics retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting provider load metrics', error);
-    res.status(500).json({
-      error: 'Failed to get provider load metrics',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get provider load metrics');
   }
 }
 
@@ -796,16 +567,10 @@ export async function getTeamLoadDistribution(req: Request, res: Response) {
   try {
     const distribution = await analyzeTeamLoadDistribution();
 
-    res.status(200).json({
-      message: 'Team load distribution analyzed successfully',
-      distribution
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { distribution }, 'Team load distribution analyzed successfully');
+  } catch (error) {
     logControllerError('Error analyzing team load distribution', error);
-    res.status(500).json({
-      error: 'Failed to analyze team load distribution',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to analyze team load distribution');
   }
 }
 
@@ -817,17 +582,13 @@ export async function getLoadRecommendations(req: Request, res: Response) {
   try {
     const recommendations = await getLoadBalancingRecommendations();
 
-    res.status(200).json({
-      message: 'Load balancing recommendations retrieved successfully',
+    return sendSuccess(res, {
       count: recommendations.length,
       recommendations
-    });
-  } catch (error: any) {
+    }, 'Load balancing recommendations retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting load balancing recommendations', error);
-    res.status(500).json({
-      error: 'Failed to get load balancing recommendations',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get load balancing recommendations');
   }
 }
 
@@ -841,25 +602,18 @@ export async function getProviderCapacity(req: Request, res: Response) {
     const limitNum = limit ? parseInt(limit as string) : 10;
 
     if (limitNum < 1 || limitNum > 50) {
-      return res.status(400).json({
-        error: 'Invalid limit parameter',
-        details: 'Limit must be between 1 and 50'
-      });
+      return sendBadRequest(res, 'Invalid limit parameter: must be between 1 and 50');
     }
 
     const providers = await getProvidersByCapacity(limitNum);
 
-    res.status(200).json({
-      message: 'Providers with available capacity retrieved successfully',
+    return sendSuccess(res, {
       count: providers.length,
       providers
-    });
-  } catch (error: any) {
+    }, 'Providers with available capacity retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting provider capacity', error);
-    res.status(500).json({
-      error: 'Failed to get provider capacity',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get provider capacity');
   }
 }
 
@@ -876,17 +630,13 @@ export async function runPatternDetection(req: Request, res: Response) {
 
     const patterns = await detectAllPatterns(start, end);
 
-    res.status(200).json({
-      message: 'Pattern detection completed successfully',
+    return sendSuccess(res, {
       count: patterns.length,
       patterns
-    });
-  } catch (error: any) {
+    }, 'Pattern detection completed successfully');
+  } catch (error) {
     logControllerError('Error running pattern detection', error);
-    res.status(500).json({
-      error: 'Failed to run pattern detection',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to run pattern detection');
   }
 }
 
@@ -903,17 +653,13 @@ export async function getPatterns(req: Request, res: Response) {
       category as any
     );
 
-    res.status(200).json({
-      message: 'Active patterns retrieved successfully',
+    return sendSuccess(res, {
       count: patterns.length,
       patterns
-    });
-  } catch (error: any) {
+    }, 'Active patterns retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting patterns', error);
-    res.status(500).json({
-      error: 'Failed to get patterns',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get patterns');
   }
 }
 
@@ -925,16 +671,10 @@ export async function getPatternsStats(req: Request, res: Response) {
   try {
     const stats = await getPatternStatistics();
 
-    res.status(200).json({
-      message: 'Pattern statistics retrieved successfully',
-      stats
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { stats }, 'Pattern statistics retrieved successfully');
+  } catch (error) {
     logControllerError('Error getting pattern statistics', error);
-    res.status(500).json({
-      error: 'Failed to get pattern statistics',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get pattern statistics');
   }
 }
 
@@ -948,35 +688,23 @@ export async function resolvePatternController(req: Request, res: Response) {
     const { resolutionNotes } = req.body;
 
     if (!patternId) {
-      return res.status(400).json({
-        error: 'Missing required parameter',
-        details: 'patternId is required'
-      });
+      return sendBadRequest(res, 'Missing required parameter: patternId is required');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify pattern exists
-    const pattern = await prisma.schedulingPattern.findUnique({
-      where: { id: patternId }
-    });
+    const pattern = await aiSchedulingService.findSchedulingPattern(patternId);
 
     if (!pattern) {
-      return res.status(404).json({
-        error: 'Pattern not found',
-        details: `No pattern found with ID: ${patternId}`
-      });
+      return sendNotFound(res, 'Pattern');
     }
 
     await resolvePattern(patternId, resolutionNotes);
 
-    res.status(200).json({
-      message: 'Pattern marked as resolved successfully'
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Pattern marked as resolved successfully');
+  } catch (error) {
     logControllerError('Error resolving pattern', error);
-    res.status(500).json({
-      error: 'Failed to resolve pattern',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to resolve pattern');
   }
 }
 
@@ -990,34 +718,22 @@ export async function ignorePatternController(req: Request, res: Response) {
     const { ignoreReason } = req.body;
 
     if (!patternId) {
-      return res.status(400).json({
-        error: 'Missing required parameter',
-        details: 'patternId is required'
-      });
+      return sendBadRequest(res, 'Missing required parameter: patternId is required');
     }
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify pattern exists
-    const pattern = await prisma.schedulingPattern.findUnique({
-      where: { id: patternId }
-    });
+    const pattern = await aiSchedulingService.findSchedulingPattern(patternId);
 
     if (!pattern) {
-      return res.status(404).json({
-        error: 'Pattern not found',
-        details: `No pattern found with ID: ${patternId}`
-      });
+      return sendNotFound(res, 'Pattern');
     }
 
     await ignorePattern(patternId, ignoreReason);
 
-    res.status(200).json({
-      message: 'Pattern marked as ignored successfully'
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Pattern marked as ignored successfully');
+  } catch (error) {
     logControllerError('Error ignoring pattern', error);
-    res.status(500).json({
-      error: 'Failed to ignore pattern',
-      details: error.message
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to ignore pattern');
   }
 }

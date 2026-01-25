@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as PriorAuthService from '../services/priorAuthorization.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 /**
  * Phase 2: Prior Authorization Controller (Module 2)
@@ -28,18 +32,10 @@ export const getAuthorizations = async (req: Request, res: Response) => {
 
     const authorizations = await PriorAuthService.getAuthorizations(filters);
 
-    return res.json({
-      success: true,
-      data: authorizations,
-      total: authorizations.length,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching prior authorizations', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch prior authorizations',
-      error: error.message,
-    });
+    return sendSuccess(res, { authorizations, total: authorizations.length });
+  } catch (error) {
+    logger.error('Error fetching prior authorizations', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch prior authorizations');
   }
 };
 
@@ -51,17 +47,10 @@ export const getAuthorizationStats = async (req: Request, res: Response) => {
   try {
     const stats = await PriorAuthService.getAuthorizationStats();
 
-    return res.json({
-      success: true,
-      data: stats,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching authorization stats', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch authorization statistics',
-      error: error.message,
-    });
+    return sendSuccess(res, stats);
+  } catch (error) {
+    logger.error('Error fetching authorization stats', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch authorization statistics');
   }
 };
 
@@ -75,26 +64,16 @@ export const getAuthorizationById = async (req: Request, res: Response) => {
     const authorization = await PriorAuthService.getAuthorizationById(id);
 
     if (!authorization) {
-      return res.status(404).json({
-        success: false,
-        message: 'Prior authorization not found',
-      });
+      return sendNotFound(res, 'Prior authorization');
     }
 
-    return res.json({
-      success: true,
-      data: authorization,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, authorization);
+  } catch (error) {
     logger.error('Error fetching prior authorization', {
-      error: error.message,
+      error: getErrorMessage(error),
       authId: req.params.id,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch prior authorization',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to fetch prior authorization');
   }
 };
 
@@ -132,20 +111,7 @@ export const createAuthorization = async (req: Request, res: Response) => {
       !endDate ||
       !requestingProviderId
     ) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields',
-        required: [
-          'clientId',
-          'insuranceId',
-          'authorizationNumber',
-          'authorizationType',
-          'sessionsAuthorized',
-          'startDate',
-          'endDate',
-          'requestingProviderId',
-        ],
-      });
+      return sendBadRequest(res, 'Missing required fields: clientId, insuranceId, authorizationNumber, authorizationType, sessionsAuthorized, startDate, endDate, requestingProviderId');
     }
 
     const validTypes = [
@@ -155,17 +121,11 @@ export const createAuthorization = async (req: Request, res: Response) => {
       'MEDICATION_MANAGEMENT',
     ];
     if (!validTypes.includes(authorizationType)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid authorization type. Must be one of: ${validTypes.join(', ')}`,
-      });
+      return sendBadRequest(res, `Invalid authorization type. Must be one of: ${validTypes.join(', ')}`);
     }
 
     if (sessionsAuthorized <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Sessions authorized must be greater than 0',
-      });
+      return sendBadRequest(res, 'Sessions authorized must be greater than 0');
     }
 
     const authorization = await PriorAuthService.createAuthorization({
@@ -183,24 +143,16 @@ export const createAuthorization = async (req: Request, res: Response) => {
       performingProviderId,
       clinicalJustification,
       supportingDocuments,
-      createdBy: (req as any).user.id, // From auth middleware
+      createdBy: req.user!.userId, // From auth middleware
     });
 
-    return res.status(201).json({
-      success: true,
-      message: 'Prior authorization created successfully',
-      data: authorization,
-    });
-  } catch (error: any) {
+    return sendCreated(res, authorization, 'Prior authorization created successfully');
+  } catch (error) {
     logger.error('Error creating prior authorization', {
-      error: error.message,
+      error: getErrorMessage(error),
       body: req.body,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create prior authorization',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to create prior authorization');
   }
 };
 
@@ -217,10 +169,7 @@ export const updateAuthorization = async (req: Request, res: Response) => {
     if (updates.status) {
       const validStatuses = ['PENDING', 'APPROVED', 'DENIED', 'EXPIRED', 'EXHAUSTED'];
       if (!validStatuses.includes(updates.status)) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
-        });
+        return sendBadRequest(res, `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
       }
     }
 
@@ -231,21 +180,13 @@ export const updateAuthorization = async (req: Request, res: Response) => {
 
     const authorization = await PriorAuthService.updateAuthorization(id, updates);
 
-    return res.json({
-      success: true,
-      message: 'Prior authorization updated successfully',
-      data: authorization,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, authorization, 'Prior authorization updated successfully');
+  } catch (error) {
     logger.error('Error updating prior authorization', {
-      error: error.message,
+      error: getErrorMessage(error),
       authId: req.params.id,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update prior authorization',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to update prior authorization');
   }
 };
 
@@ -259,10 +200,7 @@ export const useSession = async (req: Request, res: Response) => {
     const { sessionDate, providerId } = req.body;
 
     if (!sessionDate || !providerId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: sessionDate and providerId',
-      });
+      return sendBadRequest(res, 'Missing required fields: sessionDate and providerId');
     }
 
     const authorization = await PriorAuthService.useSession({
@@ -271,28 +209,22 @@ export const useSession = async (req: Request, res: Response) => {
       providerId,
     });
 
-    return res.json({
-      success: true,
-      message: 'Session used successfully',
-      data: authorization,
-      sessionsRemaining: authorization.sessionsRemaining,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { authorization, sessionsRemaining: authorization.sessionsRemaining }, 'Session used successfully');
+  } catch (error) {
     logger.error('Error using session', {
-      error: error.message,
+      error: getErrorMessage(error),
       authId: req.params.id,
     });
 
     // Return 400 for business logic errors (expired, exhausted, etc.)
-    const status = error.message.includes('expired') || error.message.includes('exhausted')
+    const status = getErrorMessage(error).includes('expired') || getErrorMessage(error).includes('exhausted')
       ? 400
       : 500;
 
-    return res.status(status).json({
-      success: false,
-      message: 'Failed to use session',
-      error: error.message,
-    });
+    if (status === 400) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+    return sendServerError(res, 'Failed to use session');
   }
 };
 
@@ -306,18 +238,11 @@ export const renewAuthorization = async (req: Request, res: Response) => {
     const { newSessionsRequested, newEndDate, renewalJustification } = req.body;
 
     if (!newSessionsRequested || !newEndDate || !renewalJustification) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields',
-        required: ['newSessionsRequested', 'newEndDate', 'renewalJustification'],
-      });
+      return sendBadRequest(res, 'Missing required fields: newSessionsRequested, newEndDate, renewalJustification');
     }
 
     if (newSessionsRequested <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'New sessions requested must be greater than 0',
-      });
+      return sendBadRequest(res, 'New sessions requested must be greater than 0');
     }
 
     const newAuthorization = await PriorAuthService.initiateRenewal({
@@ -325,24 +250,16 @@ export const renewAuthorization = async (req: Request, res: Response) => {
       newSessionsRequested,
       newEndDate: new Date(newEndDate),
       renewalJustification,
-      requestingProviderId: (req as any).user.id, // From auth middleware
+      requestingProviderId: req.user!.userId, // From auth middleware
     });
 
-    return res.status(201).json({
-      success: true,
-      message: 'Renewal initiated successfully',
-      data: newAuthorization,
-    });
-  } catch (error: any) {
+    return sendCreated(res, newAuthorization, 'Renewal initiated successfully');
+  } catch (error) {
     logger.error('Error initiating renewal', {
-      error: error.message,
+      error: getErrorMessage(error),
       authId: req.params.id,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to initiate renewal',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to initiate renewal');
   }
 };
 
@@ -355,17 +272,10 @@ export const checkExpiringAuthorizations = async (req: Request, res: Response) =
   try {
     await PriorAuthService.checkExpiringAuthorizations();
 
-    return res.json({
-      success: true,
-      message: 'Expiring authorizations checked successfully',
-    });
-  } catch (error: any) {
-    logger.error('Error checking expiring authorizations', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to check expiring authorizations',
-      error: error.message,
-    });
+    return sendSuccess(res, null, 'Expiring authorizations checked successfully');
+  } catch (error) {
+    logger.error('Error checking expiring authorizations', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to check expiring authorizations');
   }
 };
 
@@ -378,20 +288,12 @@ export const deleteAuthorization = async (req: Request, res: Response) => {
     const { id } = req.params;
     const authorization = await PriorAuthService.deleteAuthorization(id);
 
-    return res.json({
-      success: true,
-      message: 'Prior authorization deleted successfully',
-      data: authorization,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, authorization, 'Prior authorization deleted successfully');
+  } catch (error) {
     logger.error('Error deleting prior authorization', {
-      error: error.message,
+      error: getErrorMessage(error),
       authId: req.params.id,
     });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to delete prior authorization',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to delete prior authorization');
   }
 };

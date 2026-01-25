@@ -15,6 +15,7 @@ import {
   getStatistics,
 } from '../controllers/reminder.controller.new';
 import { authMiddleware, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -45,13 +46,13 @@ router.use(authMiddleware);
  * GET /api/v1/reminders/config
  * Get current reminder configuration
  */
-router.get('/config', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), getConfig);
+router.get('/config', authorize(UserRoles.ADMINISTRATOR, UserRoles.PRACTICE_ADMIN), getConfig);
 
 /**
  * PUT /api/v1/reminders/config
  * Update reminder configuration
  */
-router.put('/config', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), updateConfig);
+router.put('/config', authorize(UserRoles.ADMINISTRATOR, UserRoles.PRACTICE_ADMIN), updateConfig);
 
 // Testing endpoints (Admin only)
 /**
@@ -59,14 +60,14 @@ router.put('/config', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), updateConfig
  * Send a test SMS to verify configuration
  * Body: { phoneNumber: string, fromNumber: string }
  */
-router.post('/test/sms', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), testSms);
+router.post('/test/sms', authorize(UserRoles.ADMINISTRATOR, UserRoles.PRACTICE_ADMIN), testSms);
 
 /**
  * POST /api/v1/reminders/test/email
  * Send a test email to verify configuration
  * Body: { email: string, fromEmail: string }
  */
-router.post('/test/email', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), testEmail);
+router.post('/test/email', authorize(UserRoles.ADMINISTRATOR, UserRoles.PRACTICE_ADMIN), testEmail);
 
 // Appointment reminder management
 /**
@@ -92,7 +93,7 @@ router.post('/:reminderId/resend', resendReminder);
  * POST /api/v1/reminders/process
  * Manually trigger reminder processing (normally runs via cron)
  */
-router.post('/process', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), processReminders);
+router.post('/process', authorize(UserRoles.ADMINISTRATOR, UserRoles.PRACTICE_ADMIN), processReminders);
 
 /**
  * POST /api/v1/reminders/retry-failed
@@ -100,7 +101,7 @@ router.post('/process', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), processRem
  */
 router.post(
   '/retry-failed',
-  authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.PRACTICE_ADMIN),
   retryFailedReminders
 );
 
@@ -109,13 +110,13 @@ router.post(
  * GET /api/v1/reminders/jobs/status
  * Get status of reminder cron jobs
  */
-router.get('/jobs/status', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), getJobStatus);
+router.get('/jobs/status', authorize(UserRoles.ADMINISTRATOR, UserRoles.PRACTICE_ADMIN), getJobStatus);
 
 /**
  * GET /api/v1/reminders/statistics
  * Get reminder statistics
  * Query params: startDate (optional), endDate (optional)
  */
-router.get('/statistics', authorize('ADMINISTRATOR', 'PRACTICE_ADMIN'), getStatistics);
+router.get('/statistics', authorize(UserRoles.ADMINISTRATOR, UserRoles.PRACTICE_ADMIN), getStatistics);
 
 export default router;

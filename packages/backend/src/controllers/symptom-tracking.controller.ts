@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import symptomTrackingService from '../services/symptom-tracking.service';
 import { ValidationError } from '../utils/errors';
 import logger, { logControllerError } from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendServerError, sendPaginated } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Create a new symptom log entry
@@ -13,11 +15,11 @@ export const createSymptomLog = async (req: Request, res: Response) => {
 
     // Validate required fields
     if (!data.symptoms || !Array.isArray(data.symptoms) || data.symptoms.length === 0) {
-      throw new ValidationError('Symptoms array is required');
+      return sendBadRequest(res, 'Symptoms array is required');
     }
 
     if (!data.severity || data.severity < 1 || data.severity > 10) {
-      throw new ValidationError('Severity must be between 1 and 10');
+      return sendBadRequest(res, 'Severity must be between 1 and 10');
     }
 
     const log = await symptomTrackingService.logSymptom(
@@ -26,17 +28,10 @@ export const createSymptomLog = async (req: Request, res: Response) => {
       req.user!.id
     );
 
-    res.status(201).json({
-      success: true,
-      data: log,
-      message: 'Symptom log created successfully',
-    });
+    return sendCreated(res, log, 'Symptom log created successfully');
   } catch (error) {
     logControllerError('createSymptomLog', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create symptom log',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to create symptom log');
   }
 };
 
@@ -60,17 +55,10 @@ export const getSymptomLogs = async (req: Request, res: Response) => {
 
     const result = await symptomTrackingService.getSymptomLogs(clientId, filters);
 
-    res.status(200).json({
-      success: true,
-      data: result.logs,
-      pagination: result.pagination,
-    });
+    return sendPaginated(res, result.logs, result.pagination);
   } catch (error) {
     logControllerError('getSymptomLogs', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch symptom logs',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch symptom logs');
   }
 };
 
@@ -83,16 +71,10 @@ export const getSymptomLogById = async (req: Request, res: Response) => {
 
     const log = await symptomTrackingService.getSymptomLogById(id);
 
-    res.status(200).json({
-      success: true,
-      data: log,
-    });
+    return sendSuccess(res, log);
   } catch (error) {
     logControllerError('getSymptomLogById', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch symptom log',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch symptom log');
   }
 };
 
@@ -110,17 +92,10 @@ export const updateSymptomLog = async (req: Request, res: Response) => {
       req.user!.id
     );
 
-    res.status(200).json({
-      success: true,
-      data: log,
-      message: 'Symptom log updated successfully',
-    });
+    return sendSuccess(res, log, 'Symptom log updated successfully');
   } catch (error) {
     logControllerError('updateSymptomLog', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update symptom log',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to update symptom log');
   }
 };
 
@@ -133,13 +108,10 @@ export const deleteSymptomLog = async (req: Request, res: Response) => {
 
     const result = await symptomTrackingService.deleteSymptomLog(id, req.user!.id);
 
-    res.status(200).json(result);
+    return sendSuccess(res, result);
   } catch (error) {
     logControllerError('deleteSymptomLog', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete symptom log',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to delete symptom log');
   }
 };
 
@@ -175,16 +147,10 @@ export const getSymptomTrends = async (req: Request, res: Response) => {
 
     const trends = await symptomTrackingService.getSymptomTrends(clientId, dateRange);
 
-    res.status(200).json({
-      success: true,
-      data: trends,
-    });
+    return sendSuccess(res, trends);
   } catch (error) {
     logControllerError('getSymptomTrends', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch symptom trends',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch symptom trends');
   }
 };
 
@@ -220,15 +186,9 @@ export const getSymptomSummary = async (req: Request, res: Response) => {
 
     const summary = await symptomTrackingService.getSymptomSummary(clientId, dateRange);
 
-    res.status(200).json({
-      success: true,
-      data: summary,
-    });
+    return sendSuccess(res, summary);
   } catch (error) {
     logControllerError('getSymptomSummary', error, { params: req.params });
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch symptom summary',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch symptom summary');
   }
 };

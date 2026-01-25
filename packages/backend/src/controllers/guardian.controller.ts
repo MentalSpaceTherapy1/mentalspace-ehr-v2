@@ -1,17 +1,21 @@
 import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import prisma from '../services/database';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import * as guardianService from '../services/guardian.service';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError, sendValidationError } from '../utils/apiResponse';
 
 // Helper to clean empty strings from object
-const cleanEmptyStrings = (obj: any): any => {
-  const cleaned: any = {};
+const cleanEmptyStrings = <T extends Record<string, unknown>>(obj: T): Partial<T> => {
+  const cleaned: Partial<T> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value === '' || value === null) {
       // Don't include empty strings or null in the cleaned object
       continue;
     }
-    cleaned[key] = value;
+    (cleaned as Record<string, unknown>)[key] = value;
   }
   return cleaned;
 };
@@ -37,24 +41,15 @@ export const getClientGuardians = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
 
-    const guardians = await prisma.legalGuardian.findMany({
-      where: { clientId },
-      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const guardians = await guardianService.getClientGuardians(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: guardians,
-    });
+    return sendSuccess(res, guardians);
   } catch (error) {
     const errorId = logControllerError('Get guardians', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve guardians',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve guardians', errorId);
   }
 };
 
@@ -63,40 +58,19 @@ export const getGuardianById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const guardian = await prisma.legalGuardian.findUnique({
-      where: { id },
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            medicalRecordNumber: true,
-          },
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const guardian = await guardianService.getGuardianById(id);
 
     if (!guardian) {
-      return res.status(404).json({
-        success: false,
-        message: 'Guardian not found',
-      });
+      return sendNotFound(res, 'Guardian');
     }
 
-    res.status(200).json({
-      success: true,
-      data: guardian,
-    });
+    return sendSuccess(res, guardian);
   } catch (error) {
     const errorId = logControllerError('Get guardian', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve guardian',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to retrieve guardian', errorId);
   }
 };
 
@@ -107,52 +81,19 @@ export const createGuardian = async (req: Request, res: Response) => {
     const cleanedBody = cleanEmptyStrings(req.body);
     const validatedData = guardianSchema.parse(cleanedBody);
 
-    // If this guardian is marked as primary, unset any other primary guardians for this client
-    if (validatedData.isPrimary) {
-      await prisma.legalGuardian.updateMany({
-        where: {
-          clientId: validatedData.clientId,
-          isPrimary: true,
-        },
-        data: {
-          isPrimary: false,
-        },
-      });
-    }
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const guardian = await guardianService.createGuardian(validatedData);
 
-    // Convert empty strings to undefined for database
-    const dataToCreate = {
-      ...validatedData,
-      email: validatedData.email === '' ? undefined : validatedData.email,
-      address: validatedData.address === '' ? undefined : validatedData.address,
-    };
-
-    const guardian = await prisma.legalGuardian.create({
-      data: dataToCreate as any,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Guardian created successfully',
-      data: guardian,
-    });
+    return sendCreated(res, guardian, 'Guardian created successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     const errorId = logControllerError('Create guardian', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create guardian',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to create guardian', errorId);
   }
 };
 
@@ -164,58 +105,23 @@ export const updateGuardian = async (req: Request, res: Response) => {
     const cleanedBody = cleanEmptyStrings(req.body);
     const validatedData = updateGuardianSchema.parse(cleanedBody);
 
-    const existingGuardian = await prisma.legalGuardian.findUnique({
-      where: { id },
-    });
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const guardian = await guardianService.updateGuardian(id, validatedData);
 
-    if (!existingGuardian) {
-      return res.status(404).json({
-        success: false,
-        message: 'Guardian not found',
-      });
+    if (!guardian) {
+      return sendNotFound(res, 'Guardian');
     }
 
-    // If this guardian is being set as primary, unset other primary guardians
-    if (validatedData.isPrimary) {
-      await prisma.legalGuardian.updateMany({
-        where: {
-          clientId: existingGuardian.clientId,
-          isPrimary: true,
-          id: { not: id },
-        },
-        data: {
-          isPrimary: false,
-        },
-      });
-    }
-
-    const guardian = await prisma.legalGuardian.update({
-      where: { id },
-      data: validatedData,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Guardian updated successfully',
-      data: guardian,
-    });
+    return sendSuccess(res, guardian, 'Guardian updated successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
     const errorId = logControllerError('Update guardian', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update guardian',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to update guardian', errorId);
   }
 };
 
@@ -224,33 +130,18 @@ export const deleteGuardian = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const existingGuardian = await prisma.legalGuardian.findUnique({
-      where: { id },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const result = await guardianService.deleteGuardian(id);
 
-    if (!existingGuardian) {
-      return res.status(404).json({
-        success: false,
-        message: 'Guardian not found',
-      });
+    if (!result) {
+      return sendNotFound(res, 'Guardian');
     }
 
-    await prisma.legalGuardian.delete({
-      where: { id },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Guardian deleted successfully',
-    });
+    return sendSuccess(res, null, 'Guardian deleted successfully');
   } catch (error) {
     const errorId = logControllerError('Delete guardian', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete guardian',
-      errorId,
-    });
+    return sendServerError(res, 'Failed to delete guardian', errorId);
   }
 };

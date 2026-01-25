@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { sendEmail, EmailTemplates, isResendConfigured } from '../services/resend.service';
 import config from '../config';
+import { UserRoles } from '@mentalspace/shared';
 
 const prisma = new PrismaClient();
 
@@ -70,7 +71,7 @@ export const performanceReviewReminders = cron.schedule('0 9 * * *', async () =>
       // Get supervisor email (if available)
       const supervisor = await prisma.user.findFirst({
         where: {
-          roles: { hasSome: ['SUPERVISOR', 'ADMINISTRATOR', 'SUPER_ADMIN'] },
+          roles: { hasSome: [UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN] },
         },
         select: { email: true, firstName: true },
       });
@@ -112,7 +113,7 @@ export const performanceReviewReminders = cron.schedule('0 9 * * *', async () =>
 
       const supervisor = await prisma.user.findFirst({
         where: {
-          roles: { hasSome: ['SUPERVISOR', 'ADMINISTRATOR', 'SUPER_ADMIN'] },
+          roles: { hasSome: [UserRoles.SUPERVISOR, UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN] },
         },
         select: { email: true, firstName: true },
       });
@@ -275,7 +276,7 @@ export const attendanceComplianceCheck = cron.schedule('0 8 * * 1', async () => 
       if (isResendConfigured()) {
         const hrUsers = await prisma.user.findMany({
           where: {
-            roles: { hasSome: ['ADMINISTRATOR', 'SUPER_ADMIN'] },
+            roles: { hasSome: [UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN] },
             employmentStatus: 'ACTIVE',
           },
           select: { email: true, firstName: true },

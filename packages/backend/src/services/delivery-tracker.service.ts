@@ -1,5 +1,6 @@
 import { PrismaClient } from '@mentalspace/database';
 import { sendReportEmail } from './email-distribution.service';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -69,7 +70,7 @@ export async function retryFailedDelivery(deliveryId: string) {
   }
 
   if (delivery.attemptCount >= MAX_RETRY_ATTEMPTS) {
-    console.log(`[Delivery Tracker] Max retry attempts reached for delivery ${deliveryId}`);
+    logger.info(`[Delivery Tracker] Max retry attempts reached for delivery ${deliveryId}`);
     await updateDeliveryStatus(
       deliveryId,
       'PERMANENTLY_FAILED',
@@ -78,7 +79,7 @@ export async function retryFailedDelivery(deliveryId: string) {
     return false;
   }
 
-  console.log(`[Delivery Tracker] Retrying delivery ${deliveryId} (attempt ${delivery.attemptCount + 1})`);
+  logger.info(`[Delivery Tracker] Retrying delivery ${deliveryId} (attempt ${delivery.attemptCount + 1})`);
 
   try {
     const recipients = delivery.recipients as any;
@@ -95,18 +96,20 @@ export async function retryFailedDelivery(deliveryId: string) {
     });
 
     await updateDeliveryStatus(deliveryId, 'SENT', undefined, new Date());
-    console.log(`[Delivery Tracker] Retry successful for delivery ${deliveryId}`);
+    logger.info(`[Delivery Tracker] Retry successful for delivery ${deliveryId}`);
     return true;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     await updateDeliveryStatus(deliveryId, 'FAILED', errorMsg);
-    console.error(`[Delivery Tracker] Retry failed for delivery ${deliveryId}:`, error);
+    logger.error(`[Delivery Tracker] Retry failed for delivery ${deliveryId}`, { error });
 
     // Schedule next retry if attempts remaining
     if (delivery.attemptCount + 1 < MAX_RETRY_ATTEMPTS) {
       const delay = RETRY_DELAYS[delivery.attemptCount] || RETRY_DELAYS[RETRY_DELAYS.length - 1];
       setTimeout(() => {
-        retryFailedDelivery(deliveryId).catch(console.error);
+        retryFailedDelivery(deliveryId).catch((err) => {
+          logger.error('[Delivery Tracker] Scheduled retry failed', { deliveryId, error: err });
+        });
       }, delay);
     }
 
@@ -127,13 +130,13 @@ export async function processFailedDeliveries() {
     }
   });
 
-  console.log(`[Delivery Tracker] Found ${failedDeliveries.length} failed deliveries to retry`);
+  logger.info(`[Delivery Tracker] Found ${failedDeliveries.length} failed deliveries to retry`);
 
   for (const delivery of failedDeliveries) {
     try {
       await retryFailedDelivery(delivery.id);
     } catch (error) {
-      console.error(`[Delivery Tracker] Error processing failed delivery ${delivery.id}:`, error);
+      logger.error('Delivery Tracker: Error processing failed delivery', { deliveryId: delivery.id, error });
     }
   }
 }
@@ -170,7 +173,7 @@ export async function getDeliveryStats(scheduleId: string) {
 }
 
 export async function handleBounce(deliveryId: string, bounceType: string, bounceMessage: string) {
-  console.log(`[Delivery Tracker] Handling bounce for delivery ${deliveryId}: ${bounceType}`);
+  logger.info(`[Delivery Tracker] Handling bounce for delivery ${deliveryId}: ${bounceType}`);
 
   const delivery = await prisma.deliveryLog.findUnique({
     where: { id: deliveryId }
@@ -219,7 +222,7 @@ export async function cleanupOldDeliveryLogs(daysToKeep = 90) {
     }
   });
 
-  console.log(`[Delivery Tracker] Cleaned up ${result.count} old delivery logs`);
+  logger.info(`[Delivery Tracker] Cleaned up ${result.count} old delivery logs`);
   return result.count;
 }
 
@@ -337,9 +340,9 @@ export function startDeliveryRetryProcessor() {
     try {
       await processFailedDeliveries();
     } catch (error) {
-      console.error('[Delivery Tracker] Error in retry processor:', error);
+      logger.error('Delivery Tracker: Error in retry processor', { error });
     }
   }, 5 * 60 * 1000); // 5 minutes
 
-  console.log('[Delivery Tracker] Retry processor started');
+  logger.info('[Delivery Tracker] Retry processor started');
 }

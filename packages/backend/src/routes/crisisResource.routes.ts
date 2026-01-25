@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import * as crisisResourceController from '../controllers/crisisResource.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -44,28 +45,28 @@ router.get(
 router.post(
   '/',
   authenticate,
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   crisisResourceController.createCrisisResource
 );
 
 router.put(
   '/:id',
   authenticate,
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   crisisResourceController.updateCrisisResource
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   crisisResourceController.deleteCrisisResource
 );
 
 router.post(
   '/reorder',
   authenticate,
-  authorize('ADMINISTRATOR', 'SUPERVISOR'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR),
   crisisResourceController.reorderCrisisResources
 );
 

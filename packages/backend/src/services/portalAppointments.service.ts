@@ -1,5 +1,6 @@
 import prisma from './database';
 import logger from '../utils/logger';
+import { AppointmentStatus as AppointmentStatusConst } from '@mentalspace/shared';
 
 /**
  * Get client's upcoming appointments
@@ -13,7 +14,7 @@ export async function getUpcomingAppointments(clientId: string) {
           gte: new Date(),
         },
         status: {
-          in: ['SCHEDULED', 'CONFIRMED', 'CHECKED_IN'],
+          in: [AppointmentStatusConst.SCHEDULED, AppointmentStatusConst.CONFIRMED, AppointmentStatusConst.CHECKED_IN],
         },
       },
       include: {
@@ -134,7 +135,7 @@ export async function requestCancellation(appointmentId: string, clientId: strin
       throw new Error('Appointment not found');
     }
 
-    if (appointment.status === 'CANCELLED') {
+    if (appointment.status === AppointmentStatusConst.CANCELLED) {
       throw new Error('Appointment is already cancelled');
     }
 
@@ -142,7 +143,7 @@ export async function requestCancellation(appointmentId: string, clientId: strin
     const updated = await prisma.appointment.update({
       where: { id: appointmentId },
       data: {
-        status: 'CANCELLED',
+        status: AppointmentStatusConst.CANCELLED,
         cancellationNotes: reason ? `Client cancellation reason: ${reason}` : 'Cancelled by client via portal',
         cancellationDate: new Date(),
       },

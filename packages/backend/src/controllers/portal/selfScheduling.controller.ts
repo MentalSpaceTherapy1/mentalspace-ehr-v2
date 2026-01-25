@@ -7,6 +7,9 @@ import { PortalRequest } from '../../types/express.d';
 import * as availableSlotsService from '../../services/available-slots.service';
 import { addMinutes, parseISO, format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
+import { UserRoles } from '@mentalspace/shared';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendServerError } from '../../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../../utils/errorHelpers';
 
 // ============================================================================
 // PORTAL SELF-SCHEDULING CONTROLLER
@@ -41,10 +44,7 @@ export const getAvailableClinicians = async (req: PortalRequest, res: Response) 
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get client's primary therapist
@@ -67,16 +67,10 @@ export const getAvailableClinicians = async (req: PortalRequest, res: Response) 
       });
     }
 
-    res.status(200).json({
-      success: true,
-      data: clinicians,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, clinicians);
+  } catch (error) {
     logger.error('Error getting available clinicians:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to get available clinicians',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get available clinicians');
   }
 };
 
@@ -91,10 +85,7 @@ export const getAvailableSlots = async (req: PortalRequest, res: Response) => {
     const { startDate, endDate } = req.query;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     if (!startDate || !endDate) {
@@ -112,16 +103,10 @@ export const getAvailableSlots = async (req: PortalRequest, res: Response) => {
     // Get available slots
     const slots = await availableSlotsService.getAvailableSlots(clinicianId, start, end);
 
-    res.status(200).json({
-      success: true,
-      data: slots,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, slots);
+  } catch (error) {
     logger.error('Error getting available slots:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to get available slots',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get available slots');
   }
 };
 
@@ -134,10 +119,7 @@ export const getAppointmentTypes = async (req: PortalRequest, res: Response) => 
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const appointmentTypes = await prisma.appointmentType.findMany({
@@ -159,16 +141,10 @@ export const getAppointmentTypes = async (req: PortalRequest, res: Response) => 
       },
     });
 
-    res.status(200).json({
-      success: true,
-      data: appointmentTypes,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, appointmentTypes);
+  } catch (error) {
     logger.error('Error getting appointment types:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to get appointment types',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get appointment types');
   }
 };
 
@@ -181,19 +157,12 @@ export const bookAppointment = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const validation = bookAppointmentSchema.safeParse(req.body);
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request data',
-        errors: validation.error.errors,
-      });
+      return sendBadRequest(res, 'Invalid request data');
     }
 
     const { clinicianId, appointmentDate, appointmentType, duration, notes, serviceLocation } = validation.data;
@@ -219,7 +188,7 @@ export const bookAppointment = async (req: PortalRequest, res: Response) => {
     const clinician = await prisma.user.findFirst({
       where: {
         id: clinicianId,
-        roles: { hasSome: ['CLINICIAN'] },
+        roles: { hasSome: [UserRoles.CLINICIAN] },
       },
       select: {
         id: true,
@@ -298,17 +267,10 @@ export const bookAppointment = async (req: PortalRequest, res: Response) => {
       appointmentType,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Appointment booked successfully',
-      data: appointment,
-    });
-  } catch (error: any) {
+    return sendCreated(res, appointment, 'Appointment booked successfully');
+  } catch (error) {
     logger.error('Error booking appointment:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to book appointment',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to book appointment');
   }
 };
 
@@ -322,19 +284,12 @@ export const rescheduleAppointment = async (req: PortalRequest, res: Response) =
     const { appointmentId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const validation = rescheduleAppointmentSchema.safeParse(req.body);
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request data',
-        errors: validation.error.errors,
-      });
+      return sendBadRequest(res, 'Invalid request data');
     }
 
     const { newAppointmentDate, reason } = validation.data;
@@ -419,17 +374,10 @@ export const rescheduleAppointment = async (req: PortalRequest, res: Response) =
       reason,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Appointment rescheduled successfully',
-      data: updatedAppointment,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, updatedAppointment, 'Appointment rescheduled successfully');
+  } catch (error) {
     logger.error('Error rescheduling appointment:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to reschedule appointment',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to reschedule appointment');
   }
 };
 
@@ -443,19 +391,12 @@ export const cancelAppointment = async (req: PortalRequest, res: Response) => {
     const { appointmentId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const validation = cancelAppointmentSchema.safeParse(req.body);
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request data',
-        errors: validation.error.errors,
-      });
+      return sendBadRequest(res, 'Invalid request data');
     }
 
     const { reason } = validation.data;
@@ -532,22 +473,15 @@ export const cancelAppointment = async (req: PortalRequest, res: Response) => {
       isLateCancellation,
     });
 
-    res.status(200).json({
-      success: true,
-      message: isLateCancellation
-        ? 'Appointment cancelled. Note: This is a late cancellation (less than 24 hours notice) and may be subject to a fee.'
-        : 'Appointment cancelled successfully',
-      data: {
-        appointment: cancelledAppointment,
-        isLateCancellation,
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, {
+      appointment: cancelledAppointment,
+      isLateCancellation,
+    }, isLateCancellation
+      ? 'Appointment cancelled. Note: This is a late cancellation (less than 24 hours notice) and may be subject to a fee.'
+      : 'Appointment cancelled successfully');
+  } catch (error) {
     logger.error('Error cancelling appointment:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to cancel appointment',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to cancel appointment');
   }
 };
 
@@ -562,10 +496,7 @@ export const getMyAppointments = async (req: PortalRequest, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get upcoming appointments
@@ -618,18 +549,12 @@ export const getMyAppointments = async (req: PortalRequest, res: Response) => {
       });
     }
 
-    res.status(200).json({
-      success: true,
-      data: {
-        upcoming: upcomingAppointments,
-        past: includeHistory ? pastAppointments : undefined,
-      },
+    return sendSuccess(res, {
+      upcoming: upcomingAppointments,
+      past: includeHistory ? pastAppointments : undefined,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error getting my appointments:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to get appointments',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get appointments');
   }
 };

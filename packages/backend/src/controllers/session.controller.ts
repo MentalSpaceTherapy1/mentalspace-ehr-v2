@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import sessionService from '../services/session.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { UnauthorizedError } from '../utils/errors';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendPaginated, calculatePagination } from '../utils/apiResponse';
 
 /**
  * Session Management Controller
@@ -27,10 +28,7 @@ export class SessionController {
 
     await sessionService.extendSession(sessionId);
 
-    res.status(200).json({
-      success: true,
-      message: 'Session extended successfully',
-    });
+    return sendSuccess(res, null, 'Session extended successfully');
   });
 
   /**
@@ -55,10 +53,7 @@ export class SessionController {
 
     await sessionService.terminateSession(id);
 
-    res.status(200).json({
-      success: true,
-      message: 'Session terminated successfully',
-    });
+    return sendSuccess(res, null, 'Session terminated successfully');
   });
 
   /**
@@ -74,11 +69,7 @@ export class SessionController {
 
     const count = await sessionService.terminateAllUserSessions(userId);
 
-    res.status(200).json({
-      success: true,
-      message: `${count} session(s) terminated successfully`,
-      count,
-    });
+    return sendSuccess(res, { count }, `${count} session(s) terminated successfully`);
   });
 
   /**
@@ -101,11 +92,7 @@ export class SessionController {
       isCurrent: session.id === currentSessionId,
     }));
 
-    res.status(200).json({
-      success: true,
-      data: sessionsWithCurrentFlag,
-      count: sessions.length,
-    });
+    return sendSuccess(res, { sessions: sessionsWithCurrentFlag, count: sessions.length });
   });
 }
 

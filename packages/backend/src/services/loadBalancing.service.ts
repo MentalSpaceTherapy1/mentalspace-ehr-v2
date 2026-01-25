@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { startOfWeek, endOfWeek, startOfDay, endOfDay, addDays, differenceInMinutes } from 'date-fns';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -322,7 +324,7 @@ export async function analyzeTeamLoadDistribution(): Promise<TeamLoadDistributio
     where: {
       isActive: true,
       roles: {
-        hasSome: ['ADMINISTRATOR', 'CLINICIAN']
+        hasSome: [UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN]
       }
     },
     select: {
@@ -581,7 +583,7 @@ export async function getLoadBalancingAdjustment(providerId: string): Promise<nu
       return 1.1 - ((loadScore - 40) / 40) * 0.2;
     }
   } catch (error) {
-    console.error('Error calculating load balancing adjustment:', error);
+    logger.error('Error calculating load balancing adjustment', { error });
     return 1.0; // Neutral adjustment on error
   }
 }

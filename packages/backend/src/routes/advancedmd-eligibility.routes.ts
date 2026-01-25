@@ -14,6 +14,8 @@ import {
   AdvancedMDEligibilityService,
   EligibilityCheckResult,
 } from '../services/advancedmd/eligibility.service';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -40,7 +42,7 @@ const requireEligibilityAccess = (req: Request, res: Response, next: NextFunctio
   const userRoles = user.roles || (user.role ? [user.role] : []);
 
   // Use actual UserRole enum values
-  const allowedRoles = ['ADMINISTRATOR', 'BILLING_STAFF', 'SUPER_ADMIN', 'CLINICIAN', 'FRONT_DESK'];
+  const allowedRoles: readonly string[] = [UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, UserRoles.SUPER_ADMIN, UserRoles.CLINICIAN, UserRoles.FRONT_DESK];
   const hasAllowedRole = userRoles.some((role: string) => allowedRoles.includes(role));
 
   if (!hasAllowedRole) {
@@ -85,7 +87,7 @@ router.get('/client/:clientId', requireEligibilityAccess, async (req: Request, r
       });
     }
   } catch (error: any) {
-    console.error('[Eligibility Routes] Error checking eligibility:', error);
+    logger.error('Eligibility Routes: Error checking eligibility:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to check eligibility',
@@ -117,7 +119,7 @@ router.get('/appointment/:appointmentId', requireEligibilityAccess, async (req: 
       });
     }
   } catch (error: any) {
-    console.error('[Eligibility Routes] Error checking appointment eligibility:', error);
+    logger.error('Eligibility Routes: Error checking appointment eligibility:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to check eligibility',
@@ -158,7 +160,7 @@ router.post('/batch', requireEligibilityAccess, async (req: Request, res: Respon
       data: result,
     });
   } catch (error: any) {
-    console.error('[Eligibility Routes] Error in batch eligibility check:', error);
+    logger.error('Eligibility Routes: Error in batch eligibility check:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to check eligibility batch',
@@ -189,7 +191,7 @@ router.post('/date-appointments', requireEligibilityAccess, async (req: Request,
       data: result,
     });
   } catch (error: any) {
-    console.error('[Eligibility Routes] Error checking date appointments eligibility:', error);
+    logger.error('Eligibility Routes: Error checking date appointments eligibility:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to check eligibility',
@@ -221,7 +223,7 @@ router.get('/history/:clientId', requireEligibilityAccess, async (req: Request, 
       data: history,
     });
   } catch (error: any) {
-    console.error('[Eligibility Routes] Error getting eligibility history:', error);
+    logger.error('Eligibility Routes: Error getting eligibility history:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get eligibility history',
@@ -256,7 +258,7 @@ router.get('/last/:clientId', requireEligibilityAccess, async (req: Request, res
       });
     }
   } catch (error: any) {
-    console.error('[Eligibility Routes] Error getting last eligibility check:', error);
+    logger.error('Eligibility Routes: Error getting last eligibility check:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get last eligibility check',
@@ -282,7 +284,7 @@ router.get('/cache/stats', requireEligibilityAccess, async (req: Request, res: R
       data: stats,
     });
   } catch (error: any) {
-    console.error('[Eligibility Routes] Error getting cache stats:', error);
+    logger.error('Eligibility Routes: Error getting cache stats:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get cache stats',
@@ -306,7 +308,7 @@ router.delete('/cache/client/:clientId', requireEligibilityAccess, async (req: R
       message: `Cache cleared for client ${clientId}`,
     });
   } catch (error: any) {
-    console.error('[Eligibility Routes] Error clearing client cache:', error);
+    logger.error('Eligibility Routes: Error clearing client cache:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to clear client cache',
@@ -325,7 +327,7 @@ router.delete('/cache/all', requireEligibilityAccess, async (req: Request, res: 
     const userRoles = user.roles || (user.role ? [user.role] : []);
 
     // Only allow admins to clear all cache
-    if (!userRoles.includes('ADMINISTRATOR') && !userRoles.includes('SUPER_ADMIN')) {
+    if (!userRoles.includes(UserRoles.ADMINISTRATOR) && !userRoles.includes(UserRoles.SUPER_ADMIN)) {
       return res.status(403).json({
         success: false,
         error: 'Only administrators can clear all cache',
@@ -339,7 +341,7 @@ router.delete('/cache/all', requireEligibilityAccess, async (req: Request, res: 
       message: 'All eligibility cache cleared',
     });
   } catch (error: any) {
-    console.error('[Eligibility Routes] Error clearing all cache:', error);
+    logger.error('Eligibility Routes: Error clearing all cache:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to clear all cache',

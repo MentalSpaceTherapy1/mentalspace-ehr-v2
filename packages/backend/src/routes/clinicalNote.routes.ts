@@ -25,6 +25,7 @@ import {
 } from '../controllers/clinicalNote.controller';
 import { signClinicalNote } from '../controllers/signature.controller';
 import { checkBillingReadiness } from '../controllers/billingHold.controller';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -40,28 +41,28 @@ router.use(authenticate);
 // Get my notes (logged-in clinician's notes across all clients)
 router.get(
   '/my-notes',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   getMyNotes
 );
 
 // Get compliance dashboard data
 router.get(
   '/compliance/dashboard',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, UserRoles.SUPER_ADMIN),
   getComplianceDashboard
 );
 
 // Get appointments without signed notes
 router.get(
   '/compliance/appointments-without-notes',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, UserRoles.SUPER_ADMIN),
   getAppointmentsWithoutNotes
 );
 
 // Get notes for co-signing (supervisor)
 router.get(
   '/cosigning',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICAL_DIRECTOR, UserRoles.SUPER_ADMIN),
   getNotesForCosigning
 );
 
@@ -69,35 +70,35 @@ router.get(
 // Query params: status (comma-separated), limit, noteType, clientId
 router.get(
   '/',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'BILLING_STAFF', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, UserRoles.BILLING_STAFF, UserRoles.SUPER_ADMIN),
   getClinicalNotes
 );
 
 // RLS: Client-specific routes require client access
 router.get(
   '/client/:clientId/diagnosis',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireClientAccess('clientId'),
   getClientDiagnosis
 );
 
 router.get(
   '/client/:clientId/treatment-plan-status',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireClientAccess('clientId'),
   getTreatmentPlanStatus
 );
 
 router.get(
   '/client/:clientId/eligible-appointments/:noteType',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireClientAccess('clientId'),
   getEligibleAppointments
 );
 
 router.get(
   '/client/:clientId/inherited-diagnoses/:noteType',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireClientAccess('clientId'),
   getInheritedDiagnoses
 );
@@ -105,7 +106,7 @@ router.get(
 // RLS: Get all notes for a client (requires client access)
 router.get(
   '/client/:clientId',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireClientAccess('clientId'),
   getClientNotes
 );
@@ -113,7 +114,7 @@ router.get(
 // RLS: Get note by ID (requires note access)
 router.get(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireNoteAccess('id'),
   getClinicalNoteById
 );
@@ -122,21 +123,21 @@ router.get(
 // Note: Client access will be checked in the controller when creating
 router.post(
   '/',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   createClinicalNote
 );
 
 // RLS: Update note (requires note access)
 router.patch(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireNoteAccess('id'),
   updateClinicalNote
 );
 
 router.put(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireNoteAccess('id'),
   updateClinicalNote
 );
@@ -144,7 +145,7 @@ router.put(
 // RLS: Sign note (requires note access)
 router.post(
   '/:id/sign',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireNoteAccess('id'),
   signClinicalNote
 );
@@ -152,7 +153,7 @@ router.post(
 // RLS: Co-sign note (supervisor - requires note access)
 router.post(
   '/:id/cosign',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICAL_DIRECTOR, UserRoles.SUPER_ADMIN),
   requireNoteAccess('id'),
   cosignClinicalNote
 );
@@ -160,7 +161,7 @@ router.post(
 // RLS: Return for revision (supervisor - requires note access)
 router.post(
   '/:id/return-for-revision',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICAL_DIRECTOR, UserRoles.SUPER_ADMIN),
   requireNoteAccess('id'),
   returnForRevision
 );
@@ -168,7 +169,7 @@ router.post(
 // RLS: Resubmit for review (clinician - requires note access)
 router.post(
   '/:id/resubmit-for-review',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'INTERN', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, 'INTERN', UserRoles.SUPER_ADMIN),
   requireNoteAccess('id'),
   resubmitForReview
 );
@@ -181,7 +182,7 @@ router.get('/validation-summary/:noteType', getValidationSummaryForNoteType);
 // RLS: Billing readiness check (note access required)
 router.get(
   '/:id/billing-readiness',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'BILLING_STAFF', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, UserRoles.BILLING_STAFF, UserRoles.SUPER_ADMIN),
   requireNoteAccess('id'),
   checkBillingReadiness
 );
@@ -189,7 +190,7 @@ router.get(
 // RLS: Delete note (draft only - requires note access)
 router.delete(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLINICAL_DIRECTOR', 'SUPER_ADMIN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLINICAL_DIRECTOR, UserRoles.SUPER_ADMIN),
   requireNoteAccess('id'),
   deleteClinicalNote
 );

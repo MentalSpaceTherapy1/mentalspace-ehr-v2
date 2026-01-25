@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import onboardingService from '../services/onboarding.service';
 import { BadRequestError } from '../utils/errors';
 import logger from '../utils/logger';
+import { sendSuccess, sendCreated, sendUnauthorized } from '../utils/apiResponse';
 
 /**
  * Module 9: Onboarding Controller
@@ -28,11 +31,7 @@ class OnboardingController {
         items,
       });
 
-      res.status(201).json({
-        success: true,
-        message: 'Onboarding checklist created successfully',
-        data: checklist,
-      });
+      return sendCreated(res, checklist, 'Onboarding checklist created successfully');
     } catch (error) {
       next(error);
     }
@@ -48,10 +47,7 @@ class OnboardingController {
 
       const checklist = await onboardingService.getOnboardingChecklistByUserId(userId);
 
-      res.status(200).json({
-        success: true,
-        data: checklist,
-      });
+      return sendSuccess(res, checklist);
     } catch (error) {
       next(error);
     }
@@ -67,10 +63,7 @@ class OnboardingController {
 
       const checklist = await onboardingService.getOnboardingChecklistById(id);
 
-      res.status(200).json({
-        success: true,
-        data: checklist,
-      });
+      return sendSuccess(res, checklist);
     } catch (error) {
       next(error);
     }
@@ -93,9 +86,8 @@ class OnboardingController {
 
       const result = await onboardingService.getOnboardingChecklists(filters);
 
-      res.status(200).json({
-        success: true,
-        data: result.checklists,
+      return sendSuccess(res, {
+        checklists: result.checklists,
         pagination: result.pagination,
       });
     } catch (error) {
@@ -114,11 +106,7 @@ class OnboardingController {
 
       const updatedChecklist = await onboardingService.updateOnboardingChecklist(id, updateData);
 
-      res.status(200).json({
-        success: true,
-        message: 'Onboarding checklist updated successfully',
-        data: updatedChecklist,
-      });
+      return sendSuccess(res, updatedChecklist, 'Onboarding checklist updated successfully');
     } catch (error) {
       next(error);
     }
@@ -142,7 +130,7 @@ class OnboardingController {
       const { completed, notes, documentUrl } = req.body;
 
       // Get updatedBy from authenticated user - require valid ID for audit compliance
-      const updatedBy = (req as any).user?.id;
+      const updatedBy = req.user?.userId;
 
       if (!updatedBy) {
         logger.warn('Attempted to update checklist item without authentication', {
@@ -150,10 +138,7 @@ class OnboardingController {
           itemId,
           ip: req.ip,
         });
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required. Please log in to update checklist items.',
-        });
+        return sendUnauthorized(res, 'Authentication required. Please log in to update checklist items.');
       }
 
       const updatedChecklist = await onboardingService.updateChecklistItem(
@@ -167,11 +152,7 @@ class OnboardingController {
         updatedBy
       );
 
-      res.status(200).json({
-        success: true,
-        message: 'Checklist item updated successfully',
-        data: updatedChecklist,
-      });
+      return sendSuccess(res, updatedChecklist, 'Checklist item updated successfully');
     } catch (error) {
       next(error);
     }
@@ -199,11 +180,7 @@ class OnboardingController {
         dueDate: dueDate ? new Date(dueDate) : undefined,
       });
 
-      res.status(201).json({
-        success: true,
-        message: 'Checklist item added successfully',
-        data: updatedChecklist,
-      });
+      return sendCreated(res, updatedChecklist, 'Checklist item added successfully');
     } catch (error) {
       next(error);
     }
@@ -219,11 +196,7 @@ class OnboardingController {
 
       const updatedChecklist = await onboardingService.removeChecklistItem(id, itemId);
 
-      res.status(200).json({
-        success: true,
-        message: 'Checklist item removed successfully',
-        data: updatedChecklist,
-      });
+      return sendSuccess(res, updatedChecklist, 'Checklist item removed successfully');
     } catch (error) {
       next(error);
     }
@@ -239,10 +212,7 @@ class OnboardingController {
 
       const result = await onboardingService.deleteOnboardingChecklist(id);
 
-      res.status(200).json({
-        success: true,
-        message: result.message,
-      });
+      return sendSuccess(res, null, result.message);
     } catch (error) {
       next(error);
     }
@@ -258,10 +228,7 @@ class OnboardingController {
 
       const statistics = await onboardingService.getMentorStatistics(mentorId);
 
-      res.status(200).json({
-        success: true,
-        data: statistics,
-      });
+      return sendSuccess(res, statistics);
     } catch (error) {
       next(error);
     }
@@ -275,10 +242,7 @@ class OnboardingController {
     try {
       const statistics = await onboardingService.getOnboardingStatistics();
 
-      res.status(200).json({
-        success: true,
-        data: statistics,
-      });
+      return sendSuccess(res, statistics);
     } catch (error) {
       next(error);
     }

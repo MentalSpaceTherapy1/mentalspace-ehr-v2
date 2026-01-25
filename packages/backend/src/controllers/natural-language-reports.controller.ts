@@ -1,10 +1,14 @@
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import {
   processNaturalLanguageQuery,
   getExampleQueries,
   suggestReportType,
 } from '../services/natural-language-reports.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendBadRequest, sendServerError } from '../utils/apiResponse';
 
 /**
  * Natural Language Reports Controller
@@ -21,25 +25,16 @@ export async function handleNaturalLanguageQuery(req: Request, res: Response) {
 
     // Validate input
     if (!query || typeof query !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: 'Query is required and must be a string',
-      });
+      return sendBadRequest(res, 'Query is required and must be a string');
     }
 
     // Validate query length
     if (query.length < 3) {
-      return res.status(400).json({
-        success: false,
-        error: 'Query is too short. Please provide more details.',
-      });
+      return sendBadRequest(res, 'Query is too short. Please provide more details.');
     }
 
     if (query.length > 500) {
-      return res.status(400).json({
-        success: false,
-        error: 'Query is too long. Please keep it under 500 characters.',
-      });
+      return sendBadRequest(res, 'Query is too long. Please keep it under 500 characters.');
     }
 
     // Process the query
@@ -47,21 +42,22 @@ export async function handleNaturalLanguageQuery(req: Request, res: Response) {
 
     // Log the query for analytics
     logger.info('Natural language report query processed', {
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
       query,
       reportType: result.interpretation.reportType,
       success: result.success,
       confidence: result.interpretation.confidence,
     });
 
-    return res.status(result.success ? 200 : 400).json(result);
+    if (result.success) {
+      return sendSuccess(res, result);
+    } else {
+      return sendBadRequest(res, result.error || 'Query processing failed');
+    }
 
-  } catch (error: any) {
-    logger.error('Error in natural language query controller:', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      error: 'An error occurred while processing your query. Please try again.',
-    });
+  } catch (error) {
+    logger.error('Error in natural language query controller:', { error: getErrorMessage(error) });
+    return sendServerError(res, 'An error occurred while processing your query. Please try again.');
   }
 }
 
@@ -72,16 +68,10 @@ export async function handleNaturalLanguageQuery(req: Request, res: Response) {
 export async function getQueryExamples(req: Request, res: Response) {
   try {
     const examples = getExampleQueries();
-    return res.status(200).json({
-      success: true,
-      data: examples,
-    });
-  } catch (error: any) {
-    logger.error('Error getting query examples:', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to get example queries',
-    });
+    return sendSuccess(res, examples);
+  } catch (error) {
+    logger.error('Error getting query examples:', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to get example queries');
   }
 }
 
@@ -94,27 +84,18 @@ export async function getSuggestions(req: Request, res: Response) {
     const { q } = req.query;
 
     if (!q || typeof q !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: 'Query parameter "q" is required',
-      });
+      return sendBadRequest(res, 'Query parameter "q" is required');
     }
 
     const suggestions = suggestReportType(q);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        query: q,
-        suggestedReportTypes: suggestions,
-      },
+    return sendSuccess(res, {
+      query: q,
+      suggestedReportTypes: suggestions,
     });
-  } catch (error: any) {
-    logger.error('Error getting suggestions:', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to get suggestions',
-    });
+  } catch (error) {
+    logger.error('Error getting suggestions:', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to get suggestions');
   }
 }
 

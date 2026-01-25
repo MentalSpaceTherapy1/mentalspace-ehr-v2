@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@mentalspace/database';
+// Phase 3.2: Removed direct PrismaClient import - using service methods instead
 import { logControllerError } from '../utils/logger';
 import {
   createSchedule,
@@ -8,11 +8,12 @@ import {
   getSchedulesByUser,
   pauseSchedule,
   resumeSchedule,
-  executeScheduledReport
+  executeScheduledReport,
+  findScheduleByIdAndUser,
+  findScheduleByIdAndUserWithDetails
 } from '../services/report-scheduler.service';
 import { getDeliveryHistory, getDeliveryStats } from '../services/delivery-tracker.service';
-
-const prisma = new PrismaClient();
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 export const reportSchedulesController = {
   // Create a new report schedule
@@ -32,29 +33,29 @@ export const reportSchedulesController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
       // Validate required fields
       if (!reportId || !reportType || !frequency || !format || !recipients) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        return sendBadRequest(res, 'Missing required fields');
       }
 
       // Validate frequency
       const validFrequencies = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'];
       if (!validFrequencies.includes(frequency)) {
-        return res.status(400).json({ error: 'Invalid frequency' });
+        return sendBadRequest(res, 'Invalid frequency');
       }
 
       // Validate format
       const validFormats = ['PDF', 'EXCEL', 'CSV'];
       if (!validFormats.includes(format)) {
-        return res.status(400).json({ error: 'Invalid format' });
+        return sendBadRequest(res, 'Invalid format');
       }
 
       // Validate recipients structure
       if (!recipients.to || !Array.isArray(recipients.to) || recipients.to.length === 0) {
-        return res.status(400).json({ error: 'At least one recipient email is required' });
+        return sendBadRequest(res, 'At least one recipient email is required');
       }
 
       const schedule = await createSchedule({
@@ -69,10 +70,10 @@ export const reportSchedulesController = {
         distributionCondition
       });
 
-      res.status(201).json(schedule);
+      return sendCreated(res, schedule);
     } catch (error) {
       logControllerError('Error creating schedule', error);
-      res.status(500).json({ error: 'Failed to create schedule' });
+      return sendServerError(res, 'Failed to create schedule');
     }
   },
 
@@ -82,15 +83,15 @@ export const reportSchedulesController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
       const schedules = await getSchedulesByUser(userId);
 
-      res.json(schedules);
+      return sendSuccess(res, schedules);
     } catch (error) {
       logControllerError('Error fetching schedules', error);
-      res.status(500).json({ error: 'Failed to fetch schedules' });
+      return sendServerError(res, 'Failed to fetch schedules');
     }
   },
 
@@ -101,31 +102,20 @@ export const reportSchedulesController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      const schedule = await prisma.reportSchedule.findFirst({
-        where: {
-          id,
-          userId
-        },
-        include: {
-          report: true,
-          logs: {
-            orderBy: { createdAt: 'desc' },
-            take: 10
-          }
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const schedule = await findScheduleByIdAndUserWithDetails(id, userId);
 
       if (!schedule) {
-        return res.status(404).json({ error: 'Schedule not found' });
+        return sendNotFound(res, 'Schedule');
       }
 
-      res.json(schedule);
+      return sendSuccess(res, schedule);
     } catch (error) {
       logControllerError('Error fetching schedule', error);
-      res.status(500).json({ error: 'Failed to fetch schedule' });
+      return sendServerError(res, 'Failed to fetch schedule');
     }
   },
 
@@ -145,26 +135,21 @@ export const reportSchedulesController = {
       } = req.body;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify schedule belongs to user
-      const existingSchedule = await prisma.reportSchedule.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const existingSchedule = await findScheduleByIdAndUser(id, userId);
 
       if (!existingSchedule) {
-        return res.status(404).json({ error: 'Schedule not found' });
+        return sendNotFound(res, 'Schedule');
       }
 
       // Validate frequency if provided
       if (frequency) {
         const validFrequencies = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'];
         if (!validFrequencies.includes(frequency)) {
-          return res.status(400).json({ error: 'Invalid frequency' });
+          return sendBadRequest(res, 'Invalid frequency');
         }
       }
 
@@ -172,7 +157,7 @@ export const reportSchedulesController = {
       if (format) {
         const validFormats = ['PDF', 'EXCEL', 'CSV'];
         if (!validFormats.includes(format)) {
-          return res.status(400).json({ error: 'Invalid format' });
+          return sendBadRequest(res, 'Invalid format');
         }
       }
 
@@ -180,7 +165,7 @@ export const reportSchedulesController = {
       if (status) {
         const validStatuses = ['ACTIVE', 'PAUSED', 'CANCELLED'];
         if (!validStatuses.includes(status)) {
-          return res.status(400).json({ error: 'Invalid status' });
+          return sendBadRequest(res, 'Invalid status');
         }
       }
 
@@ -195,10 +180,10 @@ export const reportSchedulesController = {
 
       const schedule = await updateSchedule(id, updateData);
 
-      res.json(schedule);
+      return sendSuccess(res, schedule);
     } catch (error) {
       logControllerError('Error updating schedule', error);
-      res.status(500).json({ error: 'Failed to update schedule' });
+      return sendServerError(res, 'Failed to update schedule');
     }
   },
 
@@ -209,27 +194,22 @@ export const reportSchedulesController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify schedule belongs to user
-      const schedule = await prisma.reportSchedule.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const schedule = await findScheduleByIdAndUser(id, userId);
 
       if (!schedule) {
-        return res.status(404).json({ error: 'Schedule not found' });
+        return sendNotFound(res, 'Schedule');
       }
 
       await deleteSchedule(id);
 
-      res.json({ message: 'Schedule deleted successfully' });
+      return sendSuccess(res, { message: 'Schedule deleted successfully' });
     } catch (error) {
       logControllerError('Error deleting schedule', error);
-      res.status(500).json({ error: 'Failed to delete schedule' });
+      return sendServerError(res, 'Failed to delete schedule');
     }
   },
 
@@ -240,27 +220,22 @@ export const reportSchedulesController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify schedule belongs to user
-      const schedule = await prisma.reportSchedule.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const schedule = await findScheduleByIdAndUser(id, userId);
 
       if (!schedule) {
-        return res.status(404).json({ error: 'Schedule not found' });
+        return sendNotFound(res, 'Schedule');
       }
 
       const updatedSchedule = await pauseSchedule(id);
 
-      res.json(updatedSchedule);
+      return sendSuccess(res, updatedSchedule);
     } catch (error) {
       logControllerError('Error pausing schedule', error);
-      res.status(500).json({ error: 'Failed to pause schedule' });
+      return sendServerError(res, 'Failed to pause schedule');
     }
   },
 
@@ -271,27 +246,22 @@ export const reportSchedulesController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify schedule belongs to user
-      const schedule = await prisma.reportSchedule.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const schedule = await findScheduleByIdAndUser(id, userId);
 
       if (!schedule) {
-        return res.status(404).json({ error: 'Schedule not found' });
+        return sendNotFound(res, 'Schedule');
       }
 
       const updatedSchedule = await resumeSchedule(id);
 
-      res.json(updatedSchedule);
+      return sendSuccess(res, updatedSchedule);
     } catch (error) {
       logControllerError('Error resuming schedule', error);
-      res.status(500).json({ error: 'Failed to resume schedule' });
+      return sendServerError(res, 'Failed to resume schedule');
     }
   },
 
@@ -302,27 +272,22 @@ export const reportSchedulesController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify schedule belongs to user
-      const schedule = await prisma.reportSchedule.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const schedule = await findScheduleByIdAndUser(id, userId);
 
       if (!schedule) {
-        return res.status(404).json({ error: 'Schedule not found' });
+        return sendNotFound(res, 'Schedule');
       }
 
       await executeScheduledReport(id);
 
-      res.json({ message: 'Schedule executed successfully' });
+      return sendSuccess(res, { message: 'Schedule executed successfully' });
     } catch (error) {
       logControllerError('Error executing schedule', error);
-      res.status(500).json({ error: 'Failed to execute schedule' });
+      return sendServerError(res, 'Failed to execute schedule');
     }
   },
 
@@ -334,27 +299,22 @@ export const reportSchedulesController = {
       const limit = parseInt(req.query.limit as string) || 50;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify schedule belongs to user
-      const schedule = await prisma.reportSchedule.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const schedule = await findScheduleByIdAndUser(id, userId);
 
       if (!schedule) {
-        return res.status(404).json({ error: 'Schedule not found' });
+        return sendNotFound(res, 'Schedule');
       }
 
       const history = await getDeliveryHistory(id, limit);
 
-      res.json(history);
+      return sendSuccess(res, history);
     } catch (error) {
       logControllerError('Error fetching schedule history', error);
-      res.status(500).json({ error: 'Failed to fetch schedule history' });
+      return sendServerError(res, 'Failed to fetch schedule history');
     }
   },
 
@@ -365,27 +325,22 @@ export const reportSchedulesController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify schedule belongs to user
-      const schedule = await prisma.reportSchedule.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const schedule = await findScheduleByIdAndUser(id, userId);
 
       if (!schedule) {
-        return res.status(404).json({ error: 'Schedule not found' });
+        return sendNotFound(res, 'Schedule');
       }
 
       const stats = await getDeliveryStats(id);
 
-      res.json(stats);
+      return sendSuccess(res, stats);
     } catch (error) {
       logControllerError('Error fetching schedule stats', error);
-      res.status(500).json({ error: 'Failed to fetch schedule stats' });
+      return sendServerError(res, 'Failed to fetch schedule stats');
     }
   }
 };

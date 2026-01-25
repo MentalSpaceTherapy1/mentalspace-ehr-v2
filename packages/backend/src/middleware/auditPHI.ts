@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { auditLogger } from '../utils/logger';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 
 /**
  * PHI Access Audit Logging Middleware
@@ -30,8 +32,8 @@ export const auditPHIAccess = (resourceType: 'CLIENT' | 'CLINICAL_NOTE' | 'APPOI
 
         auditLogger.info('PHI Access', {
           // User information
-          userId: (req as any).user?.userId || 'anonymous',
-          userRole: (req as any).user?.roles?.join(',') || 'unknown',
+          userId: req.user?.userId || 'anonymous',
+          userRole: req.user?.roles?.join(',') || 'unknown',
 
           // Resource information
           resourceType,
@@ -86,8 +88,8 @@ export const auditPHIModification = (
     const logModification = () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         auditLogger.info('PHI Modification', {
-          userId: (req as any).user?.userId,
-          userRole: (req as any).user?.roles?.join(','),
+          userId: req.user?.userId,
+          userRole: req.user?.roles?.join(','),
           resourceType,
           resourceId: req.params.id || 'new',
           action,
@@ -119,7 +121,7 @@ export const auditPHIModification = (
  */
 export const logFailedAccess = (req: Request, reason: string) => {
   auditLogger.warn('Failed PHI Access Attempt', {
-    userId: (req as any).user?.userId || 'anonymous',
+    userId: req.user?.userId || 'anonymous',
     reason,
     path: req.path,
     method: req.method,

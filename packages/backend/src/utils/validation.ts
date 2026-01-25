@@ -1,4 +1,16 @@
 import { z } from 'zod';
+import { UserRoles } from '@mentalspace/shared';
+
+// Create enum array from UserRoles constant for Zod validation
+const ROLE_VALUES = [
+  UserRoles.SUPER_ADMIN,
+  UserRoles.ADMINISTRATOR,
+  UserRoles.SUPERVISOR,
+  UserRoles.CLINICIAN,
+  UserRoles.BILLING_STAFF,
+  UserRoles.FRONT_DESK,
+  UserRoles.ASSOCIATE,
+] as const;
 
 // User Registration Schema
 export const registerSchema = z.object({
@@ -13,7 +25,7 @@ export const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   title: z.string().optional(),
-  role: z.enum(['SUPER_ADMIN', 'ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'BILLING_STAFF', 'FRONT_DESK', 'ASSOCIATE']),
+  role: z.enum(ROLE_VALUES),
   licenseNumber: z.string().optional(),
   licenseState: z.string().optional(),
   licenseExpiration: z.preprocess(
@@ -72,7 +84,7 @@ export const createUserSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   title: z.string().optional(),
-  roles: z.array(z.enum(['SUPER_ADMIN', 'ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'BILLING_STAFF', 'FRONT_DESK', 'ASSOCIATE'])).min(1, 'At least one role is required'),
+  roles: z.array(z.enum(ROLE_VALUES)).min(1, 'At least one role is required'),
   npiNumber: z.string().optional(),
   licenseNumber: z.string().optional(),
   licenseState: z.string().optional(),
@@ -91,7 +103,7 @@ export const updateUserAdminSchema = z.object({
   lastName: z.string().min(1).optional(),
   title: z.string().optional(),
   roles: z
-    .array(z.enum(['SUPER_ADMIN', 'ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'BILLING_STAFF', 'FRONT_DESK', 'ASSOCIATE']))
+    .array(z.enum(ROLE_VALUES))
     .min(1, 'At least one role is required')
     .optional(),
   npiNumber: z.string().optional(),

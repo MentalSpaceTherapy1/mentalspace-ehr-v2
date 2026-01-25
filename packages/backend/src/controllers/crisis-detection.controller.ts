@@ -6,6 +6,9 @@
  */
 
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import logger from '../utils/logger';
 import {
   getCrisisLogs,
@@ -15,6 +18,7 @@ import {
   getCrisisStats,
 } from '../services/crisis-detection.service';
 import { CrisisSeverity } from '../config/crisis-keywords';
+import { sendSuccess, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 /**
  * GET /api/crisis/logs
@@ -67,30 +71,23 @@ export const getAllCrisisLogs = async (req: Request, res: Response) => {
     const { logs, total } = await getCrisisLogs(filters);
 
     logger.info('Crisis logs retrieved', {
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
       count: logs.length,
       filters,
     });
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        logs,
-        pagination: {
-          total,
-          page: parseInt(page as string),
-          limit: parseInt(limit as string),
-          pages: Math.ceil(total / parseInt(limit as string)),
-        },
+    return sendSuccess(res, {
+      logs,
+      pagination: {
+        total,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        pages: Math.ceil(total / parseInt(limit as string)),
       },
     });
-  } catch (error: any) {
-    logger.error('Error getting crisis logs', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve crisis logs',
-      error: error.message,
-    });
+  } catch (error) {
+    logger.error('Error getting crisis logs', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to retrieve crisis logs');
   }
 };
 
@@ -106,32 +103,22 @@ export const getCrisisLog = async (req: Request, res: Response) => {
     const log = await getCrisisLogById(id);
 
     logger.info('Crisis log retrieved', {
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
       logId: id,
     });
 
-    return res.status(200).json({
-      success: true,
-      data: log,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, log);
+  } catch (error) {
     logger.error('Error getting crisis log', {
-      error: error.message,
+      error: getErrorMessage(error),
       logId: req.params.id,
     });
 
-    if (error.message.includes('not found')) {
-      return res.status(404).json({
-        success: false,
-        message: 'Crisis detection log not found',
-      });
+    if (getErrorMessage(error).includes('not found')) {
+      return sendNotFound(res, 'Crisis detection log');
     }
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve crisis log',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve crisis log');
   }
 };
 
@@ -144,20 +131,14 @@ export const reviewCrisisLog = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { notes, falsePositive = false, actionTaken } = req.body;
-    const reviewerId = (req as any).user?.id;
+    const reviewerId = req.user?.userId;
 
     if (!reviewerId) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated',
-      });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
     if (!notes || typeof notes !== 'string') {
-      return res.status(400).json({
-        success: false,
-        message: 'Review notes are required',
-      });
+      return sendBadRequest(res, 'Review notes are required');
     }
 
     // Review the detection
@@ -179,22 +160,14 @@ export const reviewCrisisLog = async (req: Request, res: Response) => {
       falsePositive,
     });
 
-    return res.status(200).json({
-      success: true,
-      message: 'Crisis detection reviewed successfully',
-      data: updated,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, updated, 'Crisis detection reviewed successfully');
+  } catch (error) {
     logger.error('Error reviewing crisis log', {
-      error: error.message,
+      error: getErrorMessage(error),
       logId: req.params.id,
     });
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to review crisis detection',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to review crisis detection');
   }
 };
 
@@ -209,35 +182,24 @@ export const recordActionTaken = async (req: Request, res: Response) => {
     const { actionTaken } = req.body;
 
     if (!actionTaken || typeof actionTaken !== 'string') {
-      return res.status(400).json({
-        success: false,
-        message: 'Action taken description is required',
-      });
+      return sendBadRequest(res, 'Action taken description is required');
     }
 
     const updated = await markActionTaken(id, actionTaken);
 
     logger.info('Action recorded for crisis log', {
       logId: id,
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
     });
 
-    return res.status(200).json({
-      success: true,
-      message: 'Action recorded successfully',
-      data: updated,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, updated, 'Action recorded successfully');
+  } catch (error) {
     logger.error('Error recording action', {
-      error: error.message,
+      error: getErrorMessage(error),
       logId: req.params.id,
     });
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to record action',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to record action');
   }
 };
 
@@ -263,20 +225,13 @@ export const getCrisisStatistics = async (req: Request, res: Response) => {
     const stats = await getCrisisStats(filters);
 
     logger.info('Crisis statistics retrieved', {
-      userId: (req as any).user?.id,
+      userId: req.user?.userId,
       filters,
     });
 
-    return res.status(200).json({
-      success: true,
-      data: stats,
-    });
-  } catch (error: any) {
-    logger.error('Error getting crisis statistics', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve statistics',
-      error: error.message,
-    });
+    return sendSuccess(res, stats);
+  } catch (error) {
+    logger.error('Error getting crisis statistics', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to retrieve statistics');
   }
 };

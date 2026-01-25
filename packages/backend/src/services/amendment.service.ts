@@ -2,6 +2,48 @@ import prisma from './database';
 import logger from '../utils/logger';
 import { Prisma } from '@prisma/client';
 
+// ============================================================================
+// HELPER METHODS FOR CONTROLLER (Phase 3.2)
+// ============================================================================
+
+/**
+ * Find user by ID (basic lookup)
+ */
+export async function findUserById(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+}
+
+/**
+ * Get user roles by ID
+ */
+export async function getUserRoles(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { roles: true },
+  });
+}
+
+/**
+ * Find clinical note for access check
+ */
+export async function findNoteForAccessCheck(noteId: string) {
+  return prisma.clinicalNote.findUnique({
+    where: { id: noteId },
+    select: {
+      id: true,
+      clinicianId: true,
+      cosignedBy: true,
+    },
+  });
+}
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
 export interface CreateAmendmentRequest {
   noteId: string;
   reason: string;

@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { z } from 'zod';
+import { getErrorMessage, getErrorCode } from '../../utils/errorHelpers';
 import {
   billingService,
   insuranceService,
@@ -8,6 +9,7 @@ import {
   moodTrackingService,
 } from '../../services/portal';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendServerError } from '../../utils/apiResponse';
 
 // ============================================================================
 // BILLING & PAYMENTS
@@ -27,16 +29,9 @@ export const addPaymentMethod = async (req: PortalRequest, res: Response) => {
       stripeToken: data.stripeToken,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Payment method added successfully',
-      data: paymentMethod,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to add payment method',
-    });
+    return sendCreated(res, paymentMethod, 'Payment method added successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to add payment method');
   }
 };
 
@@ -46,15 +41,9 @@ export const getPaymentMethods = async (req: PortalRequest, res: Response) => {
 
     const paymentMethods = await billingService.getPaymentMethods(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: paymentMethods,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch payment methods',
-    });
+    return sendSuccess(res, paymentMethods);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch payment methods');
   }
 };
 
@@ -72,16 +61,9 @@ export const setDefaultPaymentMethod = async (req: PortalRequest, res: Response)
       paymentMethodId: data.paymentMethodId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Default payment method updated',
-      data: updated,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to update default payment method',
-    });
+    return sendSuccess(res, updated, 'Default payment method updated');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to update default payment method');
   }
 };
 
@@ -95,15 +77,9 @@ export const removePaymentMethod = async (req: PortalRequest, res: Response) => 
       paymentMethodId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Payment method removed successfully',
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to remove payment method',
-    });
+    return sendSuccess(res, null, 'Payment method removed successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to remove payment method');
   }
 };
 
@@ -113,15 +89,9 @@ export const getCurrentBalance = async (req: PortalRequest, res: Response) => {
 
     const balance = await billingService.getCurrentBalance(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: balance,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch balance',
-    });
+    return sendSuccess(res, balance);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch balance');
   }
 };
 
@@ -143,16 +113,9 @@ export const makePayment = async (req: PortalRequest, res: Response) => {
       description: data.description,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Payment processed successfully',
-      data: result,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to process payment',
-    });
+    return sendSuccess(res, result, 'Payment processed successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to process payment');
   }
 };
 
@@ -163,15 +126,9 @@ export const getPaymentHistory = async (req: PortalRequest, res: Response) => {
 
     const payments = await billingService.getPaymentHistory(clientId, limit);
 
-    res.status(200).json({
-      success: true,
-      data: payments,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch payment history',
-    });
+    return sendSuccess(res, payments);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch payment history');
   }
 };
 
@@ -188,10 +145,7 @@ export const uploadInsuranceCard = async (req: PortalRequest, res: Response) => 
     const { insuranceType, frontImage, backImage, insuranceName, policyNumber, groupNumber } = req.body;
 
     if (!insuranceType || !frontImage || !backImage) {
-      return res.status(400).json({
-        success: false,
-        message: 'Insurance type and both card images are required',
-      });
+      return sendBadRequest(res, 'Insurance type and both card images are required');
     }
 
     // Convert base64 to buffer
@@ -210,16 +164,9 @@ export const uploadInsuranceCard = async (req: PortalRequest, res: Response) => 
       groupNumber,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Insurance card uploaded successfully',
-      data: card,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to upload insurance card',
-    });
+    return sendCreated(res, card, 'Insurance card uploaded successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to upload insurance card');
   }
 };
 
@@ -229,15 +176,9 @@ export const getInsuranceCards = async (req: PortalRequest, res: Response) => {
 
     const cards = await insuranceService.getActiveInsuranceCards(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: cards,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch insurance cards',
-    });
+    return sendSuccess(res, cards);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch insurance cards');
   }
 };
 
@@ -277,16 +218,9 @@ export const createSessionReview = async (req: PortalRequest, res: Response) => 
       isAnonymous: data.isAnonymous,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Session review submitted successfully',
-      data: review,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to submit session review',
-    });
+    return sendCreated(res, review, 'Session review submitted successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to submit session review');
   }
 };
 
@@ -296,15 +230,9 @@ export const getClientReviews = async (req: PortalRequest, res: Response) => {
 
     const reviews = await sessionReviewsService.getClientReviews(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: reviews,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch reviews',
-    });
+    return sendSuccess(res, reviews);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch reviews');
   }
 };
 
@@ -324,16 +252,9 @@ export const updateReviewSharing = async (req: PortalRequest, res: Response) => 
       isSharedWithClinician: data.isSharedWithClinician,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Review sharing settings updated',
-      data: updated,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to update review sharing',
-    });
+    return sendSuccess(res, updated, 'Review sharing settings updated');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to update review sharing');
   }
 };
 
@@ -359,16 +280,9 @@ export const createChangeRequest = async (req: PortalRequest, res: Response) => 
       isSensitive: data.isSensitive,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Therapist change request submitted successfully',
-      data: request,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to submit change request',
-    });
+    return sendCreated(res, request, 'Therapist change request submitted successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to submit change request');
   }
 };
 
@@ -378,15 +292,9 @@ export const getClientChangeRequests = async (req: PortalRequest, res: Response)
 
     const requests = await therapistChangeService.getClientChangeRequests(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: requests,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch change requests',
-    });
+    return sendSuccess(res, requests);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch change requests');
   }
 };
 
@@ -400,15 +308,9 @@ export const cancelChangeRequest = async (req: PortalRequest, res: Response) => 
       requestId,
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Change request cancelled successfully',
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to cancel change request',
-    });
+    return sendSuccess(res, null, 'Change request cancelled successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to cancel change request');
   }
 };
 
@@ -440,16 +342,9 @@ export const createMoodEntry = async (req: PortalRequest, res: Response) => {
       sharedWithClinician: data.sharedWithClinician,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Mood entry recorded successfully',
-      data: entry,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to record mood entry',
-    });
+    return sendCreated(res, entry, 'Mood entry recorded successfully');
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to record mood entry');
   }
 };
 
@@ -467,15 +362,9 @@ export const getMoodEntries = async (req: PortalRequest, res: Response) => {
       limit,
     });
 
-    res.status(200).json({
-      success: true,
-      data: entries,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch mood entries',
-    });
+    return sendSuccess(res, entries);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch mood entries');
   }
 };
 
@@ -489,14 +378,8 @@ export const getMoodTrends = async (req: PortalRequest, res: Response) => {
       days,
     });
 
-    res.status(200).json({
-      success: true,
-      data: trends,
-    });
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch mood trends',
-    });
+    return sendSuccess(res, trends);
+  } catch (error) {
+    return sendServerError(res, getErrorMessage(error) || 'Failed to fetch mood trends');
   }
 };

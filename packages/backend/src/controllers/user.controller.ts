@@ -4,6 +4,7 @@ import authService from '../services/auth.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { UserRole } from '@mentalspace/shared';
 import { ValidationError } from '../utils/errors';
+import { sendSuccess, sendCreated, sendPaginated, calculatePagination } from '../utils/apiResponse';
 
 export class UserController {
   /**
@@ -23,11 +24,7 @@ export class UserController {
 
     const result = await userService.getUsers(filters);
 
-    res.status(200).json({
-      success: true,
-      data: result.users,
-      pagination: result.pagination,
-    });
+    return sendPaginated(res, result.users, result.pagination);
   });
 
   /**
@@ -38,10 +35,7 @@ export class UserController {
     const userId = req.params.id;
     const user = await userService.getUserById(userId);
 
-    res.status(200).json({
-      success: true,
-      data: user,
-    });
+    return sendSuccess(res, user);
   });
 
   /**
@@ -58,11 +52,7 @@ export class UserController {
       ? 'User created with temporary password. Password expires in 72 hours.'
       : 'User created successfully';
 
-    res.status(201).json({
-      success: true,
-      message,
-      data: result,
-    });
+    return sendCreated(res, result, message);
   });
 
   /**
@@ -74,11 +64,7 @@ export class UserController {
     const updatedBy = req.user!.userId;
     const user = await userService.updateUser(userId, req.body, updatedBy);
 
-    res.status(200).json({
-      success: true,
-      message: 'User updated successfully',
-      data: user,
-    });
+    return sendSuccess(res, user, 'User updated successfully');
   });
 
   /**
@@ -90,10 +76,7 @@ export class UserController {
     const deactivatedBy = req.user!.userId;
     const result = await userService.deactivateUser(userId, deactivatedBy);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return sendSuccess(res, null, result.message);
   });
 
   /**
@@ -105,10 +88,7 @@ export class UserController {
     const activatedBy = req.user!.userId;
     const result = await userService.activateUser(userId, activatedBy);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return sendSuccess(res, null, result.message);
   });
 
   /**
@@ -122,10 +102,7 @@ export class UserController {
 
     const result = await userService.resetUserPassword(userId, newPassword, resetBy);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return sendSuccess(res, null, result.message);
   });
 
   /**
@@ -135,10 +112,7 @@ export class UserController {
   getUserStats = asyncHandler(async (req: Request, res: Response) => {
     const stats = await userService.getUserStats();
 
-    res.status(200).json({
-      success: true,
-      data: stats,
-    });
+    return sendSuccess(res, stats);
   });
 
   /**
@@ -149,11 +123,7 @@ export class UserController {
     const createdBy = req.user!.userId;
     const result = await userService.createUserWithInvitation(req.body, createdBy);
 
-    res.status(201).json({
-      success: true,
-      message: 'User invited successfully',
-      data: result,
-    });
+    return sendCreated(res, result, 'User invited successfully');
   });
 
   /**
@@ -165,11 +135,7 @@ export class UserController {
     const resendBy = req.user!.userId;
     const result = await userService.resendInvitation(userId, resendBy);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-      data: result,
-    });
+    return sendSuccess(res, result, result.message);
   });
 
   /**
@@ -180,11 +146,7 @@ export class UserController {
     const { email } = req.body;
     const result = await userService.requestPasswordReset(email);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-      data: result,
-    });
+    return sendSuccess(res, result, result.message);
   });
 
   /**
@@ -195,10 +157,7 @@ export class UserController {
     const { token, newPassword } = req.body;
     const result = await userService.resetPasswordWithToken(token, newPassword);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return sendSuccess(res, null, result.message);
   });
 
   /**
@@ -210,10 +169,7 @@ export class UserController {
     const { oldPassword, newPassword } = req.body;
     const result = await userService.changePassword(userId, oldPassword, newPassword);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return sendSuccess(res, null, result.message);
   });
 
   /**
@@ -225,10 +181,7 @@ export class UserController {
     const { newPassword } = req.body;
     const result = await userService.forcePasswordChange(userId, newPassword);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return sendSuccess(res, null, result.message);
   });
 
   /**
@@ -245,10 +198,7 @@ export class UserController {
 
     const result = await authService.unlockAccount(userId, adminId);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return sendSuccess(res, null, result.message);
   });
 
   /**
@@ -265,10 +215,7 @@ export class UserController {
 
     const result = await authService.forcePasswordChange(userId, adminId);
 
-    res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return sendSuccess(res, null, result.message);
   });
 }
 

@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Get pending assessments for client
@@ -13,10 +14,7 @@ export const getPendingAssessments = async (req: PortalRequest, res: Response) =
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const assessments = await prisma.assessmentAssignment.findMany({
@@ -34,16 +32,10 @@ export const getPendingAssessments = async (req: PortalRequest, res: Response) =
 
     logger.info(`Retrieved ${assessments.length} pending assessments for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: assessments,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, assessments);
+  } catch (error) {
     logger.error('Error fetching pending assessments:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch pending assessments',
-    });
+    return sendServerError(res, 'Failed to fetch pending assessments');
   }
 };
 
@@ -56,10 +48,7 @@ export const getCompletedAssessments = async (req: PortalRequest, res: Response)
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const assessments = await prisma.assessmentAssignment.findMany({
@@ -72,16 +61,10 @@ export const getCompletedAssessments = async (req: PortalRequest, res: Response)
 
     logger.info(`Retrieved ${assessments.length} completed assessments for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: assessments,
-    });
+    return sendSuccess(res, assessments);
   } catch (error) {
     logger.error('Error fetching completed assessments:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch completed assessments',
-    });
+    return sendServerError(res, 'Failed to fetch completed assessments');
   }
 };
 
@@ -95,10 +78,7 @@ export const getAssessmentDetails = async (req: PortalRequest, res: Response) =>
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const assessment = await prisma.assessmentAssignment.findFirst({
@@ -109,10 +89,7 @@ export const getAssessmentDetails = async (req: PortalRequest, res: Response) =>
     });
 
     if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Assessment not found',
-      });
+      return sendNotFound(res, 'Assessment');
     }
 
     // Get assessment questions based on type
@@ -120,19 +97,10 @@ export const getAssessmentDetails = async (req: PortalRequest, res: Response) =>
 
     logger.info(`Client ${clientId} accessed assessment ${assessmentId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        assessment,
-        questions,
-      },
-    });
+    return sendSuccess(res, { assessment, questions });
   } catch (error) {
     logger.error('Error fetching assessment details:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch assessment details',
-    });
+    return sendServerError(res, 'Failed to fetch assessment details');
   }
 };
 
@@ -146,10 +114,7 @@ export const startAssessment = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const assessment = await prisma.assessmentAssignment.findFirst({
@@ -161,10 +126,7 @@ export const startAssessment = async (req: PortalRequest, res: Response) => {
     });
 
     if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Assessment not found or already started',
-      });
+      return sendNotFound(res, 'Assessment');
     }
 
     const updated = await prisma.assessmentAssignment.update({
@@ -174,17 +136,10 @@ export const startAssessment = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Client ${clientId} started assessment ${assessmentId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Assessment started',
-      data: updated,
-    });
+    return sendSuccess(res, updated, 'Assessment started');
   } catch (error) {
     logger.error('Error starting assessment:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to start assessment',
-    });
+    return sendServerError(res, 'Failed to start assessment');
   }
 };
 
@@ -199,10 +154,7 @@ export const submitAssessment = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const assessment = await prisma.assessmentAssignment.findFirst({
@@ -213,17 +165,11 @@ export const submitAssessment = async (req: PortalRequest, res: Response) => {
     });
 
     if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Assessment not found',
-      });
+      return sendNotFound(res, 'Assessment');
     }
 
     if (assessment.status === 'COMPLETED') {
-      return res.status(400).json({
-        success: false,
-        message: 'Assessment already completed',
-      });
+      return sendBadRequest(res, 'Assessment already completed');
     }
 
     // Calculate score based on assessment type
@@ -246,17 +192,10 @@ export const submitAssessment = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Client ${clientId} submitted assessment ${assessmentId} with score ${score}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Assessment submitted successfully',
-      data: updated,
-    });
+    return sendSuccess(res, updated, 'Assessment submitted successfully');
   } catch (error) {
     logger.error('Error submitting assessment:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to submit assessment',
-    });
+    return sendServerError(res, 'Failed to submit assessment');
   }
 };
 
@@ -270,10 +209,7 @@ export const getAssessmentResults = async (req: PortalRequest, res: Response) =>
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const assessment = await prisma.assessmentAssignment.findFirst({
@@ -285,24 +221,15 @@ export const getAssessmentResults = async (req: PortalRequest, res: Response) =>
     });
 
     if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Assessment results not found',
-      });
+      return sendNotFound(res, 'Assessment results');
     }
 
     logger.info(`Client ${clientId} viewed results for assessment ${assessmentId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: assessment,
-    });
+    return sendSuccess(res, assessment);
   } catch (error) {
     logger.error('Error fetching assessment results:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch assessment results',
-    });
+    return sendServerError(res, 'Failed to fetch assessment results');
   }
 };
 
@@ -316,10 +243,7 @@ export const getAssessmentHistory = async (req: PortalRequest, res: Response) =>
     const { assessmentType } = req.query;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const where: any = {
@@ -346,16 +270,10 @@ export const getAssessmentHistory = async (req: PortalRequest, res: Response) =>
 
     logger.info(`Retrieved assessment history for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: history,
-    });
+    return sendSuccess(res, history);
   } catch (error) {
     logger.error('Error fetching assessment history:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch assessment history',
-    });
+    return sendServerError(res, 'Failed to fetch assessment history');
   }
 };
 

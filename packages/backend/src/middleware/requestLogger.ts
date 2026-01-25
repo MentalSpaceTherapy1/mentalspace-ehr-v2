@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logRequest, performanceLogger } from '../utils/logger';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 
 /**
  * Enhanced request logger middleware with performance tracking
@@ -9,7 +11,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
 
   // Generate correlation ID for request tracking
   const correlationId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  (req as any).correlationId = correlationId;
+  req.correlationId = correlationId;
 
   // Add correlation ID to response headers
   res.setHeader('X-Correlation-Id', correlationId);
@@ -29,7 +31,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
         url: req.url,
         duration: `${duration}ms`,
         statusCode: res.statusCode,
-        userId: (req as any).user?.userId,
+        userId: req.user?.userId,
       });
     }
   });

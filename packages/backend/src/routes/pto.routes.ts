@@ -14,6 +14,7 @@ import {
   uuidParamSchema,
   userIdParamSchema,
 } from '../validators/pto.validator';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = express.Router();
 
@@ -22,13 +23,13 @@ router.use(authenticate);
 
 // Special endpoints (must come before :id routes)
 // Calendar is viewable by supervisors/admins to see team availability
-router.get('/calendar', requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']), validateQuery(ptoCalendarQuerySchema), ptoController.getPTOCalendar.bind(ptoController));
+router.get('/calendar', requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR]), validateQuery(ptoCalendarQuerySchema), ptoController.getPTOCalendar.bind(ptoController));
 // Alias for frontend compatibility
-router.get('/team-calendar', requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']), validateQuery(ptoCalendarQuerySchema), ptoController.getPTOCalendar.bind(ptoController));
+router.get('/team-calendar', requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR]), validateQuery(ptoCalendarQuerySchema), ptoController.getPTOCalendar.bind(ptoController));
 // Check conflicts endpoint for PTO scheduling
 router.get('/check-conflicts', ptoController.checkConflicts.bind(ptoController));
 // Process accruals - admin only (financial/payroll operation)
-router.post('/process-accruals', requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']), ptoController.processAccruals.bind(ptoController));
+router.post('/process-accruals', requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]), ptoController.processAccruals.bind(ptoController));
 
 // PTO Request routes
 // Create request - any authenticated user can create their own request (ownership validated in controller)
@@ -36,15 +37,15 @@ router.post('/requests', validateBody(createPTORequestSchema), auditLog({ entity
 // Get all requests - admins/supervisors see all, others see own (filtered in controller)
 router.get('/requests', ptoController.getAllRequests.bind(ptoController));
 // Get pending requests - supervisors/admins only (to approve others' requests)
-router.get('/requests/pending', requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']), ptoController.getPendingRequests.bind(ptoController));
+router.get('/requests/pending', requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR]), ptoController.getPendingRequests.bind(ptoController));
 // Get/update/delete by ID - ownership validated in controller
 router.get('/requests/:id', validateParams(uuidParamSchema), auditLog({ entityType: 'PTORequest', action: 'VIEW' }), ptoController.getRequestById.bind(ptoController));
 router.put('/requests/:id', validateParams(uuidParamSchema), validateBody(updatePTORequestSchema), auditLog({ entityType: 'PTORequest', action: 'UPDATE' }), ptoController.updateRequest.bind(ptoController));
 router.delete('/requests/:id', validateParams(uuidParamSchema), auditLog({ entityType: 'PTORequest', action: 'DELETE' }), ptoController.deleteRequest.bind(ptoController));
 
 // Request workflow actions - require supervisor/admin role
-router.post('/requests/:id/approve', validateParams(uuidParamSchema), requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']), validateBody(approveDenyPTOSchema), auditLog({ entityType: 'PTORequest', action: 'APPROVE' }), ptoController.approveRequest.bind(ptoController));
-router.post('/requests/:id/deny', validateParams(uuidParamSchema), requireRole(['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR']), validateBody(denyPTOSchema), auditLog({ entityType: 'PTORequest', action: 'DENY' }), ptoController.denyRequest.bind(ptoController));
+router.post('/requests/:id/approve', validateParams(uuidParamSchema), requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR]), validateBody(approveDenyPTOSchema), auditLog({ entityType: 'PTORequest', action: 'APPROVE' }), ptoController.approveRequest.bind(ptoController));
+router.post('/requests/:id/deny', validateParams(uuidParamSchema), requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR]), validateBody(denyPTOSchema), auditLog({ entityType: 'PTORequest', action: 'DENY' }), ptoController.denyRequest.bind(ptoController));
 // Cancel - users can cancel their own, admins can cancel any (validated in controller)
 router.post('/requests/:id/cancel', validateParams(uuidParamSchema), auditLog({ entityType: 'PTORequest', action: 'UPDATE' }), ptoController.cancelRequest.bind(ptoController));
 
@@ -52,6 +53,6 @@ router.post('/requests/:id/cancel', validateParams(uuidParamSchema), auditLog({ 
 // View balance - users can view own, admins can view any (validated in controller)
 router.get('/balance/:userId', validateParams(userIdParamSchema), ptoController.getBalance.bind(ptoController));
 // Update balance - admin only operation
-router.put('/balance/:userId', validateParams(userIdParamSchema), requireRole(['ADMINISTRATOR', 'SUPER_ADMIN']), validateBody(updatePTOBalanceSchema), auditLog({ entityType: 'PTORequest', action: 'UPDATE' }), ptoController.updateBalance.bind(ptoController));
+router.put('/balance/:userId', validateParams(userIdParamSchema), requireRole([UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN]), validateBody(updatePTOBalanceSchema), auditLog({ entityType: 'PTORequest', action: 'UPDATE' }), ptoController.updateBalance.bind(ptoController));
 
 export default router;

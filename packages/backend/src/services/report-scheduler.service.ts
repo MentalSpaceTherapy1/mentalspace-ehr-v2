@@ -4,6 +4,7 @@ import { sendReportEmail } from './email-distribution.service';
 import { trackDelivery, updateDeliveryStatus } from './delivery-tracker.service';
 import { addMinutes, addDays, addWeeks, addMonths, parseISO } from 'date-fns';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -14,18 +15,18 @@ interface ScheduleConfig {
 }
 
 export function startReportScheduler() {
-  console.log('[Report Scheduler] Starting automated report scheduler...');
+  logger.info('[Report Scheduler] Starting automated report scheduler...');
 
   // Check for scheduled reports every minute
   cron.schedule('* * * * *', async () => {
     try {
       await checkAndExecuteSchedules();
     } catch (error) {
-      console.error('[Report Scheduler] Error in scheduler:', error);
+      logger.error('Report Scheduler: Error in scheduler:', error);
     }
   });
 
-  console.log('[Report Scheduler] Scheduler started successfully');
+  logger.info('[Report Scheduler] Scheduler started successfully');
 }
 
 async function checkAndExecuteSchedules() {
@@ -52,13 +53,13 @@ async function checkAndExecuteSchedules() {
     }
   });
 
-  console.log(`[Report Scheduler] Found ${dueSchedules.length} due schedules`);
+  logger.info(`[Report Scheduler] Found ${dueSchedules.length} due schedules`);
 
   for (const schedule of dueSchedules) {
     try {
       await executeScheduledReport(schedule.id);
     } catch (error) {
-      console.error(`[Report Scheduler] Failed to execute schedule ${schedule.id}:`, error);
+      logger.error('Report Scheduler: Failed to execute schedule', { scheduleId: schedule.id, error });
     }
   }
 }
@@ -76,7 +77,7 @@ export async function executeScheduledReport(scheduleId: string) {
     throw new Error(`Schedule ${scheduleId} not found`);
   }
 
-  console.log(`[Report Scheduler] Executing schedule ${scheduleId} for report ${schedule.reportType}`);
+  logger.info(`[Report Scheduler] Executing schedule ${scheduleId} for report ${schedule.reportType}`);
 
   // Create delivery log
   const deliveryLog = await trackDelivery({
@@ -96,7 +97,7 @@ export async function executeScheduledReport(scheduleId: string) {
       );
 
       if (!shouldSend) {
-        console.log(`[Report Scheduler] Skipping distribution due to condition not met`);
+        logger.info(`[Report Scheduler] Skipping distribution due to condition not met`);
         await updateDeliveryStatus(deliveryLog.id, 'SKIPPED', 'Condition not met');
         await updateNextRunDate(schedule);
         return;
@@ -122,9 +123,9 @@ export async function executeScheduledReport(scheduleId: string) {
     // Update schedule
     await updateNextRunDate(schedule);
 
-    console.log(`[Report Scheduler] Successfully executed schedule ${scheduleId}`);
+    logger.info(`[Report Scheduler] Successfully executed schedule ${scheduleId}`);
   } catch (error) {
-    console.error(`[Report Scheduler] Failed to send report:`, error);
+    logger.error('Report Scheduler: Failed to send report', { error });
     await updateDeliveryStatus(
       deliveryLog.id,
       'FAILED',
@@ -212,7 +213,7 @@ async function evaluateDistributionCondition(
         return true;
     }
   } catch (error) {
-    console.error('[Report Scheduler] Error evaluating condition:', error);
+    logger.error('Report Scheduler: Error evaluating condition:', error);
     return true; // Default to sending on error
   }
 }
@@ -340,5 +341,40 @@ export async function resumeSchedule(scheduleId: string) {
   return await prisma.reportSchedule.update({
     where: { id: scheduleId },
     data: { status: 'ACTIVE' }
+  });
+}
+
+// ============================================================================
+// Phase 3.2: Additional service methods for controller refactoring
+// ============================================================================
+
+/**
+ * Find schedule by ID and user (basic ownership check)
+ */
+export async function findScheduleByIdAndUser(scheduleId: string, userId: string) {
+  return await prisma.reportSchedule.findFirst({
+    where: {
+      id: scheduleId,
+      userId
+    }
+  });
+}
+
+/**
+ * Find schedule by ID and user with full details (report and logs)
+ */
+export async function findScheduleByIdAndUserWithDetails(scheduleId: string, userId: string) {
+  return await prisma.reportSchedule.findFirst({
+    where: {
+      id: scheduleId,
+      userId
+    },
+    include: {
+      report: true,
+      logs: {
+        orderBy: { createdAt: 'desc' },
+        take: 10
+      }
+    }
   });
 }

@@ -1,15 +1,42 @@
 import { Request, Response } from 'express';
+import { UserRoles, type UserRole } from '@mentalspace/shared';
 import ptoService from '../services/pto.service';
 import { PTOStatus, AbsenceType } from '@prisma/client';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendForbidden, sendPaginated } from '../utils/apiResponse';
+
+/**
+ * Type definitions for PTO filters
+ */
+interface PTOFilters {
+  userId?: string;
+  status?: PTOStatus;
+  requestType?: AbsenceType;
+  startDate?: Date;
+  endDate?: Date;
+  page?: number;
+  limit?: number;
+}
+
+interface PTOCalendarItem {
+  departmentId?: string;
+  userId: string;
+  startDate: Date;
+  endDate: Date;
+}
 
 // Helper function to check if user has admin/supervisor role
 const hasAdminOrSupervisorRole = (roles: string[] = []): boolean => {
-  return roles.some(role => ['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR'].includes(role));
+  const adminSupervisorRoles: string[] = [UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR];
+  return roles.some(role => adminSupervisorRoles.includes(role));
 };
 
 // Helper function to check if user has admin role only
 const hasAdminRole = (roles: string[] = []): boolean => {
-  return roles.some(role => ['ADMINISTRATOR', 'SUPER_ADMIN'].includes(role));
+  const adminRoles: string[] = [UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN];
+  return roles.some(role => adminRoles.includes(role));
 };
 
 export class PTOController {
@@ -20,14 +47,11 @@ export class PTOController {
    */
   async createRequest(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
 
       if (!currentUserId) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
+        return sendUnauthorized(res, 'Authentication required');
       }
 
       // Force userId from authenticated session - users can only create requests for themselves
@@ -35,10 +59,7 @@ export class PTOController {
       let targetUserId = currentUserId;
       if (req.body.userId && req.body.userId !== currentUserId) {
         if (!hasAdminRole(currentUser?.roles)) {
-          return res.status(403).json({
-            success: false,
-            message: 'Only administrators can create PTO requests for other users',
-          });
+          return sendForbidden(res, 'Only administrators can create PTO requests for other users');
         }
         targetUserId = req.body.userId;
       }
@@ -49,16 +70,10 @@ export class PTOController {
       };
 
       const request = await ptoService.createRequest(requestData);
-      res.status(201).json({
-        success: true,
-        data: request,
-        message: 'PTO request created successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to create PTO request',
-      });
+      return sendCreated(res, request, 'PTO request created successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to create PTO request';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -69,7 +84,7 @@ export class PTOController {
    */
   async getAllRequests(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
 
       const {
@@ -82,7 +97,7 @@ export class PTOController {
         limit,
       } = req.query;
 
-      const filters: any = {};
+      const filters: PTOFilters = {};
 
       // Non-admin users can only see their own requests
       if (!hasAdminOrSupervisorRole(currentUser?.roles)) {
@@ -99,16 +114,10 @@ export class PTOController {
       if (limit) filters.limit = parseInt(limit as string);
 
       const result = await ptoService.getAllRequests(filters);
-      res.status(200).json({
-        success: true,
-        data: result.requests,
-        pagination: result.pagination,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch PTO requests',
-      });
+      return sendPaginated(res, result.requests, result.pagination);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch PTO requests';
+      return sendServerError(res, errorMessage);
     }
   }
 
@@ -119,7 +128,7 @@ export class PTOController {
    */
   async getRequestById(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
 
@@ -127,21 +136,12 @@ export class PTOController {
 
       // Ownership validation: users can only view their own requests
       if (request.userId !== currentUserId && !hasAdminOrSupervisorRole(currentUser?.roles)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Not authorized to view this PTO request',
-        });
+        return sendForbidden(res, 'Not authorized to view this PTO request');
       }
 
-      res.status(200).json({
-        success: true,
-        data: request,
-      });
-    } catch (error: any) {
-      res.status(404).json({
-        success: false,
-        message: error.message || 'PTO request not found',
-      });
+      return sendSuccess(res, request);
+    } catch (error: unknown) {
+      return sendNotFound(res, 'PTO request');
     }
   }
 
@@ -152,7 +152,7 @@ export class PTOController {
    */
   async updateRequest(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
 
@@ -162,30 +162,18 @@ export class PTOController {
       // Non-admins can only update their own pending requests
       if (!hasAdminRole(currentUser?.roles)) {
         if (existingRequest.userId !== currentUserId) {
-          return res.status(403).json({
-            success: false,
-            message: 'Not authorized to update this PTO request',
-          });
+          return sendForbidden(res, 'Not authorized to update this PTO request');
         }
         if (existingRequest.status !== 'PENDING') {
-          return res.status(400).json({
-            success: false,
-            message: 'Can only update pending PTO requests',
-          });
+          return sendBadRequest(res, 'Can only update pending PTO requests');
         }
       }
 
       const request = await ptoService.updateRequest(id, req.body);
-      res.status(200).json({
-        success: true,
-        data: request,
-        message: 'PTO request updated successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to update PTO request',
-      });
+      return sendSuccess(res, request, 'PTO request updated successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to update PTO request';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -196,20 +184,21 @@ export class PTOController {
    */
   async approveRequest(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
       const { approvalNotes } = req.body;
+
+      if (!currentUserId) {
+        return sendUnauthorized(res, 'Authentication required');
+      }
 
       // Fetch the request to check ownership
       const existingRequest = await ptoService.getRequestById(id);
 
       // Prevent self-approval
       if (existingRequest.userId === currentUserId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Cannot approve your own PTO request',
-        });
+        return sendForbidden(res, 'Cannot approve your own PTO request');
       }
 
       // Use authenticated user as approver (not from body for security)
@@ -218,16 +207,10 @@ export class PTOController {
         approvalNotes,
       });
 
-      res.status(200).json({
-        success: true,
-        data: request,
-        message: 'PTO request approved successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to approve PTO request',
-      });
+      return sendSuccess(res, request, 'PTO request approved successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to approve PTO request';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -238,16 +221,17 @@ export class PTOController {
    */
   async denyRequest(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
       const { approvalNotes } = req.body;
 
+      if (!currentUserId) {
+        return sendUnauthorized(res, 'Authentication required');
+      }
+
       if (!approvalNotes) {
-        return res.status(400).json({
-          success: false,
-          message: 'Denial reason is required when denying a request',
-        });
+        return sendBadRequest(res, 'Denial reason is required when denying a request');
       }
 
       // Fetch the request to check ownership
@@ -255,10 +239,7 @@ export class PTOController {
 
       // Prevent self-denial
       if (existingRequest.userId === currentUserId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Cannot deny your own PTO request. Use cancel instead.',
-        });
+        return sendForbidden(res, 'Cannot deny your own PTO request. Use cancel instead.');
       }
 
       // Use authenticated user as denier (not from body for security)
@@ -267,16 +248,10 @@ export class PTOController {
         approvalNotes,
       });
 
-      res.status(200).json({
-        success: true,
-        data: request,
-        message: 'PTO request denied',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to deny PTO request',
-      });
+      return sendSuccess(res, request, 'PTO request denied');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to deny PTO request';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -287,7 +262,7 @@ export class PTOController {
    */
   async cancelRequest(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
 
@@ -296,23 +271,14 @@ export class PTOController {
 
       // Only owner or admin can cancel
       if (existingRequest.userId !== currentUserId && !hasAdminRole(currentUser?.roles)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Not authorized to cancel this PTO request',
-        });
+        return sendForbidden(res, 'Not authorized to cancel this PTO request');
       }
 
       const request = await ptoService.cancelRequest(id);
-      res.status(200).json({
-        success: true,
-        data: request,
-        message: 'PTO request cancelled successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to cancel PTO request',
-      });
+      return sendSuccess(res, request, 'PTO request cancelled successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to cancel PTO request';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -323,7 +289,7 @@ export class PTOController {
    */
   async deleteRequest(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { id } = req.params;
 
@@ -333,29 +299,18 @@ export class PTOController {
       // Non-admins can only delete their own pending requests
       if (!hasAdminRole(currentUser?.roles)) {
         if (existingRequest.userId !== currentUserId) {
-          return res.status(403).json({
-            success: false,
-            message: 'Not authorized to delete this PTO request',
-          });
+          return sendForbidden(res, 'Not authorized to delete this PTO request');
         }
         if (existingRequest.status !== 'PENDING') {
-          return res.status(400).json({
-            success: false,
-            message: 'Can only delete pending PTO requests',
-          });
+          return sendBadRequest(res, 'Can only delete pending PTO requests');
         }
       }
 
       const result = await ptoService.deleteRequest(id);
-      res.status(200).json({
-        success: true,
-        message: result.message,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to delete PTO request',
-      });
+      return sendSuccess(res, null, result.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to delete PTO request';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -366,28 +321,20 @@ export class PTOController {
    */
   async getBalance(req: Request, res: Response) {
     try {
-      const currentUser = (req as any).user;
+      const currentUser = req.user;
       const currentUserId = currentUser?.id || currentUser?.userId;
       const { userId } = req.params;
 
       // Ownership validation: users can only view their own balance
       if (userId !== currentUserId && !hasAdminOrSupervisorRole(currentUser?.roles)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Not authorized to view this PTO balance',
-        });
+        return sendForbidden(res, 'Not authorized to view this PTO balance');
       }
 
       const balance = await ptoService.getBalance(userId);
-      res.status(200).json({
-        success: true,
-        data: balance,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch PTO balance',
-      });
+      return sendSuccess(res, balance);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch PTO balance';
+      return sendServerError(res, errorMessage);
     }
   }
 
@@ -399,16 +346,10 @@ export class PTOController {
     try {
       const { userId } = req.params;
       const balance = await ptoService.updateBalance(userId, req.body);
-      res.status(200).json({
-        success: true,
-        data: balance,
-        message: 'PTO balance updated successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to update PTO balance',
-      });
+      return sendSuccess(res, balance, 'PTO balance updated successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to update PTO balance';
+      return sendBadRequest(res, errorMessage);
     }
   }
 
@@ -419,16 +360,10 @@ export class PTOController {
   async processAccruals(req: Request, res: Response) {
     try {
       const result = await ptoService.processAccruals();
-      res.status(200).json({
-        success: true,
-        message: result.message,
-        data: result.results,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to process accruals',
-      });
+      return sendSuccess(res, result.results, result.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to process accruals';
+      return sendServerError(res, errorMessage);
     }
   }
 
@@ -439,15 +374,10 @@ export class PTOController {
   async getPendingRequests(req: Request, res: Response) {
     try {
       const requests = await ptoService.getPendingRequests();
-      res.status(200).json({
-        success: true,
-        data: requests,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch pending requests',
-      });
+      return sendSuccess(res, requests);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch pending requests';
+      return sendServerError(res, errorMessage);
     }
   }
 
@@ -460,10 +390,7 @@ export class PTOController {
       const { startDate, endDate } = req.query;
 
       if (!startDate || !endDate) {
-        return res.status(400).json({
-          success: false,
-          message: 'Start date and end date are required',
-        });
+        return sendBadRequest(res, 'Start date and end date are required');
       }
 
       const requests = await ptoService.getPTOCalendar(
@@ -471,15 +398,10 @@ export class PTOController {
         new Date(endDate as string)
       );
 
-      res.status(200).json({
-        success: true,
-        data: requests,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch PTO calendar',
-      });
+      return sendSuccess(res, requests);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to fetch PTO calendar';
+      return sendServerError(res, errorMessage);
     }
   }
 
@@ -492,10 +414,7 @@ export class PTOController {
       const { startDate, endDate, departmentId } = req.query;
 
       if (!startDate || !endDate) {
-        return res.status(400).json({
-          success: false,
-          message: 'Start date and end date are required',
-        });
+        return sendBadRequest(res, 'Start date and end date are required');
       }
 
       // Get approved PTO requests for the date range to check for conflicts
@@ -507,21 +426,16 @@ export class PTOController {
       // Filter by department if provided
       let filteredConflicts = conflicts;
       if (departmentId) {
-        filteredConflicts = conflicts.filter((c: any) => c.departmentId === departmentId);
+        filteredConflicts = conflicts.filter((c: PTOCalendarItem) => c.departmentId === departmentId);
       }
 
-      res.status(200).json({
-        success: true,
-        data: {
-          hasConflicts: filteredConflicts.length > 0,
-          conflicts: filteredConflicts,
-        },
+      return sendSuccess(res, {
+        hasConflicts: filteredConflicts.length > 0,
+        conflicts: filteredConflicts,
       });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to check PTO conflicts',
-      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? getErrorMessage(error) : 'Failed to check PTO conflicts';
+      return sendServerError(res, errorMessage);
     }
   }
 }

@@ -4,6 +4,7 @@ import logger from '../../utils/logger';
 import bcrypt from 'bcryptjs';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Get client profile
@@ -14,10 +15,7 @@ export const getProfile = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const client = await prisma.client.findUnique({
@@ -31,38 +29,29 @@ export const getProfile = async (req: PortalRequest, res: Response) => {
     });
 
     if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found',
-      });
+      return sendNotFound(res, 'Client');
     }
 
     const emergencyContact = client.emergencyContacts[0];
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: client.id,
-        firstName: client.firstName,
-        lastName: client.lastName,
-        email: client.email,
-        phone: client.primaryPhone,
-        dateOfBirth: client.dateOfBirth,
-        address: client.addressStreet1,
-        city: client.addressCity,
-        state: client.addressState,
-        zipCode: client.addressZipCode,
-        emergencyContactName: emergencyContact?.name,
-        emergencyContactPhone: emergencyContact?.phone,
-        emergencyContactRelationship: emergencyContact?.relationship,
-      },
+    return sendSuccess(res, {
+      id: client.id,
+      firstName: client.firstName,
+      lastName: client.lastName,
+      email: client.email,
+      phone: client.primaryPhone,
+      dateOfBirth: client.dateOfBirth,
+      address: client.addressStreet1,
+      city: client.addressCity,
+      state: client.addressState,
+      zipCode: client.addressZipCode,
+      emergencyContactName: emergencyContact?.name,
+      emergencyContactPhone: emergencyContact?.phone,
+      emergencyContactRelationship: emergencyContact?.relationship,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching profile:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch profile',
-    });
+    return sendServerError(res, 'Failed to fetch profile');
   }
 };
 
@@ -88,18 +77,12 @@ export const updateProfile = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate required fields
     if (!firstName || !lastName || !email) {
-      return res.status(400).json({
-        success: false,
-        message: 'First name, last name, and email are required',
-      });
+      return sendBadRequest(res, 'First name, last name, and email are required');
     }
 
     // Update client information
@@ -148,17 +131,10 @@ export const updateProfile = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Profile updated for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Profile updated successfully',
-      data: updatedClient,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, updatedClient, 'Profile updated successfully');
+  } catch (error) {
     logger.error('Error updating profile:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update profile',
-    });
+    return sendServerError(res, 'Failed to update profile');
   }
 };
 
@@ -172,10 +148,7 @@ export const getAccountSettings = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!portalAccountId || !clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get portal account info (contains notification preferences)
@@ -183,24 +156,18 @@ export const getAccountSettings = async (req: PortalRequest, res: Response) => {
       where: { id: portalAccountId },
     });
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: portalAccountId,
-        username: portalAccount?.email || '',
-        emailNotifications: portalAccount?.emailNotifications ?? true,
-        smsNotifications: portalAccount?.smsNotifications ?? false,
-        appointmentReminders: portalAccount?.appointmentReminders ?? true,
-        billingReminders: portalAccount?.billingReminders ?? true,
-        messageNotifications: portalAccount?.messageNotifications ?? true,
-      },
+    return sendSuccess(res, {
+      id: portalAccountId,
+      username: portalAccount?.email || '',
+      emailNotifications: portalAccount?.emailNotifications ?? true,
+      smsNotifications: portalAccount?.smsNotifications ?? false,
+      appointmentReminders: portalAccount?.appointmentReminders ?? true,
+      billingReminders: portalAccount?.billingReminders ?? true,
+      messageNotifications: portalAccount?.messageNotifications ?? true,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching account settings:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch account settings',
-    });
+    return sendServerError(res, 'Failed to fetch account settings');
   }
 };
 
@@ -220,10 +187,7 @@ export const updateNotificationPreferences = async (req: PortalRequest, res: Res
     } = req.body;
 
     if (!portalAccountId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Update portal account notification preferences
@@ -240,16 +204,10 @@ export const updateNotificationPreferences = async (req: PortalRequest, res: Res
 
     logger.info(`Notification preferences updated for portal account ${portalAccountId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Notification preferences updated successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Notification preferences updated successfully');
+  } catch (error) {
     logger.error('Error updating notification preferences:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update notification preferences',
-    });
+    return sendServerError(res, 'Failed to update notification preferences');
   }
 };
 
@@ -263,25 +221,16 @@ export const changePassword = async (req: PortalRequest, res: Response) => {
     const { currentPassword, newPassword } = req.body;
 
     if (!portalAccountId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate input
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'Current password and new password are required',
-      });
+      return sendBadRequest(res, 'Current password and new password are required');
     }
 
     if (newPassword.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password must be at least 8 characters long',
-      });
+      return sendBadRequest(res, 'Password must be at least 8 characters long');
     }
 
     // Get portal account
@@ -290,20 +239,14 @@ export const changePassword = async (req: PortalRequest, res: Response) => {
     });
 
     if (!portalAccount) {
-      return res.status(404).json({
-        success: false,
-        message: 'Account not found',
-      });
+      return sendNotFound(res, 'Account');
     }
 
     // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, portalAccount.password);
 
     if (!isPasswordValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Current password is incorrect',
-      });
+      return sendBadRequest(res, 'Current password is incorrect');
     }
 
     // Hash new password
@@ -319,15 +262,9 @@ export const changePassword = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Password changed for portal account ${portalAccountId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Password changed successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Password changed successfully');
+  } catch (error) {
     logger.error('Error changing password:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to change password',
-    });
+    return sendServerError(res, 'Failed to change password');
   }
 };

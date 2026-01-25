@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import logger from '../utils/logger';
-import prisma from '../services/database';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 3.2: Removed direct prisma import - using service methods instead
 import * as availableSlotsService from '../services/available-slots.service';
 import { getEffectiveRules } from '../services/scheduling-rules.service';
 import { addMinutes, format } from 'date-fns';
+import { sendSuccess, sendBadRequest, sendServerError, sendValidationError, sendError } from '../utils/apiResponse';
 
 /**
  * Module 7: Self-Scheduling Controller
@@ -48,19 +50,12 @@ export const getAvailableClinicians = async (req: Request, res: Response) => {
 
     const clinicians = await availableSlotsService.getAvailableClinicians();
 
-    res.status(200).json({
-      success: true,
-      data: clinicians,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, clinicians);
+  } catch (error) {
     logger.error('Get available clinicians error', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve available clinicians',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve available clinicians');
   }
 };
 
@@ -74,11 +69,12 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
     const validation = getAvailableSlotsSchema.safeParse(req.query);
 
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request parameters',
-        errors: validation.error.errors,
-      });
+      const formattedErrors = validation.error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
     const { startDate, endDate } = validation.data;
@@ -95,20 +91,13 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
       new Date(endDate)
     );
 
-    res.status(200).json({
-      success: true,
-      data: slots,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, slots);
+  } catch (error) {
     logger.error('Get available slots error', {
-      error: error.message,
+      error: getErrorMessage(error),
       clinicianId: req.params.clinicianId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve available slots',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve available slots');
   }
 };
 
@@ -121,31 +110,25 @@ export const bookAppointment = async (req: Request, res: Response) => {
     const validation = bookAppointmentSchema.safeParse(req.body);
 
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request data',
-        errors: validation.error.errors,
-      });
+      const formattedErrors = validation.error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
     const { clinicianId, appointmentDate, appointmentType, duration, notes, serviceLocation } = validation.data;
 
     // TODO: Client portal/self-scheduling not yet implemented - clients don't have user accounts
     // The Client model doesn't have a userId field, so req.user.clientId doesn't exist
-    return res.status(501).json({
-      success: false,
-      message: 'Client self-scheduling not yet implemented. Please contact your provider to schedule appointments.',
-    });
-  } catch (error: any) {
+    return sendError(res, 501, 'Client self-scheduling not yet implemented. Please contact your provider to schedule appointments.', 'NOT_IMPLEMENTED');
+  } catch (error) {
     logger.error('Book appointment error', {
-      error: error.message,
+      error: getErrorMessage(error),
       body: req.body,
     });
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to book appointment',
-      error: error.message,
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to book appointment');
   }
 };
 
@@ -159,30 +142,24 @@ export const rescheduleAppointment = async (req: Request, res: Response) => {
     const validation = rescheduleAppointmentSchema.safeParse(req.body);
 
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request data',
-        errors: validation.error.errors,
-      });
+      const formattedErrors = validation.error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
     const { newAppointmentDate, reason } = validation.data;
 
     // TODO: Client portal/self-scheduling not yet implemented - clients don't have user accounts
-    return res.status(501).json({
-      success: false,
-      message: 'Client self-scheduling not yet implemented. Please contact your provider to reschedule appointments.',
-    });
-  } catch (error: any) {
+    return sendError(res, 501, 'Client self-scheduling not yet implemented. Please contact your provider to reschedule appointments.', 'NOT_IMPLEMENTED');
+  } catch (error) {
     logger.error('Reschedule appointment error', {
-      error: error.message,
+      error: getErrorMessage(error),
       appointmentId: req.params.appointmentId,
     });
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to reschedule appointment',
-      error: error.message,
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to reschedule appointment');
   }
 };
 
@@ -196,30 +173,24 @@ export const cancelAppointment = async (req: Request, res: Response) => {
     const validation = cancelAppointmentSchema.safeParse(req.body);
 
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request data',
-        errors: validation.error.errors,
-      });
+      const formattedErrors = validation.error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
     const { reason, notes } = validation.data;
 
     // TODO: Client portal/self-scheduling not yet implemented - clients don't have user accounts
-    return res.status(501).json({
-      success: false,
-      message: 'Client self-scheduling not yet implemented. Please contact your provider to cancel appointments.',
-    });
-  } catch (error: any) {
+    return sendError(res, 501, 'Client self-scheduling not yet implemented. Please contact your provider to cancel appointments.', 'NOT_IMPLEMENTED');
+  } catch (error) {
     logger.error('Cancel appointment error', {
-      error: error.message,
+      error: getErrorMessage(error),
       appointmentId: req.params.appointmentId,
     });
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to cancel appointment',
-      error: error.message,
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to cancel appointment');
   }
 };
 
@@ -230,19 +201,12 @@ export const cancelAppointment = async (req: Request, res: Response) => {
 export const getMyAppointments = async (req: Request, res: Response) => {
   try {
     // TODO: Client portal/self-scheduling not yet implemented - clients don't have user accounts
-    return res.status(501).json({
-      success: false,
-      message: 'Client self-scheduling not yet implemented. Please contact your provider for appointment information.',
-    });
-  } catch (error: any) {
+    return sendError(res, 501, 'Client self-scheduling not yet implemented. Please contact your provider for appointment information.', 'NOT_IMPLEMENTED');
+  } catch (error) {
     logger.error('Get my appointments error', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve appointments',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve appointments');
   }
 };
 
@@ -254,37 +218,14 @@ export const getAppointmentTypes = async (req: Request, res: Response) => {
   try {
     logger.info('Getting appointment types for self-scheduling');
 
-    const appointmentTypes = await prisma.appointmentType.findMany({
-      where: {
-        isActive: true,
-        allowOnlineBooking: true,
-      },
-      select: {
-        id: true,
-        typeName: true,
-        category: true,
-        description: true,
-        defaultDuration: true,
-        colorCode: true,
-        iconName: true,
-      },
-      orderBy: {
-        typeName: 'asc',
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const appointmentTypes = await availableSlotsService.getBookableAppointmentTypes();
 
-    res.status(200).json({
-      success: true,
-      data: appointmentTypes,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, appointmentTypes);
+  } catch (error) {
     logger.error('Get appointment types error', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve appointment types',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve appointment types');
   }
 };

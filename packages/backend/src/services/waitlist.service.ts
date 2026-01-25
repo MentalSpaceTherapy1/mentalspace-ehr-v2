@@ -1,5 +1,6 @@
 import { auditLogger } from '../utils/logger';
 import prisma from './database';
+import { UserRoles } from '@mentalspace/shared';
 import { AppointmentStatus, WaitlistStatus } from '@mentalspace/database';
 
 interface WaitlistEntryData {
@@ -484,7 +485,7 @@ export async function joinWaitlist(data: {
         throw new Error('Clinician not found or inactive');
       }
 
-      if (!clinician.roles.includes('CLINICIAN') && !clinician.roles.includes('ADMINISTRATOR')) {
+      if (!clinician.roles.includes(UserRoles.CLINICIAN) && !clinician.roles.includes(UserRoles.ADMINISTRATOR)) {
         throw new Error('Selected user is not a clinician');
       }
     }
@@ -764,6 +765,218 @@ export async function cancelWaitlistEntry(
   });
 
   return entry;
+}
+
+// ============================================================================
+// CLIENT PORTAL METHODS (Phase 3.2)
+// ============================================================================
+
+/**
+ * Get waitlist entries for a specific client
+ * Phase 3.2: Moved from controller to service
+ */
+export async function getClientWaitlistEntries(clientId: string) {
+  const entries = await prisma.waitlistEntry.findMany({
+    where: {
+      clientId,
+      status: 'ACTIVE',
+    },
+    include: {
+      clinician: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          title: true,
+        },
+      },
+    },
+    orderBy: {
+      joinedAt: 'desc',
+    },
+  });
+
+  auditLogger.info('Client retrieved their waitlist entries', {
+    clientId,
+    count: entries.length,
+    action: 'VIEW_MY_WAITLIST_ENTRIES',
+  });
+
+  return entries;
+}
+
+/**
+ * Get pending waitlist offers for a specific client
+ * Phase 3.2: Moved from controller to service
+ */
+export async function getClientWaitlistOffers(clientId: string) {
+  // Find active waitlist entries for this client
+  const myEntries = await prisma.waitlistEntry.findMany({
+    where: {
+      clientId,
+      status: 'ACTIVE',
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const entryIds = myEntries.map((e) => e.id);
+
+  if (entryIds.length === 0) {
+    return [];
+  }
+
+  // Find offers for these entries
+  const offers = await prisma.waitlistOffer.findMany({
+    where: {
+      waitlistEntryId: {
+        in: entryIds,
+      },
+      status: 'PENDING',
+      expiresAt: {
+        gte: new Date(),
+      },
+    },
+    include: {
+      clinician: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          title: true,
+        },
+      },
+      waitlistEntry: {
+        select: {
+          appointmentType: true,
+        },
+      },
+    },
+    orderBy: {
+      offeredAt: 'desc',
+    },
+  });
+
+  auditLogger.info('Client retrieved their waitlist offers', {
+    clientId,
+    count: offers.length,
+    action: 'VIEW_MY_WAITLIST_OFFERS',
+  });
+
+  return offers;
+}
+
+/**
+ * Accept a waitlist offer for a client
+ * Phase 3.2: Moved from controller to service
+ */
+export async function acceptClientWaitlistOffer(
+  entryId: string,
+  offerId: string,
+  clientId: string
+): Promise<{ success: boolean; error?: string }> {
+  // Verify the entry belongs to this client
+  const entry = await prisma.waitlistEntry.findUnique({
+    where: { id: entryId },
+  });
+
+  if (!entry || entry.clientId !== clientId) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  // Get the offer details
+  const offer = await prisma.waitlistOffer.findUnique({
+    where: { id: offerId },
+  });
+
+  if (!offer || offer.waitlistEntryId !== entryId) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+
+  if (offer.status !== 'PENDING') {
+    return { success: false, error: 'NOT_AVAILABLE' };
+  }
+
+  if (offer.expiresAt < new Date()) {
+    return { success: false, error: 'EXPIRED' };
+  }
+
+  // Update offer and entry in a transaction
+  await prisma.$transaction([
+    prisma.waitlistOffer.update({
+      where: { id: offerId },
+      data: {
+        status: 'ACCEPTED',
+        respondedAt: new Date(),
+      },
+    }),
+    prisma.waitlistEntry.update({
+      where: { id: entryId },
+      data: {
+        status: 'MATCHED',
+      },
+    }),
+  ]);
+
+  auditLogger.info('Client accepted waitlist offer', {
+    clientId,
+    entryId,
+    offerId,
+    action: 'ACCEPT_WAITLIST_OFFER',
+  });
+
+  return { success: true };
+}
+
+/**
+ * Decline a waitlist offer for a client
+ * Phase 3.2: Moved from controller to service
+ */
+export async function declineClientWaitlistOffer(
+  entryId: string,
+  offerId: string,
+  clientId: string
+): Promise<{ success: boolean; error?: string }> {
+  // Verify the entry belongs to this client
+  const entry = await prisma.waitlistEntry.findUnique({
+    where: { id: entryId },
+  });
+
+  if (!entry || entry.clientId !== clientId) {
+    return { success: false, error: 'UNAUTHORIZED' };
+  }
+
+  // Get the offer details
+  const offer = await prisma.waitlistOffer.findUnique({
+    where: { id: offerId },
+  });
+
+  if (!offer || offer.waitlistEntryId !== entryId) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+
+  if (offer.status !== 'PENDING') {
+    return { success: false, error: 'NOT_AVAILABLE' };
+  }
+
+  // Update offer status
+  await prisma.waitlistOffer.update({
+    where: { id: offerId },
+    data: {
+      status: 'DECLINED',
+      respondedAt: new Date(),
+    },
+  });
+
+  auditLogger.info('Client declined waitlist offer', {
+    clientId,
+    entryId,
+    offerId,
+    action: 'DECLINE_WAITLIST_OFFER',
+  });
+
+  return { success: true };
 }
 
 /**

@@ -1,5 +1,6 @@
 import ical, { ICalCalendar, ICalEventData } from 'ical-generator';
 import logger from '../utils/logger';
+import { AppointmentStatus as AppointmentStatusConst } from '@mentalspace/shared';
 
 interface AppointmentData {
   id: string;
@@ -84,7 +85,7 @@ export class IcsGeneratorService {
             role: 'REQ-PARTICIPANT' as any,
           },
         ],
-        status: 'CONFIRMED' as any,
+        status: AppointmentStatusConst.CONFIRMED as any,
         busystatus: 'BUSY' as any,
         // Set reminder for 1 hour before
         alarms: [
@@ -244,7 +245,7 @@ export class IcsGeneratorService {
               role: 'REQ-PARTICIPANT' as any,
             },
           ],
-          status: 'CONFIRMED' as any,
+          status: AppointmentStatusConst.CONFIRMED as any,
           busystatus: 'BUSY' as any,
         });
       }
@@ -290,7 +291,7 @@ export class IcsGeneratorService {
         summary: `CANCELLED: Appointment with ${this.formatClinicianName(appointment.clinician)}`,
         description: 'This appointment has been cancelled.',
         location: this.formatLocation(appointment),
-        status: 'CANCELLED' as any,
+        status: AppointmentStatusConst.CANCELLED as any,
         organizer: {
           name: this.formatClinicianName(appointment.clinician),
           email: appointment.clinician.email || 'noreply@mentalspaceehr.com',

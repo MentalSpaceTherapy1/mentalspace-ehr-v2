@@ -1,5 +1,6 @@
 ﻿import prisma from './database';
 import { Prisma } from '@mentalspace/database';
+import { AppointmentStatus as AppointmentStatusConst } from '@mentalspace/shared';
 
 
 interface RecurrencePattern {
@@ -67,7 +68,7 @@ export async function generateRecurringAppointments(
       appointmentType: baseData.appointmentType,
       serviceLocation: baseData.serviceLocation,
       timezone: baseData.timezone,
-      status: 'SCHEDULED',
+      status: AppointmentStatusConst.SCHEDULED,
       statusUpdatedBy: baseData.statusUpdatedBy,
       createdBy: baseData.createdBy,
       lastModifiedBy: baseData.createdBy,
@@ -270,7 +271,7 @@ export async function cancelSingleOccurrence(
   return await prisma.appointment.update({
     where: { id: appointmentId },
     data: {
-      status: 'CANCELLED',
+      status: AppointmentStatusConst.CANCELLED,
       cancellationReason,
       cancellationDate: new Date(),
       cancelledBy,
@@ -302,7 +303,7 @@ export async function cancelEntireSeries(
     prisma.appointment.update({
       where: { id: apt.id },
       data: {
-        status: 'CANCELLED',
+        status: AppointmentStatusConst.CANCELLED,
         cancellationReason,
         cancellationDate: new Date(),
         cancelledBy,

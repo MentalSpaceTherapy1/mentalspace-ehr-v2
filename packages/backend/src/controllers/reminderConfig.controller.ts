@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
 import * as reminderConfigService from '../services/reminderConfig.service';
 import emailReminderService from '../services/emailReminder.service';
+import userService from '../services/user.service';
 import logger from '../utils/logger';
-import prisma from '../services/database';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 /**
  * Get all reminder configurations
@@ -12,20 +15,13 @@ export const getAllConfigs = async (req: Request, res: Response) => {
   try {
     const configs = await reminderConfigService.getAllConfigs();
 
-    res.status(200).json({
-      success: true,
-      data: configs,
-      message: `Retrieved ${configs.length} reminder configurations`,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, configs, `Retrieved ${configs.length} reminder configurations`);
+  } catch (error) {
     logger.error('Error getting all reminder configurations', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve reminder configurations',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve reminder configurations');
   }
 };
 
@@ -38,25 +34,16 @@ export const getPracticeConfig = async (req: Request, res: Response) => {
     const config = await reminderConfigService.getPracticeConfig();
 
     if (!config) {
-      return res.status(404).json({
-        success: false,
-        message: 'Practice configuration not found',
-      });
+      return sendNotFound(res, 'Practice configuration');
     }
 
-    res.status(200).json({
-      success: true,
-      data: config,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, config);
+  } catch (error) {
     logger.error('Error getting practice reminder configuration', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve practice configuration',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve practice configuration');
   }
 };
 
@@ -71,26 +58,17 @@ export const getUserConfig = async (req: Request, res: Response) => {
     const config = await reminderConfigService.getUserConfig(userId);
 
     if (!config) {
-      return res.status(404).json({
-        success: false,
-        message: 'User configuration not found',
-      });
+      return sendNotFound(res, 'User configuration');
     }
 
-    res.status(200).json({
-      success: true,
-      data: config,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, config);
+  } catch (error) {
     logger.error('Error getting user reminder configuration', {
-      error: error.message,
+      error: getErrorMessage(error),
       userId: req.params.userId,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve user configuration',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve user configuration');
   }
 };
 
@@ -108,21 +86,14 @@ export const getEffectiveConfig = async (req: Request, res: Response) => {
       noteType as string | undefined
     );
 
-    res.status(200).json({
-      success: true,
-      data: config,
-      message: config ? 'Effective configuration retrieved' : 'No configuration found, using defaults',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, config, config ? 'Effective configuration retrieved' : 'No configuration found, using defaults');
+  } catch (error) {
     logger.error('Error getting effective reminder configuration', {
-      error: error.message,
+      error: getErrorMessage(error),
       userId: req.user?.id,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to retrieve effective configuration',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to retrieve effective configuration');
   }
 };
 
@@ -134,21 +105,14 @@ export const createConfig = async (req: Request, res: Response) => {
   try {
     const config = await reminderConfigService.createReminderConfig(req.body);
 
-    res.status(201).json({
-      success: true,
-      data: config,
-      message: 'Reminder configuration created successfully',
-    });
-  } catch (error: any) {
+    return sendCreated(res, config, 'Reminder configuration created successfully');
+  } catch (error) {
     logger.error('Error creating reminder configuration', {
-      error: error.message,
+      error: getErrorMessage(error),
       body: req.body,
     });
 
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to create reminder configuration',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to create reminder configuration');
   }
 };
 
@@ -165,21 +129,14 @@ export const updateConfig = async (req: Request, res: Response) => {
       ...req.body,
     });
 
-    res.status(200).json({
-      success: true,
-      data: config,
-      message: 'Reminder configuration updated successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, config, 'Reminder configuration updated successfully');
+  } catch (error) {
     logger.error('Error updating reminder configuration', {
-      error: error.message,
+      error: getErrorMessage(error),
       configId: req.params.id,
     });
 
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to update reminder configuration',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to update reminder configuration');
   }
 };
 
@@ -193,20 +150,14 @@ export const deleteConfig = async (req: Request, res: Response) => {
 
     await reminderConfigService.deleteReminderConfig(id);
 
-    res.status(200).json({
-      success: true,
-      message: 'Reminder configuration deleted successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Reminder configuration deleted successfully');
+  } catch (error) {
     logger.error('Error deleting reminder configuration', {
-      error: error.message,
+      error: getErrorMessage(error),
       configId: req.params.id,
     });
 
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to delete reminder configuration',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to delete reminder configuration');
   }
 };
 
@@ -218,20 +169,13 @@ export const initializeDefaults = async (req: Request, res: Response) => {
   try {
     const config = await reminderConfigService.initializeDefaultConfig();
 
-    res.status(200).json({
-      success: true,
-      data: config,
-      message: 'Default configuration initialized successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, config, 'Default configuration initialized successfully');
+  } catch (error) {
     logger.error('Error initializing default configuration', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
 
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Failed to initialize default configuration',
-    });
+    return sendBadRequest(res, getErrorMessage(error) || 'Failed to initialize default configuration');
   }
 };
 
@@ -243,24 +187,18 @@ export const getEmailStatus = async (req: Request, res: Response) => {
   try {
     const isConfigured = emailReminderService.isConfigured();
 
-    res.status(200).json({
-      success: true,
-      data: {
-        isConfigured,
-        message: isConfigured
-          ? 'Email service is configured and ready'
-          : 'Email service is not configured. Please set SMTP environment variables.',
-      },
+    return sendSuccess(res, {
+      isConfigured,
+      message: isConfigured
+        ? 'Email service is configured and ready'
+        : 'Email service is not configured. Please set SMTP environment variables.',
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error checking email status', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to check email status',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to check email status');
   }
 };
 
@@ -273,23 +211,14 @@ export const sendTestEmail = async (req: Request, res: Response) => {
     const jwtUser = req.user!;
 
     if (!emailReminderService.isConfigured()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email service is not configured. Please set SMTP environment variables.',
-      });
+      return sendBadRequest(res, 'Email service is not configured. Please set SMTP environment variables.');
     }
 
-    // Fetch actual user from database to get firstName/lastName
-    const user = await prisma.user.findUnique({
-      where: { id: jwtUser.userId },
-      select: { firstName: true, lastName: true, email: true },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const user = await userService.getUserBasicInfo(jwtUser.userId);
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+      return sendNotFound(res, 'User');
     }
 
     // Send a test reminder (using current user's info as test data)
@@ -318,25 +247,16 @@ export const sendTestEmail = async (req: Request, res: Response) => {
     });
 
     if (sent) {
-      res.status(200).json({
-        success: true,
-        message: `Test email sent successfully to ${user.email}`,
-      });
+      return sendSuccess(res, null, `Test email sent successfully to ${user.email}`);
     } else {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to send test email',
-      });
+      return sendServerError(res, 'Failed to send test email');
     }
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error sending test email', {
-      error: error.message,
+      error: getErrorMessage(error),
       userId: req.user?.id,
     });
 
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to send test email',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to send test email');
   }
 };

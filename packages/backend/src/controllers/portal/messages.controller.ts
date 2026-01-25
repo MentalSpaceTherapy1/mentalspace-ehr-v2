@@ -4,6 +4,7 @@ import logger from '../../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendForbidden, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Get all messages for client (grouped by thread)
@@ -14,10 +15,7 @@ export const getMessages = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get all messages for this client
@@ -40,16 +38,10 @@ export const getMessages = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${formattedMessages.length} messages for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: formattedMessages,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, formattedMessages);
+  } catch (error) {
     logger.error('Error fetching messages:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch messages',
-    });
+    return sendServerError(res, 'Failed to fetch messages');
   }
 };
 
@@ -63,10 +55,7 @@ export const getMessageThread = async (req: PortalRequest, res: Response) => {
     const { threadId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get all messages in this thread
@@ -92,16 +81,10 @@ export const getMessageThread = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${formattedMessages.length} messages in thread ${threadId} for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: formattedMessages,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, formattedMessages);
+  } catch (error) {
     logger.error('Error fetching message thread:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch conversation',
-    });
+    return sendServerError(res, 'Failed to fetch conversation');
   }
 };
 
@@ -115,18 +98,12 @@ export const sendMessage = async (req: PortalRequest, res: Response) => {
     const { subject, message, priority } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate input
     if (!subject || !message) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subject and message are required',
-      });
+      return sendBadRequest(res, 'Subject and message are required');
     }
 
     // Generate a new thread ID for this conversation
@@ -150,24 +127,17 @@ export const sendMessage = async (req: PortalRequest, res: Response) => {
 
     // TODO: Send notification to clinician/care team
 
-    return res.status(201).json({
-      success: true,
-      message: 'Message sent successfully',
-      data: {
-        id: newMessage.id,
-        threadId: newMessage.threadId,
-        subject: newMessage.subject,
-        message: newMessage.message,
-        priority: newMessage.priority,
-        createdAt: newMessage.createdAt,
-      },
-    });
-  } catch (error: any) {
+    return sendCreated(res, {
+      id: newMessage.id,
+      threadId: newMessage.threadId,
+      subject: newMessage.subject,
+      message: newMessage.message,
+      priority: newMessage.priority,
+      createdAt: newMessage.createdAt,
+    }, 'Message sent successfully');
+  } catch (error) {
     logger.error('Error sending message:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to send message',
-    });
+    return sendServerError(res, 'Failed to send message');
   }
 };
 
@@ -182,18 +152,12 @@ export const replyToMessage = async (req: PortalRequest, res: Response) => {
     const { message } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate input
     if (!message) {
-      return res.status(400).json({
-        success: false,
-        message: 'Message is required',
-      });
+      return sendBadRequest(res, 'Message is required');
     }
 
     // Get the original message to find the thread
@@ -202,18 +166,12 @@ export const replyToMessage = async (req: PortalRequest, res: Response) => {
     });
 
     if (!originalMessage) {
-      return res.status(404).json({
-        success: false,
-        message: 'Original message not found',
-      });
+      return sendNotFound(res, 'Original message');
     }
 
     // Verify the client owns this thread
     if (originalMessage.clientId !== clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to reply to this message',
-      });
+      return sendForbidden(res, 'You do not have permission to reply to this message');
     }
 
     // Create the reply
@@ -235,22 +193,15 @@ export const replyToMessage = async (req: PortalRequest, res: Response) => {
 
     // TODO: Send notification to clinician/care team
 
-    return res.status(201).json({
-      success: true,
-      message: 'Reply sent successfully',
-      data: {
-        id: reply.id,
-        threadId: reply.threadId,
-        message: reply.message,
-        createdAt: reply.createdAt,
-      },
-    });
-  } catch (error: any) {
+    return sendCreated(res, {
+      id: reply.id,
+      threadId: reply.threadId,
+      message: reply.message,
+      createdAt: reply.createdAt,
+    }, 'Reply sent successfully');
+  } catch (error) {
     logger.error('Error replying to message:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to send reply',
-    });
+    return sendServerError(res, 'Failed to send reply');
   }
 };
 
@@ -264,10 +215,7 @@ export const markMessageAsRead = async (req: PortalRequest, res: Response) => {
     const { messageId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get the message
@@ -276,18 +224,12 @@ export const markMessageAsRead = async (req: PortalRequest, res: Response) => {
     });
 
     if (!message) {
-      return res.status(404).json({
-        success: false,
-        message: 'Message not found',
-      });
+      return sendNotFound(res, 'Message');
     }
 
     // Verify the client owns this message
     if (message.clientId !== clientId) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to modify this message',
-      });
+      return sendForbidden(res, 'You do not have permission to modify this message');
     }
 
     // Mark as read
@@ -298,16 +240,10 @@ export const markMessageAsRead = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Message ${messageId} marked as read by client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Message marked as read',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Message marked as read');
+  } catch (error) {
     logger.error('Error marking message as read:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to mark message as read',
-    });
+    return sendServerError(res, 'Failed to mark message as read');
   }
 };
 
@@ -320,10 +256,7 @@ export const getUnreadCount = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Count unread messages that were sent by clinician/staff (not by client)
@@ -335,15 +268,9 @@ export const getUnreadCount = async (req: PortalRequest, res: Response) => {
       },
     });
 
-    return res.status(200).json({
-      success: true,
-      data: { unreadCount },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, { unreadCount });
+  } catch (error) {
     logger.error('Error getting unread count:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get unread count',
-    });
+    return sendServerError(res, 'Failed to get unread count');
   }
 };

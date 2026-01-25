@@ -3,6 +3,7 @@ import logger from '../utils/logger';
 import prisma from '../services/database';
 import { authenticate } from '../middleware/auth';
 import * as cache from '../services/cache.service';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -323,7 +324,7 @@ router.get('/tableau/data/kvr-analysis', authenticate, async (req: Request, res:
 
     const clinicians = await prisma.user.findMany({
       where: {
-        roles: { hasSome: ['CLINICIAN', 'SUPERVISOR', 'ASSOCIATE'] }
+        roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ASSOCIATE] }
       }
     });
 

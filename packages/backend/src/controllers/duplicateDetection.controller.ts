@@ -4,8 +4,12 @@
  */
 
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as duplicateDetectionService from '../services/duplicateDetection.service';
 import { logControllerError } from '../utils/logger';
+import { sendSuccess, sendBadRequest, sendUnauthorized, sendServerError } from '../utils/apiResponse';
 
 /**
  * POST /api/v1/clients/check-duplicates
@@ -25,17 +29,13 @@ export async function checkDuplicates(req: Request, res: Response) {
 
     // Validate required fields
     if (!firstName || !lastName || !dateOfBirth || !primaryPhone) {
-      return res.status(400).json({
-        error: 'Missing required fields: firstName, lastName, dateOfBirth, primaryPhone',
-      });
+      return sendBadRequest(res, 'Missing required fields: firstName, lastName, dateOfBirth, primaryPhone');
     }
 
     // Convert dateOfBirth string to Date
     const dob = new Date(dateOfBirth);
     if (isNaN(dob.getTime())) {
-      return res.status(400).json({
-        error: 'Invalid dateOfBirth format',
-      });
+      return sendBadRequest(res, 'Invalid dateOfBirth format');
     }
 
     // Check for duplicates
@@ -49,7 +49,7 @@ export async function checkDuplicates(req: Request, res: Response) {
       excludeClientId,
     });
 
-    res.json({
+    return sendSuccess(res, {
       foundDuplicates: matches.length > 0,
       count: matches.length,
       matches: matches.map((match) => ({
@@ -69,10 +69,7 @@ export async function checkDuplicates(req: Request, res: Response) {
     });
   } catch (error) {
     logControllerError('Error checking for duplicates', error);
-    res.status(500).json({
-      error: 'Failed to check for duplicates',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to check for duplicates');
   }
 }
 
@@ -86,9 +83,7 @@ export async function saveDuplicates(req: Request, res: Response) {
     const { matches } = req.body;
 
     if (!matches || !Array.isArray(matches)) {
-      return res.status(400).json({
-        error: 'Invalid matches array',
-      });
+      return sendBadRequest(res, 'Invalid matches array');
     }
 
     await duplicateDetectionService.savePotentialDuplicates(
@@ -96,16 +91,10 @@ export async function saveDuplicates(req: Request, res: Response) {
       matches
     );
 
-    res.json({
-      success: true,
-      message: `Saved ${matches.length} potential duplicate(s) for review`,
-    });
+    return sendSuccess(res, null, `Saved ${matches.length} potential duplicate(s) for review`);
   } catch (error) {
     logControllerError('Error saving duplicates', error);
-    res.status(500).json({
-      error: 'Failed to save duplicates',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to save duplicates');
   }
 }
 
@@ -117,7 +106,7 @@ export async function getPendingDuplicates(req: Request, res: Response) {
   try {
     const duplicates = await duplicateDetectionService.getPendingDuplicates();
 
-    res.json({
+    return sendSuccess(res, {
       count: duplicates.length,
       duplicates: duplicates.map((dup: any) => ({
         id: dup.id,
@@ -145,10 +134,7 @@ export async function getPendingDuplicates(req: Request, res: Response) {
     });
   } catch (error) {
     logControllerError('Error fetching pending duplicates', error);
-    res.status(500).json({
-      error: 'Failed to fetch pending duplicates',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch pending duplicates');
   }
 }
 
@@ -162,25 +148,19 @@ export async function mergeDuplicate(req: Request, res: Response) {
     const { sourceClientId, targetClientId, resolutionNotes } = req.body;
 
     // Get reviewer ID from authenticated user
-    const reviewedBy = (req as any).user?.id;
+    const reviewedBy = req.user?.userId;
     if (!reviewedBy) {
-      return res.status(401).json({
-        error: 'Authentication required',
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     // Validate required fields
     if (!sourceClientId || !targetClientId) {
-      return res.status(400).json({
-        error: 'Missing required fields: sourceClientId, targetClientId',
-      });
+      return sendBadRequest(res, 'Missing required fields: sourceClientId, targetClientId');
     }
 
     // Prevent merging a client with itself
     if (sourceClientId === targetClientId) {
-      return res.status(400).json({
-        error: 'Cannot merge a client with itself',
-      });
+      return sendBadRequest(res, 'Cannot merge a client with itself');
     }
 
     // Merge clients
@@ -191,18 +171,13 @@ export async function mergeDuplicate(req: Request, res: Response) {
       resolutionNotes,
     });
 
-    res.json({
-      success: true,
-      message: 'Clients merged successfully',
+    return sendSuccess(res, {
       sourceClientId,
       targetClientId,
-    });
+    }, 'Clients merged successfully');
   } catch (error) {
     logControllerError('Error merging clients', error);
-    res.status(500).json({
-      error: 'Failed to merge clients',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to merge clients');
   }
 }
 
@@ -216,11 +191,9 @@ export async function dismissDuplicate(req: Request, res: Response) {
     const { resolutionNotes } = req.body;
 
     // Get reviewer ID from authenticated user
-    const reviewedBy = (req as any).user?.id;
+    const reviewedBy = req.user?.userId;
     if (!reviewedBy) {
-      return res.status(401).json({
-        error: 'Authentication required',
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     await duplicateDetectionService.dismissDuplicate(
@@ -229,16 +202,10 @@ export async function dismissDuplicate(req: Request, res: Response) {
       resolutionNotes
     );
 
-    res.json({
-      success: true,
-      message: 'Duplicate dismissed successfully',
-    });
+    return sendSuccess(res, null, 'Duplicate dismissed successfully');
   } catch (error) {
     logControllerError('Error dismissing duplicate', error);
-    res.status(500).json({
-      error: 'Failed to dismiss duplicate',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to dismiss duplicate');
   }
 }
 
@@ -248,32 +215,12 @@ export async function dismissDuplicate(req: Request, res: Response) {
  */
 export async function getDuplicateStats(req: Request, res: Response) {
   try {
-    const { PrismaClient } = await import('@mentalspace/database');
-    const prisma = new PrismaClient();
+    // Phase 3.2: Use service method instead of direct prisma call
+    const stats = await duplicateDetectionService.getDuplicateStats();
 
-    const [pending, dismissed, merged, total] = await Promise.all([
-      prisma.potentialDuplicate.count({ where: { status: 'PENDING' } }),
-      prisma.potentialDuplicate.count({ where: { status: 'DISMISSED' } }),
-      prisma.potentialDuplicate.count({ where: { status: 'MERGED' } }),
-      prisma.potentialDuplicate.count(),
-    ]);
-
-    res.json({
-      total,
-      pending,
-      dismissed,
-      merged,
-      byMatchType: await prisma.potentialDuplicate.groupBy({
-        by: ['matchType'],
-        _count: true,
-        where: { status: 'PENDING' },
-      }),
-    });
+    return sendSuccess(res, stats);
   } catch (error) {
     logControllerError('Error fetching duplicate stats', error);
-    res.status(500).json({
-      error: 'Failed to fetch duplicate stats',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, error instanceof Error ? getErrorMessage(error) : 'Failed to fetch duplicate stats');
   }
 }

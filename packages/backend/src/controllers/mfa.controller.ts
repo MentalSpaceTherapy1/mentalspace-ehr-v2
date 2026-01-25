@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import { UserRoles } from '@mentalspace/shared';
 import mfaService from '../services/mfa.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { UnauthorizedError, ValidationError } from '../utils/errors';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendPaginated, calculatePagination } from '../utils/apiResponse';
 
 /**
  * Multi-Factor Authentication (MFA) Controller
@@ -29,16 +31,12 @@ export class MFAController {
 
     const mfaData = await mfaService.generateMFASecret(userId);
 
-    res.status(200).json({
-      success: true,
-      message: 'MFA setup initiated. Scan the QR code with your authenticator app.',
-      data: {
-        qrCodeUrl: mfaData.qrCodeUrl,
-        manualEntryKey: mfaData.manualEntryKey,
-        backupCodes: mfaData.backupCodes,
-        secret: mfaData.secret,
-      },
-    });
+    return sendSuccess(res, {
+      qrCodeUrl: mfaData.qrCodeUrl,
+      manualEntryKey: mfaData.manualEntryKey,
+      backupCodes: mfaData.backupCodes,
+      secret: mfaData.secret,
+    }, 'MFA setup initiated. Scan the QR code with your authenticator app.');
   });
 
   /**
@@ -62,10 +60,7 @@ export class MFAController {
 
     await mfaService.enableMFA(userId, secret, verificationCode, backupCodes);
 
-    res.status(200).json({
-      success: true,
-      message: 'MFA enabled successfully',
-    });
+    return sendSuccess(res, null, 'MFA enabled successfully');
   });
 
   /**
@@ -87,10 +82,7 @@ export class MFAController {
 
     await mfaService.disableMFA(userId, verificationCode);
 
-    res.status(200).json({
-      success: true,
-      message: 'MFA disabled successfully',
-    });
+    return sendSuccess(res, null, 'MFA disabled successfully');
   });
 
   /**
@@ -120,18 +112,10 @@ export class MFAController {
         throw new UnauthorizedError('Invalid verification code');
       }
 
-      return res.status(200).json({
-        success: true,
-        message: 'Backup code verified successfully',
-        usedBackupCode: true,
-      });
+      return sendSuccess(res, { usedBackupCode: true }, 'Backup code verified successfully');
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'MFA code verified successfully',
-      usedBackupCode: false,
-    });
+    return sendSuccess(res, { usedBackupCode: false }, 'MFA code verified successfully');
   });
 
   /**
@@ -153,13 +137,7 @@ export class MFAController {
 
     const newBackupCodes = await mfaService.regenerateBackupCodes(userId, verificationCode);
 
-    res.status(200).json({
-      success: true,
-      message: 'Backup codes regenerated successfully',
-      data: {
-        backupCodes: newBackupCodes,
-      },
-    });
+    return sendSuccess(res, { backupCodes: newBackupCodes }, 'Backup codes regenerated successfully');
   });
 
   /**
@@ -175,10 +153,7 @@ export class MFAController {
 
     const status = await mfaService.getMFAStatus(userId);
 
-    res.status(200).json({
-      success: true,
-      data: status,
-    });
+    return sendSuccess(res, status);
   });
 
   /**
@@ -194,10 +169,7 @@ export class MFAController {
 
     await mfaService.sendSMSCode(userId);
 
-    res.status(200).json({
-      success: true,
-      message: 'SMS verification code sent successfully',
-    });
+    return sendSuccess(res, null, 'SMS verification code sent successfully');
   });
 
   /**
@@ -229,10 +201,7 @@ export class MFAController {
 
     await mfaService.enableMFAWithMethod(userId, method, secret, verificationCode, backupCodes);
 
-    res.status(200).json({
-      success: true,
-      message: `MFA enabled successfully with ${method} method`,
-    });
+    return sendSuccess(res, null, `MFA enabled successfully with ${method} method`);
   });
 
   /**
@@ -248,16 +217,13 @@ export class MFAController {
     }
 
     // Check if user has admin or super_admin role
-    if (!userRoles.includes('ADMINISTRATOR') && !userRoles.includes('SUPER_ADMIN')) {
+    if (!userRoles.includes(UserRoles.ADMINISTRATOR) && !userRoles.includes(UserRoles.SUPER_ADMIN)) {
       throw new UnauthorizedError('Admin access required');
     }
 
     const users = await mfaService.getAllUsersWithMFAStatus();
 
-    res.status(200).json({
-      success: true,
-      data: { users },
-    });
+    return sendSuccess(res, { users });
   });
 
   /**
@@ -275,7 +241,7 @@ export class MFAController {
     }
 
     // Check if user has admin or super_admin role
-    if (!adminRoles.includes('ADMINISTRATOR') && !adminRoles.includes('SUPER_ADMIN')) {
+    if (!adminRoles.includes(UserRoles.ADMINISTRATOR) && !adminRoles.includes(UserRoles.SUPER_ADMIN)) {
       throw new UnauthorizedError('Admin access required');
     }
 
@@ -285,10 +251,7 @@ export class MFAController {
 
     await mfaService.adminResetMFA(targetUserId, adminId, reason);
 
-    res.status(200).json({
-      success: true,
-      message: 'MFA reset successfully for user',
-    });
+    return sendSuccess(res, null, 'MFA reset successfully for user');
   });
 }
 

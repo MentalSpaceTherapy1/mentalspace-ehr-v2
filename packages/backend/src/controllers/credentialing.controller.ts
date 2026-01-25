@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
-import credentialingService from '../services/credentialing.service';
+import credentialingService, { CredentialFilters } from '../services/credentialing.service';
 import logger from '../utils/logger';
-import { CredentialType, VerificationStatus } from '@prisma/client';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
+import { CredentialType, VerificationStatus, ScreeningStatus } from '@prisma/client';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
 
 /**
  * Credentialing Controller
@@ -38,10 +40,7 @@ class CredentialingController {
 
       // Validation
       if (!userId || !credentialType || !credentialNumber || !issuingAuthority || !issueDate || !expirationDate) {
-        res.status(400).json({
-          success: false,
-          error: 'Missing required fields: userId, credentialType, credentialNumber, issuingAuthority, issueDate, expirationDate',
-        });
+        sendBadRequest(res, 'Missing required fields: userId, credentialType, credentialNumber, issuingAuthority, issueDate, expirationDate');
         return;
       }
 
@@ -63,17 +62,10 @@ class CredentialingController {
 
       logger.info('Credential created via API', { credentialId: credential.id });
 
-      res.status(201).json({
-        success: true,
-        data: credential,
-        message: 'Credential created successfully',
-      });
-    } catch (error: any) {
+      sendCreated(res, credential, 'Credential created successfully');
+    } catch (error) {
       logger.error('Error in createCredential controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to create credential',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to create credential');
     }
   }
 
@@ -88,23 +80,14 @@ class CredentialingController {
       const credential = await credentialingService.getCredentialById(id);
 
       if (!credential) {
-        res.status(404).json({
-          success: false,
-          error: 'Credential not found',
-        });
+        sendNotFound(res, 'Credential');
         return;
       }
 
-      res.status(200).json({
-        success: true,
-        data: credential,
-      });
-    } catch (error: any) {
+      sendSuccess(res, credential);
+    } catch (error) {
       logger.error('Error in getCredentialById controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to fetch credential',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to fetch credential');
     }
   }
 
@@ -125,12 +108,12 @@ class CredentialingController {
         limit,
       } = req.query;
 
-      const filters: any = {};
+      const filters: CredentialFilters = {};
 
       if (userId) filters.userId = userId as string;
       if (credentialType) filters.credentialType = credentialType as CredentialType;
       if (verificationStatus) filters.verificationStatus = verificationStatus as VerificationStatus;
-      if (screeningStatus) filters.screeningStatus = screeningStatus as string;
+      if (screeningStatus) filters.screeningStatus = screeningStatus as ScreeningStatus;
       if (expiringWithinDays) filters.expiringWithinDays = parseInt(expiringWithinDays as string);
       if (expired === 'true') filters.expired = true;
       if (page) filters.page = parseInt(page as string);
@@ -138,21 +121,17 @@ class CredentialingController {
 
       const result = await credentialingService.getCredentials(filters);
 
-      res.status(200).json({
-        success: true,
-        data: result.credentials,
+      sendSuccess(res, {
+        credentials: result.credentials,
         pagination: {
           page: result.page,
           totalPages: result.totalPages,
           total: result.total,
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Error in getCredentials controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to fetch credentials',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to fetch credentials');
     }
   }
 
@@ -166,17 +145,10 @@ class CredentialingController {
 
       const credentials = await credentialingService.getCredentialsByUserId(userId);
 
-      res.status(200).json({
-        success: true,
-        data: credentials,
-        count: credentials.length,
-      });
-    } catch (error: any) {
+      sendSuccess(res, { credentials, count: credentials.length });
+    } catch (error) {
       logger.error('Error in getUserCredentials controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to fetch user credentials',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to fetch user credentials');
     }
   }
 
@@ -200,17 +172,10 @@ class CredentialingController {
 
       logger.info('Credential updated via API', { credentialId: id });
 
-      res.status(200).json({
-        success: true,
-        data: credential,
-        message: 'Credential updated successfully',
-      });
-    } catch (error: any) {
+      sendSuccess(res, credential, 'Credential updated successfully');
+    } catch (error) {
       logger.error('Error in updateCredential controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to update credential',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to update credential');
     }
   }
 
@@ -226,16 +191,10 @@ class CredentialingController {
 
       logger.info('Credential deleted via API', { credentialId: id });
 
-      res.status(200).json({
-        success: true,
-        message: 'Credential deleted successfully',
-      });
-    } catch (error: any) {
+      sendSuccess(res, null, 'Credential deleted successfully');
+    } catch (error) {
       logger.error('Error in deleteCredential controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to delete credential',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to delete credential');
     }
   }
 
@@ -249,10 +208,7 @@ class CredentialingController {
       const { verificationStatus, verificationMethod, verificationDate, notes } = req.body;
 
       if (!verificationStatus || !verificationMethod) {
-        res.status(400).json({
-          success: false,
-          error: 'Missing required fields: verificationStatus, verificationMethod',
-        });
+        sendBadRequest(res, 'Missing required fields: verificationStatus, verificationMethod');
         return;
       }
 
@@ -268,17 +224,10 @@ class CredentialingController {
         status: verificationStatus,
       });
 
-      res.status(200).json({
-        success: true,
-        data: credential,
-        message: 'Credential verified successfully',
-      });
-    } catch (error: any) {
+      sendSuccess(res, credential, 'Credential verified successfully');
+    } catch (error) {
       logger.error('Error in verifyCredential controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to verify credential',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to verify credential');
     }
   }
 
@@ -297,17 +246,10 @@ class CredentialingController {
         status: credential.screeningStatus,
       });
 
-      res.status(200).json({
-        success: true,
-        data: credential,
-        message: 'Screening completed successfully',
-      });
-    } catch (error: any) {
+      sendSuccess(res, credential, 'Screening completed successfully');
+    } catch (error) {
       logger.error('Error in runScreening controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to run screening',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to run screening');
     }
   }
 
@@ -322,18 +264,10 @@ class CredentialingController {
 
       const alerts = await credentialingService.getExpiringCredentials(daysThreshold);
 
-      res.status(200).json({
-        success: true,
-        data: alerts,
-        count: alerts.length,
-        threshold: daysThreshold,
-      });
-    } catch (error: any) {
+      sendSuccess(res, { alerts, count: alerts.length, threshold: daysThreshold });
+    } catch (error) {
       logger.error('Error in getExpiringCredentials controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to fetch expiring credentials',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to fetch expiring credentials');
     }
   }
 
@@ -350,18 +284,10 @@ class CredentialingController {
         (alert) => alert.alertLevel === 'CRITICAL_30' || alert.alertLevel === 'EXPIRED'
       );
 
-      res.status(200).json({
-        success: true,
-        data: activeAlerts,
-        count: activeAlerts.length,
-        allAlerts: alerts.length,
-      });
-    } catch (error: any) {
+      sendSuccess(res, { activeAlerts, count: activeAlerts.length, allAlerts: alerts.length });
+    } catch (error) {
       logger.error('Error in getCredentialAlerts controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to fetch credential alerts',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to fetch credential alerts');
     }
   }
 
@@ -375,17 +301,10 @@ class CredentialingController {
 
       logger.info('Expiration reminders sent via API', result);
 
-      res.status(200).json({
-        success: true,
-        data: result,
-        message: 'Expiration reminders sent successfully',
-      });
-    } catch (error: any) {
+      sendSuccess(res, result, 'Expiration reminders sent successfully');
+    } catch (error) {
       logger.error('Error in sendExpirationReminders controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to send expiration reminders',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to send expiration reminders');
     }
   }
 
@@ -399,16 +318,10 @@ class CredentialingController {
 
       const compliance = await credentialingService.checkUserCompliance(userId);
 
-      res.status(200).json({
-        success: true,
-        data: compliance,
-      });
-    } catch (error: any) {
+      sendSuccess(res, compliance);
+    } catch (error) {
       logger.error('Error in checkUserCompliance controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to check user compliance',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to check user compliance');
     }
   }
 
@@ -427,27 +340,21 @@ class CredentialingController {
         expired,
       } = req.query;
 
-      const filters: any = {};
+      const filters: CredentialFilters = {};
 
       if (userId) filters.userId = userId as string;
       if (credentialType) filters.credentialType = credentialType as CredentialType;
       if (verificationStatus) filters.verificationStatus = verificationStatus as VerificationStatus;
-      if (screeningStatus) filters.screeningStatus = screeningStatus as string;
+      if (screeningStatus) filters.screeningStatus = screeningStatus as ScreeningStatus;
       if (expiringWithinDays) filters.expiringWithinDays = parseInt(expiringWithinDays as string);
       if (expired === 'true') filters.expired = true;
 
       const report = await credentialingService.generateReport(filters);
 
-      res.status(200).json({
-        success: true,
-        data: report,
-      });
-    } catch (error: any) {
+      sendSuccess(res, report);
+    } catch (error) {
       logger.error('Error in generateReport controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to generate report',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to generate report');
     }
   }
 
@@ -461,10 +368,7 @@ class CredentialingController {
       const { documentUrl } = req.body;
 
       if (!documentUrl) {
-        res.status(400).json({
-          success: false,
-          error: 'Missing required field: documentUrl',
-        });
+        sendBadRequest(res, 'Missing required field: documentUrl');
         return;
       }
 
@@ -472,17 +376,10 @@ class CredentialingController {
 
       logger.info('Document added to credential via API', { credentialId: id });
 
-      res.status(200).json({
-        success: true,
-        data: credential,
-        message: 'Document added successfully',
-      });
-    } catch (error: any) {
+      sendSuccess(res, credential, 'Document added successfully');
+    } catch (error) {
       logger.error('Error in addDocument controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to add document',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to add document');
     }
   }
 
@@ -496,10 +393,7 @@ class CredentialingController {
       const { documentUrl } = req.body;
 
       if (!documentUrl) {
-        res.status(400).json({
-          success: false,
-          error: 'Missing required field: documentUrl',
-        });
+        sendBadRequest(res, 'Missing required field: documentUrl');
         return;
       }
 
@@ -507,17 +401,10 @@ class CredentialingController {
 
       logger.info('Document removed from credential via API', { credentialId: id });
 
-      res.status(200).json({
-        success: true,
-        data: credential,
-        message: 'Document removed successfully',
-      });
-    } catch (error: any) {
+      sendSuccess(res, credential, 'Document removed successfully');
+    } catch (error) {
       logger.error('Error in removeDocument controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to remove document',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to remove document');
     }
   }
 
@@ -533,17 +420,10 @@ class CredentialingController {
 
       logger.info('Credential renewal initiated via API', { credentialId: id });
 
-      res.status(200).json({
-        success: true,
-        data: credential,
-        message: 'Renewal initiated successfully',
-      });
-    } catch (error: any) {
+      sendSuccess(res, credential, 'Renewal initiated successfully');
+    } catch (error) {
       logger.error('Error in initiateRenewal controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to initiate renewal',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to initiate renewal');
     }
   }
 
@@ -555,16 +435,10 @@ class CredentialingController {
     try {
       const stats = await credentialingService.getComplianceStats();
 
-      res.status(200).json({
-        success: true,
-        data: stats,
-      });
-    } catch (error: any) {
+      sendSuccess(res, stats);
+    } catch (error) {
       logger.error('Error in getStats controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to fetch statistics',
-      });
+      sendServerError(res, getErrorMessage(error) || 'Failed to fetch statistics');
     }
   }
 }

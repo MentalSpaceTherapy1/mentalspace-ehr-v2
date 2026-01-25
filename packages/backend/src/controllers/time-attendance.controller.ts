@@ -1,6 +1,28 @@
 import { Request, Response } from 'express';
 import timeAttendanceService from '../services/time-attendance.service';
 import { AbsenceType } from '@prisma/client';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendPaginated, calculatePagination } from '../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+
+// ============================================================================
+// TYPE DEFINITIONS FOR PHASE 5.4
+// ============================================================================
+
+/**
+ * Filter type for attendance record queries
+ */
+interface AttendanceFilters {
+  userId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  type?: string;
+  status?: string;
+  isAbsent?: boolean;
+  absenceType?: AbsenceType;
+  approved?: boolean;
+  page?: number;
+  limit?: number;
+}
 
 export class TimeAttendanceController {
   /**
@@ -10,16 +32,9 @@ export class TimeAttendanceController {
   async createRecord(req: Request, res: Response) {
     try {
       const record = await timeAttendanceService.createRecord(req.body);
-      res.status(201).json({
-        success: true,
-        data: record,
-        message: 'Attendance record created successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to create attendance record',
-      });
+      return sendCreated(res, record, 'Attendance record created successfully');
+    } catch (error) {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to create attendance record');
     }
   }
 
@@ -37,16 +52,9 @@ export class TimeAttendanceController {
         actualStart,
       });
 
-      res.status(200).json({
-        success: true,
-        data: record,
-        message: 'Clocked in successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to clock in',
-      });
+      return sendSuccess(res, record, 'Clocked in successfully');
+    } catch (error) {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to clock in');
     }
   }
 
@@ -65,16 +73,9 @@ export class TimeAttendanceController {
         breakMinutes,
       });
 
-      res.status(200).json({
-        success: true,
-        data: record,
-        message: 'Clocked out successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to clock out',
-      });
+      return sendSuccess(res, record, 'Clocked out successfully');
+    } catch (error) {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to clock out');
     }
   }
 
@@ -88,16 +89,9 @@ export class TimeAttendanceController {
       const targetUserId = userId || employeeId;
 
       // For now, just return a success response - break tracking can be enhanced later
-      res.status(200).json({
-        success: true,
-        data: { userId: targetUserId, breakStarted: new Date() },
-        message: 'Break started successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to start break',
-      });
+      return sendSuccess(res, { userId: targetUserId, breakStarted: new Date() }, 'Break started successfully');
+    } catch (error) {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to start break');
     }
   }
 
@@ -111,16 +105,9 @@ export class TimeAttendanceController {
       const targetUserId = userId || employeeId;
 
       // For now, just return a success response - break tracking can be enhanced later
-      res.status(200).json({
-        success: true,
-        data: { userId: targetUserId, breakEnded: new Date() },
-        message: 'Break ended successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to end break',
-      });
+      return sendSuccess(res, { userId: targetUserId, breakEnded: new Date() }, 'Break ended successfully');
+    } catch (error) {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to end break');
     }
   }
 
@@ -152,21 +139,15 @@ export class TimeAttendanceController {
         }
       }
 
-      res.status(200).json({
-        success: true,
-        data: {
-          status,
-          currentRecord: currentRecord || null,
-          clockedIn: status === 'CLOCKED_IN',
-          lastClockIn: currentRecord?.actualStart || null,
-          lastClockOut: currentRecord?.actualEnd || null,
-        },
+      return sendSuccess(res, {
+        status,
+        currentRecord: currentRecord || null,
+        clockedIn: status === 'CLOCKED_IN',
+        lastClockIn: currentRecord?.actualStart || null,
+        lastClockOut: currentRecord?.actualEnd || null,
       });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to get current status',
-      });
+    } catch (error) {
+      return sendServerError(res, getErrorMessage(error) || 'Failed to get current status');
     }
   }
 
@@ -178,7 +159,7 @@ export class TimeAttendanceController {
     try {
       const { userId, startDate, endDate, format } = req.query;
 
-      const filters: any = {};
+      const filters: AttendanceFilters = {};
       if (userId) filters.userId = userId as string;
       if (startDate) filters.startDate = new Date(startDate as string);
       if (endDate) filters.endDate = new Date(endDate as string);
@@ -186,16 +167,9 @@ export class TimeAttendanceController {
       const result = await timeAttendanceService.getAllRecords(filters);
 
       // For now, return JSON data - CSV/Excel export can be enhanced later
-      res.status(200).json({
-        success: true,
-        data: result.records,
-        format: format || 'json',
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to export attendance',
-      });
+      return sendSuccess(res, { records: result.records, format: format || 'json' });
+    } catch (error) {
+      return sendServerError(res, getErrorMessage(error) || 'Failed to export attendance');
     }
   }
 
@@ -216,7 +190,7 @@ export class TimeAttendanceController {
         limit,
       } = req.query;
 
-      const filters: any = {};
+      const filters: AttendanceFilters = {};
 
       if (userId) filters.userId = userId as string;
       if (startDate) filters.startDate = new Date(startDate as string);
@@ -228,16 +202,9 @@ export class TimeAttendanceController {
       if (limit) filters.limit = parseInt(limit as string);
 
       const result = await timeAttendanceService.getAllRecords(filters);
-      res.status(200).json({
-        success: true,
-        data: result.records,
-        pagination: result.pagination,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch attendance records',
-      });
+      return sendSuccess(res, { data: result.records, pagination: result.pagination });
+    } catch (error) {
+      return sendServerError(res, getErrorMessage(error) || 'Failed to fetch attendance records');
     }
   }
 
@@ -249,15 +216,9 @@ export class TimeAttendanceController {
     try {
       const { id } = req.params;
       const record = await timeAttendanceService.getRecordById(id);
-      res.status(200).json({
-        success: true,
-        data: record,
-      });
-    } catch (error: any) {
-      res.status(404).json({
-        success: false,
-        message: error.message || 'Attendance record not found',
-      });
+      return sendSuccess(res, record);
+    } catch (error) {
+      return sendNotFound(res, 'Attendance record');
     }
   }
 
@@ -269,16 +230,9 @@ export class TimeAttendanceController {
     try {
       const { id } = req.params;
       const record = await timeAttendanceService.updateRecord(id, req.body);
-      res.status(200).json({
-        success: true,
-        data: record,
-        message: 'Attendance record updated successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to update attendance record',
-      });
+      return sendSuccess(res, record, 'Attendance record updated successfully');
+    } catch (error) {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to update attendance record');
     }
   }
 
@@ -292,16 +246,9 @@ export class TimeAttendanceController {
       const { approvedById } = req.body;
 
       const record = await timeAttendanceService.approveRecord(id, { approvedById });
-      res.status(200).json({
-        success: true,
-        data: record,
-        message: 'Attendance record approved successfully',
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to approve attendance record',
-      });
+      return sendSuccess(res, record, 'Attendance record approved successfully');
+    } catch (error) {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to approve attendance record');
     }
   }
 
@@ -313,15 +260,9 @@ export class TimeAttendanceController {
     try {
       const { id } = req.params;
       const result = await timeAttendanceService.deleteRecord(id);
-      res.status(200).json({
-        success: true,
-        message: result.message,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to delete attendance record',
-      });
+      return sendSuccess(res, null, result.message);
+    } catch (error) {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to delete attendance record');
     }
   }
 
@@ -335,10 +276,7 @@ export class TimeAttendanceController {
       const { startDate, endDate } = req.query;
 
       if (!startDate || !endDate) {
-        return res.status(400).json({
-          success: false,
-          message: 'Start date and end date are required',
-        });
+        return sendBadRequest(res, 'Start date and end date are required');
       }
 
       const summary = await timeAttendanceService.getUserAttendanceSummary(
@@ -347,15 +285,9 @@ export class TimeAttendanceController {
         new Date(endDate as string)
       );
 
-      res.status(200).json({
-        success: true,
-        data: summary,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch attendance summary',
-      });
+      return sendSuccess(res, summary);
+    } catch (error) {
+      return sendServerError(res, getErrorMessage(error) || 'Failed to fetch attendance summary');
     }
   }
 
@@ -366,15 +298,9 @@ export class TimeAttendanceController {
   async getPendingApprovals(req: Request, res: Response) {
     try {
       const records = await timeAttendanceService.getPendingApprovals();
-      res.status(200).json({
-        success: true,
-        data: records,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch pending approvals',
-      });
+      return sendSuccess(res, records);
+    } catch (error) {
+      return sendServerError(res, getErrorMessage(error) || 'Failed to fetch pending approvals');
     }
   }
 
@@ -387,23 +313,13 @@ export class TimeAttendanceController {
       const { recordIds, approvedById } = req.body;
 
       if (!recordIds || !Array.isArray(recordIds) || recordIds.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Record IDs array is required',
-        });
+        return sendBadRequest(res, 'Record IDs array is required');
       }
 
       const result = await timeAttendanceService.bulkApprove(recordIds, approvedById);
-      res.status(200).json({
-        success: true,
-        message: result.message,
-        data: { count: result.count },
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to bulk approve records',
-      });
+      return sendSuccess(res, { count: result.count }, result.message);
+    } catch (error) {
+      return sendBadRequest(res, getErrorMessage(error) || 'Failed to bulk approve records');
     }
   }
 
@@ -415,21 +331,15 @@ export class TimeAttendanceController {
     try {
       const { userId, startDate, endDate } = req.query;
 
-      const filters: any = {};
+      const filters: AttendanceFilters = {};
       if (userId) filters.userId = userId as string;
       if (startDate) filters.startDate = new Date(startDate as string);
       if (endDate) filters.endDate = new Date(endDate as string);
 
       const stats = await timeAttendanceService.getAttendanceStatistics(filters);
-      res.status(200).json({
-        success: true,
-        data: stats,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch statistics',
-      });
+      return sendSuccess(res, stats);
+    } catch (error) {
+      return sendServerError(res, getErrorMessage(error) || 'Failed to fetch statistics');
     }
   }
 }

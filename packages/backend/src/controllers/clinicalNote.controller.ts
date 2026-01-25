@@ -1,1410 +1,496 @@
-import logger, { logControllerError } from '../utils/logger';
+/**
+ * Clinical Note Controller
+ * Phase 3.2: Refactored to thin controller pattern
+ *
+ * Handles HTTP request/response only - all business logic delegated to clinicalNoteService
+ */
+
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { ClinicalNotesValidationService } from '../services/clinical-notes-validation.service';
-import prisma from '../lib/prisma';
-import { AppointmentEligibilityService } from '../services/appointment-eligibility.service';
-import { DiagnosisInheritanceService } from '../services/diagnosis-inheritance.service';
-import * as SignatureService from '../services/signature.service';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+import {
+  clinicalNoteService,
+  NOTE_TYPES,
+  clinicalNoteSchema,
+} from '../services/clinicalNote.service';
+import * as NoteValidationService from '../services/note-validation.service';
+import logger, { logControllerError } from '../utils/logger';
+import { AppError, NotFoundError, ForbiddenError, UnauthorizedError, BadRequestError } from '../utils/errors';
+import {
+  sendSuccess,
+  sendCreated,
+  sendNotFound,
+  sendBadRequest,
+  sendForbidden,
+  sendUnauthorized,
+  sendConflict,
+  sendServerError,
+  sendValidationError,
+} from '../utils/apiResponse';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 
-// Note types enum
-export const NOTE_TYPES = {
-  INTAKE_ASSESSMENT: 'Intake Assessment',
-  PROGRESS_NOTE: 'Progress Note',
-  TREATMENT_PLAN: 'Treatment Plan',
-  CANCELLATION_NOTE: 'Cancellation Note',
-  CONSULTATION_NOTE: 'Consultation Note',
-  CONTACT_NOTE: 'Contact Note',
-  TERMINATION_NOTE: 'Termination Note',
-  MISCELLANEOUS_NOTE: 'Miscellaneous Note',
-  GROUP_THERAPY: 'Group Therapy Note',
-} as const;
-
-// Clinical Note validation schema
-const clinicalNoteSchema = z.object({
-  clientId: z.string().uuid('Invalid client ID'),
-  appointmentId: z.string().uuid('Invalid appointment ID').nullable().optional(), // Made optional/nullable for drafts
-  noteType: z.enum([
-    'Intake Assessment',
-    'Progress Note',
-    'Treatment Plan',
-    'Cancellation Note',
-    'Consultation Note',
-    'Contact Note',
-    'Termination Note',
-    'Miscellaneous Note',
-    'Group Therapy Note',
-  ]),
-  sessionDate: z.string().datetime('Invalid session date').optional(), // Made optional for drafts
-  sessionStartTime: z.string().optional(),
-  sessionEndTime: z.string().optional(),
-  sessionDuration: z.number().int().positive().optional(),
-
-  // SOAP Note Fields
-  subjective: z.string().optional(),
-  objective: z.string().optional(),
-  assessment: z.string().optional(),
-  plan: z.string().optional(),
-
-  // Risk Assessment
-  suicidalIdeation: z.boolean().default(false),
-  suicidalPlan: z.boolean().default(false),
-  homicidalIdeation: z.boolean().default(false),
-  selfHarm: z.boolean().default(false),
-  riskLevel: z.string().optional(),
-  riskAssessmentDetails: z.string().optional(),
-  interventionsTaken: z.string().optional(),
-
-  // Diagnosis & Treatment (for Intake and Treatment Plan)
-  diagnosisCodes: z.array(z.string()).default([]),
-  interventionsUsed: z.array(z.string()).default([]),
-  progressTowardGoals: z.string().optional(),
-
-  // Next Session
-  nextSessionPlan: z.string().optional(),
-  nextSessionDate: z.string().datetime().optional(),
-
-  // Billing
-  cptCode: z.string().optional(),
-  billingCode: z.string().optional(),
-  billable: z.boolean().default(true),
-
-  // Compliance
-  dueDate: z.string().datetime().optional(), // Made optional for drafts
-  status: z.enum(['DRAFT', 'PENDING_COSIGN', 'SIGNED', 'COSIGNED', 'RETURNED_FOR_REVISION', 'LOCKED']).optional(),
-});
-
-/**
- * Validate note workflow rules using Business Rules validation service
- */
-async function validateNoteWorkflow(
-  clientId: string,
-  clinicianId: string,
-  noteType: string,
-  appointmentId?: string,
-  status?: string
-): Promise<{ valid: boolean; message?: string }> {
-  try {
-    // Use the comprehensive validation service
-    await ClinicalNotesValidationService.validateNoteCreation({
-      noteType,
-      clientId,
-      clinicianId,
-      appointmentId,
-      status
-    });
-
-    return { valid: true };
-  } catch (error: any) {
-    return { valid: false, message: error.message };
-  }
+// Type for enriched appointment used in appointments without notes
+interface EnrichedAppointment {
+  isOverdue?: boolean;
+  isUrgent?: boolean;
+  [key: string]: unknown;
 }
 
-/**
- * Check if Treatment Plan needs updating (3-month rule)
- */
-async function checkTreatmentPlanStatus(clientId: string) {
-  const latestTreatmentPlan = await prisma.clinicalNote.findFirst({
-    where: {
-      clientId,
-      noteType: 'Treatment Plan',
-      status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] },
-    },
-    orderBy: { signedDate: 'desc' },
-  });
-
-  if (!latestTreatmentPlan || !latestTreatmentPlan.signedDate) {
-    return { needsUpdate: true, daysOverdue: null };
-  }
-
-  const daysSinceSigned = Math.floor(
-    (new Date().getTime() - new Date(latestTreatmentPlan.signedDate).getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  const needsUpdate = daysSinceSigned > 90; // 3 months = 90 days
-  const daysOverdue = needsUpdate ? daysSinceSigned - 90 : null;
-
-  return { needsUpdate, daysOverdue, lastTreatmentPlan: latestTreatmentPlan };
-}
+// Re-export NOTE_TYPES for backward compatibility
+export { NOTE_TYPES };
 
 /**
  * Get all clinical notes for a client
+ * GET /api/clients/:clientId/clinical-notes
  */
 export const getClientNotes = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
 
-    const notes = await prisma.clinicalNote.findMany({
-      where: { clientId },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-        cosigner: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-        appointment: {
-          select: {
-            id: true,
-            appointmentDate: true,
-            startTime: true,
-            endTime: true,
-          },
-        },
-      },
-      orderBy: { sessionDate: 'desc' },
-    });
+    const { notes, treatmentPlanStatus } = await clinicalNoteService.getClientNotes(clientId);
 
-    // Check treatment plan status
-    const treatmentPlanStatus = await checkTreatmentPlanStatus(clientId);
+    return sendSuccess(res, { notes, count: notes.length, treatmentPlanStatus });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
 
-    return res.json({
-      success: true,
-      data: notes,
-      count: notes.length,
-      treatmentPlanStatus,
+    const errorId = logControllerError('Get client notes', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Get client notes error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve clinical notes',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve clinical notes', errorId);
   }
 };
 
 /**
  * Get clinical note by ID
+ * GET /api/clinical-notes/:id
  */
 export const getClinicalNoteById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const note = await prisma.clinicalNote.findUnique({
-      where: { id },
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            medicalRecordNumber: true,
-            dateOfBirth: true,
-          },
-        },
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-        cosigner: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-        appointment: true,
-      },
-    });
+    const note = await clinicalNoteService.getNoteById(id);
 
-    if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
+    return sendSuccess(res, note);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return sendNotFound(res, 'Clinical note');
     }
 
-    return res.json({
-      success: true,
-      data: note,
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Get clinical note', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Get clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve clinical note',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve clinical note', errorId);
   }
 };
 
 /**
  * Create new clinical note with workflow validation
+ * POST /api/clinical-notes
  */
 export const createClinicalNote = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
-    const validatedData = clinicalNoteSchema.parse(req.body);
+    const userId = req.user!.userId;
 
-    // Conditional validation: Require appointmentId only for non-draft notes
-    const isDraft = validatedData.status === 'DRAFT';
+    const note = await clinicalNoteService.createNote(req.body, userId);
 
-    if (!isDraft) {
-      // Non-draft notes require appointmentId
-      if (!validatedData.appointmentId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Appointment is required for non-draft notes',
-        });
-      }
-
-      // Validate workflow rules (Business Rules #1 and #2)
-      const workflowCheck = await validateNoteWorkflow(
-        validatedData.clientId,
-        userId,
-        validatedData.noteType,
-        validatedData.appointmentId,
-        validatedData.status
-      );
-
-      if (!workflowCheck.valid) {
-        return res.status(400).json({
-          success: false,
-          message: workflowCheck.message,
-        });
-      }
-    }
-
-    // Check if user is under supervision
-    const clinician = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        isUnderSupervision: true,
-        supervisorId: true,
-      },
-    });
-
-    const requiresCosign = clinician?.isUnderSupervision || false;
-
-    // DEBUG: Log the sessionDate being received
-    logger.info('🟢 CREATING CLINICAL NOTE - sessionDate received:', {
-      sessionDateRaw: validatedData.sessionDate,
-      sessionDateType: typeof validatedData.sessionDate,
-      sessionDateParsed: validatedData.sessionDate ? new Date(validatedData.sessionDate).toISOString() : null,
-      appointmentId: validatedData.appointmentId,
-      clientId: validatedData.clientId,
-      noteType: validatedData.noteType,
-      isDraft: validatedData.status === 'DRAFT'
-    });
-
-    // BUG-005 FIX: Extract sessionDate from validatedData and handle separately
-    // to ensure we default to today's date when not provided
-    const { sessionDate: rawSessionDate, dueDate: rawDueDate, nextSessionDate: rawNextSessionDate, ...restValidatedData } = validatedData as any;
-
-    // Determine the effective session date - default to today if not provided
-    const effectiveSessionDate = rawSessionDate ? new Date(rawSessionDate) : new Date();
-
-    logger.info('🟡 BUG-005 FIX - Session Date Processing:', {
-      rawSessionDate,
-      rawSessionDateType: typeof rawSessionDate,
-      effectiveSessionDate: effectiveSessionDate.toISOString(),
-    });
-
-    const note = await prisma.clinicalNote.create({
-      data: {
-        ...restValidatedData,
-        clinicianId: userId,
-        requiresCosign,
-        lastModifiedBy: userId,
-        // BUG-005 FIX: Use the pre-computed effective session date
-        sessionDate: effectiveSessionDate,
-        dueDate: rawDueDate ? new Date(rawDueDate) : null,
-        nextSessionDate: rawNextSessionDate ? new Date(rawNextSessionDate) : null,
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-      },
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: 'Clinical note created successfully',
-      data: note,
-    });
-  } catch (error: any) {
-    logger.error('Create clinical note error:', {
-      errorType: error instanceof Error ? error.constructor.name : typeof error,
-      errorMessage: error.message,
-      zodErrors: error instanceof z.ZodError ? error.errors : undefined
-    });
-
+    return sendCreated(res, note, 'Clinical note created successfully');
+  } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    // Handle Prisma unique constraint violation (duplicate appointment + noteType)
-    if (error.code === 'P2002') {
-      return res.status(409).json({
-        success: false,
-        message: 'A clinical note of this type already exists for this appointment. Please select a different appointment or edit the existing note.',
-        errorCode: 'DUPLICATE_NOTE',
-      });
+    if (error instanceof BadRequestError) {
+      // Handle duplicate note error specially
+      if (getErrorMessage(error).includes('already exists for this appointment')) {
+        return sendConflict(res, getErrorMessage(error));
+      }
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create clinical note',
-      error: error.message,
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Create clinical note', error, {
+      userId: req.user?.userId,
     });
+    return sendServerError(res, 'Failed to create clinical note', errorId);
   }
 };
 
 /**
  * Update clinical note
+ * PUT /api/clinical-notes/:id
  */
 export const updateClinicalNote = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
 
-    // Check if note exists and is editable
-    const existingNote = await prisma.clinicalNote.findUnique({
-      where: { id },
+    const note = await clinicalNoteService.updateNote(id, req.body, userId);
+
+    return sendSuccess(res, note, 'Clinical note updated successfully');
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return sendNotFound(res, 'Clinical note');
+    }
+
+    if (error instanceof ForbiddenError) {
+      return sendForbidden(res, getErrorMessage(error));
+    }
+
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Update clinical note', error, {
+      userId: req.user?.userId,
     });
-
-    if (!existingNote) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
-    }
-
-    // Can't edit locked, signed, or cosigned notes
-    if (['LOCKED', 'SIGNED', 'COSIGNED'].includes(existingNote.status)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Cannot edit locked, signed, or cosigned notes',
-      });
-    }
-
-    const updateData = { ...req.body, lastModifiedBy: userId };
-
-    // Map frontend field names to database field names
-    if (updateData.riskAssessmentNotes !== undefined) {
-      updateData.riskAssessmentDetails = updateData.riskAssessmentNotes;
-      delete updateData.riskAssessmentNotes;
-    }
-    if (updateData.interventions !== undefined) {
-      updateData.interventionsTaken = updateData.interventions;
-      delete updateData.interventions;
-    }
-
-    // Remove fields that cannot/should not be updated
-    // These are relational fields or identifiers that define the note's identity
-    delete updateData.id;
-    delete updateData.clientId;
-    delete updateData.noteType;
-    delete updateData.appointmentId;
-    delete updateData.clinicianId;
-    delete updateData.createdAt;
-    delete updateData.updatedAt;
-    delete updateData.client;
-    delete updateData.clinician;
-    delete updateData.appointment;
-    delete updateData.cosigner;
-
-    // Convert date strings to Date objects if present
-    if (updateData.sessionDate) {
-      updateData.sessionDate = new Date(updateData.sessionDate);
-    }
-    if (updateData.dueDate) {
-      updateData.dueDate = new Date(updateData.dueDate);
-    }
-    if (updateData.nextSessionDate) {
-      updateData.nextSessionDate = new Date(updateData.nextSessionDate);
-    }
-
-    const note = await prisma.clinicalNote.update({
-      where: { id },
-      data: updateData,
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-      },
-    });
-
-    return res.json({
-      success: true,
-      message: 'Clinical note updated successfully',
-      data: note,
-    });
-  } catch (error: any) {
-    logger.error('Update clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update clinical note',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to update clinical note', errorId);
   }
 };
 
 /**
  * Sign clinical note
+ * POST /api/clinical-notes/:id/sign
  */
 export const signClinicalNote = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { pin, password } = req.body; // Phase 1.4: Signature authentication
-    const userId = (req as any).user.userId;
+    const { pin, password } = req.body;
+    const userId = req.user!.userId;
 
-    const note = await prisma.clinicalNote.findUnique({
-      where: { id },
-      include: { clinician: true },
-    });
-
-    if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
-    }
-
-    // Only the note creator can sign it
-    if (note.clinicianId !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only the note creator can sign it',
-      });
-    }
-
-    // Can't sign if already signed or locked
-    if (['SIGNED', 'LOCKED', 'COSIGNED'].includes(note.status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Note is already signed or locked',
-      });
-    }
-
-    // PHASE 1.4: Verify signature authentication
-    const isAuthValid = await SignatureService.verifySignatureAuth({
-      userId,
-      pin,
-      password,
-    });
-
-    if (!isAuthValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid signature PIN or password',
-        errorCode: 'INVALID_SIGNATURE_AUTH',
-      });
-    }
-
-    // PHASE 1.3: Validate note before signing
-    const validationResult = await ClinicalNotesValidationService.validateNote(note.noteType, note);
-    if (!validationResult.isValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Note validation failed. Please complete all required fields.',
-        errors: validationResult.errors,
-        validationErrors: validationResult.errors, // For frontend compatibility
-      });
-    }
-
-    // Calculate days to complete
-    const sessionDateValue = note.sessionDate ? new Date(note.sessionDate) : new Date();
-    const daysToComplete = Math.floor(
-      (new Date().getTime() - sessionDateValue.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const completedOnTime = daysToComplete <= 7; // 7-day rule
-
-    // PHASE 1.4: Create signature event
     const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
 
-    await SignatureService.createSignatureEvent({
-      noteId: id,
+    const note = await clinicalNoteService.signNote(
+      id,
       userId,
-      signatureType: 'AUTHOR',
-      authMethod: pin ? 'PIN' : 'PASSWORD',
-      ipAddress,
-      userAgent,
-    });
+      { pin, password },
+      { ipAddress, userAgent }
+    );
 
-    const updatedNote = await prisma.clinicalNote.update({
-      where: { id },
-      data: {
-        status: note.requiresCosign ? 'PENDING_COSIGN' : 'SIGNED',
-        signedDate: new Date(),
-        signedBy: userId,
-        daysToComplete,
-        completedOnTime,
-        lastModifiedBy: userId,
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-      },
-    });
+    const message = note.status === 'PENDING_COSIGN'
+      ? 'Note signed and sent for co-signature'
+      : 'Note signed successfully';
 
-    return res.json({
-      success: true,
-      message: note.requiresCosign
-        ? 'Note signed and sent for co-signature'
-        : 'Note signed successfully',
-      data: updatedNote,
+    return sendSuccess(res, note, message);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return sendNotFound(res, 'Clinical note');
+    }
+
+    if (error instanceof ForbiddenError) {
+      return sendForbidden(res, getErrorMessage(error));
+    }
+
+    if (error instanceof UnauthorizedError) {
+      return sendUnauthorized(res, getErrorMessage(error));
+    }
+
+    if (error instanceof BadRequestError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Sign clinical note', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Sign clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to sign clinical note',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to sign clinical note', errorId);
   }
 };
 
 /**
  * Co-sign clinical note (supervisor)
+ * POST /api/clinical-notes/:id/cosign
  */
 export const cosignClinicalNote = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { supervisorComments, pin, password } = req.body; // Phase 1.4: Signature authentication
-    const supervisorId = (req as any).user.userId;
+    const { supervisorComments, pin, password } = req.body;
+    const supervisorId = req.user!.userId;
 
-    const note = await prisma.clinicalNote.findUnique({
-      where: { id },
-      include: {
-        clinician: {
-          select: {
-            supervisorId: true,
-          },
-        },
-      },
-    });
-
-    if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
-    }
-
-    // Check if user is the supervisor
-    if (note.clinician.supervisorId !== supervisorId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only the assigned supervisor can co-sign this note',
-      });
-    }
-
-    // Check if note is in correct status
-    if (note.status !== 'PENDING_COSIGN') {
-      return res.status(400).json({
-        success: false,
-        message: 'Note is not pending co-signature',
-      });
-    }
-
-    // PHASE 1.4: Verify signature authentication
-    const isAuthValid = await SignatureService.verifySignatureAuth({
-      userId: supervisorId,
-      pin,
-      password,
-    });
-
-    if (!isAuthValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid signature PIN or password',
-        errorCode: 'INVALID_SIGNATURE_AUTH',
-      });
-    }
-
-    // PHASE 1.4: Create signature event
     const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
 
-    await SignatureService.createSignatureEvent({
-      noteId: id,
-      userId: supervisorId,
-      signatureType: 'COSIGN',
-      authMethod: pin ? 'PIN' : 'PASSWORD',
-      ipAddress,
-      userAgent,
-    });
+    const note = await clinicalNoteService.cosignNote(
+      id,
+      supervisorId,
+      { supervisorComments, pin, password },
+      { ipAddress, userAgent }
+    );
 
-    const updatedNote = await prisma.clinicalNote.update({
-      where: { id },
-      data: {
-        status: 'COSIGNED',
-        cosignedDate: new Date(),
-        cosignedBy: supervisorId,
-        supervisorComments: supervisorComments || null,
-        lastModifiedBy: supervisorId,
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-        cosigner: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-      },
-    });
+    return sendSuccess(res, note, 'Note co-signed successfully');
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return sendNotFound(res, 'Clinical note');
+    }
 
-    return res.json({
-      success: true,
-      message: 'Note co-signed successfully',
-      data: updatedNote,
+    if (error instanceof ForbiddenError) {
+      return sendForbidden(res, getErrorMessage(error));
+    }
+
+    if (error instanceof UnauthorizedError) {
+      return sendUnauthorized(res, getErrorMessage(error));
+    }
+
+    if (error instanceof BadRequestError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Cosign clinical note', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Cosign clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to co-sign clinical note',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to co-sign clinical note', errorId);
   }
 };
 
 /**
  * Delete clinical note (soft delete - change status)
+ * DELETE /api/clinical-notes/:id
  */
 export const deleteClinicalNote = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
 
-    const note = await prisma.clinicalNote.findUnique({
-      where: { id },
-    });
+    await clinicalNoteService.deleteNote(id, userId);
 
-    if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
+    return sendSuccess(res, null, 'Clinical note deleted successfully');
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return sendNotFound(res, 'Clinical note');
     }
 
-    // Can only delete draft notes
-    if (note.status !== 'DRAFT') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only draft notes can be deleted',
-      });
+    if (error instanceof ForbiddenError) {
+      return sendForbidden(res, getErrorMessage(error));
     }
 
-    // Only the creator can delete
-    if (note.clinicianId !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only the note creator can delete it',
-      });
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
-    await prisma.clinicalNote.delete({
-      where: { id },
+    const errorId = logControllerError('Delete clinical note', error, {
+      userId: req.user?.userId,
     });
-
-    return res.json({
-      success: true,
-      message: 'Clinical note deleted successfully',
-    });
-  } catch (error: any) {
-    logger.error('Delete clinical note error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to delete clinical note',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to delete clinical note', errorId);
   }
 };
 
 /**
  * Get notes requiring co-signature for supervisor
+ * GET /api/clinical-notes/for-cosigning
  */
 export const getNotesForCosigning = async (req: Request, res: Response) => {
   try {
-    const supervisorId = (req as any).user.userId;
+    const supervisorId = req.user!.userId;
 
-    // Find all supervisees
-    const supervisees = await prisma.user.findMany({
-      where: { supervisorId },
-      select: { id: true },
-    });
+    const notes = await clinicalNoteService.getNotesForCosigning(supervisorId);
 
-    const superviseeIds = supervisees.map((s) => s.id);
+    return sendSuccess(res, { notes, count: notes.length });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
 
-    const notes = await prisma.clinicalNote.findMany({
-      where: {
-        clinicianId: { in: superviseeIds },
-        status: 'PENDING_COSIGN',
-      },
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            medicalRecordNumber: true,
-          },
-        },
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-      },
-      orderBy: { sessionDate: 'desc' },
+    const errorId = logControllerError('Get notes for cosigning', error, {
+      userId: req.user?.userId,
     });
-
-    return res.json({
-      success: true,
-      data: notes,
-      count: notes.length,
-    });
-  } catch (error: any) {
-    logger.error('Get notes for cosigning error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve notes for co-signing',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve notes for co-signing', errorId);
   }
 };
 
 /**
  * Get client's current diagnosis from latest Intake or Treatment Plan
+ * GET /api/clients/:clientId/diagnosis
  */
 export const getClientDiagnosis = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
 
-    // Get diagnosis from latest signed Intake Assessment or Treatment Plan
-    const latestDiagnosisNote = await prisma.clinicalNote.findFirst({
-      where: {
-        clientId,
-        noteType: { in: ['Intake Assessment', 'Treatment Plan'] },
-        status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] },
-        diagnosisCodes: { isEmpty: false },
-      },
-      orderBy: { signedDate: 'desc' },
-      select: { diagnosisCodes: true },
-    });
+    const diagnosisCodes = await clinicalNoteService.getClientDiagnosis(clientId);
 
-    return res.json({
-      success: true,
-      data: { diagnosisCodes: latestDiagnosisNote?.diagnosisCodes || [] },
+    return sendSuccess(res, { diagnosisCodes });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Get client diagnosis', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Get client diagnosis error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve client diagnosis',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve client diagnosis', errorId);
   }
 };
 
 /**
  * Get Treatment Plan update status for client
+ * GET /api/clients/:clientId/treatment-plan-status
  */
 export const getTreatmentPlanStatus = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
 
-    const status = await checkTreatmentPlanStatus(clientId);
+    const status = await clinicalNoteService.checkTreatmentPlanStatus(clientId);
 
-    return res.json({
-      success: true,
-      data: status,
+    return sendSuccess(res, status);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Get treatment plan status', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Get treatment plan status error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to check treatment plan status',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to check treatment plan status', errorId);
   }
 };
 
 /**
  * Get eligible appointments for creating a specific note type
+ * GET /api/clients/:clientId/eligible-appointments/:noteType
  */
 export const getEligibleAppointments = async (req: Request, res: Response) => {
   try {
     const { clientId, noteType } = req.params;
 
-    const appointments = await AppointmentEligibilityService.getEligibleAppointments(
-      clientId,
-      noteType
-    );
+    const result = await clinicalNoteService.getEligibleAppointments(clientId, noteType);
 
-    const defaultConfig = AppointmentEligibilityService.getDefaultAppointmentConfig(noteType);
+    return sendSuccess(res, result);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
 
-    return res.json({
-      success: true,
-      data: {
-        appointments,
-        defaultConfig,
-        hasEligible: appointments.length > 0,
-      },
+    const errorId = logControllerError('Get eligible appointments', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Get eligible appointments error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve eligible appointments',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve eligible appointments', errorId);
   }
 };
 
 /**
  * Get inherited diagnoses for a new note (for Progress Notes and Treatment Plans)
+ * GET /api/clients/:clientId/inherited-diagnoses/:noteType
  */
 export const getInheritedDiagnoses = async (req: Request, res: Response) => {
   try {
     const { clientId, noteType } = req.params;
 
-    const diagnoses = await DiagnosisInheritanceService.getInheritedDiagnosesForNote(
-      clientId,
-      noteType
-    );
+    const result = await clinicalNoteService.getInheritedDiagnoses(clientId, noteType);
 
-    const validation = await DiagnosisInheritanceService.validateDiagnosesForNoteType(
-      clientId,
-      noteType
-    );
+    return sendSuccess(res, result);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
 
-    return res.json({
-      success: true,
-      data: {
-        diagnosisCodes: diagnoses,
-        canSign: validation.valid,
-        validationMessage: validation.message,
-      },
+    const errorId = logControllerError('Get inherited diagnoses', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Get inherited diagnoses error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve inherited diagnoses',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve inherited diagnoses', errorId);
   }
 };
 
 /**
  * Get all notes for the logged-in clinician (My Notes)
+ * GET /api/clinical-notes/my-notes
  */
 export const getMyNotes = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const { status, noteType, clientId, startDate, endDate, search } = req.query;
 
-    // Build where clause
-    const where: any = {
-      clinicianId: userId,
-    };
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (noteType) {
-      where.noteType = noteType;
-    }
-
-    if (clientId) {
-      where.clientId = clientId;
-    }
-
-    if (startDate || endDate) {
-      where.sessionDate = {};
-      if (startDate) {
-        where.sessionDate.gte = new Date(startDate as string);
-      }
-      if (endDate) {
-        where.sessionDate.lte = new Date(endDate as string);
-      }
-    }
-
-    // Search filter (client name or note content)
-    if (search) {
-      where.OR = [
-        {
-          client: {
-            OR: [
-              { firstName: { contains: search as string, mode: 'insensitive' } },
-              { lastName: { contains: search as string, mode: 'insensitive' } },
-            ],
-          },
-        },
-        // SOAP note fields (Progress Note)
-        { subjective: { contains: search as string, mode: 'insensitive' } },
-        { objective: { contains: search as string, mode: 'insensitive' } },
-        { assessment: { contains: search as string, mode: 'insensitive' } },
-        { plan: { contains: search as string, mode: 'insensitive' } },
-        // Additional text fields for other note types
-        { riskAssessmentDetails: { contains: search as string, mode: 'insensitive' } },
-        { interventionsTaken: { contains: search as string, mode: 'insensitive' } },
-        { progressTowardGoals: { contains: search as string, mode: 'insensitive' } },
-        { nextSessionPlan: { contains: search as string, mode: 'insensitive' } },
-        { supervisorComments: { contains: search as string, mode: 'insensitive' } },
-        { currentRevisionComments: { contains: search as string, mode: 'insensitive' } },
-        { unlockReason: { contains: search as string, mode: 'insensitive' } },
-        { aiPrompt: { contains: search as string, mode: 'insensitive' } },
-        { inputTranscript: { contains: search as string, mode: 'insensitive' } },
-      ];
-    }
-
-    const notes = await prisma.clinicalNote.findMany({
-      where,
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            medicalRecordNumber: true,
-          },
-        },
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-        cosigner: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-        appointment: {
-          select: {
-            id: true,
-            appointmentDate: true,
-            startTime: true,
-            endTime: true,
-          },
-        },
-      },
-      orderBy: { sessionDate: 'desc' },
+    const { notes, stats } = await clinicalNoteService.getMyNotes(userId, {
+      status: status as string,
+      noteType: noteType as string,
+      clientId: clientId as string,
+      startDate: startDate as string,
+      endDate: endDate as string,
+      search: search as string,
     });
 
-    // Calculate statistics
-    const stats = {
-      total: notes.length,
-      draft: notes.filter((n) => n.status === 'DRAFT').length,
-      signed: notes.filter((n) => n.status === 'SIGNED').length,
-      pendingCosign: notes.filter((n) => n.status === 'PENDING_COSIGN').length,
-      cosigned: notes.filter((n) => n.status === 'COSIGNED').length,
-      locked: notes.filter((n) => n.isLocked).length,
-      overdue: notes.filter((n) => {
-        if (n.signedDate) return false;
-        if (!n.sessionDate) return false;
-        const daysSince = Math.floor((new Date().getTime() - new Date(n.sessionDate).getTime()) / (1000 * 60 * 60 * 24));
-        return daysSince > 3;
-      }).length,
-    };
+    return sendSuccess(res, { notes, stats, count: notes.length });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
 
-    return res.json({
-      success: true,
-      data: notes,
-      stats,
-      count: notes.length,
+    const errorId = logControllerError('Get my notes', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Get my notes error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve notes',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve notes', errorId);
   }
 };
 
 /**
  * Get appointments without notes (Compliance Dashboard)
- * Shows past completed appointments that don't have signed notes
+ * GET /api/clinical-notes/appointments-without-notes
  */
 export const getAppointmentsWithoutNotes = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { roles: true },
-    });
+    const userId = req.user!.userId;
 
-    // Build filter based on role
-    let appointmentFilter: any = {
-      status: 'COMPLETED',
-      appointmentDate: { lt: new Date() }, // Past appointments only
+    const enrichedAppointments = await clinicalNoteService.getAppointmentsWithoutNotes(userId);
+
+    const stats = {
+      total: enrichedAppointments.length,
+      overdue: enrichedAppointments.filter((a: EnrichedAppointment) => a.isOverdue).length,
+      urgent: enrichedAppointments.filter((a: EnrichedAppointment) => a.isUrgent).length,
     };
 
-    // Supervisors see supervisees' appointments, admins see all, clinicians see their own
-    if (user?.roles.includes('ADMINISTRATOR')) {
-      // Admins see all
-    } else if (user?.roles.includes('SUPERVISOR')) {
-      // Get all supervisees
-      const supervisees = await prisma.user.findMany({
-        where: { supervisorId: userId },
-        select: { id: true },
-      });
-      const superviseeIds = supervisees.map((s) => s.id);
-      appointmentFilter.clinicianId = { in: [...superviseeIds, userId] };
-    } else {
-      // Clinicians see their own
-      appointmentFilter.clinicianId = userId;
+    return sendSuccess(res, { appointments: enrichedAppointments, count: enrichedAppointments.length, stats });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
-    // Get all completed appointments
-    const appointments = await prisma.appointment.findMany({
-      where: appointmentFilter,
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            medicalRecordNumber: true,
-          },
-        },
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-        clinicalNotes: {
-          where: {
-            status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] },
-          },
-        },
-      },
-      orderBy: { appointmentDate: 'desc' },
+    const errorId = logControllerError('Get appointments without notes', error, {
+      userId: req.user?.userId,
     });
-
-    // Filter to only appointments without signed notes
-    const appointmentsWithoutNotes = appointments.filter(
-      (apt) => apt.clinicalNotes.length === 0
-    );
-
-    // Calculate days since appointment
-    const enrichedAppointments = appointmentsWithoutNotes.map((apt) => {
-      const daysSince = Math.floor(
-        (new Date().getTime() - new Date(apt.appointmentDate).getTime()) / (1000 * 60 * 60 * 24)
-      );
-      const isOverdue = daysSince > 3; // 3-day rule
-      const isUrgent = daysSince > 7; // 7-day rule
-
-      return {
-        ...apt,
-        daysSince,
-        isOverdue,
-        isUrgent,
-      };
-    });
-
-    return res.json({
-      success: true,
-      data: enrichedAppointments,
-      count: enrichedAppointments.length,
-      stats: {
-        total: enrichedAppointments.length,
-        overdue: enrichedAppointments.filter((a) => a.isOverdue).length,
-        urgent: enrichedAppointments.filter((a) => a.isUrgent).length,
-      },
-    });
-  } catch (error: any) {
-    logger.error('Get appointments without notes error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve appointments without notes',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve appointments without notes', errorId);
   }
 };
 
 /**
  * Get compliance dashboard data
- * Comprehensive view of all compliance-related items
+ * GET /api/clinical-notes/compliance-dashboard
  */
 export const getComplianceDashboard = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { roles: true },
-    });
+    const userId = req.user!.userId;
 
-    // Build filter based on role
-    let clinicianFilter: any = {};
-    if (user?.roles.includes('ADMINISTRATOR')) {
-      // Admins see all
-    } else if (user?.roles.includes('SUPERVISOR')) {
-      // Get all supervisees
-      const supervisees = await prisma.user.findMany({
-        where: { supervisorId: userId },
-        select: { id: true },
-      });
-      const superviseeIds = supervisees.map((s) => s.id);
-      clinicianFilter = { in: [...superviseeIds, userId] };
-    } else {
-      // Clinicians see their own
-      clinicianFilter = userId;
+    const dashboardData = await clinicalNoteService.getComplianceDashboard(userId);
+
+    return sendSuccess(res, dashboardData);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
-    const now = new Date();
-    const cutoffDate = new Date(now);
-    cutoffDate.setDate(cutoffDate.getDate() - 3); // 3-day rule
-
-    // Get all relevant data
-    const [
-      notesAwaitingCosign,
-      overdueNotes,
-      lockedNotes,
-      draftNotes,
-      appointmentsWithoutNotes,
-    ] = await Promise.all([
-      // Notes awaiting co-signature
-      prisma.clinicalNote.findMany({
-        where: {
-          clinicianId: clinicianFilter,
-          status: 'PENDING_COSIGN',
-          requiresCosign: true,
-          cosignedDate: null,
-        },
-        include: {
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-          clinician: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              title: true,
-            },
-          },
-        },
-        orderBy: { signedDate: 'desc' },
-      }),
-
-      // Overdue notes (not signed, past 3-day deadline)
-      prisma.clinicalNote.findMany({
-        where: {
-          clinicianId: clinicianFilter,
-          signedDate: null,
-          sessionDate: { lt: cutoffDate },
-          isLocked: false,
-          status: { in: ['DRAFT', 'PENDING_COSIGN'] },
-        },
-        include: {
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-          clinician: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              title: true,
-            },
-          },
-        },
-        orderBy: { sessionDate: 'asc' },
-      }),
-
-      // Locked notes
-      prisma.clinicalNote.findMany({
-        where: {
-          clinicianId: clinicianFilter,
-          isLocked: true,
-        },
-        include: {
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-          clinician: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              title: true,
-            },
-          },
-        },
-        orderBy: { lockedDate: 'desc' },
-      }),
-
-      // Draft notes
-      prisma.clinicalNote.findMany({
-        where: {
-          clinicianId: clinicianFilter,
-          status: 'DRAFT',
-        },
-        include: {
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-          clinician: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              title: true,
-            },
-          },
-        },
-        orderBy: { sessionDate: 'desc' },
-      }),
-
-      // Appointments without signed notes
-      prisma.appointment.findMany({
-        where: {
-          clinicianId: clinicianFilter,
-          status: 'COMPLETED',
-          appointmentDate: { lt: now },
-        },
-        include: {
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-          clinician: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              title: true,
-            },
-          },
-          clinicalNotes: {
-            where: {
-              status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] },
-            },
-          },
-        },
-        orderBy: { appointmentDate: 'desc' },
-      }),
-    ]);
-
-    // Filter appointments to only those without signed notes
-    const appointmentsWithoutSignedNotes = appointmentsWithoutNotes
-      .filter((apt) => apt.clinicalNotes.length === 0)
-      .map((apt) => {
-        const daysSince = Math.floor(
-          (now.getTime() - new Date(apt.appointmentDate).getTime()) / (1000 * 60 * 60 * 24)
-        );
-        return {
-          ...apt,
-          daysSince,
-          isOverdue: daysSince > 3,
-          isUrgent: daysSince > 7,
-        };
-      });
-
-    // Calculate statistics
-    const stats = {
-      awaitingCosign: notesAwaitingCosign.length,
-      overdue: overdueNotes.length,
-      locked: lockedNotes.length,
-      drafts: draftNotes.length,
-      missingNotes: appointmentsWithoutSignedNotes.length,
-      urgent: appointmentsWithoutSignedNotes.filter((a) => a.isUrgent).length,
-    };
-
-    return res.json({
-      success: true,
-      data: {
-        notesAwaitingCosign,
-        overdueNotes,
-        lockedNotes,
-        draftNotes,
-        appointmentsWithoutNotes: appointmentsWithoutSignedNotes,
-        stats,
-      },
+    const errorId = logControllerError('Get compliance dashboard', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logger.error('Get compliance dashboard error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve compliance dashboard',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to retrieve compliance dashboard', errorId);
   }
 };
 
@@ -1419,135 +505,53 @@ export const getComplianceDashboard = async (req: Request, res: Response) => {
 export const returnForRevision = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.userId;
-    const userRole = (req as any).user?.role;
+    const userId = req.user?.userId;
+    const userRole = req.user?.roles?.[0];
+    const userName = `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim();
 
-    // Validate request body
-    const returnSchema = z.object({
-      comments: z.string().min(10, 'Comments must be at least 10 characters'),
-      requiredChanges: z.array(z.string()).min(1, 'At least one required change must be specified'),
-    });
-
-    const validation = returnSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: validation.error.errors,
-      });
+    if (!userId || !userRole) {
+      return sendUnauthorized(res, 'Authentication required');
     }
 
-    const { comments, requiredChanges } = validation.data;
+    const note = await clinicalNoteService.returnForRevision(
+      id,
+      userId,
+      userName,
+      userRole,
+      req.body
+    );
 
-    // Get the note
-    const note = await prisma.clinicalNote.findUnique({
-      where: { id },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
-
-    if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
+    return sendSuccess(res, note, 'Note returned for revision');
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    // Only supervisors/administrators can return notes for revision
-    if (userRole !== 'SUPERVISOR' && userRole !== 'ADMINISTRATOR') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only supervisors can return notes for revision',
-      });
+    if (error instanceof NotFoundError) {
+      return sendNotFound(res, 'Clinical note');
     }
 
-    // Note must be PENDING_COSIGN to be returned
-    if (note.status !== 'PENDING_COSIGN') {
-      return res.status(400).json({
-        success: false,
-        message: `Note must be in PENDING_COSIGN status. Current status: ${note.status}`,
-      });
+    if (error instanceof ForbiddenError) {
+      return sendForbidden(res, getErrorMessage(error));
     }
 
-    // Create revision history entry
-    const revisionEntry = {
-      date: new Date().toISOString(),
-      returnedBy: userId,
-      returnedByName: (req as any).user?.firstName + ' ' + (req as any).user?.lastName,
-      comments,
-      requiredChanges,
-      resolvedDate: null,
-      resubmittedDate: null,
-    };
+    if (error instanceof BadRequestError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
 
-    // Update note with revision status
-    const updatedNote = await prisma.clinicalNote.update({
-      where: { id },
-      data: {
-        status: 'RETURNED_FOR_REVISION',
-        revisionHistory: {
-          push: revisionEntry,
-        },
-        revisionCount: {
-          increment: 1,
-        },
-        currentRevisionComments: comments,
-        currentRevisionRequiredChanges: requiredChanges,
-        lastModifiedBy: userId,
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
 
-    logger.info('Note returned for revision', {
-      noteId: id,
-      returnedBy: userId,
-      clinicianId: note.clinicianId,
-      revisionCount: updatedNote.revisionCount,
+    const errorId = logControllerError('Return for revision', error, {
+      userId: req.user?.userId,
     });
-
-    res.json({
-      success: true,
-      message: 'Note returned for revision',
-      data: updatedNote,
-    });
-  } catch (error: any) {
-    logControllerError('returnForRevision', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to return note for revision',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to return note for revision', errorId);
   }
 };
 
@@ -1558,123 +562,42 @@ export const returnForRevision = async (req: Request, res: Response) => {
 export const resubmitForReview = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
-    // Get the note
-    const note = await prisma.clinicalNote.findUnique({
-      where: { id },
-      include: {
-        cosigner: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
-
-    if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
     }
 
-    // Only the note creator can resubmit
-    if (note.clinicianId !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only the note creator can resubmit for review',
-      });
+    const note = await clinicalNoteService.resubmitForReview(id, userId);
+
+    return sendSuccess(res, note, 'Note resubmitted for review');
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return sendNotFound(res, 'Clinical note');
     }
 
-    // Note must be RETURNED_FOR_REVISION to be resubmitted
-    if (note.status !== 'RETURNED_FOR_REVISION') {
-      return res.status(400).json({
-        success: false,
-        message: `Note must be in RETURNED_FOR_REVISION status. Current status: ${note.status}`,
-      });
+    if (error instanceof ForbiddenError) {
+      return sendForbidden(res, getErrorMessage(error));
     }
 
-    // Update the latest revision history entry with resubmission date
-    const revisionHistory = note.revisionHistory as any[];
-    if (revisionHistory && revisionHistory.length > 0) {
-      const latestRevision = revisionHistory[revisionHistory.length - 1];
-      latestRevision.resubmittedDate = new Date().toISOString();
+    if (error instanceof BadRequestError) {
+      return sendBadRequest(res, getErrorMessage(error));
     }
 
-    // Update note status back to PENDING_COSIGN
-    const updatedNote = await prisma.clinicalNote.update({
-      where: { id },
-      data: {
-        status: 'PENDING_COSIGN',
-        revisionHistory: revisionHistory,
-        currentRevisionComments: null,
-        currentRevisionRequiredChanges: [],
-        lastModifiedBy: userId,
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        cosigner: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
 
-    logger.info('Note resubmitted for review', {
-      noteId: id,
-      clinicianId: userId,
-      revisionCount: note.revisionCount,
+    const errorId = logControllerError('Resubmit for review', error, {
+      userId: req.user?.userId,
     });
-
-    res.json({
-      success: true,
-      message: 'Note resubmitted for review',
-      data: updatedNote,
-    });
-  } catch (error: any) {
-    logControllerError('resubmitForReview', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to resubmit note for review',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to resubmit note for review', errorId);
   }
 };
 
 // ============================================================================
 // PHASE 1.3: REQUIRED FIELD VALIDATION ENGINE
 // ============================================================================
-
-import * as NoteValidationService from '../services/note-validation.service';
 
 /**
  * Get validation rules for a specific note type
@@ -1685,25 +608,21 @@ export const getValidationRulesForNoteType = async (req: Request, res: Response)
     const { noteType } = req.params;
 
     if (!noteType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Note type is required',
-      });
+      return sendBadRequest(res, 'Note type is required');
     }
 
     const rules = await NoteValidationService.getValidationRules(noteType);
 
-    res.json({
-      success: true,
-      data: rules,
+    return sendSuccess(res, rules);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Get validation rules', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logControllerError('getValidationRulesForNoteType', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch validation rules',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to fetch validation rules', errorId);
   }
 };
 
@@ -1716,25 +635,21 @@ export const validateNoteData = async (req: Request, res: Response) => {
     const { noteType, noteData } = req.body;
 
     if (!noteType || !noteData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Note type and note data are required',
-      });
+      return sendBadRequest(res, 'Note type and note data are required');
     }
 
     const result = await NoteValidationService.validateNote(noteType, noteData);
 
-    res.json({
-      success: true,
-      data: result,
+    return sendSuccess(res, result);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Validate note data', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logControllerError('validateNoteData', error);
-    res.status(500).json({
-      success: false,
-      message: 'Validation failed',
-      error: error.message,
-    });
+    return sendServerError(res, 'Validation failed', errorId);
   }
 };
 
@@ -1747,109 +662,50 @@ export const getValidationSummaryForNoteType = async (req: Request, res: Respons
     const { noteType } = req.params;
 
     if (!noteType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Note type is required',
-      });
+      return sendBadRequest(res, 'Note type is required');
     }
 
     const summary = await NoteValidationService.getValidationSummary(noteType);
 
-    res.json({
-      success: true,
-      data: summary,
+    return sendSuccess(res, summary);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Get validation summary', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logControllerError('getValidationSummaryForNoteType', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch validation summary',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to fetch validation summary', errorId);
   }
 };
 
 /**
  * Get clinical notes with filtering
  * GET /api/v1/clinical-notes
- * Query params: status (comma-separated), limit, noteType, clientId
- * Used by Billing Readiness Checker to load signed/cosigned notes
  */
 export const getClinicalNotes = async (req: Request, res: Response) => {
   try {
     const { status, limit, noteType, clientId } = req.query;
-    const userId = (req as any).user.userId;
-    const userRole = (req as any).user.role;
+    const userId = req.user!.userId;
+    const userRole = req.user!.roles?.[0];
 
-    // Build where clause
-    const where: any = {};
-
-    // Handle status filter (supports comma-separated values like "SIGNED,COSIGNED")
-    if (status) {
-      const statusArray = (status as string).split(',').map(s => s.trim());
-      if (statusArray.length === 1) {
-        where.status = statusArray[0];
-      } else {
-        where.status = { in: statusArray };
-      }
-    }
-
-    if (noteType) {
-      where.noteType = noteType;
-    }
-
-    if (clientId) {
-      where.clientId = clientId;
-    }
-
-    // Apply role-based access control
-    // Admins and supervisors can see all notes, clinicians only see their own
-    const adminRoles = ['SUPER_ADMIN', 'ADMINISTRATOR', 'CLINICAL_DIRECTOR'];
-    if (!adminRoles.includes(userRole)) {
-      // For non-admin roles, they can see their own notes or notes they're supervising
-      where.OR = [
-        { clinicianId: userId },
-        { cosignedBy: userId },
-      ];
-    }
-
-    // Parse limit with default
-    const takeLimit = limit ? Math.min(parseInt(limit as string, 10), 100) : 50;
-
-    const notes = await prisma.clinicalNote.findMany({
-      where,
-      take: takeLimit,
-      orderBy: { sessionDate: 'desc' },
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-      },
+    const notes = await clinicalNoteService.getClinicalNotes(userId, userRole, {
+      status: status as string,
+      limit: limit ? parseInt(limit as string, 10) : undefined,
+      noteType: noteType as string,
+      clientId: clientId as string,
     });
 
-    res.json({
-      success: true,
-      data: notes,
-      count: notes.length,
+    return sendSuccess(res, { notes, count: notes.length });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendBadRequest(res, getErrorMessage(error));
+    }
+
+    const errorId = logControllerError('Get clinical notes', error, {
+      userId: req.user?.userId,
     });
-  } catch (error: any) {
-    logControllerError('getClinicalNotes', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch clinical notes',
-      error: error.message,
-    });
+    return sendServerError(res, 'Failed to fetch clinical notes', errorId);
   }
 };

@@ -8,6 +8,7 @@ import {
   deleteServiceCode,
 } from '../controllers/serviceCode.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -17,8 +18,8 @@ router.get('/:id', authenticate, getServiceCodeById);
 router.get('/code/:code', authenticate, getServiceCodeByCode);
 
 // Admin/Supervisor only routes
-router.post('/', authenticate, authorize('ADMINISTRATOR', 'SUPERVISOR'), createServiceCode);
-router.put('/:id', authenticate, authorize('ADMINISTRATOR', 'SUPERVISOR'), updateServiceCode);
-router.delete('/:id', authenticate, authorize('ADMINISTRATOR'), deleteServiceCode);
+router.post('/', authenticate, authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR), createServiceCode);
+router.put('/:id', authenticate, authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR), updateServiceCode);
+router.delete('/:id', authenticate, authorize(UserRoles.ADMINISTRATOR), deleteServiceCode);
 
 export default router;

@@ -21,6 +21,9 @@ import { Request, Response, NextFunction } from 'express';
 import { ForbiddenError, UnauthorizedError } from '../utils/errors';
 import prisma from '../services/database';
 import logger from '../utils/logger';
+import { UserRoles } from '@mentalspace/shared';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 
 // =============================================================================
 // TYPES
@@ -39,16 +42,12 @@ export type UserRole =
   | 'RECEPTIONIST'
   | 'INTERN';
 
-export interface RLSContext {
-  userId: string;
-  roles: UserRole[];
-  organizationId?: string;
-  allowedClientIds?: string[];
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
-  isClinicalStaff: boolean;
-  isBillingStaff: boolean;
-}
+// Import RLSContext from consolidated types
+// The canonical definition is in types/express.d.ts
+import { RLSContext } from '../types/express.d';
+
+// Re-export for backward compatibility
+export type { RLSContext };
 
 // =============================================================================
 // ROLE DEFINITIONS
@@ -57,30 +56,30 @@ export interface RLSContext {
 /**
  * Roles that have full data access within their organization
  */
-const ADMIN_ROLES: UserRole[] = ['SUPER_ADMIN', 'ADMINISTRATOR'];
+const ADMIN_ROLES: UserRole[] = [UserRoles.SUPER_ADMIN, UserRoles.ADMINISTRATOR];
 
 /**
  * Roles that have clinical data access
  */
 const CLINICAL_ROLES: UserRole[] = [
-  'CLINICAL_DIRECTOR',
-  'SUPERVISOR',
-  'CLINICIAN',
-  'INTERN',
+  UserRoles.CLINICAL_DIRECTOR,
+  UserRoles.SUPERVISOR,
+  UserRoles.CLINICIAN,
+  UserRoles.INTERN,
 ];
 
 /**
  * Roles that have billing data access
  */
-const BILLING_ROLES: UserRole[] = ['BILLING_STAFF', 'OFFICE_MANAGER'];
+const BILLING_ROLES: UserRole[] = [UserRoles.BILLING_STAFF, UserRoles.OFFICE_MANAGER];
 
 /**
  * Roles that have scheduling data access
  */
 const SCHEDULING_ROLES: UserRole[] = [
-  'FRONT_DESK',
-  'SCHEDULER',
-  'RECEPTIONIST',
+  UserRoles.FRONT_DESK,
+  UserRoles.SCHEDULER,
+  UserRoles.RECEPTIONIST,
   ...CLINICAL_ROLES,
   ...ADMIN_ROLES,
 ];
@@ -99,9 +98,11 @@ export async function buildRLSContext(req: Request): Promise<RLSContext> {
   }
 
   const userId = req.user.userId || req.user.id;
-  const roles = (req.user.roles || (req.user as any).role ? [(req.user as any).role] : []).filter(Boolean) as UserRole[];
+  // Handle backward compatibility: support both 'roles' array and legacy 'role' string
+  const legacyRole = (req.user as { role?: string }).role;
+  const roles = (req.user.roles || (legacyRole ? [legacyRole] : [])).filter(Boolean) as UserRole[];
 
-  const isSuperAdmin = roles.includes('SUPER_ADMIN');
+  const isSuperAdmin = roles.includes(UserRoles.SUPER_ADMIN);
   const isAdmin = roles.some(r => ADMIN_ROLES.includes(r));
   const isClinicalStaff = roles.some(r => CLINICAL_ROLES.includes(r));
   const isBillingStaff = roles.some(r => BILLING_ROLES.includes(r));
@@ -119,7 +120,7 @@ export async function buildRLSContext(req: Request): Promise<RLSContext> {
           { primaryTherapistId: userId },
           { secondaryTherapistId: userId },
           // Include supervisees' clients for supervisors
-          ...(roles.includes('SUPERVISOR') ? [{
+          ...(roles.includes(UserRoles.SUPERVISOR) ? [{
             primaryTherapist: {
               supervisorId: userId,
             },
@@ -213,7 +214,7 @@ export async function canAccessAppointment(
   }
 
   // Scheduling roles can see appointments
-  if (context.roles.some(r => SCHEDULING_ROLES.includes(r))) {
+  if (context.roles.some(r => SCHEDULING_ROLES.includes(r as UserRole))) {
     return true;
   }
 
@@ -335,7 +336,7 @@ export function buildAppointmentFilter(context: RLSContext): Record<string, any>
   }
 
   // Scheduling roles can see all appointments (organization filtering not yet implemented)
-  if (context.roles.some(r => SCHEDULING_ROLES.includes(r))) {
+  if (context.roles.some(r => SCHEDULING_ROLES.includes(r as UserRole))) {
     return {};
   }
 
@@ -389,7 +390,7 @@ export const attachRLSContext = async (
 ) => {
   try {
     if (req.user) {
-      (req as any).rlsContext = await buildRLSContext(req);
+      req.rlsContext = await buildRLSContext(req);
     }
     next();
   } catch (error) {
@@ -409,7 +410,7 @@ export const enforceClientAccess = (paramName: string = 'clientId') => {
         return next(); // No client ID to check
       }
 
-      const context = (req as any).rlsContext || await buildRLSContext(req);
+      const context = req.rlsContext || await buildRLSContext(req);
       const hasAccess = await canAccessClient(context, String(clientId));
 
       if (!hasAccess) {
@@ -447,7 +448,7 @@ export const enforceAppointmentAccess = (paramName: string = 'appointmentId') =>
         return next();
       }
 
-      const context = (req as any).rlsContext || await buildRLSContext(req);
+      const context = req.rlsContext || await buildRLSContext(req);
       const hasAccess = await canAccessAppointment(context, String(appointmentId));
 
       if (!hasAccess) {
@@ -478,7 +479,7 @@ export const enforceClinicalNoteAccess = (paramName: string = 'noteId') => {
         return next();
       }
 
-      const context = (req as any).rlsContext || await buildRLSContext(req);
+      const context = req.rlsContext || await buildRLSContext(req);
       const hasAccess = await canAccessClinicalNote(context, String(noteId));
 
       if (!hasAccess) {
@@ -507,7 +508,7 @@ export const enforceBillingAccess = async (
 ) => {
   try {
     const clientId = req.params.clientId || req.body.clientId || req.query.clientId;
-    const context = (req as any).rlsContext || await buildRLSContext(req);
+    const context = req.rlsContext || await buildRLSContext(req);
 
     const hasAccess = await canAccessBillingData(context, clientId ? String(clientId) : undefined);
 

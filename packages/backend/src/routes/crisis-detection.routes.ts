@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roleCheck';
 import * as crisisController from '../controllers/crisis-detection.controller';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -29,7 +30,7 @@ router.use(authenticate);
  */
 router.get(
   '/logs',
-  requireRole(['ADMINISTRATOR']),
+  requireRole([UserRoles.ADMINISTRATOR]),
   crisisController.getAllCrisisLogs
 );
 
@@ -39,7 +40,7 @@ router.get(
  */
 router.get(
   '/logs/:id',
-  requireRole(['ADMINISTRATOR', 'CLINICIAN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN]),
   crisisController.getCrisisLog
 );
 
@@ -53,7 +54,7 @@ router.get(
  */
 router.put(
   '/logs/:id/review',
-  requireRole(['ADMINISTRATOR', 'CLINICIAN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN]),
   crisisController.reviewCrisisLog
 );
 
@@ -65,7 +66,7 @@ router.put(
  */
 router.put(
   '/logs/:id/action',
-  requireRole(['ADMINISTRATOR', 'CLINICIAN']),
+  requireRole([UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN]),
   crisisController.recordActionTaken
 );
 
@@ -78,7 +79,7 @@ router.put(
  */
 router.get(
   '/stats',
-  requireRole(['ADMINISTRATOR']),
+  requireRole([UserRoles.ADMINISTRATOR]),
   crisisController.getCrisisStatistics
 );
 

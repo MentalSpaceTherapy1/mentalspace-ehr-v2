@@ -8,6 +8,7 @@ import { Request, Response, NextFunction } from 'express';
 import { DiagnosisService } from '../services/diagnosis.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { BadRequestError } from '../utils/errors';
+import { sendSuccess, sendCreated } from '../utils/apiResponse';
 
 /**
  * Create a new diagnosis
@@ -54,11 +55,7 @@ export const createDiagnosis = asyncHandler(
       createdInNoteType
     });
 
-    res.status(201).json({
-      success: true,
-      data: diagnosis,
-      message: 'Diagnosis created successfully'
-    });
+    return sendCreated(res, diagnosis, 'Diagnosis created successfully');
   }
 );
 
@@ -112,11 +109,7 @@ export const updateDiagnosis = asyncHandler(
       changeReason
     });
 
-    res.json({
-      success: true,
-      data: diagnosis,
-      message: 'Diagnosis updated successfully'
-    });
+    return sendSuccess(res, diagnosis, 'Diagnosis updated successfully');
   }
 );
 
@@ -130,10 +123,7 @@ export const getDiagnosisById = asyncHandler(
 
     const diagnosis = await DiagnosisService.getDiagnosisById(id);
 
-    res.json({
-      success: true,
-      data: diagnosis
-    });
+    return sendSuccess(res, diagnosis);
   }
 );
 
@@ -151,11 +141,7 @@ export const getClientDiagnoses = asyncHandler(
       activeOnly === 'true'
     );
 
-    res.json({
-      success: true,
-      data: diagnoses,
-      count: diagnoses.length
-    });
+    return sendSuccess(res, { data: diagnoses, count: diagnoses.length });
   }
 );
 
@@ -169,11 +155,7 @@ export const getDiagnosisHistory = asyncHandler(
 
     const history = await DiagnosisService.getDiagnosisHistory(id);
 
-    res.json({
-      success: true,
-      data: history,
-      count: history.length
-    });
+    return sendSuccess(res, { data: history, count: history.length });
   }
 );
 
@@ -206,11 +188,7 @@ export const deleteDiagnosis = asyncHandler(
       reason
     );
 
-    res.json({
-      success: true,
-      data: diagnosis,
-      message: 'Diagnosis deactivated successfully'
-    });
+    return sendSuccess(res, diagnosis, 'Diagnosis deactivated successfully');
   }
 );
 
@@ -224,9 +202,6 @@ export const getClientDiagnosisStats = asyncHandler(
 
     const stats = await DiagnosisService.getClientDiagnosisStats(clientId);
 
-    res.json({
-      success: true,
-      data: stats
-    });
+    return sendSuccess(res, stats);
   }
 );

@@ -9,6 +9,7 @@ import prisma from './database';
  */
 
 import { PrismaClient, AppointmentStatus, NoteStatus } from '@mentalspace/database';
+import { validateNote } from './note-validation.service';
 import { BadRequestError } from '../utils/errors';
 
 // Note types that require appointments (Business Rule #1)
@@ -325,5 +326,6 @@ export const ClinicalNotesValidationService = {
   getClientActiveDiagnoses,
   createDiagnosisHistory,
   linkDiagnosisToNote,
-  getNoteDiagnoses
+  getNoteDiagnoses,
+  validateNote,
 };

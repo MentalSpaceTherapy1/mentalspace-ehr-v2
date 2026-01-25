@@ -1,8 +1,12 @@
 import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as messagingService from '../services/messaging.service';
 import { auditLogger } from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendForbidden, sendPaginated, sendValidationError } from '../utils/apiResponse';
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -52,7 +56,11 @@ const addMemberSchema = z.object({
 export const createMessage = async (req: Request, res: Response) => {
   try {
     const validatedData = createMessageSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const message = await messagingService.createMessage({
       senderId: userId,
@@ -68,27 +76,15 @@ export const createMessage = async (req: Request, res: Response) => {
       expiresAt: validatedData.expiresAt ? new Date(validatedData.expiresAt) : undefined,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Message sent successfully',
-      data: message,
-    });
+    return sendCreated(res, message, 'Message sent successfully');
   } catch (error) {
     logger.error('Create message error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send message',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to send message');
   }
 };
 
@@ -97,13 +93,18 @@ export const createMessage = async (req: Request, res: Response) => {
  */
 export const getMessages = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { messageType, priority, isArchived, isRead, threadId, startDate, endDate } = req.query;
 
     const filters: messagingService.MessageFilters = {};
 
-    if (messageType) filters.messageType = messageType as any;
-    if (priority) filters.priority = priority as any;
+    if (messageType) filters.messageType = messageType as messagingService.MessageFilters['messageType'];
+    if (priority) filters.priority = priority as messagingService.MessageFilters['priority'];
     if (isArchived !== undefined) filters.isArchived = isArchived === 'true';
     if (isRead !== undefined) filters.isRead = isRead === 'true';
     if (threadId) filters.threadId = threadId as string;
@@ -112,19 +113,11 @@ export const getMessages = async (req: Request, res: Response) => {
 
     const messages = await messagingService.getMessagesForUser(userId, filters);
 
-    res.json({
-      success: true,
-      data: messages,
-      count: messages.length,
-    });
+    return sendSuccess(res, messages);
   } catch (error) {
     logger.error('Get messages error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve messages',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve messages');
   }
 };
 
@@ -133,23 +126,19 @@ export const getMessages = async (req: Request, res: Response) => {
  */
 export const getSentMessages = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const messages = await messagingService.getSentMessages(userId);
 
-    res.json({
-      success: true,
-      data: messages,
-      count: messages.length,
-    });
+    return sendSuccess(res, messages);
   } catch (error) {
     logger.error('Get sent messages error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve sent messages',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve sent messages');
   }
 };
 
@@ -158,22 +147,19 @@ export const getSentMessages = async (req: Request, res: Response) => {
  */
 export const getUnreadCount = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const count = await messagingService.getUnreadCount(userId);
 
-    res.json({
-      success: true,
-      data: { count },
-    });
+    return sendSuccess(res, { count });
   } catch (error) {
     logger.error('Get unread count error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve unread count',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve unread count');
   }
 };
 
@@ -182,37 +168,29 @@ export const getUnreadCount = async (req: Request, res: Response) => {
  */
 export const getMessageById = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { id } = req.params;
 
     const message = await messagingService.getMessageById(id, userId);
 
-    res.json({
-      success: true,
-      data: message,
-    });
+    return sendSuccess(res, message);
   } catch (error) {
     logger.error('Get message by ID error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    if (error instanceof Error && error.message === 'Message not found') {
-      return res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+    if (error instanceof Error && getErrorMessage(error) === 'Message not found') {
+      return sendNotFound(res, 'Message');
     }
 
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).json({
-        success: false,
-        message: error.message,
-      });
+    if (error instanceof Error && getErrorMessage(error) === 'Access denied') {
+      return sendForbidden(res, 'Access denied');
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve message',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve message');
   }
 };
 
@@ -221,24 +199,21 @@ export const getMessageById = async (req: Request, res: Response) => {
  */
 export const markAsRead = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { id } = req.params;
 
     const message = await messagingService.markAsRead(id, userId);
 
-    res.json({
-      success: true,
-      message: 'Message marked as read',
-      data: message,
-    });
+    return sendSuccess(res, message, 'Message marked as read');
   } catch (error) {
     logger.error('Mark as read error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark message as read',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to mark message as read');
   }
 };
 
@@ -247,24 +222,21 @@ export const markAsRead = async (req: Request, res: Response) => {
  */
 export const archiveMessage = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { id } = req.params;
 
     const message = await messagingService.archiveMessage(id, userId);
 
-    res.json({
-      success: true,
-      message: 'Message archived successfully',
-      data: message,
-    });
+    return sendSuccess(res, message, 'Message archived successfully');
   } catch (error) {
     logger.error('Archive message error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to archive message',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to archive message');
   }
 };
 
@@ -273,23 +245,21 @@ export const archiveMessage = async (req: Request, res: Response) => {
  */
 export const deleteMessage = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { id } = req.params;
 
     await messagingService.deleteMessage(id, userId);
 
-    res.json({
-      success: true,
-      message: 'Message deleted successfully',
-    });
+    return sendSuccess(res, null, 'Message deleted successfully');
   } catch (error) {
     logger.error('Delete message error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete message',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to delete message');
   }
 };
 
@@ -303,7 +273,11 @@ export const deleteMessage = async (req: Request, res: Response) => {
 export const createChannel = async (req: Request, res: Response) => {
   try {
     const validatedData = createChannelSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const channel = await messagingService.createChannel({
       name: validatedData.name,
@@ -315,27 +289,15 @@ export const createChannel = async (req: Request, res: Response) => {
       createdById: userId,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Channel created successfully',
-      data: channel,
-    });
+    return sendCreated(res, channel, 'Channel created successfully');
   } catch (error) {
     logger.error('Create channel error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create channel',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to create channel');
   }
 };
 
@@ -344,23 +306,19 @@ export const createChannel = async (req: Request, res: Response) => {
  */
 export const getChannels = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const channels = await messagingService.getChannelsForUser(userId);
 
-    res.json({
-      success: true,
-      data: channels,
-      count: channels.length,
-    });
+    return sendSuccess(res, channels);
   } catch (error) {
     logger.error('Get channels error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve channels',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve channels');
   }
 };
 
@@ -369,37 +327,29 @@ export const getChannels = async (req: Request, res: Response) => {
  */
 export const getChannelById = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { id } = req.params;
 
     const channel = await messagingService.getChannelById(id, userId);
 
-    res.json({
-      success: true,
-      data: channel,
-    });
+    return sendSuccess(res, channel);
   } catch (error) {
     logger.error('Get channel by ID error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    if (error instanceof Error && error.message === 'Channel not found') {
-      return res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+    if (error instanceof Error && getErrorMessage(error) === 'Channel not found') {
+      return sendNotFound(res, 'Channel');
     }
 
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).json({
-        success: false,
-        message: error.message,
-      });
+    if (error instanceof Error && getErrorMessage(error) === 'Access denied') {
+      return sendForbidden(res, 'Access denied');
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve channel',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve channel');
   }
 };
 
@@ -409,32 +359,25 @@ export const getChannelById = async (req: Request, res: Response) => {
 export const updateChannel = async (req: Request, res: Response) => {
   try {
     const validatedData = updateChannelSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { id } = req.params;
 
     const channel = await messagingService.updateChannel(id, userId, validatedData);
 
-    res.json({
-      success: true,
-      message: 'Channel updated successfully',
-      data: channel,
-    });
+    return sendSuccess(res, channel, 'Channel updated successfully');
   } catch (error) {
     logger.error('Update channel error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update channel',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to update channel');
   }
 };
 
@@ -444,32 +387,25 @@ export const updateChannel = async (req: Request, res: Response) => {
 export const addMember = async (req: Request, res: Response) => {
   try {
     const validatedData = addMemberSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { id } = req.params;
 
     const channel = await messagingService.addMemberToChannel(id, userId, validatedData.memberId);
 
-    res.json({
-      success: true,
-      message: 'Member added successfully',
-      data: channel,
-    });
+    return sendSuccess(res, channel, 'Member added successfully');
   } catch (error) {
     logger.error('Add member error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to add member',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to add member');
   }
 };
 
@@ -478,24 +414,21 @@ export const addMember = async (req: Request, res: Response) => {
  */
 export const removeMember = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { id, memberId } = req.params;
 
     const channel = await messagingService.removeMemberFromChannel(id, userId, memberId);
 
-    res.json({
-      success: true,
-      message: 'Member removed successfully',
-      data: channel,
-    });
+    return sendSuccess(res, channel, 'Member removed successfully');
   } catch (error) {
     logger.error('Remove member error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to remove member',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to remove member');
   }
 };
 
@@ -504,23 +437,20 @@ export const removeMember = async (req: Request, res: Response) => {
  */
 export const archiveChannel = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
+
     const { id } = req.params;
 
     const channel = await messagingService.archiveChannel(id, userId);
 
-    res.json({
-      success: true,
-      message: 'Channel archived successfully',
-      data: channel,
-    });
+    return sendSuccess(res, channel, 'Channel archived successfully');
   } catch (error) {
     logger.error('Archive channel error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to archive channel',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to archive channel');
   }
 };

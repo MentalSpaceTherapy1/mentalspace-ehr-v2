@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Create a new sleep log entry
@@ -21,33 +22,21 @@ export const createSleepLog = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate required fields
     if (!logDate || !bedtime || !wakeTime) {
-      return res.status(400).json({
-        success: false,
-        message: 'Log date, bedtime, and wake time are required',
-      });
+      return sendBadRequest(res, 'Log date, bedtime, and wake time are required');
     }
 
     if (quality === undefined || quality === null) {
-      return res.status(400).json({
-        success: false,
-        message: 'Sleep quality is required',
-      });
+      return sendBadRequest(res, 'Sleep quality is required');
     }
 
     // Validate quality range (1-5)
     if (quality < 1 || quality > 5) {
-      return res.status(400).json({
-        success: false,
-        message: 'Quality must be between 1 and 5',
-      });
+      return sendBadRequest(res, 'Quality must be between 1 and 5');
     }
 
     // Calculate hours slept
@@ -62,10 +51,7 @@ export const createSleepLog = async (req: PortalRequest, res: Response) => {
 
     // Validate hours slept
     if (hoursSlept < 0 || hoursSlept > 24) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid bedtime or wake time',
-      });
+      return sendBadRequest(res, 'Invalid bedtime or wake time');
     }
 
     // Validate disturbances if provided
@@ -85,10 +71,7 @@ export const createSleepLog = async (req: PortalRequest, res: Response) => {
     if (disturbances && Array.isArray(disturbances)) {
       const invalidDisturbances = disturbances.filter(d => !validDisturbances.includes(d));
       if (invalidDisturbances.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid disturbances: ${invalidDisturbances.join(', ')}`,
-        });
+        return sendBadRequest(res, `Invalid disturbances: ${invalidDisturbances.join(', ')}`);
       }
     }
 
@@ -108,26 +91,19 @@ export const createSleepLog = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Sleep log created for client ${clientId}: ${hoursSlept.toFixed(1)}h, quality ${quality}`);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Sleep log created successfully',
-      data: {
-        id: sleepLog.id,
-        logDate: sleepLog.logDate,
-        bedtime: sleepLog.bedtime,
-        wakeTime: sleepLog.wakeTime,
-        hoursSlept: sleepLog.hoursSlept,
-        quality: sleepLog.quality,
-        disturbances: sleepLog.disturbances,
-        notes: sleepLog.notes,
-      },
-    });
-  } catch (error: any) {
+    return sendCreated(res, {
+      id: sleepLog.id,
+      logDate: sleepLog.logDate,
+      bedtime: sleepLog.bedtime,
+      wakeTime: sleepLog.wakeTime,
+      hoursSlept: sleepLog.hoursSlept,
+      quality: sleepLog.quality,
+      disturbances: sleepLog.disturbances,
+      notes: sleepLog.notes,
+    }, 'Sleep log created successfully');
+  } catch (error) {
     logger.error('Error creating sleep log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create sleep log',
-    });
+    return sendServerError(res, 'Failed to create sleep log');
   }
 };
 
@@ -141,10 +117,7 @@ export const getSleepLogs = async (req: PortalRequest, res: Response) => {
     const { days, startDate, endDate } = req.query;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Build date filter
@@ -181,16 +154,10 @@ export const getSleepLogs = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${formattedLogs.length} sleep logs for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: formattedLogs,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, formattedLogs);
+  } catch (error) {
     logger.error('Error fetching sleep logs:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch sleep logs',
-    });
+    return sendServerError(res, 'Failed to fetch sleep logs');
   }
 };
 
@@ -204,10 +171,7 @@ export const getSleepLogById = async (req: PortalRequest, res: Response) => {
     const { logId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const log = await prisma.sleepLog.findFirst({
@@ -218,31 +182,22 @@ export const getSleepLogById = async (req: PortalRequest, res: Response) => {
     });
 
     if (!log) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sleep log not found',
-      });
+      return sendNotFound(res, 'Sleep log');
     }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: log.id,
-        logDate: log.logDate,
-        bedtime: log.bedtime,
-        wakeTime: log.wakeTime,
-        hoursSlept: log.hoursSlept,
-        quality: log.quality,
-        disturbances: log.disturbances,
-        notes: log.notes,
-      },
+    return sendSuccess(res, {
+      id: log.id,
+      logDate: log.logDate,
+      bedtime: log.bedtime,
+      wakeTime: log.wakeTime,
+      hoursSlept: log.hoursSlept,
+      quality: log.quality,
+      disturbances: log.disturbances,
+      notes: log.notes,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching sleep log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch sleep log',
-    });
+    return sendServerError(res, 'Failed to fetch sleep log');
   }
 };
 
@@ -264,10 +219,7 @@ export const updateSleepLog = async (req: PortalRequest, res: Response) => {
     } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify ownership
@@ -279,18 +231,12 @@ export const updateSleepLog = async (req: PortalRequest, res: Response) => {
     });
 
     if (!existingLog) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sleep log not found',
-      });
+      return sendNotFound(res, 'Sleep log');
     }
 
     // Validate quality if provided
     if (quality !== undefined && (quality < 1 || quality > 5)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Quality must be between 1 and 5',
-      });
+      return sendBadRequest(res, 'Quality must be between 1 and 5');
     }
 
     // Recalculate hours slept if times changed
@@ -317,17 +263,10 @@ export const updateSleepLog = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Sleep log ${logId} updated for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Sleep log updated successfully',
-      data: updatedLog,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, updatedLog, 'Sleep log updated successfully');
+  } catch (error) {
     logger.error('Error updating sleep log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update sleep log',
-    });
+    return sendServerError(res, 'Failed to update sleep log');
   }
 };
 
@@ -341,10 +280,7 @@ export const deleteSleepLog = async (req: PortalRequest, res: Response) => {
     const { logId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify ownership
@@ -356,10 +292,7 @@ export const deleteSleepLog = async (req: PortalRequest, res: Response) => {
     });
 
     if (!existingLog) {
-      return res.status(404).json({
-        success: false,
-        message: 'Sleep log not found',
-      });
+      return sendNotFound(res, 'Sleep log');
     }
 
     await prisma.sleepLog.delete({
@@ -368,16 +301,10 @@ export const deleteSleepLog = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Sleep log ${logId} deleted for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Sleep log deleted successfully',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Sleep log deleted successfully');
+  } catch (error) {
     logger.error('Error deleting sleep log:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to delete sleep log',
-    });
+    return sendServerError(res, 'Failed to delete sleep log');
   }
 };
 
@@ -390,10 +317,7 @@ export const getSleepTrends = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get sleep logs from last 30 days
@@ -409,19 +333,16 @@ export const getSleepTrends = async (req: PortalRequest, res: Response) => {
     });
 
     if (sleepLogs.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          averageHoursSlept: 0,
-          averageQuality: 0,
-          sleepTrend: 'stable',
-          totalNights: 0,
-          sleepDebt: 0,
-          consistencyScore: 0,
-          streakDays: 0,
-          mostCommonDisturbances: [],
-          weeklyAverage: [],
-        },
+      return sendSuccess(res, {
+        averageHoursSlept: 0,
+        averageQuality: 0,
+        sleepTrend: 'stable',
+        totalNights: 0,
+        sleepDebt: 0,
+        consistencyScore: 0,
+        streakDays: 0,
+        mostCommonDisturbances: [],
+        weeklyAverage: [],
       });
     }
 
@@ -522,25 +443,19 @@ export const getSleepTrends = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Calculated sleep trends for client ${clientId}: ${sleepTrend}`);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        averageHoursSlept: Math.round(averageHoursSlept * 10) / 10,
-        averageQuality: Math.round(averageQuality * 10) / 10,
-        sleepTrend,
-        totalNights: sleepLogs.length,
-        sleepDebt: Math.round(sleepDebt * 10) / 10,
-        consistencyScore: Math.round(consistencyScore),
-        streakDays,
-        mostCommonDisturbances,
-        weeklyAverage,
-      },
+    return sendSuccess(res, {
+      averageHoursSlept: Math.round(averageHoursSlept * 10) / 10,
+      averageQuality: Math.round(averageQuality * 10) / 10,
+      sleepTrend,
+      totalNights: sleepLogs.length,
+      sleepDebt: Math.round(sleepDebt * 10) / 10,
+      consistencyScore: Math.round(consistencyScore),
+      streakDays,
+      mostCommonDisturbances,
+      weeklyAverage,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error calculating sleep trends:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to calculate sleep trends',
-    });
+    return sendServerError(res, 'Failed to calculate sleep trends');
   }
 };

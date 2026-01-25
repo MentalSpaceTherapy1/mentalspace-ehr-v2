@@ -1,17 +1,21 @@
 import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import prisma from '../services/database';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import * as emergencyContactService from '../services/emergencyContact.service';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 // Helper to clean empty strings from object
-const cleanEmptyStrings = (obj: any): any => {
-  const cleaned: any = {};
+const cleanEmptyStrings = <T extends Record<string, unknown>>(obj: T): Partial<T> => {
+  const cleaned: Partial<T> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value === '' || value === null) {
       // Don't include empty strings or null in the cleaned object
       continue;
     }
-    cleaned[key] = value;
+    (cleaned as Record<string, unknown>)[key] = value;
   }
   return cleaned;
 };
@@ -39,24 +43,15 @@ export const getEmergencyContacts = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
 
-    const contacts = await prisma.emergencyContact.findMany({
-      where: { clientId },
-      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const contacts = await emergencyContactService.getEmergencyContacts(clientId);
 
-    res.status(200).json({
-      success: true,
-      data: contacts,
-    });
+    return sendSuccess(res, contacts);
   } catch (error) {
     const errorId = logControllerError('Get emergency contacts', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve emergency contacts',
-      errorId,
-    });
+    return sendServerError(res, `Failed to retrieve emergency contacts (${errorId})`);
   }
 };
 
@@ -65,40 +60,19 @@ export const getEmergencyContactById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const contact = await prisma.emergencyContact.findUnique({
-      where: { id },
-      include: {
-        client: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            medicalRecordNumber: true,
-          },
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const contact = await emergencyContactService.getEmergencyContactById(id);
 
     if (!contact) {
-      return res.status(404).json({
-        success: false,
-        message: 'Emergency contact not found',
-      });
+      return sendNotFound(res, 'Emergency contact');
     }
 
-    res.status(200).json({
-      success: true,
-      data: contact,
-    });
+    return sendSuccess(res, contact);
   } catch (error) {
     const errorId = logControllerError('Get emergency contact', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve emergency contact',
-      errorId,
-    });
+    return sendServerError(res, `Failed to retrieve emergency contact (${errorId})`);
   }
 };
 
@@ -109,61 +83,19 @@ export const createEmergencyContact = async (req: Request, res: Response) => {
     const cleanedBody = cleanEmptyStrings(req.body);
     const validatedData = emergencyContactSchema.parse(cleanedBody);
 
-    // Transform the data to match database schema
-    // Frontend sends: firstName, lastName, phoneNumber, canPickup, notes
-    // Database expects: name, phone (no canPickup or notes columns)
-    const dbData = {
-      clientId: validatedData.clientId,
-      name: `${validatedData.firstName} ${validatedData.lastName}`.trim(),
-      relationship: validatedData.relationship,
-      phone: validatedData.phoneNumber,
-      alternatePhone: validatedData.alternatePhone || null,
-      email: validatedData.email || null,
-      address: validatedData.address || null,
-      isPrimary: validatedData.isPrimary,
-      okayToDiscussHealth: false, // Default value, can be added to schema later if needed
-      okayToLeaveMessage: true,   // Default value, can be added to schema later if needed
-    };
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const contact = await emergencyContactService.createEmergencyContact(validatedData);
 
-    // If this contact is marked as primary, unset any other primary contacts for this client
-    if (validatedData.isPrimary) {
-      await prisma.emergencyContact.updateMany({
-        where: {
-          clientId: validatedData.clientId,
-          isPrimary: true,
-        },
-        data: {
-          isPrimary: false,
-        },
-      });
-    }
-
-    const contact = await prisma.emergencyContact.create({
-      data: dbData,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Emergency contact created successfully',
-      data: contact,
-    });
+    return sendCreated(res, contact, 'Emergency contact created successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      return sendBadRequest(res, `Validation failed: ${error.errors.map(e => e.message).join(', ')}`);
     }
 
     const errorId = logControllerError('Create emergency contact', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create emergency contact',
-      errorId,
-    });
+    return sendServerError(res, `Failed to create emergency contact (${errorId})`);
   }
 };
 
@@ -175,79 +107,23 @@ export const updateEmergencyContact = async (req: Request, res: Response) => {
     const cleanedBody = cleanEmptyStrings(req.body);
     const validatedData = updateEmergencyContactSchema.parse(cleanedBody);
 
-    const existingContact = await prisma.emergencyContact.findUnique({
-      where: { id },
-    });
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const contact = await emergencyContactService.updateEmergencyContact(id, validatedData);
 
-    if (!existingContact) {
-      return res.status(404).json({
-        success: false,
-        message: 'Emergency contact not found',
-      });
+    if (!contact) {
+      return sendNotFound(res, 'Emergency contact');
     }
 
-    // Transform the data to match database schema
-    const dbData: any = {};
-    if (validatedData.firstName !== undefined && validatedData.lastName !== undefined) {
-      dbData.name = `${validatedData.firstName} ${validatedData.lastName}`.trim();
-    } else if (validatedData.firstName !== undefined || validatedData.lastName !== undefined) {
-      // If only one name field is provided, we need to handle it carefully
-      // Parse existing name if needed
-      const parts = existingContact.name.split(' ');
-      const currentFirst = parts[0] || '';
-      const currentLast = parts.slice(1).join(' ') || '';
-      const newFirst = validatedData.firstName !== undefined ? validatedData.firstName : currentFirst;
-      const newLast = validatedData.lastName !== undefined ? validatedData.lastName : currentLast;
-      dbData.name = `${newFirst} ${newLast}`.trim();
-    }
-    if (validatedData.phoneNumber !== undefined) dbData.phone = validatedData.phoneNumber;
-    if (validatedData.relationship !== undefined) dbData.relationship = validatedData.relationship;
-    if (validatedData.alternatePhone !== undefined) dbData.alternatePhone = validatedData.alternatePhone || null;
-    if (validatedData.email !== undefined) dbData.email = validatedData.email || null;
-    if (validatedData.address !== undefined) dbData.address = validatedData.address || null;
-    if (validatedData.isPrimary !== undefined) dbData.isPrimary = validatedData.isPrimary;
-
-    // If this contact is being set as primary, unset other primary contacts
-    if (validatedData.isPrimary) {
-      await prisma.emergencyContact.updateMany({
-        where: {
-          clientId: existingContact.clientId,
-          isPrimary: true,
-          id: { not: id },
-        },
-        data: {
-          isPrimary: false,
-        },
-      });
-    }
-
-    const contact = await prisma.emergencyContact.update({
-      where: { id },
-      data: dbData,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Emergency contact updated successfully',
-      data: contact,
-    });
+    return sendSuccess(res, contact, 'Emergency contact updated successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      return sendBadRequest(res, `Validation failed: ${error.errors.map(e => e.message).join(', ')}`);
     }
 
     const errorId = logControllerError('Update emergency contact', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update emergency contact',
-      errorId,
-    });
+    return sendServerError(res, `Failed to update emergency contact (${errorId})`);
   }
 };
 
@@ -256,33 +132,18 @@ export const deleteEmergencyContact = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const existingContact = await prisma.emergencyContact.findUnique({
-      where: { id },
-    });
+    // Phase 3.2: Use service method instead of direct prisma calls
+    const result = await emergencyContactService.deleteEmergencyContact(id);
 
-    if (!existingContact) {
-      return res.status(404).json({
-        success: false,
-        message: 'Emergency contact not found',
-      });
+    if (!result) {
+      return sendNotFound(res, 'Emergency contact');
     }
 
-    await prisma.emergencyContact.delete({
-      where: { id },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Emergency contact deleted successfully',
-    });
+    return sendSuccess(res, null, 'Emergency contact deleted successfully');
   } catch (error) {
     const errorId = logControllerError('Delete emergency contact', error, {
-      userId: (req as any).user?.userId,
+      userId: req.user?.userId,
     });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete emergency contact',
-      errorId,
-    });
+    return sendServerError(res, `Failed to delete emergency contact (${errorId})`);
   }
 };

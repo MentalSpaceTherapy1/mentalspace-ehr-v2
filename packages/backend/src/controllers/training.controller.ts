@@ -3,6 +3,7 @@ import trainingService from '../services/training.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { UnauthorizedError, ValidationError, NotFoundError } from '../utils/errors';
 import { TrainingType, TrainingCategory, TrainingStatus } from '@prisma/client';
+import { sendSuccess, sendCreated, sendBadRequest, sendNotFound, sendServerError, sendPaginated } from '../utils/apiResponse';
 
 /**
  * Training & Development Controller
@@ -56,11 +57,7 @@ export class TrainingController {
       expirationMonths
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Course created successfully',
-      data: course
-    });
+    return sendCreated(res, course, 'Course created successfully');
   });
 
   /**
@@ -72,11 +69,7 @@ export class TrainingController {
 
     const course = await trainingService.updateCourse(id, req.body);
 
-    res.status(200).json({
-      success: true,
-      message: 'Course updated successfully',
-      data: course
-    });
+    return sendSuccess(res, course, 'Course updated successfully');
   });
 
   /**
@@ -106,16 +99,11 @@ export class TrainingController {
 
     const result = await trainingService.getCourses(filters);
 
-    res.status(200).json({
-      success: true,
-      message: 'Courses retrieved successfully',
-      data: result.courses,
-      pagination: {
-        total: result.total,
-        page: result.page,
-        totalPages: result.totalPages,
-        limit: filters.limit || 20
-      }
+    return sendPaginated(res, result.courses, {
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+      limit: filters.limit || 20
     });
   });
 
@@ -132,11 +120,7 @@ export class TrainingController {
       throw new NotFoundError('Course not found');
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Course retrieved successfully',
-      data: course
-    });
+    return sendSuccess(res, course, 'Course retrieved successfully');
   });
 
   /**
@@ -148,10 +132,7 @@ export class TrainingController {
 
     await trainingService.deleteCourse(id);
 
-    res.status(200).json({
-      success: true,
-      message: 'Course deleted successfully'
-    });
+    return sendSuccess(res, null, 'Course deleted successfully');
   });
 
   /**
@@ -209,11 +190,7 @@ export class TrainingController {
       attestedDate: attestedDate ? new Date(attestedDate) : undefined
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'User enrolled successfully',
-      data: record
-    });
+    return sendCreated(res, record, 'User enrolled successfully');
   });
 
   /**
@@ -234,11 +211,7 @@ export class TrainingController {
 
     const record = await trainingService.updateProgress(id, updateData);
 
-    res.status(200).json({
-      success: true,
-      message: 'Training progress updated successfully',
-      data: record
-    });
+    return sendSuccess(res, record, 'Training progress updated successfully');
   });
 
   /**
@@ -251,11 +224,7 @@ export class TrainingController {
 
     const record = await trainingService.completeTraining(id, score, certificateUrl);
 
-    res.status(200).json({
-      success: true,
-      message: 'Training completed successfully',
-      data: record
-    });
+    return sendSuccess(res, record, 'Training completed successfully');
   });
 
   /**
@@ -280,11 +249,7 @@ export class TrainingController {
 
     const records = await trainingService.getTrainingRecordsByUser(userId, filters);
 
-    res.status(200).json({
-      success: true,
-      message: 'Training records retrieved successfully',
-      data: records
-    });
+    return sendSuccess(res, records, 'Training records retrieved successfully');
   });
 
   /**
@@ -298,15 +263,7 @@ export class TrainingController {
 
     const records = await trainingService.getExpiringTraining(daysNumber);
 
-    res.status(200).json({
-      success: true,
-      message: 'Expiring training records retrieved successfully',
-      data: records,
-      meta: {
-        days: daysNumber,
-        count: records.length
-      }
-    });
+    return sendSuccess(res, { records, meta: { days: daysNumber, count: records.length } }, 'Expiring training records retrieved successfully');
   });
 
   /**
@@ -323,11 +280,7 @@ export class TrainingController {
       endDate ? new Date(endDate as string) : undefined
     );
 
-    res.status(200).json({
-      success: true,
-      message: 'CEU report generated successfully',
-      data: report
-    });
+    return sendSuccess(res, report, 'CEU report generated successfully');
   });
 
   /**
@@ -337,11 +290,7 @@ export class TrainingController {
   getComplianceReport = asyncHandler(async (req: Request, res: Response) => {
     const report = await trainingService.getComplianceReport();
 
-    res.status(200).json({
-      success: true,
-      message: 'Compliance report generated successfully',
-      data: report
-    });
+    return sendSuccess(res, report, 'Compliance report generated successfully');
   });
 
   /**
@@ -353,14 +302,7 @@ export class TrainingController {
 
     const enrollments = await trainingService.autoEnrollNewHires(userId);
 
-    res.status(201).json({
-      success: true,
-      message: 'New hire auto-enrolled in required training',
-      data: enrollments,
-      meta: {
-        enrolledCount: enrollments.length
-      }
-    });
+    return sendCreated(res, { enrollments, meta: { enrolledCount: enrollments.length } }, 'New hire auto-enrolled in required training');
   });
 
   /**
@@ -370,10 +312,7 @@ export class TrainingController {
   sendReminders = asyncHandler(async (req: Request, res: Response) => {
     await trainingService.sendTrainingReminders();
 
-    res.status(200).json({
-      success: true,
-      message: 'Training reminders sent successfully'
-    });
+    return sendSuccess(res, null, 'Training reminders sent successfully');
   });
 
   /**
@@ -383,11 +322,7 @@ export class TrainingController {
   getStats = asyncHandler(async (req: Request, res: Response) => {
     const stats = await trainingService.getTrainingStats();
 
-    res.status(200).json({
-      success: true,
-      message: 'Training statistics retrieved successfully',
-      data: stats
-    });
+    return sendSuccess(res, stats, 'Training statistics retrieved successfully');
   });
 
   /**
@@ -421,15 +356,11 @@ export class TrainingController {
 
     const result = await trainingService.getEnrollments(filters);
 
-    res.status(200).json({
-      success: true,
-      message: 'Enrollments retrieved successfully',
-      data: result.enrollments,
-      pagination: {
-        page: result.page,
-        totalPages: result.totalPages,
-        total: result.total
-      }
+    return sendPaginated(res, result.enrollments, {
+      page: result.page,
+      totalPages: result.totalPages,
+      total: result.total,
+      limit: filters.limit || 20
     });
   });
 
@@ -443,15 +374,7 @@ export class TrainingController {
 
     const records = await trainingService.getUpcomingTraining(daysNumber);
 
-    res.status(200).json({
-      success: true,
-      message: 'Upcoming training retrieved successfully',
-      data: records,
-      meta: {
-        days: daysNumber,
-        count: records.length
-      }
-    });
+    return sendSuccess(res, { records, meta: { days: daysNumber, count: records.length } }, 'Upcoming training retrieved successfully');
   });
 }
 

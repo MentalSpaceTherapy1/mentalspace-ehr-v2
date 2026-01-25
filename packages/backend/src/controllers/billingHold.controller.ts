@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as BillingReadinessService from '../services/billingReadiness.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendServerError } from '../utils/apiResponse';
 
 /**
  * Phase 2.1: Billing Hold Controller
@@ -17,18 +21,10 @@ export const getBillingHolds = async (req: Request, res: Response) => {
 
     const holds = await BillingReadinessService.getHoldsForNote(''); // Get all if no noteId
 
-    return res.json({
-      success: true,
-      data: holds,
-      total: holds.length,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching billing holds', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch billing holds',
-      error: error.message,
-    });
+    return sendSuccess(res, { data: holds, total: holds.length });
+  } catch (error) {
+    logger.error('Error fetching billing holds', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch billing holds');
   }
 };
 
@@ -40,17 +36,10 @@ export const getBillingHoldsCount = async (req: Request, res: Response) => {
   try {
     const count = await BillingReadinessService.getActiveHoldsCount();
 
-    return res.json({
-      success: true,
-      data: { count },
-    });
-  } catch (error: any) {
-    logger.error('Error fetching billing holds count', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch billing holds count',
-      error: error.message,
-    });
+    return sendSuccess(res, { count });
+  } catch (error) {
+    logger.error('Error fetching billing holds count', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch billing holds count');
   }
 };
 
@@ -62,17 +51,10 @@ export const getBillingHoldsByReason = async (req: Request, res: Response) => {
   try {
     const holdsByReason = await BillingReadinessService.getHoldsByReason();
 
-    return res.json({
-      success: true,
-      data: holdsByReason,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching billing holds by reason', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch billing holds by reason',
-      error: error.message,
-    });
+    return sendSuccess(res, holdsByReason);
+  } catch (error) {
+    logger.error('Error fetching billing holds by reason', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch billing holds by reason');
   }
 };
 
@@ -85,18 +67,10 @@ export const getBillingHoldsByNote = async (req: Request, res: Response) => {
     const { noteId } = req.params;
     const holds = await BillingReadinessService.getHoldsForNote(noteId);
 
-    return res.json({
-      success: true,
-      data: holds,
-      total: holds.length,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching billing holds for note', { error: error.message, noteId: req.params.noteId });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch billing holds',
-      error: error.message,
-    });
+    return sendSuccess(res, { data: holds, total: holds.length });
+  } catch (error) {
+    logger.error('Error fetching billing holds for note', { error: getErrorMessage(error), noteId: req.params.noteId });
+    return sendServerError(res, 'Failed to fetch billing holds');
   }
 };
 
@@ -107,21 +81,14 @@ export const getBillingHoldsByNote = async (req: Request, res: Response) => {
 export const resolveBillingHold = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
 
     await BillingReadinessService.resolveHold(id, userId);
 
-    return res.json({
-      success: true,
-      message: 'Billing hold resolved successfully',
-    });
-  } catch (error: any) {
-    logger.error('Error resolving billing hold', { error: error.message, holdId: req.params.id });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to resolve billing hold',
-      error: error.message,
-    });
+    return sendSuccess(res, null, 'Billing hold resolved successfully');
+  } catch (error) {
+    logger.error('Error resolving billing hold', { error: getErrorMessage(error), holdId: req.params.id });
+    return sendServerError(res, 'Failed to resolve billing hold');
   }
 };
 
@@ -136,16 +103,9 @@ export const checkBillingReadiness = async (req: Request, res: Response) => {
 
     const validation = await BillingReadinessService.validateNoteForBilling(id, createHolds);
 
-    return res.json({
-      success: true,
-      data: validation,
-    });
-  } catch (error: any) {
-    logger.error('Error checking billing readiness', { error: error.message, noteId: req.params.id });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to check billing readiness',
-      error: error.message,
-    });
+    return sendSuccess(res, validation);
+  } catch (error) {
+    logger.error('Error checking billing readiness', { error: getErrorMessage(error), noteId: req.params.id });
+    return sendServerError(res, 'Failed to check billing readiness');
   }
 };

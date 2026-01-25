@@ -5,6 +5,9 @@ import { enforceSessionTimeout } from './sessionTimeout';
 import sessionService from '../services/session.service';
 import prisma from '../services/database';
 import logger from '../utils/logger';
+import { UserRoles } from '@mentalspace/shared';
+// Phase 5.4: Import consolidated Express types (global declaration in types/express.d.ts)
+import { AuthUser } from '../types/express.d';
 
 // Cookie name for access token (must match auth.controller.ts)
 const ACCESS_TOKEN_COOKIE = 'access_token';
@@ -31,19 +34,6 @@ const extractToken = (req: Request): string | null => {
 
   return null;
 };
-
-// Extend Express Request type to include user and session
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload & { userId: string; roles: string[] };
-      session?: {
-        sessionId: string;
-        token: string;
-      };
-    }
-  }
-}
 
 /**
  * Middleware to authenticate requests using session-based authentication
@@ -92,7 +82,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
         userId: user.id,
         email: user.email,
         roles: user.roles,
-      } as any;
+      } as AuthUser;
 
       req.session = {
         sessionId: sessionData.sessionId,
@@ -137,7 +127,7 @@ export const authorize = (...allowedRoles: string[]) => {
 
       // SUPER_ADMIN has absolute access to everything - but MUST be audited
       const isSuperAdmin = userRoles.some((role: string) =>
-        role === 'SUPER_ADMIN'
+        role === UserRoles.SUPER_ADMIN
       );
 
       if (isSuperAdmin) {
@@ -227,7 +217,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
             userId: user.id,
             email: user.email,
             roles: user.roles,
-          } as any;
+          } as AuthUser;
 
           req.session = {
             sessionId: sessionData.sessionId,

@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 3.2: Removed direct PrismaClient import - using service methods instead
 import { logControllerError } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import { sendSuccess, sendBadRequest, sendServerError } from '../utils/apiResponse';
+import * as analyticsService from '../services/analytics.service';
 
 /**
  * Get provider utilization rates
@@ -13,41 +14,18 @@ export const getProviderUtilization = async (req: Request, res: Response) => {
     const { startDate, endDate, providerId } = req.query;
 
     if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date and end date are required',
-      });
+      return sendBadRequest(res, 'Start date and end date are required');
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
 
-    // Build where clause
-    const whereClause: any = {
-      appointmentDate: {
-        gte: start,
-        lte: end,
-      },
-    };
-
-    if (providerId) {
-      whereClause.clinicianId = providerId;
-    }
-
-    // Get all appointments in date range
-    const appointments = await prisma.appointment.findMany({
-      where: whereClause,
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            title: true,
-          },
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const appointments = await analyticsService.getAppointmentsForUtilization(
+      start,
+      end,
+      providerId as string | undefined
+    );
 
     // Calculate utilization by provider
     const providerStats = new Map<string, any>();
@@ -106,25 +84,19 @@ export const getProviderUtilization = async (req: Request, res: Response) => {
         : 0,
     }));
 
-    res.json({
-      success: true,
-      data: {
-        dateRange: { start: startDate, end: endDate },
-        providers: utilizationData,
-        summary: {
-          totalProviders: utilizationData.length,
-          averageUtilization: utilizationData.length > 0
-            ? Math.round(utilizationData.reduce((sum, p) => sum + p.utilizationRate, 0) / utilizationData.length)
-            : 0,
-        },
+    return sendSuccess(res, {
+      dateRange: { start: startDate, end: endDate },
+      providers: utilizationData,
+      summary: {
+        totalProviders: utilizationData.length,
+        averageUtilization: utilizationData.length > 0
+          ? Math.round(utilizationData.reduce((sum, p) => sum + p.utilizationRate, 0) / utilizationData.length)
+          : 0,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     logControllerError('Error getting provider utilization', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to get provider utilization',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get provider utilization');
   }
 };
 
@@ -137,33 +109,14 @@ export const getNoShowRates = async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date and end date are required',
-      });
+      return sendBadRequest(res, 'Start date and end date are required');
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
 
-    // Get all appointments
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        appointmentDate: {
-          gte: start,
-          lte: end,
-        },
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const appointments = await analyticsService.getAppointmentsForNoShowAnalysis(start, end);
 
     // Overall stats
     const totalAppointments = appointments.length;
@@ -270,27 +223,21 @@ export const getNoShowRates = async (req: Request, res: Response) => {
       noShowRate: stats.total > 0 ? Math.round((stats.noShows / stats.total) * 100) : 0,
     }));
 
-    res.json({
-      success: true,
-      data: {
-        dateRange: { start: startDate, end: endDate },
-        overall: {
-          totalAppointments,
-          noShows: noShowCount,
-          noShowRate: overallNoShowRate,
-        },
-        byProvider: providerStats,
-        byAppointmentType: typeStats,
-        byDayOfWeek: dayOfWeekStats,
-        byTimeOfDay: timeOfDayStats,
+    return sendSuccess(res, {
+      dateRange: { start: startDate, end: endDate },
+      overall: {
+        totalAppointments,
+        noShows: noShowCount,
+        noShowRate: overallNoShowRate,
       },
+      byProvider: providerStats,
+      byAppointmentType: typeStats,
+      byDayOfWeek: dayOfWeekStats,
+      byTimeOfDay: timeOfDayStats,
     });
-  } catch (error: any) {
+  } catch (error) {
     logControllerError('Error getting no-show rates', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to get no-show rates',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get no-show rates');
   }
 };
 
@@ -302,40 +249,18 @@ export const getRevenueAnalysis = async (req: Request, res: Response) => {
     const { startDate, endDate, providerId } = req.query;
 
     if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date and end date are required',
-      });
+      return sendBadRequest(res, 'Start date and end date are required');
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
 
-    const whereClause: any = {
-      appointmentDate: {
-        gte: start,
-        lte: end,
-      },
-      status: 'COMPLETED',
-    };
-
-    if (providerId) {
-      whereClause.clinicianId = providerId;
-    }
-
-    // Get completed appointments
-    const appointments = await prisma.appointment.findMany({
-      where: whereClause,
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const appointments = await analyticsService.getCompletedAppointmentsForRevenue(
+      start,
+      end,
+      providerId as string | undefined
+    );
 
     // Calculate revenue by provider
     const providerRevenue = new Map<string, any>();
@@ -378,25 +303,19 @@ export const getRevenueAnalysis = async (req: Request, res: Response) => {
     const totalHours = revenueData.reduce((sum, p) => sum + p.totalHours, 0);
     const totalAppointments = revenueData.reduce((sum, p) => sum + p.appointmentCount, 0);
 
-    res.json({
-      success: true,
-      data: {
-        dateRange: { start: startDate, end: endDate },
-        providers: revenueData,
-        summary: {
-          totalRevenue: Math.round(totalRevenue),
-          totalHours: Math.round(totalHours * 10) / 10,
-          totalAppointments,
-          averageRevenuePerHour: totalHours > 0 ? Math.round(totalRevenue / totalHours) : 0,
-        },
+    return sendSuccess(res, {
+      dateRange: { start: startDate, end: endDate },
+      providers: revenueData,
+      summary: {
+        totalRevenue: Math.round(totalRevenue),
+        totalHours: Math.round(totalHours * 10) / 10,
+        totalAppointments,
+        averageRevenuePerHour: totalHours > 0 ? Math.round(totalRevenue / totalHours) : 0,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     logControllerError('Error getting revenue analysis', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to get revenue analysis',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get revenue analysis');
   }
 };
 
@@ -408,33 +327,14 @@ export const getCancellationPatterns = async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date and end date are required',
-      });
+      return sendBadRequest(res, 'Start date and end date are required');
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
 
-    // Get all appointments
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        appointmentDate: {
-          gte: start,
-          lte: end,
-        },
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const appointments = await analyticsService.getAppointmentsForCancellationAnalysis(start, end);
 
     const totalAppointments = appointments.length;
     const cancelled = appointments.filter((a) => a.status === 'CANCELLED');
@@ -516,26 +416,20 @@ export const getCancellationPatterns = async (req: Request, res: Response) => {
         : 0,
     }));
 
-    res.json({
-      success: true,
-      data: {
-        dateRange: { start: startDate, end: endDate },
-        overall: {
-          totalAppointments,
-          cancelled: cancelledCount,
-          cancellationRate: overallCancellationRate,
-        },
-        byReason: reasonStats,
-        byProvider: providerStats,
-        byTiming: timingStats,
+    return sendSuccess(res, {
+      dateRange: { start: startDate, end: endDate },
+      overall: {
+        totalAppointments,
+        cancelled: cancelledCount,
+        cancellationRate: overallCancellationRate,
       },
+      byReason: reasonStats,
+      byProvider: providerStats,
+      byTiming: timingStats,
     });
-  } catch (error: any) {
+  } catch (error) {
     logControllerError('Error getting cancellation patterns', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to get cancellation patterns',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get cancellation patterns');
   }
 };
 
@@ -547,33 +441,14 @@ export const getCapacityPlanning = async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date and end date are required',
-      });
+      return sendBadRequest(res, 'Start date and end date are required');
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
 
-    // Get all appointments
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        appointmentDate: {
-          gte: start,
-          lte: end,
-        },
-      },
-      include: {
-        clinician: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const appointments = await analyticsService.getAppointmentsForCapacityPlanning(start, end);
 
     // Get unique providers
     const providerIds = [...new Set(appointments.map((a) => a.clinicianId).filter(Boolean))];
@@ -624,28 +499,22 @@ export const getCapacityPlanning = async (req: Request, res: Response) => {
       ? Math.round((usedHours / totalAvailableHours) * 100)
       : 0;
 
-    res.json({
-      success: true,
-      data: {
-        dateRange: { start: startDate, end: endDate },
-        overall: {
-          totalProviders: providerIds.length,
-          workingDays,
-          totalAvailableHours: Math.round(totalAvailableHours),
-          scheduledHours: Math.round(usedHours * 10) / 10,
-          remainingHours: Math.round((totalAvailableHours - usedHours) * 10) / 10,
-          utilizationRate: overallUtilization,
-          capacityStatus:
-            overallUtilization > 85 ? 'High' : overallUtilization > 65 ? 'Medium' : 'Low',
-        },
-        byProvider: capacityByProvider,
+    return sendSuccess(res, {
+      dateRange: { start: startDate, end: endDate },
+      overall: {
+        totalProviders: providerIds.length,
+        workingDays,
+        totalAvailableHours: Math.round(totalAvailableHours),
+        scheduledHours: Math.round(usedHours * 10) / 10,
+        remainingHours: Math.round((totalAvailableHours - usedHours) * 10) / 10,
+        utilizationRate: overallUtilization,
+        capacityStatus:
+          overallUtilization > 85 ? 'High' : overallUtilization > 65 ? 'Medium' : 'Low',
       },
+      byProvider: capacityByProvider,
     });
-  } catch (error: any) {
+  } catch (error) {
     logControllerError('Error getting capacity planning', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to get capacity planning',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get capacity planning');
   }
 };

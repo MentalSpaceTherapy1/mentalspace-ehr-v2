@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import logger from '../utils/logger';
 import prisma from '../services/database';
 import { authenticate } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -372,7 +373,7 @@ router.get('/odata/KVRAnalysis', authenticate, async (req: Request, res: Respons
 
     const clinicians = await prisma.user.findMany({
       where: {
-        roles: { hasSome: ['CLINICIAN', 'SUPERVISOR', 'ASSOCIATE'] }
+        roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR, UserRoles.ASSOCIATE] }
       }
     });
 

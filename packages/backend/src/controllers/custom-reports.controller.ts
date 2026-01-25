@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+// Phase 3.2: Removed direct PrismaClient import - using service methods instead
+import { Prisma } from '@mentalspace/database';
 import { logControllerError } from '../utils/logger';
 import queryBuilderService, { QueryConfig } from '../services/query-builder.service';
-
-const prisma = new PrismaClient();
+import * as customReportsService from '../services/custom-reports.service';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 // ============================================================================
 // REPORT TEMPLATES
@@ -123,10 +124,10 @@ const REPORT_TEMPLATES: Record<string, QueryConfig> = {
 export const getDataSources = async (req: Request, res: Response) => {
   try {
     const dataSources = queryBuilderService.getAvailableDataSources();
-    res.json(dataSources);
+    return sendSuccess(res, dataSources);
   } catch (error) {
     logControllerError('Error fetching data sources', error);
-    res.status(500).json({ error: 'Failed to fetch data sources' });
+    return sendServerError(res, 'Failed to fetch data sources');
   }
 };
 
@@ -141,10 +142,10 @@ export const getTemplates = async (req: Request, res: Response) => {
       config: REPORT_TEMPLATES[key]
     }));
 
-    res.json(templates);
+    return sendSuccess(res, templates);
   } catch (error) {
     logControllerError('Error fetching templates', error);
-    res.status(500).json({ error: 'Failed to fetch templates' });
+    return sendServerError(res, 'Failed to fetch templates');
   }
 };
 
@@ -157,46 +158,39 @@ export const createReport = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
     // Validate query config
     const validation = queryBuilderService.validateQueryConfig(queryConfig);
     if (!validation.valid) {
-      return res.status(400).json({
-        error: 'Invalid query configuration',
-        details: validation.errors
-      });
+      return sendBadRequest(res, 'Invalid query configuration');
     }
 
-    // Create report definition
-    const report = await prisma.reportDefinition.create({
-      data: {
-        userId,
-        name,
-        description,
-        category: category || 'CUSTOM',
-        queryConfig,
-        isPublic: isPublic || false,
-        isTemplate: isTemplate || false
-      }
+    // Phase 3.2: Use service methods instead of direct prisma calls
+    const report = await customReportsService.createReportDefinition({
+      userId,
+      name,
+      description,
+      category: category || 'CUSTOM',
+      queryConfig,
+      isPublic: isPublic || false,
+      isTemplate: isTemplate || false,
     });
 
     // Create initial version
-    await prisma.reportVersion.create({
-      data: {
-        reportId: report.id,
-        versionNumber: 1,
-        queryConfig,
-        changedBy: userId,
-        changeNote: 'Initial version'
-      }
-    });
+    await customReportsService.createReportVersion(
+      report.id,
+      1,
+      queryConfig,
+      userId,
+      'Initial version'
+    );
 
-    res.status(201).json(report);
+    return sendCreated(res, report);
   } catch (error) {
     logControllerError('Error creating report', error);
-    res.status(500).json({ error: 'Failed to create report' });
+    return sendServerError(res, 'Failed to create report');
   }
 };
 
@@ -209,47 +203,21 @@ export const getReports = async (req: Request, res: Response) => {
     const { category, isTemplate, includePublic } = req.query;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
-    const where: any = {
-      OR: [
-        { userId },
-        ...(includePublic === 'true' ? [{ isPublic: true }] : [])
-      ]
-    };
-
-    if (category) {
-      where.category = category;
-    }
-
-    if (isTemplate !== undefined) {
-      where.isTemplate = isTemplate === 'true';
-    }
-
-    const reports = await prisma.reportDefinition.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        versions: {
-          take: 1,
-          orderBy: { versionNumber: 'desc' }
-        }
-      },
-      orderBy: { updatedAt: 'desc' }
+    // Phase 3.2: Use service method instead of direct prisma call
+    const reports = await customReportsService.getReportsList({
+      userId,
+      category: category as string,
+      isTemplate: isTemplate !== undefined ? isTemplate === 'true' : undefined,
+      includePublic: includePublic === 'true',
     });
 
-    res.json(reports);
+    return sendSuccess(res, reports);
   } catch (error) {
     logControllerError('Error fetching reports', error);
-    res.status(500).json({ error: 'Failed to fetch reports' });
+    return sendServerError(res, 'Failed to fetch reports');
   }
 };
 
@@ -262,49 +230,20 @@ export const getReportById = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
-    const report = await prisma.reportDefinition.findFirst({
-      where: {
-        id,
-        OR: [
-          { userId },
-          { isPublic: true }
-        ]
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        versions: {
-          orderBy: { versionNumber: 'desc' },
-          include: {
-            changedByUser: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true
-              }
-            }
-          }
-        }
-      }
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const report = await customReportsService.findReportByIdWithAccess(id, userId);
 
     if (!report) {
-      return res.status(404).json({ error: 'Report not found' });
+      return sendNotFound(res, 'Report');
     }
 
-    res.json(report);
+    return sendSuccess(res, report);
   } catch (error) {
     logControllerError('Error fetching report', error);
-    res.status(500).json({ error: 'Failed to fetch report' });
+    return sendServerError(res, 'Failed to fetch report');
   }
 };
 
@@ -318,65 +257,51 @@ export const updateReport = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
-    // Check if user owns the report
-    const existingReport = await prisma.reportDefinition.findFirst({
-      where: { id, userId }
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const existingReport = await customReportsService.findReportByIdAndOwner(id, userId);
 
     if (!existingReport) {
-      return res.status(404).json({ error: 'Report not found or access denied' });
+      return sendNotFound(res, 'Report');
     }
 
     // Validate query config if provided
     if (queryConfig) {
       const validation = queryBuilderService.validateQueryConfig(queryConfig);
       if (!validation.valid) {
-        return res.status(400).json({
-          error: 'Invalid query configuration',
-          details: validation.errors
-        });
+        return sendBadRequest(res, 'Invalid query configuration');
       }
     }
 
-    // Update report
-    const report = await prisma.reportDefinition.update({
-      where: { id },
-      data: {
-        name,
-        description,
-        category,
-        queryConfig,
-        isPublic
-      }
+    // Phase 3.2: Use service methods instead of direct prisma calls
+    const report = await customReportsService.updateReportDefinition(id, {
+      name,
+      description,
+      category,
+      queryConfig,
+      isPublic,
     });
 
     // Create new version if query config changed
     if (queryConfig) {
-      const latestVersion = await prisma.reportVersion.findFirst({
-        where: { reportId: id },
-        orderBy: { versionNumber: 'desc' }
-      });
+      const latestVersionNumber = await customReportsService.getLatestVersionNumber(id);
+      const newVersionNumber = latestVersionNumber + 1;
 
-      const newVersionNumber = (latestVersion?.versionNumber || 0) + 1;
-
-      await prisma.reportVersion.create({
-        data: {
-          reportId: id,
-          versionNumber: newVersionNumber,
-          queryConfig,
-          changedBy: userId,
-          changeNote: changeNote || 'Updated report configuration'
-        }
-      });
+      await customReportsService.createReportVersion(
+        id,
+        newVersionNumber,
+        queryConfig,
+        userId,
+        changeNote || 'Updated report configuration'
+      );
     }
 
-    res.json(report);
+    return sendSuccess(res, report);
   } catch (error) {
     logControllerError('Error updating report', error);
-    res.status(500).json({ error: 'Failed to update report' });
+    return sendServerError(res, 'Failed to update report');
   }
 };
 
@@ -389,27 +314,23 @@ export const deleteReport = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
-    // Check if user owns the report
-    const existingReport = await prisma.reportDefinition.findFirst({
-      where: { id, userId }
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const existingReport = await customReportsService.findReportByIdAndOwner(id, userId);
 
     if (!existingReport) {
-      return res.status(404).json({ error: 'Report not found or access denied' });
+      return sendNotFound(res, 'Report');
     }
 
     // Delete report (cascade will delete versions)
-    await prisma.reportDefinition.delete({
-      where: { id }
-    });
+    await customReportsService.deleteReportDefinition(id);
 
-    res.json({ message: 'Report deleted successfully' });
+    return sendSuccess(res, { message: 'Report deleted successfully' });
   } catch (error) {
     logControllerError('Error deleting report', error);
-    res.status(500).json({ error: 'Failed to delete report' });
+    return sendServerError(res, 'Failed to delete report');
   }
 };
 
@@ -423,22 +344,14 @@ export const executeReport = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
-    // Get report definition
-    const report = await prisma.reportDefinition.findFirst({
-      where: {
-        id,
-        OR: [
-          { userId },
-          { isPublic: true }
-        ]
-      }
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const report = await customReportsService.findReportByIdWithAccessBasic(id, userId);
 
     if (!report) {
-      return res.status(404).json({ error: 'Report not found' });
+      return sendNotFound(res, 'Report');
     }
 
     // Merge custom filters with report filters
@@ -463,7 +376,7 @@ export const executeReport = async (req: Request, res: Response) => {
       results = await queryBuilderService.executeQuery(queryConfig);
     }
 
-    res.json({
+    return sendSuccess(res, {
       report: {
         id: report.id,
         name: report.name,
@@ -474,7 +387,7 @@ export const executeReport = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logControllerError('Error executing report', error);
-    res.status(500).json({ error: 'Failed to execute report' });
+    return sendServerError(res, 'Failed to execute report');
   }
 };
 
@@ -488,52 +401,40 @@ export const cloneReport = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
-    // Get original report
-    const originalReport = await prisma.reportDefinition.findFirst({
-      where: {
-        id,
-        OR: [
-          { userId },
-          { isPublic: true }
-        ]
-      }
-    });
+    // Phase 3.2: Use service methods instead of direct prisma calls
+    const originalReport = await customReportsService.findReportByIdWithAccessBasic(id, userId);
 
     if (!originalReport) {
-      return res.status(404).json({ error: 'Report not found' });
+      return sendNotFound(res, 'Report');
     }
 
     // Create cloned report
-    const clonedReport = await prisma.reportDefinition.create({
-      data: {
-        userId,
-        name: name || `${originalReport.name} (Copy)`,
-        description: originalReport.description,
-        category: originalReport.category,
-        queryConfig: originalReport.queryConfig as any,
-        isPublic: false,
-        isTemplate: false
-      }
+    const clonedReport = await customReportsService.createReportDefinition({
+      userId,
+      name: name || `${originalReport.name} (Copy)`,
+      description: originalReport.description || undefined,
+      category: originalReport.category,
+      queryConfig: originalReport.queryConfig as Prisma.InputJsonValue,
+      isPublic: false,
+      isTemplate: false,
     });
 
     // Create initial version for cloned report
-    await prisma.reportVersion.create({
-      data: {
-        reportId: clonedReport.id,
-        versionNumber: 1,
-        queryConfig: originalReport.queryConfig as any,
-        changedBy: userId,
-        changeNote: `Cloned from report: ${originalReport.name}`
-      }
-    });
+    await customReportsService.createReportVersion(
+      clonedReport.id,
+      1,
+      originalReport.queryConfig as Prisma.InputJsonValue,
+      userId,
+      `Cloned from report: ${originalReport.name}`
+    );
 
-    res.status(201).json(clonedReport);
+    return sendCreated(res, clonedReport);
   } catch (error) {
     logControllerError('Error cloning report', error);
-    res.status(500).json({ error: 'Failed to clone report' });
+    return sendServerError(res, 'Failed to clone report');
   }
 };
 
@@ -547,28 +448,23 @@ export const shareReport = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
-    // Check if user owns the report
-    const existingReport = await prisma.reportDefinition.findFirst({
-      where: { id, userId }
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const existingReport = await customReportsService.findReportByIdAndOwner(id, userId);
 
     if (!existingReport) {
-      return res.status(404).json({ error: 'Report not found or access denied' });
+      return sendNotFound(res, 'Report');
     }
 
     // Update sharing status
-    const report = await prisma.reportDefinition.update({
-      where: { id },
-      data: { isPublic }
-    });
+    const report = await customReportsService.updateReportSharing(id, isPublic);
 
-    res.json(report);
+    return sendSuccess(res, report);
   } catch (error) {
     logControllerError('Error sharing report', error);
-    res.status(500).json({ error: 'Failed to share report' });
+    return sendServerError(res, 'Failed to share report');
   }
 };
 
@@ -581,43 +477,23 @@ export const getReportVersions = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
-    // Check access to report
-    const report = await prisma.reportDefinition.findFirst({
-      where: {
-        id,
-        OR: [
-          { userId },
-          { isPublic: true }
-        ]
-      }
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const report = await customReportsService.findReportByIdWithAccessBasic(id, userId);
 
     if (!report) {
-      return res.status(404).json({ error: 'Report not found' });
+      return sendNotFound(res, 'Report');
     }
 
     // Get versions
-    const versions = await prisma.reportVersion.findMany({
-      where: { reportId: id },
-      include: {
-        changedByUser: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        }
-      },
-      orderBy: { versionNumber: 'desc' }
-    });
+    const versions = await customReportsService.getReportVersions(id);
 
-    res.json(versions);
+    return sendSuccess(res, versions);
   } catch (error) {
     logControllerError('Error fetching versions', error);
-    res.status(500).json({ error: 'Failed to fetch versions' });
+    return sendServerError(res, 'Failed to fetch versions');
   }
 };
 
@@ -630,53 +506,44 @@ export const rollbackToVersion = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
-    // Check if user owns the report
-    const report = await prisma.reportDefinition.findFirst({
-      where: { id, userId }
-    });
+    // Phase 3.2: Use service methods instead of direct prisma calls
+    const report = await customReportsService.findReportByIdAndOwner(id, userId);
 
     if (!report) {
-      return res.status(404).json({ error: 'Report not found or access denied' });
+      return sendNotFound(res, 'Report');
     }
 
     // Get version to rollback to
-    const version = await prisma.reportVersion.findFirst({
-      where: { id: versionId, reportId: id }
-    });
+    const version = await customReportsService.findVersionByIdAndReport(versionId, id);
 
     if (!version) {
-      return res.status(404).json({ error: 'Version not found' });
+      return sendNotFound(res, 'Version');
     }
 
     // Update report with version's query config
-    const updatedReport = await prisma.reportDefinition.update({
-      where: { id },
-      data: { queryConfig: version.queryConfig as any }
-    });
+    const updatedReport = await customReportsService.updateReportQueryConfig(
+      id,
+      version.queryConfig as Prisma.InputJsonValue
+    );
 
     // Create new version for rollback
-    const latestVersion = await prisma.reportVersion.findFirst({
-      where: { reportId: id },
-      orderBy: { versionNumber: 'desc' }
-    });
+    const latestVersionNumber = await customReportsService.getLatestVersionNumber(id);
 
-    await prisma.reportVersion.create({
-      data: {
-        reportId: id,
-        versionNumber: (latestVersion?.versionNumber || 0) + 1,
-        queryConfig: version.queryConfig as any,
-        changedBy: userId,
-        changeNote: `Rolled back to version ${version.versionNumber}`
-      }
-    });
+    await customReportsService.createReportVersion(
+      id,
+      latestVersionNumber + 1,
+      version.queryConfig as Prisma.InputJsonValue,
+      userId,
+      `Rolled back to version ${version.versionNumber}`
+    );
 
-    res.json(updatedReport);
+    return sendSuccess(res, updatedReport);
   } catch (error) {
     logControllerError('Error rolling back version', error);
-    res.status(500).json({ error: 'Failed to rollback version' });
+    return sendServerError(res, 'Failed to rollback version');
   }
 };
 
@@ -689,10 +556,10 @@ export const validateQuery = async (req: Request, res: Response) => {
 
     const validation = queryBuilderService.validateQueryConfig(queryConfig);
 
-    res.json(validation);
+    return sendSuccess(res, validation);
   } catch (error) {
     logControllerError('Error validating query', error);
-    res.status(500).json({ error: 'Failed to validate query' });
+    return sendServerError(res, 'Failed to validate query');
   }
 };
 
@@ -705,16 +572,13 @@ export const previewQuery = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return sendUnauthorized(res, 'User not authenticated');
     }
 
     // Validate query config
     const validation = queryBuilderService.validateQueryConfig(queryConfig);
     if (!validation.valid) {
-      return res.status(400).json({
-        error: 'Invalid query configuration',
-        details: validation.errors
-      });
+      return sendBadRequest(res, 'Invalid query configuration');
     }
 
     // Limit preview to 10 rows
@@ -730,13 +594,13 @@ export const previewQuery = async (req: Request, res: Response) => {
       results = await queryBuilderService.executeQuery(previewConfig);
     }
 
-    res.json({
+    return sendSuccess(res, {
       results,
       rowCount: Array.isArray(results) ? results.length : 1,
       previewNote: 'Limited to 10 rows for preview'
     });
   } catch (error) {
     logControllerError('Error previewing query', error);
-    res.status(500).json({ error: 'Failed to preview query' });
+    return sendServerError(res, 'Failed to preview query');
   }
 };

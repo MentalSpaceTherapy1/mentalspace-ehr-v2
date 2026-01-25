@@ -1,8 +1,12 @@
 import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as documentService from '../services/document.service';
 import { auditLogger } from '../utils/logger';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendForbidden, sendValidationError } from '../utils/apiResponse';
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -60,7 +64,11 @@ const updateFolderSchema = z.object({
 export const createDocument = async (req: Request, res: Response) => {
   try {
     const validatedData = createDocumentSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const document = await documentService.createDocument({
       name: validatedData.name,
@@ -79,27 +87,15 @@ export const createDocument = async (req: Request, res: Response) => {
       version: validatedData.version,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Document created successfully',
-      data: document,
-    });
+    return sendCreated(res, document, 'Document created successfully');
   } catch (error) {
     logger.error('Create document error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create document',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to create document');
   }
 };
 
@@ -108,12 +104,16 @@ export const createDocument = async (req: Request, res: Response) => {
  */
 export const getDocuments = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { category, folderId, uploadedById, isArchived, tags, search, startDate, endDate } = req.query;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const filters: documentService.DocumentFilters = {};
 
-    if (category) filters.category = category as any;
+    if (category) filters.category = category as documentService.DocumentFilters['category'];
     if (folderId !== undefined) filters.folderId = folderId === 'null' ? undefined : (folderId as string);
     if (uploadedById) filters.uploadedById = uploadedById as string;
     if (isArchived !== undefined) filters.isArchived = isArchived === 'true';
@@ -124,19 +124,11 @@ export const getDocuments = async (req: Request, res: Response) => {
 
     const documents = await documentService.getDocuments(userId, filters);
 
-    res.json({
-      success: true,
-      data: documents,
-      count: documents.length,
-    });
+    return sendSuccess(res, documents);
   } catch (error) {
     logger.error('Get documents error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve documents',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve documents');
   }
 };
 
@@ -145,37 +137,28 @@ export const getDocuments = async (req: Request, res: Response) => {
  */
 export const getDocumentById = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const document = await documentService.getDocumentById(id, userId);
 
-    res.json({
-      success: true,
-      data: document,
-    });
+    return sendSuccess(res, document);
   } catch (error) {
     logger.error('Get document by ID error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    if (error instanceof Error && error.message === 'Document not found') {
-      return res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+    if (error instanceof Error && getErrorMessage(error) === 'Document not found') {
+      return sendNotFound(res, 'Document');
     }
 
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).json({
-        success: false,
-        message: error.message,
-      });
+    if (error instanceof Error && getErrorMessage(error) === 'Access denied') {
+      return sendForbidden(res, 'Access denied');
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve document',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve document');
   }
 };
 
@@ -185,8 +168,12 @@ export const getDocumentById = async (req: Request, res: Response) => {
 export const updateDocument = async (req: Request, res: Response) => {
   try {
     const validatedData = updateDocumentSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const updateData: documentService.UpdateDocumentData = {};
 
@@ -201,27 +188,15 @@ export const updateDocument = async (req: Request, res: Response) => {
 
     const document = await documentService.updateDocument(id, userId, updateData);
 
-    res.json({
-      success: true,
-      message: 'Document updated successfully',
-      data: document,
-    });
+    return sendSuccess(res, document, 'Document updated successfully');
   } catch (error) {
     logger.error('Update document error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update document',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to update document');
   }
 };
 
@@ -231,8 +206,12 @@ export const updateDocument = async (req: Request, res: Response) => {
 export const createDocumentVersion = async (req: Request, res: Response) => {
   try {
     const validatedData = createDocumentSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const newVersion = await documentService.createDocumentVersion(id, {
       name: validatedData.name,
@@ -249,27 +228,15 @@ export const createDocumentVersion = async (req: Request, res: Response) => {
       expiresAt: validatedData.expiresAt ? new Date(validatedData.expiresAt) : undefined,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Document version created successfully',
-      data: newVersion,
-    });
+    return sendCreated(res, newVersion, 'Document version created successfully');
   } catch (error) {
     logger.error('Create document version error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create document version',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to create document version');
   }
 };
 
@@ -278,24 +245,20 @@ export const createDocumentVersion = async (req: Request, res: Response) => {
  */
 export const archiveDocument = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const document = await documentService.archiveDocument(id, userId);
 
-    res.json({
-      success: true,
-      message: 'Document archived successfully',
-      data: document,
-    });
+    return sendSuccess(res, document, 'Document archived successfully');
   } catch (error) {
     logger.error('Archive document error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to archive document',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to archive document');
   }
 };
 
@@ -304,23 +267,20 @@ export const archiveDocument = async (req: Request, res: Response) => {
  */
 export const deleteDocument = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     await documentService.deleteDocument(id, userId);
 
-    res.json({
-      success: true,
-      message: 'Document deleted successfully',
-    });
+    return sendSuccess(res, null, 'Document deleted successfully');
   } catch (error) {
     logger.error('Delete document error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete document',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to delete document');
   }
 };
 
@@ -334,7 +294,11 @@ export const deleteDocument = async (req: Request, res: Response) => {
 export const createFolder = async (req: Request, res: Response) => {
   try {
     const validatedData = createFolderSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const folder = await documentService.createFolder({
       name: validatedData.name,
@@ -345,27 +309,15 @@ export const createFolder = async (req: Request, res: Response) => {
       createdById: userId,
     });
 
-    res.status(201).json({
-      success: true,
-      message: 'Folder created successfully',
-      data: folder,
-    });
+    return sendCreated(res, folder, 'Folder created successfully');
   } catch (error) {
     logger.error('Create folder error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create folder',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to create folder');
   }
 };
 
@@ -374,27 +326,23 @@ export const createFolder = async (req: Request, res: Response) => {
  */
 export const getFolders = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { parentId } = req.query;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const folders = await documentService.getFolders(
       userId,
       parentId ? (parentId as string) : undefined
     );
 
-    res.json({
-      success: true,
-      data: folders,
-      count: folders.length,
-    });
+    return sendSuccess(res, folders);
   } catch (error) {
     logger.error('Get folders error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve folders',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve folders');
   }
 };
 
@@ -403,37 +351,28 @@ export const getFolders = async (req: Request, res: Response) => {
  */
 export const getFolderById = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const folder = await documentService.getFolderById(id, userId);
 
-    res.json({
-      success: true,
-      data: folder,
-    });
+    return sendSuccess(res, folder);
   } catch (error) {
     logger.error('Get folder by ID error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    if (error instanceof Error && error.message === 'Folder not found') {
-      return res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+    if (error instanceof Error && getErrorMessage(error) === 'Folder not found') {
+      return sendNotFound(res, 'Folder');
     }
 
-    if (error instanceof Error && error.message === 'Access denied') {
-      return res.status(403).json({
-        success: false,
-        message: error.message,
-      });
+    if (error instanceof Error && getErrorMessage(error) === 'Access denied') {
+      return sendForbidden(res, 'Access denied');
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve folder',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve folder');
   }
 };
 
@@ -443,32 +382,24 @@ export const getFolderById = async (req: Request, res: Response) => {
 export const updateFolder = async (req: Request, res: Response) => {
   try {
     const validatedData = updateFolderSchema.parse(req.body);
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const folder = await documentService.updateFolder(id, userId, validatedData);
 
-    res.json({
-      success: true,
-      message: 'Folder updated successfully',
-      data: folder,
-    });
+    return sendSuccess(res, folder, 'Folder updated successfully');
   } catch (error) {
     logger.error('Update folder error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update folder',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to update folder');
   }
 };
 
@@ -477,22 +408,19 @@ export const updateFolder = async (req: Request, res: Response) => {
  */
 export const deleteFolder = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { id } = req.params;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     await documentService.deleteFolder(id, userId);
 
-    res.json({
-      success: true,
-      message: 'Folder deleted successfully',
-    });
+    return sendSuccess(res, null, 'Folder deleted successfully');
   } catch (error) {
     logger.error('Delete folder error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete folder',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to delete folder');
   }
 };

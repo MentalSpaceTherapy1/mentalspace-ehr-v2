@@ -19,6 +19,7 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { PrismaClient } from '@prisma/client';
 import { advancedMDAuth } from './auth.service';
 import { advancedMDRateLimiter } from './rate-limiter.service';
+import logger from '../../utils/logger';
 import {
   AdvancedMDResponse,
   AdvancedMDError,
@@ -134,7 +135,7 @@ export class AdvancedMDAPIClient {
 
       // If no ppmdmsg in response, log the full response for debugging
       if (!ppmdmsg) {
-        console.error('[AMD API] Unexpected response structure:', JSON.stringify(response.data, null, 2));
+        logger.error('AMD API: Unexpected response structure:', JSON.stringify(response.data, null, 2));
         throw this.createAPIError(
           endpoint,
           'Invalid response structure from AdvancedMD - missing ppmdmsg',
@@ -188,7 +189,7 @@ export class AdvancedMDAPIClient {
 
       // Retry on rate limit if enabled
       if (isRateLimitError && retryOnRateLimit && maxRetries > 0) {
-        console.log(
+        logger.debug(
           `[AMD API] Rate limit hit for ${endpoint}, retrying after backoff (${maxRetries} retries remaining)...`
         );
 
@@ -226,7 +227,7 @@ export class AdvancedMDAPIClient {
 
       // If error occurred and not rate limit, stop batch
       if (!result.success && !this.isRateLimitError(result.error)) {
-        console.error('[AMD API] Batch execution stopped due to error:', result.error);
+        logger.error('AMD API: Batch execution stopped due to error:', result.error);
         break;
       }
     }

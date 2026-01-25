@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authorize } from '../middleware/auth';
 import { authenticateDual } from '../middleware/dualAuth';
+import { UserRoles } from '@mentalspace/shared';
 
 // Symptom tracking controllers
 import {
@@ -53,11 +54,8 @@ import {
 
 const router = Router();
 
-console.log('[PROGRESS-TRACKING] Router being created, applying authenticateDual middleware');
-
 // All routes require authentication (accepts both staff and portal tokens)
 router.use(authenticateDual);
-console.log('[PROGRESS-TRACKING] authenticateDual middleware applied');
 
 // ============================================================================
 // SYMPTOM TRACKING ROUTES
@@ -66,49 +64,49 @@ console.log('[PROGRESS-TRACKING] authenticateDual middleware applied');
 // Create symptom log (clients can create their own, clinicians can create for clients)
 router.post(
   '/symptoms/:clientId',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   createSymptomLog
 );
 
 // Get symptom logs (with filtering)
 router.get(
   '/symptoms/:clientId',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getSymptomLogs
 );
 
 // Get single symptom log
 router.get(
   '/symptoms/log/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getSymptomLogById
 );
 
 // Update symptom log
 router.put(
   '/symptoms/log/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   updateSymptomLog
 );
 
 // Delete symptom log
 router.delete(
   '/symptoms/log/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   deleteSymptomLog
 );
 
 // Get symptom trends
 router.get(
   '/symptoms/:clientId/trends',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getSymptomTrends
 );
 
 // Get symptom summary
 router.get(
   '/symptoms/:clientId/summary',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getSymptomSummary
 );
 
@@ -119,49 +117,49 @@ router.get(
 // Create sleep log
 router.post(
   '/sleep/:clientId',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   createSleepLog
 );
 
 // Get sleep logs (with filtering)
 router.get(
   '/sleep/:clientId',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getSleepLogs
 );
 
 // Get single sleep log
 router.get(
   '/sleep/log/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getSleepLogById
 );
 
 // Update sleep log
 router.put(
   '/sleep/log/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   updateSleepLog
 );
 
 // Delete sleep log
 router.delete(
   '/sleep/log/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   deleteSleepLog
 );
 
 // Get sleep metrics
 router.get(
   '/sleep/:clientId/metrics',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getSleepMetrics
 );
 
 // Get sleep trends
 router.get(
   '/sleep/:clientId/trends',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getSleepTrends
 );
 
@@ -172,49 +170,49 @@ router.get(
 // Create exercise log
 router.post(
   '/exercise/:clientId',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   createExerciseLog
 );
 
 // Get exercise logs (with filtering)
 router.get(
   '/exercise/:clientId',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getExerciseLogs
 );
 
 // Get single exercise log
 router.get(
   '/exercise/log/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getExerciseLogById
 );
 
 // Update exercise log
 router.put(
   '/exercise/log/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   updateExerciseLog
 );
 
 // Delete exercise log
 router.delete(
   '/exercise/log/:id',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   deleteExerciseLog
 );
 
 // Get exercise stats
 router.get(
   '/exercise/:clientId/stats',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getExerciseStats
 );
 
 // Get exercise trends
 router.get(
   '/exercise/:clientId/trends',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getExerciseTrends
 );
 
@@ -225,21 +223,21 @@ router.get(
 // Get combined analytics
 router.get(
   '/analytics/:clientId/combined',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getCombinedAnalytics
 );
 
 // Generate progress report
 router.get(
   '/analytics/:clientId/report',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   generateProgressReport
 );
 
 // Compare to goals
 router.get(
   '/analytics/:clientId/goals',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   compareToGoals
 );
 
@@ -250,21 +248,21 @@ router.get(
 // Export to CSV
 router.get(
   '/export/:clientId/csv',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   exportToCSV
 );
 
 // Export to JSON
 router.get(
   '/export/:clientId/json',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   exportToJSON
 );
 
 // Generate PDF data
 router.get(
   '/export/:clientId/pdf',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   generatePDFData
 );
 
@@ -275,28 +273,28 @@ router.get(
 // Get reminder preferences
 router.get(
   '/reminders/:clientId/preferences',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getReminderPreferences
 );
 
 // Update reminder preferences
 router.put(
   '/reminders/:clientId/preferences',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLIENT),
   updateReminderPreferences
 );
 
 // Get logging streak
 router.get(
   '/reminders/:clientId/streak',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN', 'CLIENT'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN, UserRoles.CLIENT),
   getLoggingStreak
 );
 
 // Get engagement score
 router.get(
   '/reminders/:clientId/engagement',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN),
   getEngagementScore
 );
 
@@ -307,14 +305,14 @@ router.get(
 // Get clinician notes for a client (from clinical notes)
 router.get(
   '/notes/:clientId',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN),
   getClinicianNotes
 );
 
 // Create a progress observation note
 router.post(
   '/notes/:clientId',
-  authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN),
   createProgressNote
 );
 

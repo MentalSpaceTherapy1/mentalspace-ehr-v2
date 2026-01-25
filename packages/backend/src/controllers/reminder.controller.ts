@@ -2,6 +2,7 @@ import logger, { logControllerError } from '../utils/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import * as reminderService from '../services/reminder.service';
+import { sendSuccess, sendBadRequest, sendServerError, sendValidationError } from '../utils/apiResponse';
 
 const reminderSettingsSchema = z.object({
   clinicianId: z.string().uuid('Invalid clinician ID'),
@@ -23,27 +24,20 @@ export const upsertReminderSettings = async (req: Request, res: Response) => {
     const validatedData = reminderSettingsSchema.parse(req.body);
     const settings = await reminderService.upsertReminderSettings(validatedData as any);
 
-    res.status(200).json({
-      success: true,
-      message: 'Reminder settings saved successfully',
-      data: settings,
-    });
+    return sendSuccess(res, settings, 'Reminder settings saved successfully');
   } catch (error) {
     logger.error('Upsert reminder settings error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      const formattedErrors = error.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+        code: e.code,
+      }));
+      return sendValidationError(res, formattedErrors);
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to save reminder settings',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to save reminder settings');
   }
 };
 
@@ -52,18 +46,11 @@ export const getReminderSettings = async (req: Request, res: Response) => {
     const { clinicianId } = req.params;
     const settings = await reminderService.getReminderSettings(clinicianId);
 
-    res.status(200).json({
-      success: true,
-      data: settings,
-    });
+    return sendSuccess(res, settings);
   } catch (error) {
     logger.error('Get reminder settings error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve reminder settings',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to retrieve reminder settings');
   }
 };
 
@@ -71,19 +58,11 @@ export const processReminders = async (req: Request, res: Response) => {
   try {
     const results = await reminderService.processReminders();
 
-    res.status(200).json({
-      success: true,
-      message: 'Reminders processed successfully',
-      data: results,
-    });
+    return sendSuccess(res, results, 'Reminders processed successfully');
   } catch (error) {
     logger.error('Process reminders error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to process reminders',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to process reminders');
   }
 };
 
@@ -93,10 +72,7 @@ export const sendImmediateReminder = async (req: Request, res: Response) => {
     const { reminderType } = req.body;
 
     if (!reminderType || !['email', 'sms'].includes(reminderType)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Valid reminder type (email or sms) is required',
-      });
+      return sendBadRequest(res, 'Valid reminder type (email or sms) is required');
     }
 
     const success = await reminderService.sendImmediateReminder(
@@ -104,19 +80,10 @@ export const sendImmediateReminder = async (req: Request, res: Response) => {
       reminderType
     );
 
-    res.status(200).json({
-      success,
-      message: success
-        ? 'Reminder sent successfully'
-        : 'Failed to send reminder',
-    });
+    return sendSuccess(res, { success }, success ? 'Reminder sent successfully' : 'Failed to send reminder');
   } catch (error) {
     logger.error('Send immediate reminder error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
 
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send reminder',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to send reminder');
   }
 };

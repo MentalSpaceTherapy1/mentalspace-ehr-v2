@@ -28,6 +28,7 @@ import {
   TIER2_ENDPOINTS,
   TIER3_PATTERN,
 } from '../../types/advancedmd.types';
+import logger from '../../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -199,7 +200,7 @@ export class AdvancedMDRateLimiterService {
     }
 
     // Default to Tier 2 (medium impact) for unknown endpoints
-    console.warn(`[Rate Limiter] Unknown endpoint: ${endpoint}, defaulting to Tier 2`);
+    logger.warn('Rate Limiter: Unknown endpoint, defaulting to Tier 2', { endpoint });
     return 'tier2';
   }
 
@@ -343,9 +344,13 @@ export class AdvancedMDRateLimiterService {
     state.backoffUntil = backoffUntil;
     state.backoffRetryCount = Math.min(retryCount + 1, BACKOFF_CONFIG.maxRetries);
 
-    console.warn(
-      `[Rate Limiter] Tier ${tier} endpoint ${endpoint} backing off until ${backoffUntil.toISOString()} (retry ${state.backoffRetryCount}/${BACKOFF_CONFIG.maxRetries})`
-    );
+    logger.warn('Rate Limiter: Endpoint backing off', {
+      tier,
+      endpoint,
+      backoffUntil: backoffUntil.toISOString(),
+      retryCount: state.backoffRetryCount,
+      maxRetries: BACKOFF_CONFIG.maxRetries,
+    });
 
     await this.saveState(state, tier, endpoint);
   }
@@ -465,7 +470,7 @@ export class AdvancedMDRateLimiterService {
 
     this.stateCache.clear();
 
-    console.log('[Rate Limiter] All rate limit states reset');
+    logger.info('[Rate Limiter] All rate limit states reset');
   }
 }
 

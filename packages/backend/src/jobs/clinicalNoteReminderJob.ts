@@ -4,6 +4,7 @@ import emailReminderService from '../services/emailReminder.service';
 import * as reminderConfigService from '../services/reminderConfig.service';
 import logger from '../utils/logger';
 import { NoteStatus } from '@prisma/client';
+import { UserRoles } from '@mentalspace/shared';
 
 /**
  * Clinical Note Reminder Job
@@ -403,7 +404,7 @@ async function sendDailyDigests() {
       where: {
         isActive: true,
         roles: {
-          hasSome: ['CLINICIAN', 'ASSOCIATE'],
+          hasSome: [UserRoles.CLINICIAN, UserRoles.ASSOCIATE],
         },
       },
       include: {

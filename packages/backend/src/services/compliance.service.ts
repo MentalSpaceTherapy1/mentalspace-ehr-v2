@@ -2,6 +2,7 @@ import logger, { logControllerError } from '../utils/logger';
 import cron from 'node-cron';
 import { sendEmail } from './email.service';
 import prisma from './database';
+import { NoteStatus } from '@mentalspace/shared';
 
 // Compliance Configuration (can be moved to database later)
 const COMPLIANCE_CONFIG = {
@@ -61,7 +62,7 @@ export async function sundayLockout() {
     const notesToLock = await prisma.clinicalNote.findMany({
       where: {
         status: {
-          in: ['DRAFT', 'PENDING_COSIGN'], // Only lock unsigned or pending notes
+          in: [NoteStatus.DRAFT, NoteStatus.PENDING_COSIGN], // Only lock unsigned or pending notes
         },
         signedDate: null,
         sessionDate: {
@@ -232,7 +233,7 @@ export async function sendNoteReminders() {
       const notesApproachingDue = await prisma.clinicalNote.findMany({
         where: {
           status: {
-            in: ['DRAFT', 'PENDING_COSIGN'],
+            in: [NoteStatus.DRAFT, NoteStatus.PENDING_COSIGN],
           },
           signedDate: null,
           sessionDate: {
@@ -359,7 +360,7 @@ export async function getComplianceStats() {
     prisma.clinicalNote.count({
       where: {
         signedDate: null,
-        status: { in: ['DRAFT', 'PENDING_COSIGN'] },
+        status: { in: [NoteStatus.DRAFT, NoteStatus.PENDING_COSIGN] },
       },
     }),
     // Overdue notes (not locked yet)
@@ -368,7 +369,7 @@ export async function getComplianceStats() {
         signedDate: null,
         sessionDate: { lt: cutoffDate },
         isLocked: false,
-        status: { in: ['DRAFT', 'PENDING_COSIGN'] },
+        status: { in: [NoteStatus.DRAFT, NoteStatus.PENDING_COSIGN] },
       },
     }),
     // Locked notes
@@ -386,7 +387,7 @@ export async function getComplianceStats() {
           lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() - COMPLIANCE_CONFIG.noteDueDays + 1),
         },
         isLocked: false,
-        status: { in: ['DRAFT', 'PENDING_COSIGN'] },
+        status: { in: [NoteStatus.DRAFT, NoteStatus.PENDING_COSIGN] },
       },
     }),
     // Due tomorrow
@@ -398,7 +399,7 @@ export async function getComplianceStats() {
           lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() - COMPLIANCE_CONFIG.noteDueDays + 2),
         },
         isLocked: false,
-        status: { in: ['DRAFT', 'PENDING_COSIGN'] },
+        status: { in: [NoteStatus.DRAFT, NoteStatus.PENDING_COSIGN] },
       },
     }),
   ]);

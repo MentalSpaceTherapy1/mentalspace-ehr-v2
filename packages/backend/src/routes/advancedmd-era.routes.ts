@@ -13,6 +13,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
 import { AdvancedMDERAService } from '../services/advancedmd/era.service';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -36,7 +38,7 @@ const requireBillingAccess = (req: Request, res: Response, next: NextFunction) =
   }
 
   const userRoles = user.roles || (user.role ? [user.role] : []);
-  const allowedRoles = ['ADMINISTRATOR', 'BILLING_STAFF', 'SUPER_ADMIN'];
+  const allowedRoles: readonly string[] = [UserRoles.ADMINISTRATOR, UserRoles.BILLING_STAFF, UserRoles.SUPER_ADMIN];
   const hasAllowedRole = userRoles.some((role: string) => allowedRoles.includes(role));
 
   if (!hasAllowedRole) {
@@ -82,7 +84,7 @@ router.post('/import/json', requireBillingAccess, async (req: Request, res: Resp
       data: result,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error importing payments:', error);
+    logger.error('ERA Routes: Error importing payments:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to import payments',
@@ -132,7 +134,7 @@ router.post('/import/csv', requireBillingAccess, async (req: Request, res: Respo
       data: result,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error importing CSV payments:', error);
+    logger.error('ERA Routes: Error importing CSV payments:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to import CSV payments',
@@ -175,7 +177,7 @@ router.post('/import/835', requireBillingAccess, async (req: Request, res: Respo
       data: result,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error importing 835 file:', error);
+    logger.error('ERA Routes: Error importing 835 file:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to import 835 file',
@@ -206,7 +208,7 @@ router.get('/pending', requireBillingAccess, async (req: Request, res: Response)
       data: payments,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error getting pending payments:', error);
+    logger.error('ERA Routes: Error getting pending payments:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get pending payments',
@@ -237,7 +239,7 @@ router.get('/pending/:id', requireBillingAccess, async (req: Request, res: Respo
       data: payment,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error getting pending payment:', error);
+    logger.error('ERA Routes: Error getting pending payment:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get pending payment',
@@ -270,7 +272,7 @@ router.put('/pending/:id/match', requireBillingAccess, async (req: Request, res:
       data: payment,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error matching payment:', error);
+    logger.error('ERA Routes: Error matching payment:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to match payment',
@@ -306,7 +308,7 @@ router.post('/pending/:id/post', requireBillingAccess, async (req: Request, res:
       });
     }
   } catch (error: any) {
-    console.error('[ERA Routes] Error posting payment:', error);
+    logger.error('ERA Routes: Error posting payment:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to post payment',
@@ -353,7 +355,7 @@ router.post('/batch-post', requireBillingAccess, async (req: Request, res: Respo
       results,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error batch posting payments:', error);
+    logger.error('ERA Routes: Error batch posting payments:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to batch post payments',
@@ -384,7 +386,7 @@ router.post('/post-all-matched', requireBillingAccess, async (req: Request, res:
       results,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error posting all matched payments:', error);
+    logger.error('ERA Routes: Error posting all matched payments:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to post all matched payments',
@@ -425,7 +427,7 @@ router.post('/reconcile', requireBillingAccess, async (req: Request, res: Respon
       data: result,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error reconciling payments:', error);
+    logger.error('ERA Routes: Error reconciling payments:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to reconcile payments',
@@ -451,7 +453,7 @@ router.get('/stats', requireBillingAccess, async (req: Request, res: Response) =
       data: stats,
     });
   } catch (error: any) {
-    console.error('[ERA Routes] Error getting ERA stats:', error);
+    logger.error('ERA Routes: Error getting ERA stats:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get ERA statistics',

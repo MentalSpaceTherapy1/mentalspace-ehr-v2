@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import logger from '../utils/logger';
-import prisma from '../services/database';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import * as clientDocumentsService from '../services/clientDocuments.service';
 import {
   uploadDocument,
   generateUploadPresignedUrl,
@@ -10,6 +14,7 @@ import {
   isStorageConfigured,
 } from '../services/storage.service';
 import { v4 as uuidv4 } from 'uuid';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendValidationError, sendError } from '../utils/apiResponse';
 
 /**
  * EHR-side controller for managing client documents
@@ -33,23 +38,15 @@ export const getSharedDocumentsForClient = async (req: Request, res: Response) =
   try {
     const { clientId } = req.params;
 
-    const documents = await prisma.sharedDocument.findMany({
-      where: { clientId },
-      orderBy: { sharedAt: 'desc' },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const documents = await clientDocumentsService.getSharedDocumentsForClient(clientId);
 
     logger.info(`Retrieved ${documents.length} shared documents for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: documents,
-    });
+    return sendSuccess(res, documents);
   } catch (error) {
     logger.error('Error fetching shared documents:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch shared documents',
-    });
+    return sendServerError(res, 'Failed to fetch shared documents');
   }
 };
 
@@ -60,43 +57,35 @@ export const getSharedDocumentsForClient = async (req: Request, res: Response) =
 export const shareDocumentWithClient = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return sendUnauthorized(res, 'Authentication required');
+    }
 
     const validatedData = shareDocumentSchema.parse({ ...req.body, clientId });
 
-    const sharedDocument = await prisma.sharedDocument.create({
-      data: {
-        clientId,
-        documentName: validatedData.documentName,
-        documentType: validatedData.documentType,
-        documentS3Key: validatedData.documentS3Key,
-        sharedBy: userId,
-        expiresAt: validatedData.expiresAt ? new Date(validatedData.expiresAt) : null,
-      },
+    // Phase 3.2: Use service method instead of direct prisma call
+    const sharedDocument = await clientDocumentsService.shareDocument({
+      clientId,
+      documentName: validatedData.documentName,
+      documentType: validatedData.documentType,
+      documentS3Key: validatedData.documentS3Key,
+      sharedBy: userId,
+      expiresAt: validatedData.expiresAt ? new Date(validatedData.expiresAt) : null,
     });
 
     logger.info(`Document shared with client ${clientId} by user ${userId}`);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Document shared successfully',
-      data: sharedDocument,
-    });
+    return sendCreated(res, sharedDocument, 'Document shared successfully');
   } catch (error) {
     logger.error('Error sharing document:', error);
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: error.errors,
-      });
+      return sendValidationError(res, error.errors.map(e => ({ path: e.path.join('.'), message: e.message })));
     }
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to share document',
-    });
+    return sendServerError(res, 'Failed to share document');
   }
 };
 
@@ -107,38 +96,23 @@ export const shareDocumentWithClient = async (req: Request, res: Response) => {
 export const revokeDocumentAccess = async (req: Request, res: Response) => {
   try {
     const { clientId, documentId } = req.params;
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
-    const document = await prisma.sharedDocument.findFirst({
-      where: {
-        id: documentId,
-        clientId,
-      },
-    });
+    // Phase 3.2: Use service methods instead of direct prisma calls
+    const document = await clientDocumentsService.findSharedDocument(documentId, clientId);
 
     if (!document) {
-      return res.status(404).json({
-        success: false,
-        message: 'Shared document not found',
-      });
+      return sendNotFound(res, 'Shared document');
     }
 
-    await prisma.sharedDocument.delete({
-      where: { id: documentId },
-    });
+    await clientDocumentsService.deleteSharedDocument(documentId);
 
     logger.info(`Document access revoked for document ${documentId} by user ${userId}`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Document access revoked successfully',
-    });
+    return sendSuccess(res, null, 'Document access revoked successfully');
   } catch (error) {
     logger.error('Error revoking document access:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to revoke document access',
-    });
+    return sendServerError(res, 'Failed to revoke document access');
   }
 };
 
@@ -150,38 +124,17 @@ export const getDocumentAnalytics = async (req: Request, res: Response) => {
   try {
     const { clientId, documentId } = req.params;
 
-    const document = await prisma.sharedDocument.findFirst({
-      where: {
-        id: documentId,
-        clientId,
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const result = await clientDocumentsService.getDocumentWithAnalytics(documentId, clientId);
 
-    if (!document) {
-      return res.status(404).json({
-        success: false,
-        message: 'Shared document not found',
-      });
+    if (!result) {
+      return sendNotFound(res, 'Shared document');
     }
 
-    const analytics = {
-      viewCount: document.viewCount,
-      lastViewedAt: document.lastViewedAt,
-      sharedAt: document.sharedAt,
-      expiresAt: document.expiresAt,
-      hasBeenViewed: document.viewCount > 0,
-    };
-
-    return res.status(200).json({
-      success: true,
-      data: analytics,
-    });
+    return sendSuccess(res, result.analytics);
   } catch (error) {
     logger.error('Error fetching document analytics:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch document analytics',
-    });
+    return sendServerError(res, 'Failed to fetch document analytics');
   }
 };
 
@@ -195,31 +148,22 @@ export const getDocumentAnalytics = async (req: Request, res: Response) => {
  */
 export const uploadDocumentFile = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     // Check if S3 is configured
     if (!isStorageConfigured()) {
       logger.error('S3 storage not configured');
-      return res.status(503).json({
-        success: false,
-        message: 'File storage service is not configured. Please contact administrator.',
-      });
+      return sendError(res, 503, 'File storage service is not configured. Please contact administrator.');
     }
 
     const { fileName, mimeType, clientId, documentType, requestPresignedUrl } = req.body;
 
     if (!fileName) {
-      return res.status(400).json({
-        success: false,
-        message: 'fileName is required',
-      });
+      return sendBadRequest(res, 'fileName is required');
     }
 
     const bucket = getDocumentsBucket();
@@ -242,30 +186,23 @@ export const uploadDocumentFile = async (req: Request, res: Response) => {
         fileName: sanitizedFileName,
       });
 
-      return res.status(200).json({
-        success: true,
-        message: 'Presigned URL generated for upload',
-        data: {
-          uploadUrl: url,
-          s3Key: s3Key,
-          bucket,
-          expiresIn: 3600,
-          method: 'PUT',
-          headers: {
-            'Content-Type': mimeType || 'application/octet-stream',
-          },
+      return sendSuccess(res, {
+        uploadUrl: url,
+        s3Key: s3Key,
+        bucket,
+        expiresIn: 3600,
+        method: 'PUT',
+        headers: {
+          'Content-Type': mimeType || 'application/octet-stream',
         },
-      });
+      }, 'Presigned URL generated for upload');
     }
 
     // Mode 2: Direct upload from request body (for small files via base64)
     const { fileContent } = req.body;
 
     if (!fileContent) {
-      return res.status(400).json({
-        success: false,
-        message: 'Either fileContent (base64) or requestPresignedUrl must be provided',
-      });
+      return sendBadRequest(res, 'Either fileContent (base64) or requestPresignedUrl must be provided');
     }
 
     // Decode base64 file content
@@ -305,25 +242,18 @@ export const uploadDocumentFile = async (req: Request, res: Response) => {
       fileName: sanitizedFileName,
     });
 
-    return res.status(200).json({
-      success: true,
-      message: 'File uploaded successfully',
-      data: {
-        s3Key: key,
-        bucket,
-        fileUrl: downloadUrl,
-        fileName: sanitizedFileName,
-        fileSize: uploadResult.size,
-        mimeType: mimeType || 'application/octet-stream',
-        etag: uploadResult.etag,
-      },
-    });
-  } catch (error: any) {
-    logger.error('Error uploading file:', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to upload file: ' + error.message,
-    });
+    return sendSuccess(res, {
+      s3Key: key,
+      bucket,
+      fileUrl: downloadUrl,
+      fileName: sanitizedFileName,
+      fileSize: uploadResult.size,
+      mimeType: mimeType || 'application/octet-stream',
+      etag: uploadResult.etag,
+    }, 'File uploaded successfully');
+  } catch (error) {
+    logger.error('Error uploading file:', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to upload file: ' + getErrorMessage(error));
   }
 };
 
@@ -333,21 +263,15 @@ export const uploadDocumentFile = async (req: Request, res: Response) => {
  */
 export const getDocumentDownloadUrl = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = req.user?.userId;
     const { s3Key } = req.params;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     if (!s3Key) {
-      return res.status(400).json({
-        success: false,
-        message: 's3Key is required',
-      });
+      return sendBadRequest(res, 's3Key is required');
     }
 
     const bucket = getDocumentsBucket();
@@ -359,18 +283,12 @@ export const getDocumentDownloadUrl = async (req: Request, res: Response) => {
 
     logger.info(`Download URL generated for document by user ${userId}`, { s3Key });
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        downloadUrl,
-        expiresIn: 3600,
-      },
+    return sendSuccess(res, {
+      downloadUrl,
+      expiresIn: 3600,
     });
-  } catch (error: any) {
-    logger.error('Error generating download URL:', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to generate download URL',
-    });
+  } catch (error) {
+    logger.error('Error generating download URL:', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to generate download URL');
   }
 };

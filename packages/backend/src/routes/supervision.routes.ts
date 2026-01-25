@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import prisma from '../services/database';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -25,7 +27,7 @@ router.get('/sessions', authenticate, async (req: Request, res: Response) => {
 
     let sessions;
 
-    if (user?.roles.includes('ADMINISTRATOR')) {
+    if (user?.roles.includes(UserRoles.ADMINISTRATOR)) {
       // Admins see all sessions
       sessions = await prisma.supervisionSession.findMany({
         include: {
@@ -48,7 +50,7 @@ router.get('/sessions', authenticate, async (req: Request, res: Response) => {
         },
         orderBy: { sessionDate: 'desc' },
       });
-    } else if (user?.roles.includes('SUPERVISOR')) {
+    } else if (user?.roles.includes(UserRoles.SUPERVISOR)) {
       // Supervisors see sessions they conducted
       sessions = await prisma.supervisionSession.findMany({
         where: { supervisorId: userId },
@@ -84,7 +86,7 @@ router.get('/sessions', authenticate, async (req: Request, res: Response) => {
 
     res.json(sessions);
   } catch (error) {
-    console.error('Error fetching supervision sessions:', error);
+    logger.error('Supervision Routes:Error fetching supervision sessions:', error);
     res.status(500).json({ error: 'Failed to fetch supervision sessions' });
   }
 });
@@ -127,7 +129,7 @@ router.get('/sessions/:id', authenticate, async (req: Request, res: Response) =>
 
     res.json(session);
   } catch (error) {
-    console.error('Error fetching supervision session:', error);
+    logger.error('Supervision Routes:Error fetching supervision session:', error);
     res.status(500).json({ error: 'Failed to fetch supervision session' });
   }
 });
@@ -246,7 +248,7 @@ router.post('/sessions', authenticate, async (req: Request, res: Response) => {
 
     res.status(201).json(session);
   } catch (error) {
-    console.error('Error creating supervision session:', error);
+    logger.error('Supervision Routes:Error creating supervision session:', error);
     res.status(500).json({ error: 'Failed to create supervision session' });
   }
 });
@@ -276,7 +278,7 @@ router.put('/sessions/:id', authenticate, async (req: Request, res: Response) =>
 
     res.json(session);
   } catch (error) {
-    console.error('Error updating supervision session:', error);
+    logger.error('Supervision Routes:Error updating supervision session:', error);
     res.status(500).json({ error: 'Failed to update supervision session' });
   }
 });
@@ -406,7 +408,7 @@ router.get('/hours/:superviseeId', authenticate, async (req: Request, res: Respo
 
     res.json(summary);
   } catch (error) {
-    console.error('Error fetching supervision hours summary:', error);
+    logger.error('Supervision Routes:Error fetching supervision hours summary:', error);
     res.status(500).json({ error: 'Failed to fetch supervision hours summary' });
   }
 });
@@ -425,7 +427,7 @@ router.get('/hours', authenticate, async (req: Request, res: Response) => {
 
     let hoursLogs;
 
-    if (user?.roles.includes('ADMINISTRATOR')) {
+    if (user?.roles.includes(UserRoles.ADMINISTRATOR)) {
       hoursLogs = await prisma.supervisionHoursLog.findMany({
         include: {
           supervisee: {
@@ -438,7 +440,7 @@ router.get('/hours', authenticate, async (req: Request, res: Response) => {
         },
         orderBy: { hourDate: 'desc' },
       });
-    } else if (user?.roles.includes('SUPERVISOR')) {
+    } else if (user?.roles.includes(UserRoles.SUPERVISOR)) {
       hoursLogs = await prisma.supervisionHoursLog.findMany({
         where: { supervisorId: userId },
         include: {
@@ -461,7 +463,7 @@ router.get('/hours', authenticate, async (req: Request, res: Response) => {
 
     res.json(hoursLogs);
   } catch (error) {
-    console.error('Error fetching supervision hours logs:', error);
+    logger.error('Supervision Routes:Error fetching supervision hours logs:', error);
     res.status(500).json({ error: 'Failed to fetch supervision hours logs' });
   }
 });
@@ -530,7 +532,7 @@ router.post('/hours', authenticate, async (req: Request, res: Response) => {
 
     res.status(201).json(hoursLog);
   } catch (error) {
-    console.error('Error creating supervision hours log:', error);
+    logger.error('Supervision Routes:Error creating supervision hours log:', error);
     res.status(500).json({ error: 'Failed to create supervision hours log' });
   }
 });
@@ -578,7 +580,7 @@ router.put('/hours/:id/verify', authenticate, async (req: Request, res: Response
 
     res.json(updatedLog);
   } catch (error) {
-    console.error('Error verifying supervision hours:', error);
+    logger.error('Supervision Routes:Error verifying supervision hours:', error);
     res.status(500).json({ error: 'Failed to verify supervision hours' });
   }
 });
@@ -634,7 +636,7 @@ router.get('/cosign-queue', authenticate, async (req: Request, res: Response) =>
 
     res.json(notes);
   } catch (error) {
-    console.error('Error fetching co-sign queue:', error);
+    logger.error('Supervision Routes:Error fetching co-sign queue:', error);
     res.status(500).json({ error: 'Failed to fetch co-sign queue' });
   }
 });
@@ -701,7 +703,7 @@ router.post('/cosign/:noteId', authenticate, async (req: Request, res: Response)
       res.json(updatedNote);
     }
   } catch (error) {
-    console.error('Error co-signing note:', error);
+    logger.error('Supervision Routes:Error co-signing note:', error);
     res.status(500).json({ error: 'Failed to co-sign note' });
   }
 });
@@ -732,7 +734,7 @@ router.get('/supervisees', authenticate, async (req: Request, res: Response) => 
 
     res.json(supervisees);
   } catch (error) {
-    console.error('Error fetching supervisees:', error);
+    logger.error('Supervision Routes:Error fetching supervisees:', error);
     res.status(500).json({ error: 'Failed to fetch supervisees' });
   }
 });

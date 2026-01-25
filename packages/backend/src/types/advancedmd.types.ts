@@ -173,6 +173,7 @@ export interface PatientDemographic {
   middleName?: string;
   dateOfBirth: string; // Format: "MM/DD/YYYY"
   gender: 'M' | 'F' | 'U'; // Male, Female, Unknown
+  /** @deprecated SSN is never collected by MentalSpace. Field exists for AdvancedMD API compatibility only. */
   ssn?: string;
   address1?: string;
   address2?: string;

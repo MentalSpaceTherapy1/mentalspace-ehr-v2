@@ -4,6 +4,7 @@ import * as reportsService from './reports.service';
 import { exportReportToPDF } from './export-pdf.service';
 import { exportReportToExcel } from './export-excel.service';
 import fs from 'fs';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -33,7 +34,7 @@ const createTransporter = () => {
 
   // Fallback to console if SMTP not configured
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('[Email Distribution] SMTP credentials not configured, using console output');
+    logger.warn('Email Distribution: SMTP credentials not configured, using console output');
     return nodemailer.createTransport({
       streamTransport: true,
       newline: 'unix'
@@ -56,7 +57,7 @@ export async function sendReportEmail(options: EmailOptions): Promise<void> {
     includeCharts = true
   } = options;
 
-  console.log(`[Email Distribution] Preparing to send ${reportType} report to ${recipients.length} recipients`);
+  logger.info(`[Email Distribution] Preparing to send ${reportType} report to ${recipients.length} recipients`);
 
   try {
     // Generate report content based on format
@@ -110,10 +111,10 @@ export async function sendReportEmail(options: EmailOptions): Promise<void> {
 
     const info = await transporter.sendMail(mailOptions);
 
-    console.log(`[Email Distribution] Email sent successfully: ${info.messageId}`);
-    console.log(`[Email Distribution] Recipients: ${recipients.join(', ')}`);
+    logger.info(`[Email Distribution] Email sent successfully: ${info.messageId}`);
+    logger.info(`[Email Distribution] Recipients: ${recipients.join(', ')}`);
   } catch (error) {
-    console.error('[Email Distribution] Failed to send email:', error);
+    logger.error('Email Distribution: Failed to send email:', error);
     throw new Error(`Email delivery failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -123,7 +124,7 @@ async function generateReportContent(
   reportType: string,
   format: 'PDF' | 'EXCEL' | 'CSV'
 ): Promise<Buffer> {
-  console.log(`[Email Distribution] Generating ${format} report for ${reportType}`);
+  logger.info(`[Email Distribution] Generating ${format} report for ${reportType}`);
 
   try {
     // Generate report data based on report type
@@ -186,12 +187,12 @@ async function generateReportContent(
     try {
       fs.unlinkSync(exportResult.filepath);
     } catch (cleanupError) {
-      console.warn('[Email Distribution] Could not clean up temporary file:', cleanupError);
+      logger.warn('Email Distribution: Could not clean up temporary file:', cleanupError);
     }
 
     return fileBuffer;
   } catch (error) {
-    console.error('[Email Distribution] Error generating report content:', error);
+    logger.error('Email Distribution: Error generating report content:', error);
     // Return a placeholder if report generation fails
     const content = `Report: ${reportType}\nGenerated: ${new Date().toISOString()}\nFormat: ${format}\n\nError generating report. Please contact support.`;
     return Buffer.from(content, 'utf-8');
@@ -243,7 +244,7 @@ function generateCSVFromData(data: any): string {
 async function generateChartImages(reportId: string, reportType: string): Promise<Buffer[]> {
   // This would generate chart images for inline embedding
   // For now, return empty array
-  console.log(`[Email Distribution] Generating chart images for ${reportType}`);
+  logger.info(`[Email Distribution] Generating chart images for ${reportType}`);
 
   // TODO: Integrate with chart generation service
   // This should generate chart images that can be embedded inline
@@ -392,10 +393,10 @@ export async function sendTestEmail(recipient: string): Promise<boolean> {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('[Email Distribution] Test email sent:', info.messageId);
+    logger.info('[Email Distribution] Test email sent:', info.messageId);
     return true;
   } catch (error) {
-    console.error('[Email Distribution] Test email failed:', error);
+    logger.error('Email Distribution: Test email failed:', error);
     return false;
   }
 }

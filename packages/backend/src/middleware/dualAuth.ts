@@ -4,6 +4,9 @@ import config from '../config';
 import logger from '../utils/logger';
 import prisma from '../services/database';
 import sessionService from '../services/session.service';
+import { UserRoles } from '@mentalspace/shared';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import { AuthUser, PortalAccount, SessionData } from '../types/express.d';
 
 interface PortalTokenPayload {
   userId: string; // This is the clientId in portal tokens
@@ -140,7 +143,7 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
       }
 
       // Portal authentication successful - attach portal account info
-      (req as any).portalAccount = {
+      req.portalAccount = {
         id: portalAccount.id,
         portalAccountId: portalAccount.id,
         clientId: portalAccount.clientId,
@@ -151,11 +154,12 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
 
       // Also set req.user for compatibility with authorize middleware
       req.user = {
+        id: portalAccount.clientId,     // Use clientId as id for portal users
         userId: portalAccount.clientId,
         clientId: portalAccount.clientId, // Add clientId for self-scheduling controller compatibility
         email: portalAccount.email,
-        roles: ['CLIENT'], // Portal users have CLIENT role
-      } as any;
+        roles: [UserRoles.CLIENT], // Portal users have CLIENT role
+      } as AuthUser;
 
       logger.debug('Dual auth: Portal authentication successful', {
         clientId: portalAccount.clientId,
@@ -210,17 +214,18 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
 
         // Staff authentication successful
         req.user = {
+          id: user.id,           // Include id for JwtPayload compatibility
           userId: user.id,
           email: user.email,
           roles: user.roles,
           firstName: user.firstName,
           lastName: user.lastName,
-        } as any;
+        } as AuthUser;
 
         req.session = {
           sessionId: sessionData.sessionId,
           token: token,
-        } as any;
+        } as SessionData;
 
         // Update session activity
         await sessionService.updateActivity(sessionData.sessionId);
@@ -242,7 +247,7 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
         logger.error('[DUAL AUTH] ALL AUTH METHODS FAILED - returning 401', {
           url: req.url,
           method: req.method,
-          portalError: (portalError as any).message,
+          portalError: portalError.message,
           staffError: staffError.message,
         });
         return res.status(401).json({
@@ -269,7 +274,7 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
  */
 export const getClientId = (req: Request): string | null => {
   // If authenticated via portal, use the portal account's clientId
-  const portalAccount = (req as any).portalAccount;
+  const portalAccount = req.portalAccount;
   if (portalAccount?.clientId) {
     return portalAccount.clientId;
   }
@@ -300,14 +305,14 @@ export const canAccessClientData = (req: Request, targetClientId: string): boole
     : [];
 
   // Roles with global client access (administrative/operational roles)
-  const GLOBAL_ACCESS_ROLES = [
-    'SUPER_ADMIN',
-    'ADMINISTRATOR',
-    'CLINICAL_DIRECTOR',
-    'BILLING_STAFF',
-    'OFFICE_MANAGER',
-    'SCHEDULER',
-    'RECEPTIONIST',
+  const GLOBAL_ACCESS_ROLES: readonly string[] = [
+    UserRoles.SUPER_ADMIN,
+    UserRoles.ADMINISTRATOR,
+    UserRoles.CLINICAL_DIRECTOR,
+    UserRoles.BILLING_STAFF,
+    UserRoles.OFFICE_MANAGER,
+    UserRoles.SCHEDULER,
+    UserRoles.RECEPTIONIST,
   ];
 
   // Check if user has a role with global access
@@ -325,7 +330,7 @@ export const canAccessClientData = (req: Request, targetClientId: string): boole
   }
 
   // Portal account - can only access own data
-  const portalAccount = (req as any).portalAccount;
+  const portalAccount = req.portalAccount;
   if (portalAccount?.clientId) {
     return portalAccount.clientId === targetClientId;
   }
@@ -334,10 +339,10 @@ export const canAccessClientData = (req: Request, targetClientId: string): boole
   // Return true here to allow the request to proceed, but controllers MUST
   // verify clinician-client assignment using verifyClinicianClientAccess()
   // This is a security gate, not the final authorization check
-  if (req.user?.userId && (userRoles.includes('CLINICIAN') || userRoles.includes('SUPERVISOR') || userRoles.includes('INTERN'))) {
+  if (req.user?.userId && (userRoles.includes(UserRoles.CLINICIAN) || userRoles.includes(UserRoles.SUPERVISOR) || userRoles.includes(UserRoles.INTERN))) {
     // Mark request to indicate clinician-level access check is needed
-    (req as any).requiresClinicianClientCheck = true;
-    (req as any).targetClientId = targetClientId;
+    req.requiresClinicianClientCheck = true;
+    req.targetClientId = targetClientId;
     return true;
   }
 

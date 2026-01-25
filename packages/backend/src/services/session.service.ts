@@ -2,6 +2,8 @@ import crypto from 'crypto';
 import prisma from './database';
 import { auditLogger } from '../utils/logger';
 import { UnauthorizedError, ValidationError } from '../utils/errors';
+import * as sessionCache from './sessionCache.service';
+import type { CachedSessionData } from './sessionCache.service';
 
 /**
  * Session Management Service
@@ -71,8 +73,66 @@ export class SessionService {
 
   /**
    * Validate a session token and return user if valid
+   * Uses caching to reduce database load (60-second TTL)
    */
   async validateSession(token: string): Promise<{ userId: string; sessionId: string } | null> {
+    // Check cache first
+    const cachedSession = await sessionCache.getCachedSession(token);
+
+    if (cachedSession) {
+      // Validate cached data
+      const now = new Date();
+      const expiresAt = new Date(cachedSession.expiresAt);
+      const lastActivity = new Date(cachedSession.lastActivity);
+
+      // Check if session is active
+      if (!cachedSession.isActive) {
+        return null;
+      }
+
+      // Check if session has expired
+      if (now > expiresAt) {
+        await this.terminateSession(cachedSession.sessionId, token);
+        auditLogger.info('Session expired (from cache)', {
+          userId: cachedSession.userId,
+          sessionId: cachedSession.sessionId,
+          action: 'SESSION_EXPIRED',
+        });
+        return null;
+      }
+
+      // Check if user account is locked
+      if (cachedSession.accountLockedUntil && now < new Date(cachedSession.accountLockedUntil)) {
+        await this.terminateSession(cachedSession.sessionId, token);
+        throw new UnauthorizedError('Account is locked. Please contact administrator.');
+      }
+
+      // Check if user is active
+      if (!cachedSession.userIsActive) {
+        await this.terminateSession(cachedSession.sessionId, token);
+        throw new UnauthorizedError('Account is disabled. Please contact administrator.');
+      }
+
+      // Check if session has been inactive for too long
+      const timeSinceLastActivity = now.getTime() - lastActivity.getTime();
+      if (timeSinceLastActivity > this.INACTIVITY_TIMEOUT_MS) {
+        await this.terminateSession(cachedSession.sessionId, token);
+        auditLogger.info('Session timed out due to inactivity (from cache)', {
+          userId: cachedSession.userId,
+          sessionId: cachedSession.sessionId,
+          action: 'SESSION_TIMEOUT',
+        });
+        throw new UnauthorizedError('Session timed out due to inactivity. Please log in again.');
+      }
+
+      // Cache hit - return cached data (activity will be updated separately)
+      return {
+        userId: cachedSession.userId,
+        sessionId: cachedSession.sessionId,
+      };
+    }
+
+    // Cache miss - query database
     const session = await prisma.session.findUnique({
       where: { token },
       include: {
@@ -97,7 +157,7 @@ export class SessionService {
 
     // Check if session has expired
     if (new Date() > session.expiresAt) {
-      await this.terminateSession(session.id);
+      await this.terminateSession(session.id, token);
       auditLogger.info('Session expired', {
         userId: session.userId,
         sessionId: session.id,
@@ -108,20 +168,20 @@ export class SessionService {
 
     // Check if user account is locked
     if (session.user.accountLockedUntil && new Date() < session.user.accountLockedUntil) {
-      await this.terminateSession(session.id);
+      await this.terminateSession(session.id, token);
       throw new UnauthorizedError('Account is locked. Please contact administrator.');
     }
 
     // Check if user is active
     if (!session.user.isActive) {
-      await this.terminateSession(session.id);
+      await this.terminateSession(session.id, token);
       throw new UnauthorizedError('Account is disabled. Please contact administrator.');
     }
 
     // Check if session has been inactive for too long
     const timeSinceLastActivity = Date.now() - session.lastActivity.getTime();
     if (timeSinceLastActivity > this.INACTIVITY_TIMEOUT_MS) {
-      await this.terminateSession(session.id);
+      await this.terminateSession(session.id, token);
       auditLogger.info('Session timed out due to inactivity', {
         userId: session.userId,
         sessionId: session.id,
@@ -130,8 +190,17 @@ export class SessionService {
       throw new UnauthorizedError('Session timed out due to inactivity. Please log in again.');
     }
 
-    // Update last activity timestamp
-    await this.updateActivity(session.id);
+    // Cache the session data for future requests
+    const cacheData: CachedSessionData = {
+      userId: session.userId,
+      sessionId: session.id,
+      isActive: session.isActive,
+      expiresAt: session.expiresAt.toISOString(),
+      lastActivity: session.lastActivity.toISOString(),
+      userIsActive: session.user.isActive,
+      accountLockedUntil: session.user.accountLockedUntil?.toISOString() || null,
+    };
+    await sessionCache.cacheSession(token, cacheData);
 
     return {
       userId: session.userId,
@@ -141,6 +210,7 @@ export class SessionService {
 
   /**
    * Update session last activity timestamp
+   * Note: Cache is updated on next validateSession call (60s TTL handles staleness)
    */
   async updateActivity(sessionId: string): Promise<void> {
     const newExpiresAt = new Date(Date.now() + this.INACTIVITY_TIMEOUT_MS);
@@ -152,21 +222,34 @@ export class SessionService {
         expiresAt: newExpiresAt,
       },
     });
+    // Note: We don't update cache here because:
+    // 1. Cache has short 60s TTL, so it auto-refreshes
+    // 2. Updating cache on every activity would negate performance gains
+    // 3. The cached lastActivity is used for inactivity checks, and
+    //    the 60s cache TTL is much shorter than the 20min inactivity timeout
   }
 
   /**
    * Terminate a specific session
+   * @param sessionId Session ID
+   * @param token Optional token for cache invalidation (if known)
    */
-  async terminateSession(sessionId: string): Promise<void> {
+  async terminateSession(sessionId: string, token?: string): Promise<void> {
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
-      select: { userId: true },
+      select: { userId: true, token: true },
     });
 
     await prisma.session.update({
       where: { id: sessionId },
       data: { isActive: false },
     });
+
+    // Invalidate session cache
+    const sessionToken = token || session?.token;
+    if (sessionToken) {
+      await sessionCache.invalidateSessionCache(sessionToken);
+    }
 
     if (session) {
       auditLogger.info('Session terminated', {
@@ -181,6 +264,15 @@ export class SessionService {
    * Terminate all sessions for a user (logout from all devices)
    */
   async terminateAllUserSessions(userId: string): Promise<number> {
+    // Get all active session tokens for cache invalidation
+    const activeSessions = await prisma.session.findMany({
+      where: {
+        userId,
+        isActive: true,
+      },
+      select: { token: true },
+    });
+
     const result = await prisma.session.updateMany({
       where: {
         userId,
@@ -188,6 +280,11 @@ export class SessionService {
       },
       data: { isActive: false },
     });
+
+    // Invalidate all session caches
+    for (const session of activeSessions) {
+      await sessionCache.invalidateSessionCache(session.token);
+    }
 
     auditLogger.info('All user sessions terminated', {
       userId,
@@ -323,6 +420,9 @@ export class SessionService {
         lastActivity: new Date(),
       },
     });
+
+    // Invalidate cache so next request gets fresh data
+    await sessionCache.invalidateSessionCache(session.token);
 
     auditLogger.info('Session extended', {
       userId: session.userId,

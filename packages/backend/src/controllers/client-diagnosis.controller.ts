@@ -9,6 +9,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ClientDiagnosisService } from '../services/client-diagnosis.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { BadRequestError } from '../utils/errors';
+import { sendSuccess, sendCreated } from '../utils/apiResponse';
 
 /**
  * POST /api/v1/clients/:clientId/diagnoses
@@ -64,11 +65,7 @@ export const addDiagnosis = asyncHandler(
       diagnosedById: userId
     });
 
-    res.status(201).json({
-      success: true,
-      data: diagnosis,
-      message: 'Diagnosis added successfully'
-    });
+    return sendCreated(res, diagnosis, 'Diagnosis added successfully');
   }
 );
 
@@ -86,11 +83,7 @@ export const getClientDiagnoses = asyncHandler(
       diagnosisType: diagnosisType as string | undefined
     });
 
-    res.json({
-      success: true,
-      data: diagnoses,
-      count: diagnoses.length
-    });
+    return sendSuccess(res, { data: diagnoses, count: diagnoses.length });
   }
 );
 
@@ -104,10 +97,7 @@ export const getDiagnosisById = asyncHandler(
 
     const diagnosis = await ClientDiagnosisService.getDiagnosisById(id);
 
-    res.json({
-      success: true,
-      data: diagnosis
-    });
+    return sendSuccess(res, diagnosis);
   }
 );
 
@@ -180,11 +170,7 @@ export const updateDiagnosis = asyncHandler(
       lastReviewedDate: new Date()
     });
 
-    res.json({
-      success: true,
-      data: diagnosis,
-      message: 'Diagnosis updated successfully'
-    });
+    return sendSuccess(res, diagnosis, 'Diagnosis updated successfully');
   }
 );
 
@@ -221,11 +207,7 @@ export const updateDiagnosisStatus = asyncHandler(
       lastReviewedById: userId
     });
 
-    res.json({
-      success: true,
-      data: diagnosis,
-      message: 'Diagnosis status updated successfully'
-    });
+    return sendSuccess(res, diagnosis, 'Diagnosis status updated successfully');
   }
 );
 
@@ -244,11 +226,7 @@ export const deleteDiagnosis = asyncHandler(
 
     const diagnosis = await ClientDiagnosisService.deleteDiagnosis(id, userId);
 
-    res.json({
-      success: true,
-      data: diagnosis,
-      message: 'Diagnosis deleted successfully'
-    });
+    return sendSuccess(res, diagnosis, 'Diagnosis deleted successfully');
   }
 );
 
@@ -266,12 +244,7 @@ export const searchICD10Codes = asyncHandler(
 
     const results = await ClientDiagnosisService.searchICD10Codes(q);
 
-    res.json({
-      success: true,
-      data: results,
-      count: results.length,
-      query: q
-    });
+    return sendSuccess(res, { data: results, count: results.length, query: q });
   }
 );
 
@@ -285,10 +258,7 @@ export const getClientDiagnosisStats = asyncHandler(
 
     const stats = await ClientDiagnosisService.getClientDiagnosisStats(clientId);
 
-    res.json({
-      success: true,
-      data: stats
-    });
+    return sendSuccess(res, stats);
   }
 );
 

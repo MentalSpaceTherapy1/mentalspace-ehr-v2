@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@mentalspace/database';
+// Phase 3.2: Removed direct PrismaClient import - using service methods instead
 import { getDeliveryHistory } from '../services/delivery-tracker.service';
+import * as subscriptionsService from '../services/subscriptions.service';
 import { logControllerError } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../utils/apiResponse';
 
 export const subscriptionsController = {
   // Create a new subscription
@@ -13,48 +13,46 @@ export const subscriptionsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
       // Validate required fields
       if (!reportId || !reportType || !frequency || !format || !deliveryMethod) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        return sendBadRequest(res, 'Missing required fields');
       }
 
       // Validate frequency
       const validFrequencies = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'];
       if (!validFrequencies.includes(frequency)) {
-        return res.status(400).json({ error: 'Invalid frequency' });
+        return sendBadRequest(res, 'Invalid frequency');
       }
 
       // Validate format
       const validFormats = ['PDF', 'EXCEL', 'CSV'];
       if (!validFormats.includes(format)) {
-        return res.status(400).json({ error: 'Invalid format' });
+        return sendBadRequest(res, 'Invalid format');
       }
 
       // Validate delivery method
       const validMethods = ['EMAIL', 'PORTAL', 'BOTH'];
       if (!validMethods.includes(deliveryMethod)) {
-        return res.status(400).json({ error: 'Invalid delivery method' });
+        return sendBadRequest(res, 'Invalid delivery method');
       }
 
-      const subscription = await prisma.subscription.create({
-        data: {
-          reportId,
-          reportType,
-          userId,
-          frequency,
-          format,
-          deliveryMethod,
-          isActive: true
-        }
+      // Phase 3.2: Use service method instead of direct prisma call
+      const subscription = await subscriptionsService.createSubscription({
+        reportId,
+        reportType,
+        userId,
+        frequency,
+        format,
+        deliveryMethod,
       });
 
-      res.status(201).json(subscription);
+      return sendCreated(res, subscription, 'Subscription created successfully');
     } catch (error) {
       logControllerError('Error creating subscription', error);
-      res.status(500).json({ error: 'Failed to create subscription' });
+      return sendServerError(res, 'Failed to create subscription');
     }
   },
 
@@ -64,18 +62,16 @@ export const subscriptionsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      const subscriptions = await prisma.subscription.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const subscriptions = await subscriptionsService.getSubscriptionsByUserId(userId);
 
-      res.json(subscriptions);
+      return sendSuccess(res, subscriptions);
     } catch (error) {
       logControllerError('Error fetching subscriptions', error);
-      res.status(500).json({ error: 'Failed to fetch subscriptions' });
+      return sendServerError(res, 'Failed to fetch subscriptions');
     }
   },
 
@@ -86,24 +82,20 @@ export const subscriptionsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      const subscription = await prisma.subscription.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const subscription = await subscriptionsService.findSubscriptionByIdAndUser(id, userId);
 
       if (!subscription) {
-        return res.status(404).json({ error: 'Subscription not found' });
+        return sendNotFound(res, 'Subscription');
       }
 
-      res.json(subscription);
+      return sendSuccess(res, subscription);
     } catch (error) {
       logControllerError('Error fetching subscription', error);
-      res.status(500).json({ error: 'Failed to fetch subscription' });
+      return sendServerError(res, 'Failed to fetch subscription');
     }
   },
 
@@ -115,26 +107,21 @@ export const subscriptionsController = {
       const { frequency, format, deliveryMethod, isActive } = req.body;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify subscription belongs to user
-      const existingSubscription = await prisma.subscription.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const existingSubscription = await subscriptionsService.findSubscriptionByIdAndUser(id, userId);
 
       if (!existingSubscription) {
-        return res.status(404).json({ error: 'Subscription not found' });
+        return sendNotFound(res, 'Subscription');
       }
 
       // Validate frequency if provided
       if (frequency) {
         const validFrequencies = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'];
         if (!validFrequencies.includes(frequency)) {
-          return res.status(400).json({ error: 'Invalid frequency' });
+          return sendBadRequest(res, 'Invalid frequency');
         }
       }
 
@@ -142,7 +129,7 @@ export const subscriptionsController = {
       if (format) {
         const validFormats = ['PDF', 'EXCEL', 'CSV'];
         if (!validFormats.includes(format)) {
-          return res.status(400).json({ error: 'Invalid format' });
+          return sendBadRequest(res, 'Invalid format');
         }
       }
 
@@ -150,24 +137,22 @@ export const subscriptionsController = {
       if (deliveryMethod) {
         const validMethods = ['EMAIL', 'PORTAL', 'BOTH'];
         if (!validMethods.includes(deliveryMethod)) {
-          return res.status(400).json({ error: 'Invalid delivery method' });
+          return sendBadRequest(res, 'Invalid delivery method');
         }
       }
 
-      const subscription = await prisma.subscription.update({
-        where: { id },
-        data: {
-          ...(frequency && { frequency }),
-          ...(format && { format }),
-          ...(deliveryMethod && { deliveryMethod }),
-          ...(isActive !== undefined && { isActive })
-        }
+      // Phase 3.2: Use service method instead of direct prisma call
+      const subscription = await subscriptionsService.updateSubscription(id, {
+        frequency,
+        format,
+        deliveryMethod,
+        isActive,
       });
 
-      res.json(subscription);
+      return sendSuccess(res, subscription, 'Subscription updated successfully');
     } catch (error) {
       logControllerError('Error updating subscription', error);
-      res.status(500).json({ error: 'Failed to update subscription' });
+      return sendServerError(res, 'Failed to update subscription');
     }
   },
 
@@ -178,29 +163,22 @@ export const subscriptionsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify subscription belongs to user
-      const subscription = await prisma.subscription.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const subscription = await subscriptionsService.findSubscriptionByIdAndUser(id, userId);
 
       if (!subscription) {
-        return res.status(404).json({ error: 'Subscription not found' });
+        return sendNotFound(res, 'Subscription');
       }
 
-      await prisma.subscription.delete({
-        where: { id }
-      });
+      await subscriptionsService.deleteSubscription(id);
 
-      res.json({ message: 'Subscription deleted successfully' });
+      return sendSuccess(res, null, 'Subscription deleted successfully');
     } catch (error) {
       logControllerError('Error deleting subscription', error);
-      res.status(500).json({ error: 'Failed to delete subscription' });
+      return sendServerError(res, 'Failed to delete subscription');
     }
   },
 
@@ -211,30 +189,22 @@ export const subscriptionsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify subscription belongs to user
-      const subscription = await prisma.subscription.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const subscription = await subscriptionsService.findSubscriptionByIdAndUser(id, userId);
 
       if (!subscription) {
-        return res.status(404).json({ error: 'Subscription not found' });
+        return sendNotFound(res, 'Subscription');
       }
 
-      const updatedSubscription = await prisma.subscription.update({
-        where: { id },
-        data: { isActive: false }
-      });
+      const updatedSubscription = await subscriptionsService.pauseSubscription(id);
 
-      res.json(updatedSubscription);
+      return sendSuccess(res, updatedSubscription, 'Subscription paused successfully');
     } catch (error) {
       logControllerError('Error pausing subscription', error);
-      res.status(500).json({ error: 'Failed to pause subscription' });
+      return sendServerError(res, 'Failed to pause subscription');
     }
   },
 
@@ -245,30 +215,22 @@ export const subscriptionsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify subscription belongs to user
-      const subscription = await prisma.subscription.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const subscription = await subscriptionsService.findSubscriptionByIdAndUser(id, userId);
 
       if (!subscription) {
-        return res.status(404).json({ error: 'Subscription not found' });
+        return sendNotFound(res, 'Subscription');
       }
 
-      const updatedSubscription = await prisma.subscription.update({
-        where: { id },
-        data: { isActive: true }
-      });
+      const updatedSubscription = await subscriptionsService.resumeSubscription(id);
 
-      res.json(updatedSubscription);
+      return sendSuccess(res, updatedSubscription, 'Subscription resumed successfully');
     } catch (error) {
       logControllerError('Error resuming subscription', error);
-      res.status(500).json({ error: 'Failed to resume subscription' });
+      return sendServerError(res, 'Failed to resume subscription');
     }
   },
 
@@ -280,39 +242,32 @@ export const subscriptionsController = {
       const limit = parseInt(req.query.limit as string) || 50;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify subscription belongs to user
-      const subscription = await prisma.subscription.findFirst({
-        where: {
-          id,
-          userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const subscription = await subscriptionsService.findSubscriptionByIdAndUser(id, userId);
 
       if (!subscription) {
-        return res.status(404).json({ error: 'Subscription not found' });
+        return sendNotFound(res, 'Subscription');
       }
 
       // Find associated schedule
-      const schedule = await prisma.reportSchedule.findFirst({
-        where: {
-          reportId: subscription.reportId,
-          userId
-        }
-      });
+      const schedule = await subscriptionsService.findReportScheduleForSubscription(
+        subscription.reportId,
+        userId
+      );
 
       if (!schedule) {
-        return res.json([]);
+        return sendSuccess(res, []);
       }
 
       const history = await getDeliveryHistory(schedule.id, limit);
 
-      res.json(history);
+      return sendSuccess(res, history);
     } catch (error) {
       logControllerError('Error fetching subscription history', error);
-      res.status(500).json({ error: 'Failed to fetch subscription history' });
+      return sendServerError(res, 'Failed to fetch subscription history');
     }
   }
 };

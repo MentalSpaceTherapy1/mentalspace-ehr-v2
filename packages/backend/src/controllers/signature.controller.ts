@@ -1,8 +1,12 @@
 import { Request, Response } from 'express';
+import { UserRoles } from '@mentalspace/shared';
+import { getErrorMessage, getErrorCode, getErrorName, getErrorStack, getErrorStatusCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
 import * as SignatureService from '../services/signature.service';
 import logger from '../utils/logger';
-import prisma from '../services/database';
-import bcrypt from 'bcryptjs';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import { sendSuccess, sendBadRequest, sendUnauthorized, sendNotFound, sendForbidden, sendServerError } from '../utils/apiResponse';
 
 /**
  * GET /api/v1/signatures/attestation/:noteType
@@ -11,7 +15,7 @@ import bcrypt from 'bcryptjs';
 export const getApplicableAttestation = async (req: Request, res: Response) => {
   try {
     const { noteType } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const signatureType = (req.query.signatureType as 'AUTHOR' | 'COSIGN' | 'AMENDMENT') || 'AUTHOR';
 
     const attestation = await SignatureService.getApplicableAttestation(
@@ -21,29 +25,19 @@ export const getApplicableAttestation = async (req: Request, res: Response) => {
     );
 
     if (!attestation) {
-      return res.status(404).json({
-        success: false,
-        message: 'No applicable attestation found for this note type',
-      });
+      return sendNotFound(res, 'Applicable attestation');
     }
 
-    return res.json({
-      success: true,
-      data: {
-        id: attestation.id,
-        attestationText: attestation.attestationText,
-        role: attestation.role,
-        noteType: attestation.noteType,
-        jurisdiction: attestation.jurisdiction,
-      },
+    return sendSuccess(res, {
+      id: attestation.id,
+      attestationText: attestation.attestationText,
+      role: attestation.role,
+      noteType: attestation.noteType,
+      jurisdiction: attestation.jurisdiction,
     });
-  } catch (error: any) {
-    logger.error('Error fetching attestation', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch attestation',
-      error: error.message,
-    });
+  } catch (error) {
+    logger.error('Error fetching attestation', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch attestation');
   }
 };
 
@@ -53,54 +47,29 @@ export const getApplicableAttestation = async (req: Request, res: Response) => {
  */
 export const setSignaturePin = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const { pin, currentPassword } = req.body;
 
     // Validate PIN format (4-6 digits)
     if (!/^\d{4,6}$/.test(pin)) {
-      return res.status(400).json({
-        success: false,
-        message: 'PIN must be 4-6 digits',
-      });
+      return sendBadRequest(res, 'PIN must be 4-6 digits');
     }
 
-    // Verify current password before allowing PIN change
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { password: true },
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
-    }
-
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    // Phase 3.2: Use service method instead of direct prisma call
+    const isPasswordValid = await SignatureService.verifyUserPassword(userId, currentPassword);
 
     if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid current password',
-      });
+      return sendUnauthorized(res, 'Invalid current password');
     }
 
     await SignatureService.setSignaturePin(userId, pin);
 
     logger.info('Signature PIN set', { userId });
 
-    return res.json({
-      success: true,
-      message: 'Signature PIN set successfully',
-    });
-  } catch (error: any) {
-    logger.error('Error setting signature PIN', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to set signature PIN',
-      error: error.message,
-    });
+    return sendSuccess(res, null, 'Signature PIN set successfully');
+  } catch (error) {
+    logger.error('Error setting signature PIN', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to set signature PIN');
   }
 };
 
@@ -110,46 +79,24 @@ export const setSignaturePin = async (req: Request, res: Response) => {
  */
 export const setSignaturePassword = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const { signaturePassword, currentPassword } = req.body;
 
-    // Verify current password before allowing signature password change
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { password: true },
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
-    }
-
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    // Phase 3.2: Use service method instead of direct prisma call
+    const isPasswordValid = await SignatureService.verifyUserPassword(userId, currentPassword);
 
     if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid current password',
-      });
+      return sendUnauthorized(res, 'Invalid current password');
     }
 
     await SignatureService.setSignaturePassword(userId, signaturePassword);
 
     logger.info('Signature password set', { userId });
 
-    return res.json({
-      success: true,
-      message: 'Signature password set successfully',
-    });
-  } catch (error: any) {
-    logger.error('Error setting signature password', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to set signature password',
-      error: error.message,
-    });
+    return sendSuccess(res, null, 'Signature password set successfully');
+  } catch (error) {
+    logger.error('Error setting signature password', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to set signature password');
   }
 };
 
@@ -160,60 +107,35 @@ export const setSignaturePassword = async (req: Request, res: Response) => {
 export const getNoteSignatures = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
 
-    // Verify user has access to this note
-    const note = await prisma.clinicalNote.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        clinicianId: true,
-        cosignedBy: true, // Field name is cosignedBy, not cosignerId
-        appointment: {
-          select: { clientId: true },
-        },
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const note = await SignatureService.getNoteWithAccessInfo(id);
 
     if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
+      return sendNotFound(res, 'Clinical note');
     }
 
-    // Check permissions: must be clinician, cosigner, or client's provider
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { roles: true },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const userRoles = await SignatureService.getUserRoles(userId);
 
+    // Check permissions: must be clinician, cosigner, or admin/supervisor
     const hasAccess =
       note.clinicianId === userId ||
       note.cosignedBy === userId ||
-      user?.roles.includes('ADMINISTRATOR') ||
-      user?.roles.includes('SUPERVISOR');
+      userRoles?.roles.includes(UserRoles.ADMINISTRATOR) ||
+      userRoles?.roles.includes(UserRoles.SUPERVISOR);
 
     if (!hasAccess) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to view signatures for this note',
-      });
+      return sendForbidden(res, 'You do not have permission to view signatures for this note');
     }
 
     const signatures = await SignatureService.getSignatureEvents(id);
 
-    return res.json({
-      success: true,
-      data: signatures,
-    });
-  } catch (error: any) {
-    logger.error('Error fetching note signatures', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch note signatures',
-      error: error.message,
-    });
+    return sendSuccess(res, signatures);
+  } catch (error) {
+    logger.error('Error fetching note signatures', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch note signatures');
   }
 };
 
@@ -224,27 +146,18 @@ export const getNoteSignatures = async (req: Request, res: Response) => {
 export const revokeSignature = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const { reason } = req.body;
 
-    // Verify admin permission
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { roles: true },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const userRoles = await SignatureService.getUserRoles(userId);
 
-    if (!user?.roles.includes('ADMINISTRATOR')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only administrators can revoke signatures',
-      });
+    if (!userRoles?.roles.includes(UserRoles.ADMINISTRATOR)) {
+      return sendForbidden(res, 'Only administrators can revoke signatures');
     }
 
     if (!reason || reason.trim().length < 10) {
-      return res.status(400).json({
-        success: false,
-        message: 'Revocation reason must be at least 10 characters',
-      });
+      return sendBadRequest(res, 'Revocation reason must be at least 10 characters');
     }
 
     const revokedSignature = await SignatureService.revokeSignature(id, userId, reason);
@@ -255,18 +168,10 @@ export const revokeSignature = async (req: Request, res: Response) => {
       reason,
     });
 
-    return res.json({
-      success: true,
-      message: 'Signature revoked successfully',
-      data: revokedSignature,
-    });
-  } catch (error: any) {
-    logger.error('Error revoking signature', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to revoke signature',
-      error: error.message,
-    });
+    return sendSuccess(res, revokedSignature, 'Signature revoked successfully');
+  } catch (error) {
+    logger.error('Error revoking signature', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to revoke signature');
   }
 };
 
@@ -277,31 +182,19 @@ export const revokeSignature = async (req: Request, res: Response) => {
 export const signClinicalNote = async (req: Request, res: Response) => {
   try {
     const { id: noteId } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const { signatureType } = req.body;
 
     // Validate signature type
     if (!['AUTHOR', 'COSIGN', 'AMENDMENT'].includes(signatureType)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid signature type',
-      });
+      return sendBadRequest(res, 'Invalid signature type');
     }
 
-    // Verify user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        roles: true,
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const user = await SignatureService.getUserForSigning(userId);
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+      return sendNotFound(res, 'User');
     }
 
     // Get client IP and user agent for audit trail
@@ -327,22 +220,14 @@ export const signClinicalNote = async (req: Request, res: Response) => {
       signatureEventId: signatureEvent.id,
     });
 
-    return res.json({
-      success: true,
-      message: 'Note signed successfully',
-      data: signatureEvent,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, signatureEvent, 'Note signed successfully');
+  } catch (error) {
     logger.error('Error signing clinical note', {
-      error: error.message,
-      stack: error.stack,
+      error: getErrorMessage(error),
+      stack: getErrorStack(error),
     });
 
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to sign note',
-      error: error.message,
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to sign note');
   }
 };
 
@@ -352,36 +237,18 @@ export const signClinicalNote = async (req: Request, res: Response) => {
  */
 export const getSignatureStatus = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        signaturePin: true,
-        signaturePassword: true,
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const status = await SignatureService.getSignatureStatus(userId);
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+    if (!status) {
+      return sendNotFound(res, 'User');
     }
 
-    return res.json({
-      success: true,
-      data: {
-        hasPinConfigured: !!user.signaturePin,
-        hasPasswordConfigured: !!user.signaturePassword,
-      },
-    });
-  } catch (error: any) {
-    logger.error('Error fetching signature status', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch signature status',
-      error: error.message,
-    });
+    return sendSuccess(res, status);
+  } catch (error) {
+    logger.error('Error fetching signature status', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to fetch signature status');
   }
 };

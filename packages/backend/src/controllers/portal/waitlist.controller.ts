@@ -5,6 +5,8 @@ import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
 import * as waitlistService from '../../services/waitlist.service';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../../utils/errorHelpers';
 
 // ============================================================================
 // PORTAL WAITLIST CONTROLLER
@@ -30,19 +32,12 @@ export const joinWaitlist = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const validation = joinWaitlistSchema.safeParse(req.body);
     if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid request data',
-        errors: validation.error.errors,
-      });
+      return sendBadRequest(res, 'Invalid request data');
     }
 
     const { clinicianId, appointmentTypeId, preferredDays, preferredTimes, priority, notes } = validation.data;
@@ -97,10 +92,7 @@ export const joinWaitlist = async (req: PortalRequest, res: Response) => {
     });
 
     if (existingEntry) {
-      return res.status(400).json({
-        success: false,
-        message: 'You are already on the waitlist for this clinician and appointment type',
-      });
+      return sendBadRequest(res, 'You are already on the waitlist for this clinician and appointment type');
     }
 
     // Create waitlist entry using service
@@ -118,17 +110,10 @@ export const joinWaitlist = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Client ${clientId} joined waitlist`, { entryId: entry.id });
 
-    res.status(201).json({
-      success: true,
-      message: 'Successfully joined the waitlist',
-      data: entry,
-    });
-  } catch (error: any) {
+    return sendCreated(res, entry, 'Successfully joined the waitlist');
+  } catch (error) {
     logger.error('Error joining waitlist:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to join waitlist',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to join waitlist');
   }
 };
 
@@ -142,10 +127,7 @@ export const leaveWaitlist = async (req: PortalRequest, res: Response) => {
     const { entryId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify the entry belongs to this client
@@ -158,10 +140,7 @@ export const leaveWaitlist = async (req: PortalRequest, res: Response) => {
     });
 
     if (!entry) {
-      return res.status(404).json({
-        success: false,
-        message: 'Waitlist entry not found or already processed',
-      });
+      return sendNotFound(res, 'Waitlist entry');
     }
 
     // Remove from waitlist
@@ -173,16 +152,10 @@ export const leaveWaitlist = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Client ${clientId} left waitlist`, { entryId });
 
-    res.status(200).json({
-      success: true,
-      message: 'Successfully removed from waitlist',
-    });
-  } catch (error: any) {
+    return sendSuccess(res, null, 'Successfully removed from waitlist');
+  } catch (error) {
     logger.error('Error leaving waitlist:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to leave waitlist',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to leave waitlist');
   }
 };
 
@@ -195,10 +168,7 @@ export const getMyWaitlistEntries = async (req: PortalRequest, res: Response) =>
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const entries = await prisma.waitlistEntry.findMany({
@@ -219,27 +189,21 @@ export const getMyWaitlistEntries = async (req: PortalRequest, res: Response) =>
       orderBy: { createdAt: 'desc' },
     });
 
-    res.status(200).json({
-      success: true,
-      data: entries.map(entry => ({
-        id: entry.id,
-        clinicianId: entry.clinicianId || entry.requestedClinicianId,
-        appointmentType: entry.appointmentType || entry.requestedAppointmentType,
-        preferredDays: entry.preferredDays,
-        preferredTimes: entry.preferredTimes,
-        priority: entry.priority,
-        status: entry.status,
-        joinedAt: entry.joinedAt || entry.createdAt,
-        notes: entry.notes,
-        clinician: entry.clinician,
-      })),
-    });
-  } catch (error: any) {
+    return sendSuccess(res, entries.map(entry => ({
+      id: entry.id,
+      clinicianId: entry.clinicianId || entry.requestedClinicianId,
+      appointmentType: entry.appointmentType || entry.requestedAppointmentType,
+      preferredDays: entry.preferredDays,
+      preferredTimes: entry.preferredTimes,
+      priority: entry.priority,
+      status: entry.status,
+      joinedAt: entry.joinedAt || entry.createdAt,
+      notes: entry.notes,
+      clinician: entry.clinician,
+    })));
+  } catch (error) {
     logger.error('Error getting waitlist entries:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to get waitlist entries',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get waitlist entries');
   }
 };
 
@@ -252,10 +216,7 @@ export const getMyWaitlistOffers = async (req: PortalRequest, res: Response) => 
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get entries with pending offers
@@ -310,15 +271,9 @@ export const getMyWaitlistOffers = async (req: PortalRequest, res: Response) => 
       }))
     );
 
-    res.status(200).json({
-      success: true,
-      data: offers,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, offers);
+  } catch (error) {
     logger.error('Error getting waitlist offers:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to get waitlist offers',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to get waitlist offers');
   }
 };

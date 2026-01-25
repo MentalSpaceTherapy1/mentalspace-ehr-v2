@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { startOfDay, endOfDay, subDays, differenceInMinutes, format, startOfWeek, endOfWeek } from 'date-fns';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -244,7 +246,7 @@ export async function detectUnderutilization(
   const providers = await prisma.user.findMany({
     where: {
       isActive: true,
-      roles: { hasSome: ['ADMINISTRATOR', 'CLINICIAN'] }
+      roles: { hasSome: [UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN] }
     },
     select: {
       id: true,
@@ -359,7 +361,7 @@ export async function detectGapTimeInefficiencies(
   const providers = await prisma.user.findMany({
     where: {
       isActive: true,
-      roles: { hasSome: ['ADMINISTRATOR', 'CLINICIAN'] }
+      roles: { hasSome: [UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN] }
     },
     select: { id: true, firstName: true, lastName: true }
   });
@@ -659,7 +661,7 @@ async function storeDetectedPatterns(patterns: DetectedPattern[]): Promise<void>
         }
       });
     } catch (error) {
-      console.error('Error storing pattern:', error);
+      logger.error('Error storing pattern', { error });
       // Continue with other patterns
     }
   }

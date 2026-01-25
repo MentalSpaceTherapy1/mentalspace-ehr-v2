@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@mentalspace/database';
+// Phase 3.2: Removed direct PrismaClient import - using service methods instead
+import * as distributionListsService from '../services/distribution-lists.service';
 import { logControllerError } from '../utils/logger';
-
-const prisma = new PrismaClient();
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendForbidden, sendPaginated } from '../utils/apiResponse';
 
 export const distributionListsController = {
   // Create a new distribution list
@@ -12,42 +12,38 @@ export const distributionListsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
       // Validate required fields
       if (!name || !emails) {
-        return res.status(400).json({ error: 'Name and emails are required' });
+        return sendBadRequest(res, 'Name and emails are required');
       }
 
       // Validate emails is an array
       if (!Array.isArray(emails) || emails.length === 0) {
-        return res.status(400).json({ error: 'Emails must be a non-empty array' });
+        return sendBadRequest(res, 'Emails must be a non-empty array');
       }
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const invalidEmails = emails.filter(email => !emailRegex.test(email));
       if (invalidEmails.length > 0) {
-        return res.status(400).json({
-          error: 'Invalid email format',
-          invalidEmails
-        });
+        return sendBadRequest(res, `Invalid email format: ${invalidEmails.join(', ')}`);
       }
 
-      const distributionList = await prisma.distributionList.create({
-        data: {
-          name,
-          description,
-          emails,
-          createdBy: userId
-        }
+      // Phase 3.2: Use service method instead of direct prisma call
+      const distributionList = await distributionListsService.createDistributionList({
+        name,
+        description,
+        emails,
+        createdBy: userId,
       });
 
-      res.status(201).json(distributionList);
+      return sendCreated(res, distributionList, 'Distribution list created successfully');
     } catch (error) {
       logControllerError('Error creating distribution list', error);
-      res.status(500).json({ error: 'Failed to create distribution list' });
+      return sendServerError(res, 'Failed to create distribution list');
     }
   },
 
@@ -57,23 +53,11 @@ export const distributionListsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      const distributionLists = await prisma.distributionList.findMany({
-        where: { createdBy: userId },
-        orderBy: { createdAt: 'desc' },
-        include: {
-          creator: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const distributionLists = await distributionListsService.getDistributionListsByUser(userId);
 
       // Add email count to each list
       const listsWithCount = distributionLists.map(list => ({
@@ -81,10 +65,10 @@ export const distributionListsController = {
         emailCount: Array.isArray(list.emails) ? list.emails.length : 0
       }));
 
-      res.json(listsWithCount);
+      return sendSuccess(res, listsWithCount);
     } catch (error) {
       logControllerError('Error fetching distribution lists', error);
-      res.status(500).json({ error: 'Failed to fetch distribution lists' });
+      return sendServerError(res, 'Failed to fetch distribution lists');
     }
   },
 
@@ -95,34 +79,20 @@ export const distributionListsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      const distributionList = await prisma.distributionList.findFirst({
-        where: {
-          id,
-          createdBy: userId
-        },
-        include: {
-          creator: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const distributionList = await distributionListsService.findDistributionListByIdAndUser(id, userId);
 
       if (!distributionList) {
-        return res.status(404).json({ error: 'Distribution list not found' });
+        return sendNotFound(res, 'Distribution list');
       }
 
-      res.json(distributionList);
+      return sendSuccess(res, distributionList);
     } catch (error) {
       logControllerError('Error fetching distribution list', error);
-      res.status(500).json({ error: 'Failed to fetch distribution list' });
+      return sendServerError(res, 'Failed to fetch distribution list');
     }
   },
 
@@ -134,52 +104,41 @@ export const distributionListsController = {
       const { name, description, emails } = req.body;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify distribution list belongs to user
-      const existingList = await prisma.distributionList.findFirst({
-        where: {
-          id,
-          createdBy: userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const existingList = await distributionListsService.findDistributionListByIdAndUserBasic(id, userId);
 
       if (!existingList) {
-        return res.status(404).json({ error: 'Distribution list not found' });
+        return sendNotFound(res, 'Distribution list');
       }
 
       // Validate emails if provided
       if (emails) {
         if (!Array.isArray(emails) || emails.length === 0) {
-          return res.status(400).json({ error: 'Emails must be a non-empty array' });
+          return sendBadRequest(res, 'Emails must be a non-empty array');
         }
 
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const invalidEmails = emails.filter(email => !emailRegex.test(email));
         if (invalidEmails.length > 0) {
-          return res.status(400).json({
-            error: 'Invalid email format',
-            invalidEmails
-          });
+          return sendBadRequest(res, `Invalid email format: ${invalidEmails.join(', ')}`);
         }
       }
 
-      const updateData: any = {};
-      if (name) updateData.name = name;
-      if (description !== undefined) updateData.description = description;
-      if (emails) updateData.emails = emails;
-
-      const distributionList = await prisma.distributionList.update({
-        where: { id },
-        data: updateData
+      // Phase 3.2: Use service method instead of direct prisma call
+      const distributionList = await distributionListsService.updateDistributionList(id, {
+        name,
+        description,
+        emails,
       });
 
-      res.json(distributionList);
+      return sendSuccess(res, distributionList, 'Distribution list updated successfully');
     } catch (error) {
       logControllerError('Error updating distribution list', error);
-      res.status(500).json({ error: 'Failed to update distribution list' });
+      return sendServerError(res, 'Failed to update distribution list');
     }
   },
 
@@ -190,29 +149,22 @@ export const distributionListsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify distribution list belongs to user
-      const distributionList = await prisma.distributionList.findFirst({
-        where: {
-          id,
-          createdBy: userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const distributionList = await distributionListsService.findDistributionListByIdAndUserBasic(id, userId);
 
       if (!distributionList) {
-        return res.status(404).json({ error: 'Distribution list not found' });
+        return sendNotFound(res, 'Distribution list');
       }
 
-      await prisma.distributionList.delete({
-        where: { id }
-      });
+      await distributionListsService.deleteDistributionList(id);
 
-      res.json({ message: 'Distribution list deleted successfully' });
+      return sendSuccess(res, null, 'Distribution list deleted successfully');
     } catch (error) {
       logControllerError('Error deleting distribution list', error);
-      res.status(500).json({ error: 'Failed to delete distribution list' });
+      return sendServerError(res, 'Failed to delete distribution list');
     }
   },
 
@@ -224,49 +176,39 @@ export const distributionListsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
       if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
+        return sendBadRequest(res, 'Email is required');
       }
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        return res.status(400).json({ error: 'Invalid email format' });
+        return sendBadRequest(res, 'Invalid email format');
       }
 
-      // Verify distribution list belongs to user
-      const distributionList = await prisma.distributionList.findFirst({
-        where: {
-          id,
-          createdBy: userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const distributionList = await distributionListsService.findDistributionListByIdAndUserBasic(id, userId);
 
       if (!distributionList) {
-        return res.status(404).json({ error: 'Distribution list not found' });
+        return sendNotFound(res, 'Distribution list');
       }
 
       const currentEmails = distributionList.emails as string[];
 
       // Check if email already exists
       if (currentEmails.includes(email)) {
-        return res.status(400).json({ error: 'Email already exists in list' });
+        return sendBadRequest(res, 'Email already exists in list');
       }
 
-      const updatedList = await prisma.distributionList.update({
-        where: { id },
-        data: {
-          emails: [...currentEmails, email]
-        }
-      });
+      const updatedList = await distributionListsService.addEmailToList(id, currentEmails, email);
 
-      res.json(updatedList);
+      return sendSuccess(res, updatedList, 'Email added successfully');
     } catch (error) {
       logControllerError('Error adding email to list', error);
-      res.status(500).json({ error: 'Failed to add email to list' });
+      return sendServerError(res, 'Failed to add email to list');
     }
   },
 
@@ -277,44 +219,34 @@ export const distributionListsController = {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return sendUnauthorized(res);
       }
 
-      // Verify distribution list belongs to user
-      const distributionList = await prisma.distributionList.findFirst({
-        where: {
-          id,
-          createdBy: userId
-        }
-      });
+      // Phase 3.2: Use service method instead of direct prisma call
+      const distributionList = await distributionListsService.findDistributionListByIdAndUserBasic(id, userId);
 
       if (!distributionList) {
-        return res.status(404).json({ error: 'Distribution list not found' });
+        return sendNotFound(res, 'Distribution list');
       }
 
       const currentEmails = distributionList.emails as string[];
 
       // Check if email exists
       if (!currentEmails.includes(email)) {
-        return res.status(404).json({ error: 'Email not found in list' });
+        return sendNotFound(res, 'Email in list');
       }
 
       // Don't allow removing last email
       if (currentEmails.length === 1) {
-        return res.status(400).json({ error: 'Cannot remove the last email from the list' });
+        return sendBadRequest(res, 'Cannot remove the last email from the list');
       }
 
-      const updatedList = await prisma.distributionList.update({
-        where: { id },
-        data: {
-          emails: currentEmails.filter(e => e !== email)
-        }
-      });
+      const updatedList = await distributionListsService.removeEmailFromList(id, currentEmails, email);
 
-      res.json(updatedList);
+      return sendSuccess(res, updatedList, 'Email removed successfully');
     } catch (error) {
       logControllerError('Error removing email from list', error);
-      res.status(500).json({ error: 'Failed to remove email from list' });
+      return sendServerError(res, 'Failed to remove email from list');
     }
   }
 };

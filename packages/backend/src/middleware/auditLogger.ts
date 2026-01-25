@@ -178,8 +178,8 @@ async function createAuditLog(data: {
     });
 
     // In production, this should trigger an alert
-    // For now, log to console as well
-    console.error('AUDIT LOG FAILURE:', error);
+    // Using structured logging for audit failures
+    logger.error('AUDIT LOG FAILURE', { error, auditData: data });
   }
 }
 

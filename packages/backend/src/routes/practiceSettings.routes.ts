@@ -7,6 +7,8 @@ import {
   getPublicSettings,
   validatePracticeSettings,
 } from '../services/practiceSettings.service';
+import { UserRoles } from '@mentalspace/shared';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -19,7 +21,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     const user = (req as any).user;
 
     // Check if user is administrator
-    if (!user.roles.includes('ADMINISTRATOR')) {
+    if (!user.roles.includes(UserRoles.ADMINISTRATOR)) {
       return res.status(403).json({
         success: false,
         error: 'Only administrators can access practice settings',
@@ -33,7 +35,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       data: settings,
     });
   } catch (error: any) {
-    console.error('Error fetching practice settings:', error);
+    logger.error('Practice Settings Routes:Error fetching practice settings:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to fetch practice settings',
@@ -54,7 +56,7 @@ router.get('/public', async (req: Request, res: Response) => {
       data: settings,
     });
   } catch (error: any) {
-    console.error('Error fetching public settings:', error);
+    logger.error('Practice Settings Routes:Error fetching public settings:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to fetch public settings',
@@ -71,7 +73,7 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
     const user = (req as any).user;
 
     // Check if user is administrator
-    if (!user.roles.includes('ADMINISTRATOR')) {
+    if (!user.roles.includes(UserRoles.ADMINISTRATOR)) {
       return res.status(403).json({
         success: false,
         error: 'Only administrators can update practice settings',
@@ -99,7 +101,7 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
       message: 'Practice settings updated successfully',
     });
   } catch (error: any) {
-    console.error('Error updating practice settings:', error);
+    logger.error('Practice Settings Routes:Error updating practice settings:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to update practice settings',
@@ -116,7 +118,7 @@ router.post('/initialize', authenticate, async (req: Request, res: Response) => 
     const user = (req as any).user;
 
     // Check if user is administrator
-    if (!user.roles.includes('ADMINISTRATOR')) {
+    if (!user.roles.includes(UserRoles.ADMINISTRATOR)) {
       return res.status(403).json({
         success: false,
         error: 'Only administrators can initialize practice settings',
@@ -131,7 +133,7 @@ router.post('/initialize', authenticate, async (req: Request, res: Response) => 
       message: 'Practice settings initialized successfully',
     });
   } catch (error: any) {
-    console.error('Error initializing practice settings:', error);
+    logger.error('Practice Settings Routes:Error initializing practice settings:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to initialize practice settings',
@@ -148,7 +150,7 @@ router.patch('/ai-features', authenticate, async (req: Request, res: Response) =
     const user = (req as any).user;
 
     // Check if user is administrator
-    if (!user.roles.includes('ADMINISTRATOR')) {
+    if (!user.roles.includes(UserRoles.ADMINISTRATOR)) {
       return res.status(403).json({
         success: false,
         error: 'Only administrators can modify AI settings',
@@ -176,7 +178,7 @@ router.patch('/ai-features', authenticate, async (req: Request, res: Response) =
       message: `AI features ${enabled ? 'enabled' : 'disabled'} successfully`,
     });
   } catch (error: any) {
-    console.error('Error toggling AI features:', error);
+    logger.error('Practice Settings Routes:Error toggling AI features:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to toggle AI features',
@@ -193,7 +195,7 @@ router.patch('/compliance-lockout', authenticate, async (req: Request, res: Resp
     const user = (req as any).user;
 
     // Check if user is administrator
-    if (!user.roles.includes('ADMINISTRATOR')) {
+    if (!user.roles.includes(UserRoles.ADMINISTRATOR)) {
       return res.status(403).json({
         success: false,
         error: 'Only administrators can modify compliance settings',
@@ -238,7 +240,7 @@ router.patch('/compliance-lockout', authenticate, async (req: Request, res: Resp
       message: 'Compliance lockout settings updated successfully',
     });
   } catch (error: any) {
-    console.error('Error updating compliance lockout:', error);
+    logger.error('Practice Settings Routes:Error updating compliance lockout:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to update compliance lockout',
@@ -255,7 +257,7 @@ router.post('/test-email', authenticate, async (req: Request, res: Response) => 
     const user = (req as any).user;
 
     // Check if user is administrator
-    if (!user.roles.includes('ADMINISTRATOR')) {
+    if (!user.roles.includes(UserRoles.ADMINISTRATOR)) {
       return res.status(403).json({
         success: false,
         error: 'Only administrators can test email settings',
@@ -284,7 +286,7 @@ router.post('/test-email', authenticate, async (req: Request, res: Response) => 
       message: `Test email sent to ${testEmailAddress}`,
     });
   } catch (error: any) {
-    console.error('Error sending test email:', error);
+    logger.error('Practice Settings Routes:Error sending test email:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to send test email',

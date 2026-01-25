@@ -1,6 +1,7 @@
 import prisma from './database';
 import type { GroupSession, Appointment } from '@prisma/client';
 import { addDays, addWeeks, format, parseISO } from 'date-fns';
+import { AppointmentStatus as AppointmentStatusConst } from '@mentalspace/shared';
 
 /**
  * Module 3 Phase 2.1: Group Session Service
@@ -503,7 +504,7 @@ export async function generateRecurringSessions(
           appointmentType: groupSession.appointmentType.typeName,
           appointmentTypeId: groupSession.appointmentTypeId,
           serviceLocation: 'In-Office',
-          status: 'SCHEDULED',
+          status: AppointmentStatusConst.SCHEDULED,
           statusUpdatedBy: request.createdBy,
           createdBy: request.createdBy,
           lastModifiedBy: request.createdBy,

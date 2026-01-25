@@ -71,9 +71,10 @@ if (config.nodeEnv === 'production' || process.env.ENABLE_CLOUDWATCH === 'true')
   logger.info('📊 CloudWatch monitoring disabled in non-production environment');
 }
 
-// Test database connection
-prisma.$connect()
-  .then(async () => {
+// Initialize database and start background jobs
+(async () => {
+  try {
+    await prisma.$connect();
     logger.info('✅ Database connected successfully');
 
     // Run schema check to ensure all required columns exist
@@ -131,13 +132,14 @@ prisma.$connect()
     startReportScheduler();
     startDeliveryRetryProcessor();
     logger.info('✅ Report scheduler and delivery retry processor started');
-  })
-  .catch((error) => {
-    logger.error('❌ Database connection failed', { error: error.message });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('❌ Database connection failed', { error: errorMessage });
     if (config.nodeEnv === 'production') {
       process.exit(1);
     }
-  });
+  }
+})();
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {

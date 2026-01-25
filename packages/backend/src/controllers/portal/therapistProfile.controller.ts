@@ -3,6 +3,8 @@ import { Response } from 'express';
 import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { UserRoles } from '@mentalspace/shared';
+import { sendSuccess, sendUnauthorized, sendNotFound, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Get client's assigned therapist profile
@@ -13,10 +15,7 @@ export const getMyTherapistProfile = async (req: PortalRequest, res: Response) =
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get client's primary therapist
@@ -26,10 +25,7 @@ export const getMyTherapistProfile = async (req: PortalRequest, res: Response) =
     });
 
     if (!client?.primaryTherapistId) {
-      return res.status(404).json({
-        success: false,
-        message: 'No therapist assigned',
-      });
+      return sendNotFound(res, 'Therapist');
     }
 
     // Get therapist profile with client-facing information only
@@ -56,24 +52,15 @@ export const getMyTherapistProfile = async (req: PortalRequest, res: Response) =
     });
 
     if (!therapist) {
-      return res.status(404).json({
-        success: false,
-        message: 'Therapist profile not found',
-      });
+      return sendNotFound(res, 'Therapist profile');
     }
 
     logger.info(`Client ${clientId} viewed therapist profile ${therapist.id}`);
 
-    return res.status(200).json({
-      success: true,
-      data: therapist,
-    });
+    return sendSuccess(res, therapist);
   } catch (error) {
     logger.error('Error fetching therapist profile:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch therapist profile',
-    });
+    return sendServerError(res, 'Failed to fetch therapist profile');
   }
 };
 
@@ -87,17 +74,14 @@ export const getTherapistProfile = async (req: PortalRequest, res: Response) => 
     const { therapistId } = req.params;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get therapist profile with client-facing information only
     const therapist = await prisma.user.findFirst({
       where: {
         id: therapistId,
-        roles: { hasSome: ['CLINICIAN'] },
+        roles: { hasSome: [UserRoles.CLINICIAN] },
         isActive: true,
       },
       select: {
@@ -120,24 +104,15 @@ export const getTherapistProfile = async (req: PortalRequest, res: Response) => 
     });
 
     if (!therapist) {
-      return res.status(404).json({
-        success: false,
-        message: 'Therapist not found',
-      });
+      return sendNotFound(res, 'Therapist');
     }
 
     logger.info(`Client ${clientId} viewed therapist profile ${therapistId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: therapist,
-    });
+    return sendSuccess(res, therapist);
   } catch (error) {
     logger.error('Error fetching therapist profile:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch therapist profile',
-    });
+    return sendServerError(res, 'Failed to fetch therapist profile');
   }
 };
 
@@ -150,10 +125,7 @@ export const getAvailableTherapists = async (req: PortalRequest, res: Response) 
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get client's current therapist to exclude from list
@@ -165,7 +137,7 @@ export const getAvailableTherapists = async (req: PortalRequest, res: Response) 
     // Get all active clinicians who accept new clients
     const therapists = await prisma.user.findMany({
       where: {
-        roles: { hasSome: ['CLINICIAN'] },
+        roles: { hasSome: [UserRoles.CLINICIAN] },
         isActive: true,
         acceptsNewClients: true,
         id: {
@@ -194,16 +166,10 @@ export const getAvailableTherapists = async (req: PortalRequest, res: Response) 
 
     logger.info(`Client ${clientId} viewed available therapists list`);
 
-    return res.status(200).json({
-      success: true,
-      data: therapists,
-    });
+    return sendSuccess(res, therapists);
   } catch (error) {
     logger.error('Error fetching available therapists:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch available therapists',
-    });
+    return sendServerError(res, 'Failed to fetch available therapists');
   }
 };
 
@@ -217,15 +183,12 @@ export const searchTherapists = async (req: PortalRequest, res: Response) => {
     const { specialty, language, approach } = req.query;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Build dynamic where clause
     const where: any = {
-      roles: { hasSome: ['CLINICIAN'] },
+      roles: { hasSome: [UserRoles.CLINICIAN] },
       isActive: true,
       acceptsNewClients: true,
     };
@@ -272,15 +235,9 @@ export const searchTherapists = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Client ${clientId} searched therapists with filters`);
 
-    return res.status(200).json({
-      success: true,
-      data: therapists,
-    });
+    return sendSuccess(res, therapists);
   } catch (error) {
     logger.error('Error searching therapists:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to search therapists',
-    });
+    return sendServerError(res, 'Failed to search therapists');
   }
 };

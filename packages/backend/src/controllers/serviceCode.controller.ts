@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import prisma from '../services/database';
+// Phase 3.2: Removed direct prisma import - using service methods instead
+import * as serviceCodeService from '../services/serviceCode.service';
+import { sendSuccess, sendCreated, sendNotFound } from '../utils/apiResponse';
 
 /**
  * Get all service codes
@@ -9,36 +11,14 @@ export const getAllServiceCodes = async (req: Request, res: Response, next: Next
   try {
     const { isActive, serviceType, category } = req.query;
 
-    const where: any = {};
-
-    // Filter by active status
-    if (isActive !== undefined) {
-      where.isActive = isActive === 'true';
-    }
-
-    // Filter by service type
-    if (serviceType) {
-      where.serviceType = serviceType as string;
-    }
-
-    // Filter by category
-    if (category) {
-      where.category = category as string;
-    }
-
-    const serviceCodes = await prisma.serviceCode.findMany({
-      where,
-      orderBy: [
-        { serviceType: 'asc' },
-        { code: 'asc' },
-      ],
+    // Phase 3.2: Use service method instead of direct prisma call
+    const serviceCodes = await serviceCodeService.getAllServiceCodes({
+      isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      serviceType: serviceType as string | undefined,
+      category: category as string | undefined,
     });
 
-    res.status(200).json({
-      success: true,
-      data: serviceCodes,
-      count: serviceCodes.length,
-    });
+    return sendSuccess(res, serviceCodes);
   } catch (error) {
     next(error);
   }
@@ -52,21 +32,14 @@ export const getServiceCodeById = async (req: Request, res: Response, next: Next
   try {
     const { id } = req.params;
 
-    const serviceCode = await prisma.serviceCode.findUnique({
-      where: { id },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const serviceCode = await serviceCodeService.getServiceCodeById(id);
 
     if (!serviceCode) {
-      return res.status(404).json({
-        success: false,
-        message: 'Service code not found',
-      });
+      return sendNotFound(res, 'Service code');
     }
 
-    res.status(200).json({
-      success: true,
-      data: serviceCode,
-    });
+    return sendSuccess(res, serviceCode);
   } catch (error) {
     next(error);
   }
@@ -80,21 +53,14 @@ export const getServiceCodeByCode = async (req: Request, res: Response, next: Ne
   try {
     const { code } = req.params;
 
-    const serviceCode = await prisma.serviceCode.findUnique({
-      where: { code },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const serviceCode = await serviceCodeService.getServiceCodeByCode(code);
 
     if (!serviceCode) {
-      return res.status(404).json({
-        success: false,
-        message: 'Service code not found',
-      });
+      return sendNotFound(res, 'Service code');
     }
 
-    res.status(200).json({
-      success: true,
-      data: serviceCode,
-    });
+    return sendSuccess(res, serviceCode);
   } catch (error) {
     next(error);
   }
@@ -107,39 +73,12 @@ export const getServiceCodeByCode = async (req: Request, res: Response, next: Ne
  */
 export const createServiceCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const {
-      code,
-      description,
-      serviceType,
-      category,
-      defaultDuration,
-      defaultRate,
-      isActive,
-      requiresAuthorization,
-    } = req.body;
-
     const userId = req.user?.userId;
 
-    const serviceCode = await prisma.serviceCode.create({
-      data: {
-        code,
-        description,
-        serviceType,
-        category,
-        defaultDuration,
-        defaultRate,
-        isActive: isActive !== undefined ? isActive : true,
-        requiresAuthorization: requiresAuthorization !== undefined ? requiresAuthorization : false,
-        createdBy: userId,
-        lastModifiedBy: userId,
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const serviceCode = await serviceCodeService.createServiceCode(req.body, userId);
 
-    res.status(201).json({
-      success: true,
-      data: serviceCode,
-      message: 'Service code created successfully',
-    });
+    return sendCreated(res, serviceCode, 'Service code created successfully');
   } catch (error) {
     next(error);
   }
@@ -153,39 +92,12 @@ export const createServiceCode = async (req: Request, res: Response, next: NextF
 export const updateServiceCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const {
-      code,
-      description,
-      serviceType,
-      category,
-      defaultDuration,
-      defaultRate,
-      isActive,
-      requiresAuthorization,
-    } = req.body;
-
     const userId = req.user?.userId;
 
-    const serviceCode = await prisma.serviceCode.update({
-      where: { id },
-      data: {
-        ...(code && { code }),
-        ...(description && { description }),
-        ...(serviceType && { serviceType }),
-        ...(category !== undefined && { category }),
-        ...(defaultDuration !== undefined && { defaultDuration }),
-        ...(defaultRate !== undefined && { defaultRate }),
-        ...(isActive !== undefined && { isActive }),
-        ...(requiresAuthorization !== undefined && { requiresAuthorization }),
-        lastModifiedBy: userId,
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const serviceCode = await serviceCodeService.updateServiceCode(id, req.body, userId);
 
-    res.status(200).json({
-      success: true,
-      data: serviceCode,
-      message: 'Service code updated successfully',
-    });
+    return sendSuccess(res, serviceCode, 'Service code updated successfully');
   } catch (error) {
     next(error);
   }
@@ -201,19 +113,10 @@ export const deleteServiceCode = async (req: Request, res: Response, next: NextF
     const { id } = req.params;
     const userId = req.user?.userId;
 
-    const serviceCode = await prisma.serviceCode.update({
-      where: { id },
-      data: {
-        isActive: false,
-        lastModifiedBy: userId,
-      },
-    });
+    // Phase 3.2: Use service method instead of direct prisma call
+    const serviceCode = await serviceCodeService.deleteServiceCode(id, userId);
 
-    res.status(200).json({
-      success: true,
-      data: serviceCode,
-      message: 'Service code deactivated successfully',
-    });
+    return sendSuccess(res, serviceCode, 'Service code deactivated successfully');
   } catch (error) {
     next(error);
   }

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { UserRoles, AppointmentStatus as AppointmentStatusConst } from '@mentalspace/shared';
 
 const prisma = new PrismaClient();
 
@@ -90,7 +91,7 @@ const DATA_SOURCE_METADATA: Record<string, DataSourceMetadata> = {
       startTime: { type: 'string' },
       endTime: { type: 'string' },
       duration: { type: 'number' },
-      status: { type: 'enum', enumValues: ['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW', 'RESCHEDULED'] },
+      status: { type: 'enum', enumValues: Object.values(AppointmentStatusConst) },
       appointmentType: { type: 'string' },
       createdAt: { type: 'date' },
       updatedAt: { type: 'date' }
@@ -164,7 +165,7 @@ const DATA_SOURCE_METADATA: Record<string, DataSourceMetadata> = {
       email: { type: 'string' },
       firstName: { type: 'string' },
       lastName: { type: 'string' },
-      role: { type: 'enum', enumValues: ['ADMIN', 'CLINICIAN', 'BILLING', 'SUPPORT'] },
+      role: { type: 'enum', enumValues: Object.values(UserRoles) },
       isActive: { type: 'boolean' },
       createdAt: { type: 'date' },
       updatedAt: { type: 'date' }

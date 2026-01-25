@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { addDays, format, parse, addMinutes, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { UserRoles } from '@mentalspace/shared';
 import { calculateCompatibilityScore } from './compatibilityScoring.service';
+import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -199,7 +201,7 @@ async function findBestProviderAndSlots(
   // Get all available providers
   const providers = await prisma.user.findMany({
     where: {
-      roles: { hasSome: ['CLINICIAN', 'SUPERVISOR'] },
+      roles: { hasSome: [UserRoles.CLINICIAN, UserRoles.SUPERVISOR] },
       isActive: true,
       availableForScheduling: true,
       acceptsNewClients: true
@@ -221,7 +223,7 @@ async function findBestProviderAndSlots(
           requestId
         );
       } catch (error) {
-        console.error(`Error finding slots for provider ${provider.id}:`, error);
+        logger.error('Error finding slots for provider', { providerId: provider.id, error });
         return [];
       }
     })

@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger, { logControllerError } from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
+import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendError, sendServerError } from '../../utils/apiResponse';
 
 /**
  * Get client's assigned forms
@@ -13,10 +14,7 @@ export const getFormAssignments = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get all form assignments for this client
@@ -42,16 +40,10 @@ export const getFormAssignments = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${assignments.length} form assignments for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: assignments,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, assignments);
+  } catch (error) {
     logger.error('Error fetching form assignments:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch form assignments',
-    });
+    return sendServerError(res, 'Failed to fetch form assignments');
   }
 };
 
@@ -82,10 +74,7 @@ export const getFormDetails = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify the form is assigned to this client
@@ -98,10 +87,7 @@ export const getFormDetails = async (req: PortalRequest, res: Response) => {
     });
 
     if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Form assignment not found',
-      });
+      return sendNotFound(res, 'Form assignment');
     }
 
     const form = await prisma.intakeForm.findUnique({
@@ -109,10 +95,7 @@ export const getFormDetails = async (req: PortalRequest, res: Response) => {
     });
 
     if (!form) {
-      return res.status(404).json({
-        success: false,
-        message: 'Form not found',
-      });
+      return sendNotFound(res, 'Form');
     }
 
     logger.info(`Client ${clientId} accessed form ${formId}`);
@@ -125,19 +108,10 @@ export const getFormDetails = async (req: PortalRequest, res: Response) => {
         : form.formFieldsJson
     };
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        form: formToSend,
-        assignment,
-      },
-    });
+    return sendSuccess(res, { form: formToSend, assignment });
   } catch (error) {
     logger.error('Error fetching form details:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch form details',
-    });
+    return sendServerError(res, 'Failed to fetch form details');
   }
 };
 
@@ -158,10 +132,7 @@ export const submitForm = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Verify assignment
@@ -174,34 +145,22 @@ export const submitForm = async (req: PortalRequest, res: Response) => {
     });
 
     if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Form assignment not found',
-      });
+      return sendNotFound(res, 'Form assignment');
     }
 
     // Validate e-signature if provided
     if (signatureData || signedByName) {
       // If any signature field is provided, all required fields must be present
       if (!signatureData) {
-        return res.status(400).json({
-          success: false,
-          message: 'Signature image is required when submitting with e-signature',
-        });
+        return sendBadRequest(res, 'Signature image is required when submitting with e-signature');
       }
 
       if (!signedByName || signedByName.trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Signed name is required when submitting with e-signature',
-        });
+        return sendBadRequest(res, 'Signed name is required when submitting with e-signature');
       }
 
       if (!consentAgreed) {
-        return res.status(400).json({
-          success: false,
-          message: 'You must agree to the e-signature consent to submit',
-        });
+        return sendBadRequest(res, 'You must agree to the e-signature consent to submit');
       }
     }
 
@@ -247,18 +206,10 @@ export const submitForm = async (req: PortalRequest, res: Response) => {
       signedByName: signedByName || 'N/A',
     });
 
-    return res.status(200).json({
-      success: true,
-      message: 'Form submitted successfully',
-      data: submission,
-    });
+    return sendSuccess(res, submission, 'Form submitted successfully');
   } catch (error) {
     logger.error('Error submitting form:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to submit form',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    return sendServerError(res, 'Failed to submit form');
   }
 };
 
@@ -271,10 +222,7 @@ export const getSharedDocuments = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const documents = await prisma.sharedDocument.findMany({
@@ -290,16 +238,10 @@ export const getSharedDocuments = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${documents.length} shared documents for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: documents,
-    });
+    return sendSuccess(res, documents);
   } catch (error) {
     logger.error('Error fetching shared documents:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch shared documents',
-    });
+    return sendServerError(res, 'Failed to fetch shared documents');
   }
 };
 
@@ -313,10 +255,7 @@ export const downloadDocument = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const document = await prisma.sharedDocument.findFirst({
@@ -327,18 +266,12 @@ export const downloadDocument = async (req: PortalRequest, res: Response) => {
     });
 
     if (!document) {
-      return res.status(404).json({
-        success: false,
-        message: 'Document not found',
-      });
+      return sendNotFound(res, 'Document');
     }
 
     // Check if document is expired
     if (document.expiresAt && document.expiresAt < new Date()) {
-      return res.status(410).json({
-        success: false,
-        message: 'Document has expired',
-      });
+      return sendError(res, 410, 'Document has expired', 'EXPIRED');
     }
 
     // Update view count and last viewed timestamp
@@ -354,17 +287,10 @@ export const downloadDocument = async (req: PortalRequest, res: Response) => {
 
     // In a real implementation, this would stream the file from S3 or file storage
     // For now, return the document metadata
-    return res.status(200).json({
-      success: true,
-      message: 'Document download endpoint - implement file streaming from storage',
-      data: document,
-    });
+    return sendSuccess(res, document, 'Document download endpoint - implement file streaming from storage');
   } catch (error) {
     logger.error('Error downloading document:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to download document',
-    });
+    return sendServerError(res, 'Failed to download document');
   }
 };
 
@@ -377,10 +303,7 @@ export const uploadDocument = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // In a real implementation, this would handle file upload to S3 or file storage
@@ -400,17 +323,10 @@ export const uploadDocument = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Client ${clientId} uploaded document ${document.id}`);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Document uploaded successfully',
-      data: document,
-    });
+    return sendCreated(res, document, 'Document uploaded successfully');
   } catch (error) {
     logger.error('Error uploading document:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to upload document',
-    });
+    return sendServerError(res, 'Failed to upload document');
   }
 };
 
@@ -423,10 +339,7 @@ export const getUploadedDocuments = async (req: PortalRequest, res: Response) =>
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const documents = await prisma.clientDocument.findMany({
@@ -439,15 +352,9 @@ export const getUploadedDocuments = async (req: PortalRequest, res: Response) =>
 
     logger.info(`Retrieved ${documents.length} uploaded documents for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: documents,
-    });
+    return sendSuccess(res, documents);
   } catch (error) {
     logger.error('Error fetching uploaded documents:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch uploaded documents',
-    });
+    return sendServerError(res, 'Failed to fetch uploaded documents');
   }
 };

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as timeOffController from '../controllers/timeOff.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 const router = Router();
 
@@ -33,14 +34,14 @@ router.get(
 router.post(
   '/:id/approve',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   timeOffController.approveTimeOffRequest
 );
 
 router.post(
   '/:id/deny',
   authenticate,
-  authorize('ADMINISTRATOR'),
+  authorize(UserRoles.ADMINISTRATOR),
   timeOffController.denyTimeOffRequest
 );
 
@@ -48,7 +49,7 @@ router.post(
 router.post(
   '/',
   authenticate,
-  authorize('ADMINISTRATOR', 'THERAPIST'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN),
   timeOffController.createTimeOffRequest
 );
 
@@ -67,14 +68,14 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  authorize('ADMINISTRATOR', 'THERAPIST'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN),
   timeOffController.updateTimeOffRequest
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('ADMINISTRATOR', 'THERAPIST'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.CLINICIAN),
   timeOffController.deleteTimeOffRequest
 );
 

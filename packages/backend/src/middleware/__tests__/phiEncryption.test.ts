@@ -52,11 +52,10 @@ describe('PHI Encryption Middleware', () => {
       expect(encrypted.primaryPhone.split(':').length).toBe(3);
     });
 
-    it('should encrypt SSN in InsuranceInformation model', () => {
+    it('should encrypt memberId in InsuranceInformation model', () => {
       const insuranceData = {
         id: '456',
         memberId: 'MEM-123',
-        subscriberSSN: '123-45-6789',
         subscriberFirstName: 'Jane',
       };
 
@@ -64,11 +63,10 @@ describe('PHI Encryption Middleware', () => {
 
       expect(encrypted.id).toBe('456');
       expect(encrypted.memberId).not.toBe('MEM-123');
-      expect(encrypted.subscriberSSN).not.toBe('123-45-6789');
       expect(encrypted.subscriberFirstName).not.toBe('Jane');
 
-      // SSN should be encrypted
-      expect(encrypted.subscriberSSN.split(':').length).toBe(3);
+      // memberId should be encrypted
+      expect(encrypted.memberId.split(':').length).toBe(3);
     });
 
     it('should handle null and undefined values', () => {
@@ -147,15 +145,15 @@ describe('PHI Encryption Middleware', () => {
       expect(decrypted.primaryPhone).toBe('555-123-4567');
     });
 
-    it('should decrypt SSN correctly', () => {
-      const originalSSN = '123-45-6789';
+    it('should decrypt memberId correctly', () => {
+      const originalMemberId = 'MEM-123-456';
       const data = {
-        subscriberSSN: encryptValue(originalSSN),
+        memberId: encryptValue(originalMemberId),
       };
 
       const decrypted = decryptPHIFields('InsuranceInformation', data);
 
-      expect(decrypted.subscriberSSN).toBe(originalSSN);
+      expect(decrypted.memberId).toBe(originalMemberId);
     });
   });
 
@@ -207,11 +205,11 @@ describe('PHI Encryption Middleware', () => {
     });
 
     it('should build encrypted field search clause', () => {
-      const searchClause = buildEncryptedFieldSearch('subscriberSSN', '123-45-6789');
+      const searchClause = buildEncryptedFieldSearch('memberId', 'MEM-123-456');
 
-      expect(searchClause).toHaveProperty('subscriberSSNHash');
-      expect(typeof searchClause.subscriberSSNHash).toBe('string');
-      expect(searchClause.subscriberSSNHash.length).toBe(64); // SHA-256 hex
+      expect(searchClause).toHaveProperty('memberIdHash');
+      expect(typeof searchClause.memberIdHash).toBe('string');
+      expect(searchClause.memberIdHash.length).toBe(64); // SHA-256 hex
     });
   });
 
@@ -225,7 +223,6 @@ describe('PHI Encryption Middleware', () => {
 
     it('should have InsuranceInformation model PHI fields defined', () => {
       expect(PHI_FIELDS_BY_MODEL.InsuranceInformation).toBeDefined();
-      expect(PHI_FIELDS_BY_MODEL.InsuranceInformation).toContain('subscriberSSN');
       expect(PHI_FIELDS_BY_MODEL.InsuranceInformation).toContain('memberId');
     });
 

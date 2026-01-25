@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode, getErrorName, getErrorStack, getErrorStatusCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+import { UserRoles } from '@mentalspace/shared';
 import * as AmendmentService from '../services/amendment.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendBadRequest, sendNotFound, sendForbidden, sendServerError } from '../utils/apiResponse';
 
 /**
  * POST /api/v1/clinical-notes/:id/amend
@@ -9,22 +14,16 @@ import logger from '../utils/logger';
 export const amendClinicalNote = async (req: Request, res: Response) => {
   try {
     const { id: noteId } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
     const { reason, fieldsChanged, changeSummary, newNoteData } = req.body;
 
     // Validate input
     if (!reason || !fieldsChanged || !changeSummary || !newNoteData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Reason, fieldsChanged, changeSummary, and newNoteData are required',
-      });
+      return sendBadRequest(res, 'Reason, fieldsChanged, changeSummary, and newNoteData are required');
     }
 
     if (!Array.isArray(fieldsChanged) || fieldsChanged.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'fieldsChanged must be a non-empty array',
-      });
+      return sendBadRequest(res, 'fieldsChanged must be a non-empty array');
     }
 
     // Get client IP and user agent
@@ -52,24 +51,17 @@ export const amendClinicalNote = async (req: Request, res: Response) => {
       userId,
     });
 
-    return res.json({
-      success: true,
-      message: 'Note amended successfully. Signature required to finalize.',
-      data: {
-        amendment: result.amendment,
-        updatedNote: result.updatedNote,
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, {
+      amendment: result.amendment,
+      updatedNote: result.updatedNote,
+    }, 'Note amended successfully. Signature required to finalize.');
+  } catch (error) {
     logger.error('Error amending clinical note', {
-      error: error.message,
-      stack: error.stack,
+      error: getErrorMessage(error),
+      stack: getErrorStack(error),
     });
 
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to amend note',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to amend note');
   }
 };
 
@@ -80,22 +72,14 @@ export const amendClinicalNote = async (req: Request, res: Response) => {
 export const signAmendment = async (req: Request, res: Response) => {
   try {
     const { id: amendmentId } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
 
+    // Phase 3.2: Use service method instead of direct prisma call
     // Verify user exists
-    const prisma = (await import('../services/database')).default;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-      },
-    });
+    const user = await AmendmentService.findUserById(userId);
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+      return sendNotFound(res, 'User');
     }
 
     // Get client IP and user agent
@@ -120,21 +104,14 @@ export const signAmendment = async (req: Request, res: Response) => {
       signatureEventId: signatureEvent.id,
     });
 
-    return res.json({
-      success: true,
-      message: 'Amendment signed successfully',
-      data: signatureEvent,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, signatureEvent, 'Amendment signed successfully');
+  } catch (error) {
     logger.error('Error signing amendment', {
-      error: error.message,
-      stack: error.stack,
+      error: getErrorMessage(error),
+      stack: getErrorStack(error),
     });
 
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to sign amendment',
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to sign amendment');
   }
 };
 
@@ -145,57 +122,35 @@ export const signAmendment = async (req: Request, res: Response) => {
 export const getAmendments = async (req: Request, res: Response) => {
   try {
     const { id: noteId } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
 
+    // Phase 3.2: Use service methods instead of direct prisma calls
     // Verify user has access to this note
-    const prisma = (await import('../services/database')).default;
-    const note = await prisma.clinicalNote.findUnique({
-      where: { id: noteId },
-      select: {
-        id: true,
-        clinicianId: true,
-        cosignedBy: true,
-      },
-    });
+    const note = await AmendmentService.findNoteForAccessCheck(noteId);
 
     if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
+      return sendNotFound(res, 'Clinical note');
     }
 
     // Check permissions
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { roles: true },
-    });
+    const user = await AmendmentService.getUserRoles(userId);
 
     const hasAccess =
       note.clinicianId === userId ||
       note.cosignedBy === userId ||
-      user?.roles.includes('ADMINISTRATOR') ||
-      user?.roles.includes('SUPERVISOR');
+      user?.roles.includes(UserRoles.ADMINISTRATOR) ||
+      user?.roles.includes(UserRoles.SUPERVISOR);
 
     if (!hasAccess) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to view amendments for this note',
-      });
+      return sendForbidden(res, 'You do not have permission to view amendments for this note');
     }
 
     const amendments = await AmendmentService.getAmendmentsForNote(noteId);
 
-    return res.json({
-      success: true,
-      data: amendments,
-    });
-  } catch (error: any) {
-    logger.error('Error getting amendments', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get amendments',
-    });
+    return sendSuccess(res, amendments);
+  } catch (error) {
+    logger.error('Error getting amendments', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to get amendments');
   }
 };
 
@@ -206,57 +161,35 @@ export const getAmendments = async (req: Request, res: Response) => {
 export const getVersionHistory = async (req: Request, res: Response) => {
   try {
     const { id: noteId } = req.params;
-    const userId = (req as any).user.userId;
+    const userId = req.user!.userId;
 
+    // Phase 3.2: Use service methods instead of direct prisma calls
     // Verify user has access to this note
-    const prisma = (await import('../services/database')).default;
-    const note = await prisma.clinicalNote.findUnique({
-      where: { id: noteId },
-      select: {
-        id: true,
-        clinicianId: true,
-        cosignedBy: true,
-      },
-    });
+    const note = await AmendmentService.findNoteForAccessCheck(noteId);
 
     if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinical note not found',
-      });
+      return sendNotFound(res, 'Clinical note');
     }
 
     // Check permissions
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { roles: true },
-    });
+    const user = await AmendmentService.getUserRoles(userId);
 
     const hasAccess =
       note.clinicianId === userId ||
       note.cosignedBy === userId ||
-      user?.roles.includes('ADMINISTRATOR') ||
-      user?.roles.includes('SUPERVISOR');
+      user?.roles.includes(UserRoles.ADMINISTRATOR) ||
+      user?.roles.includes(UserRoles.SUPERVISOR);
 
     if (!hasAccess) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to view version history for this note',
-      });
+      return sendForbidden(res, 'You do not have permission to view version history for this note');
     }
 
     const versions = await AmendmentService.getVersionHistory(noteId);
 
-    return res.json({
-      success: true,
-      data: versions,
-    });
-  } catch (error: any) {
-    logger.error('Error getting version history', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get version history',
-    });
+    return sendSuccess(res, versions);
+  } catch (error) {
+    logger.error('Error getting version history', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to get version history');
   }
 };
 
@@ -269,10 +202,7 @@ export const compareVersions = async (req: Request, res: Response) => {
     const { version1, version2 } = req.query;
 
     if (!version1 || !version2) {
-      return res.status(400).json({
-        success: false,
-        message: 'Both version1 and version2 query parameters are required',
-      });
+      return sendBadRequest(res, 'Both version1 and version2 query parameters are required');
     }
 
     const comparison = await AmendmentService.compareVersions(
@@ -280,15 +210,9 @@ export const compareVersions = async (req: Request, res: Response) => {
       version2 as string
     );
 
-    return res.json({
-      success: true,
-      data: comparison,
-    });
-  } catch (error: any) {
-    logger.error('Error comparing versions', { error: error.message });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to compare versions',
-    });
+    return sendSuccess(res, comparison);
+  } catch (error) {
+    logger.error('Error comparing versions', { error: getErrorMessage(error) });
+    return sendServerError(res, 'Failed to compare versions');
   }
 };

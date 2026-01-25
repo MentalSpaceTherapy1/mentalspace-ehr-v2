@@ -11,33 +11,41 @@ import prisma from './database';
 import { ForbiddenError, UnauthorizedError } from '../utils/errors';
 import { JwtPayload } from '../utils/jwt';
 import logger from '../utils/logger';
+import { UserRoles, RoleGroups } from '@mentalspace/shared';
 
 // =============================================================================
 // ROLE DEFINITIONS
+// Note: Primary definitions are now in @mentalspace/shared/constants/roles
+// These local constants are kept for backward compatibility with existing code
 // =============================================================================
 
 /**
  * Roles that have full data access within their organization
  */
-const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMINISTRATOR'] as const;
+const ADMIN_ROLES = [UserRoles.SUPER_ADMIN, UserRoles.ADMINISTRATOR] as const;
 
 /**
  * Roles that have clinical data access
  */
-const CLINICAL_ROLES = ['CLINICAL_DIRECTOR', 'SUPERVISOR', 'CLINICIAN', 'INTERN'] as const;
+const CLINICAL_ROLES = [
+  UserRoles.CLINICAL_DIRECTOR,
+  UserRoles.SUPERVISOR,
+  UserRoles.CLINICIAN,
+  UserRoles.INTERN,
+] as const;
 
 /**
  * Roles that have billing data access
  */
-const BILLING_ROLES = ['BILLING_STAFF', 'OFFICE_MANAGER'] as const;
+const BILLING_ROLES = [UserRoles.BILLING_STAFF, UserRoles.OFFICE_MANAGER] as const;
 
 /**
  * Roles that have scheduling data access
  */
 const SCHEDULING_ROLES = [
-  'FRONT_DESK',
-  'SCHEDULER',
-  'RECEPTIONIST',
+  UserRoles.FRONT_DESK,
+  UserRoles.SCHEDULER,
+  UserRoles.RECEPTIONIST,
   ...CLINICAL_ROLES,
   ...ADMIN_ROLES,
 ] as const;
@@ -53,28 +61,28 @@ const hasAnyRole = (user: JwtPayload | undefined, roles: readonly string[]) =>
   roles.some(role => hasRole(user, role));
 
 export const isSuperAdmin = (user: JwtPayload | undefined) =>
-  hasRole(user, 'SUPER_ADMIN');
+  hasRole(user, UserRoles.SUPER_ADMIN);
 
 export const isAdministrator = (user: JwtPayload | undefined) =>
   hasAnyRole(user, ADMIN_ROLES);
 
 export const isSupervisor = (user: JwtPayload | undefined) =>
-  hasRole(user, 'SUPERVISOR');
+  hasRole(user, UserRoles.SUPERVISOR);
 
 export const isClinicalDirector = (user: JwtPayload | undefined) =>
-  hasRole(user, 'CLINICAL_DIRECTOR');
+  hasRole(user, UserRoles.CLINICAL_DIRECTOR);
 
 export const isClinician = (user: JwtPayload | undefined) =>
-  hasRole(user, 'CLINICIAN');
+  hasRole(user, UserRoles.CLINICIAN);
 
 export const isIntern = (user: JwtPayload | undefined) =>
-  hasRole(user, 'INTERN');
+  hasRole(user, UserRoles.INTERN);
 
 export const isBillingStaff = (user: JwtPayload | undefined) =>
   hasAnyRole(user, BILLING_ROLES);
 
 export const isFrontDesk = (user: JwtPayload | undefined) =>
-  hasAnyRole(user, ['FRONT_DESK', 'SCHEDULER', 'RECEPTIONIST']);
+  hasAnyRole(user, [UserRoles.FRONT_DESK, UserRoles.SCHEDULER, UserRoles.RECEPTIONIST]);
 
 export const isClinicalStaff = (user: JwtPayload | undefined) =>
   hasAnyRole(user, CLINICAL_ROLES);
@@ -196,7 +204,7 @@ export const assertCanAccessClient = async (
 
   // SUPER_ADMIN has full access
   if (isSuperAdmin(user)) {
-    logAccess(userId, 'client', clientId, 'SUPER_ADMIN', true);
+    logAccess(userId, 'client', clientId, UserRoles.SUPER_ADMIN, true);
     return;
   }
 
@@ -218,13 +226,13 @@ export const assertCanAccessClient = async (
 
   // ADMINISTRATOR has access to all clients (organization filtering not yet implemented)
   if (isAdministrator(user)) {
-    logAccess(userId, 'client', clientId, 'ADMINISTRATOR', true);
+    logAccess(userId, 'client', clientId, UserRoles.ADMINISTRATOR, true);
     return;
   }
 
   // Billing staff can view client for billing purposes
   if (allowBillingView && isBillingStaff(user)) {
-    logAccess(userId, 'client', clientId, 'BILLING_STAFF', true);
+    logAccess(userId, 'client', clientId, UserRoles.BILLING_STAFF, true);
     return;
   }
 
@@ -302,7 +310,7 @@ export const assertCanAccessClinicalNote = async (
 
   // SUPER_ADMIN has full access
   if (isSuperAdmin(user)) {
-    logAccess(userId, 'clinicalNote', noteId, 'SUPER_ADMIN', true);
+    logAccess(userId, 'clinicalNote', noteId, UserRoles.SUPER_ADMIN, true);
     return;
   }
 
@@ -330,7 +338,7 @@ export const assertCanAccessClinicalNote = async (
 
   // Administrator has access to all clinical notes (organization filtering not yet implemented)
   if (isAdministrator(user)) {
-    logAccess(userId, 'clinicalNote', noteId, 'ADMINISTRATOR', true);
+    logAccess(userId, 'clinicalNote', noteId, UserRoles.ADMINISTRATOR, true);
     return;
   }
 
@@ -418,7 +426,7 @@ export const assertCanAccessAppointment = async (
 
   // SUPER_ADMIN has full access
   if (isSuperAdmin(user)) {
-    logAccess(userId, 'appointment', appointmentId, 'SUPER_ADMIN', true);
+    logAccess(userId, 'appointment', appointmentId, UserRoles.SUPER_ADMIN, true);
     return;
   }
 
@@ -440,7 +448,7 @@ export const assertCanAccessAppointment = async (
 
   // Administrator has access to all appointments (organization filtering not yet implemented)
   if (isAdministrator(user)) {
-    logAccess(userId, 'appointment', appointmentId, 'ADMINISTRATOR', true);
+    logAccess(userId, 'appointment', appointmentId, UserRoles.ADMINISTRATOR, true);
     return;
   }
 
@@ -458,7 +466,7 @@ export const assertCanAccessAppointment = async (
 
   // Billing staff have access for billing purposes (organization filtering not yet implemented)
   if (isBillingStaff(user)) {
-    logAccess(userId, 'appointment', appointmentId, 'BILLING_STAFF', true);
+    logAccess(userId, 'appointment', appointmentId, UserRoles.BILLING_STAFF, true);
     return;
   }
 
@@ -518,7 +526,7 @@ export const assertCanAccessBillingData = async (
 
   // SUPER_ADMIN has full access
   if (isSuperAdmin(user)) {
-    logAccess(userId, 'billing', clientId || 'all', 'SUPER_ADMIN', true);
+    logAccess(userId, 'billing', clientId || 'all', UserRoles.SUPER_ADMIN, true);
     return;
   }
 

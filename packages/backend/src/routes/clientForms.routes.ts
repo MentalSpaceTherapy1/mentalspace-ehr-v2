@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireClientAccess } from '../middleware/clientAccess';
+import { UserRoles } from '@mentalspace/shared';
 import * as clientFormsController from '../controllers/clientForms.controller';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
-router.use(authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'));
+router.use(authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN));
 
 /**
  * Form Library & Assignment Routes
@@ -30,4 +31,3 @@ router.post('/:clientId/forms/:assignmentId/transfer-to-demographics', clientFor
 router.post('/:clientId/forms/:assignmentId/transfer-to-intake', clientFormsController.transferToIntake);
 
 export default router;
-

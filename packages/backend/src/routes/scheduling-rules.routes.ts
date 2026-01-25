@@ -8,6 +8,7 @@ import {
   getEffectiveRules,
 } from '../controllers/scheduling-rules.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { UserRoles } from '@mentalspace/shared';
 
 /**
  * Module 7: Scheduling Rules Routes
@@ -28,7 +29,7 @@ router.use(authenticate);
  */
 router.get(
   '/',
-  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR, UserRoles.CLINICIAN),
   getSchedulingRules
 );
 
@@ -40,7 +41,7 @@ router.get(
  */
 router.get(
   '/effective/:clinicianId',
-  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR, UserRoles.CLINICIAN),
   getEffectiveRules
 );
 
@@ -51,7 +52,7 @@ router.get(
  */
 router.get(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.SUPERVISOR, UserRoles.CLINICIAN),
   getSchedulingRuleById
 );
 
@@ -62,7 +63,7 @@ router.get(
  */
 router.post(
   '/',
-  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.CLINICIAN),
   createSchedulingRule
 );
 
@@ -73,7 +74,7 @@ router.post(
  */
 router.put(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.CLINICIAN),
   updateSchedulingRule
 );
 
@@ -84,7 +85,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('ADMINISTRATOR', 'SUPER_ADMIN', 'CLINICIAN'),
+  authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPER_ADMIN, UserRoles.CLINICIAN),
   deleteSchedulingRule
 );
 

@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireClientAccess } from '../middleware/clientAccess';
+import { UserRoles } from '@mentalspace/shared';
 import * as clientDocumentsController from '../controllers/clientDocuments.controller';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
-router.use(authorize('ADMINISTRATOR', 'SUPERVISOR', 'CLINICIAN'));
+router.use(authorize(UserRoles.ADMINISTRATOR, UserRoles.SUPERVISOR, UserRoles.CLINICIAN));
 
 /**
  * Document Sharing Routes
@@ -24,4 +25,3 @@ router.delete('/:clientId/documents/shared/:documentId', clientDocumentsControll
 router.get('/:clientId/documents/shared/:documentId/analytics', clientDocumentsController.getDocumentAnalytics);
 
 export default router;
-

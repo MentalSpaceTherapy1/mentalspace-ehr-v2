@@ -8,6 +8,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ClientRelationshipService } from '../services/clientRelationship.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { BadRequestError } from '../utils/errors';
+import { sendSuccess, sendCreated } from '../utils/apiResponse';
 
 // ============================================================================
 // CLIENT RELATIONSHIP ENDPOINTS
@@ -72,11 +73,7 @@ export const createRelationship = asyncHandler(
       createdBy: userId
     });
 
-    res.status(201).json({
-      success: true,
-      data: relationship,
-      message: 'Client relationship created successfully'
-    });
+    return sendCreated(res, relationship, 'Client relationship created successfully');
   }
 );
 
@@ -90,10 +87,7 @@ export const getRelationshipById = asyncHandler(
 
     const relationship = await ClientRelationshipService.getRelationshipById(id);
 
-    res.json({
-      success: true,
-      data: relationship
-    });
+    return sendSuccess(res, relationship);
   }
 );
 
@@ -140,11 +134,7 @@ export const updateRelationship = asyncHandler(
       isActive
     });
 
-    res.json({
-      success: true,
-      data: relationship,
-      message: 'Relationship updated successfully'
-    });
+    return sendSuccess(res, relationship, 'Relationship updated successfully');
   }
 );
 
@@ -158,11 +148,7 @@ export const deleteRelationship = asyncHandler(
 
     const relationship = await ClientRelationshipService.deleteRelationship(id);
 
-    res.json({
-      success: true,
-      data: relationship,
-      message: 'Relationship deactivated successfully'
-    });
+    return sendSuccess(res, relationship, 'Relationship deactivated successfully');
   }
 );
 
@@ -176,10 +162,7 @@ export const getFamilyTree = asyncHandler(
 
     const familyTree = await ClientRelationshipService.getFamilyTree(clientId);
 
-    res.json({
-      success: true,
-      data: familyTree
-    });
+    return sendSuccess(res, familyTree);
   }
 );
 
@@ -197,11 +180,7 @@ export const getClientRelationships = asyncHandler(
       activeOnly === 'true'
     );
 
-    res.json({
-      success: true,
-      data: relationships,
-      count: relationships.length
-    });
+    return sendSuccess(res, { relationships, count: relationships.length });
   }
 );
 
@@ -262,11 +241,7 @@ export const addProvider = asyncHandler(
       createdBy: userId
     });
 
-    res.status(201).json({
-      success: true,
-      data: provider,
-      message: 'Provider added to care team successfully'
-    });
+    return sendCreated(res, provider, 'Provider added to care team successfully');
   }
 );
 
@@ -280,10 +255,7 @@ export const getProviderById = asyncHandler(
 
     const provider = await ClientRelationshipService.getProviderById(id);
 
-    res.json({
-      success: true,
-      data: provider
-    });
+    return sendSuccess(res, provider);
   }
 );
 
@@ -326,11 +298,7 @@ export const updateProvider = asyncHandler(
       endDate: endDate ? new Date(endDate) : undefined
     });
 
-    res.json({
-      success: true,
-      data: provider,
-      message: 'Provider updated successfully'
-    });
+    return sendSuccess(res, provider, 'Provider updated successfully');
   }
 );
 
@@ -344,11 +312,7 @@ export const deleteProvider = asyncHandler(
 
     const provider = await ClientRelationshipService.deleteProvider(id);
 
-    res.json({
-      success: true,
-      data: provider,
-      message: 'Provider removed from care team successfully'
-    });
+    return sendSuccess(res, provider, 'Provider removed from care team successfully');
   }
 );
 
@@ -362,10 +326,7 @@ export const getCareTeam = asyncHandler(
 
     const careTeam = await ClientRelationshipService.getCareTeam(clientId);
 
-    res.json({
-      success: true,
-      data: careTeam
-    });
+    return sendSuccess(res, careTeam);
   }
 );
 
@@ -383,10 +344,6 @@ export const getClientProviders = asyncHandler(
       activeOnly === 'true'
     );
 
-    res.json({
-      success: true,
-      data: providers,
-      count: providers.length
-    });
+    return sendSuccess(res, { providers, count: providers.length });
   }
 );

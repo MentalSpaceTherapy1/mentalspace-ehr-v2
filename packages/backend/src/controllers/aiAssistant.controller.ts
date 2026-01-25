@@ -19,21 +19,26 @@
  */
 
 import { Request, Response } from 'express';
+import { getErrorMessage, getErrorCode } from '../utils/errorHelpers';
+// Phase 5.4: Import consolidated Express types to eliminate `as any` casts
+import '../types/express.d';
+import { UserRoles } from '@mentalspace/shared';
 import { aiAssistantService, UserContext } from '../services/ai/aiAssistant.service';
 import logger from '../utils/logger';
+import { sendSuccess, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError, sendError } from '../utils/apiResponse';
 
 /**
  * Build user context from request
  */
 function buildUserContext(req: Request): UserContext {
-  const user = req.user as any;
+  const user = req.user;
   return {
-    userId: user?.id || '',
-    role: user?.role || 'CLINICIAN',
-    permissions: user?.permissions || [],
-    clinicianId: user?.clinicianId || user?.id,
-    departmentId: user?.departmentId,
-    supervisorId: user?.supervisorId
+    userId: user?.userId || '',
+    role: (user as { role?: string })?.role || UserRoles.CLINICIAN,
+    permissions: (user as { permissions?: string[] })?.permissions || [],
+    clinicianId: (user as { clinicianId?: string })?.clinicianId || user?.userId,
+    departmentId: (user as { departmentId?: string })?.departmentId,
+    supervisorId: (user as { supervisorId?: string })?.supervisorId
   };
 }
 
@@ -50,26 +55,17 @@ export const chat = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const { message, conversationId, clientId } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Message is required'
-      });
+      return sendBadRequest(res, 'Message is required');
     }
 
     if (message.length > 10000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Message too long (max 10,000 characters)'
-      });
+      return sendBadRequest(res, 'Message too long (max 10,000 characters)');
     }
 
     const userContext = buildUserContext(req);
@@ -87,29 +83,22 @@ export const chat = async (req: Request, res: Response) => {
       topic: response.topic
     });
 
-    return res.json({
-      success: true,
-      data: {
-        conversationId: response.conversationId,
-        messageId: response.messageId,
-        content: response.content,
-        topic: response.topic,
-        dataSourcesAccessed: response.dataSourcesAccessed,
-        tokensUsed: response.tokensUsed
-      }
+    return sendSuccess(res, {
+      conversationId: response.conversationId,
+      messageId: response.messageId,
+      content: response.content,
+      topic: response.topic,
+      dataSourcesAccessed: response.dataSourcesAccessed,
+      tokensUsed: response.tokensUsed
     });
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('AI Assistant chat error', {
-      error: error.message,
+      error: getErrorMessage(error),
       userId: req.user?.id
     });
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to process message',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    return sendServerError(res, 'Failed to process message');
   }
 };
 
@@ -124,19 +113,13 @@ export const streamChat = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const { message, conversationId } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Message is required'
-      });
+      return sendBadRequest(res, 'Message is required');
     }
 
     const userContext = buildUserContext(req);
@@ -166,18 +149,15 @@ export const streamChat = async (req: Request, res: Response) => {
     res.write('data: [DONE]\n\n');
     res.end();
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('AI Assistant stream error', {
-      error: error.message,
+      error: getErrorMessage(error),
       userId: req.user?.id
     });
 
     // If headers haven't been sent, send error response
     if (!res.headersSent) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to stream response'
-      });
+      return sendServerError(res, 'Failed to stream response');
     }
 
     // If streaming, send error in stream format
@@ -198,10 +178,7 @@ export const getConversations = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
@@ -214,23 +191,15 @@ export const getConversations = async (req: Request, res: Response) => {
       includeArchived
     });
 
-    return res.json({
-      success: true,
-      data: conversations,
-      total: conversations.length,
-      pagination: { limit, offset }
-    });
+    return sendSuccess(res, conversations);
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to get conversations', {
-      error: error.message,
+      error: getErrorMessage(error),
       userId: req.user?.id
     });
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get conversations'
-    });
+    return sendServerError(res, 'Failed to get conversations');
   }
 };
 
@@ -244,10 +213,7 @@ export const getConversation = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const { id } = req.params;
@@ -255,27 +221,18 @@ export const getConversation = async (req: Request, res: Response) => {
     const conversation = await aiAssistantService.getFullConversation(id, userId);
 
     if (!conversation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Conversation not found'
-      });
+      return sendNotFound(res, 'Conversation');
     }
 
-    return res.json({
-      success: true,
-      data: conversation
-    });
+    return sendSuccess(res, conversation);
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to get conversation', {
-      error: error.message,
+      error: getErrorMessage(error),
       conversationId: req.params.id
     });
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get conversation'
-    });
+    return sendServerError(res, 'Failed to get conversation');
   }
 };
 
@@ -289,10 +246,7 @@ export const deleteConversation = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const { id } = req.params;
@@ -301,21 +255,15 @@ export const deleteConversation = async (req: Request, res: Response) => {
 
     logger.info('AI conversation deleted', { conversationId: id, userId });
 
-    return res.json({
-      success: true,
-      message: 'Conversation deleted'
-    });
+    return sendSuccess(res, null, 'Conversation deleted');
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to delete conversation', {
-      error: error.message,
+      error: getErrorMessage(error),
       conversationId: req.params.id
     });
 
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to delete conversation'
-    });
+    return sendServerError(res, getErrorMessage(error) || 'Failed to delete conversation');
   }
 };
 
@@ -329,31 +277,22 @@ export const archiveConversation = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const { id } = req.params;
 
     await aiAssistantService.archiveConversation(id, userId);
 
-    return res.json({
-      success: true,
-      message: 'Conversation archived'
-    });
+    return sendSuccess(res, null, 'Conversation archived');
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to archive conversation', {
-      error: error.message,
+      error: getErrorMessage(error),
       conversationId: req.params.id
     });
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to archive conversation'
-    });
+    return sendServerError(res, 'Failed to archive conversation');
   }
 };
 
@@ -368,39 +307,27 @@ export const togglePinConversation = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const { id } = req.params;
     const { pinned } = req.body;
 
     if (typeof pinned !== 'boolean') {
-      return res.status(400).json({
-        success: false,
-        message: 'pinned field (boolean) is required'
-      });
+      return sendBadRequest(res, 'pinned field (boolean) is required');
     }
 
     await aiAssistantService.togglePinConversation(id, userId, pinned);
 
-    return res.json({
-      success: true,
-      message: pinned ? 'Conversation pinned' : 'Conversation unpinned'
-    });
+    return sendSuccess(res, null, pinned ? 'Conversation pinned' : 'Conversation unpinned');
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to toggle pin', {
-      error: error.message,
+      error: getErrorMessage(error),
       conversationId: req.params.id
     });
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update conversation'
-    });
+    return sendServerError(res, 'Failed to update conversation');
   }
 };
 
@@ -414,19 +341,13 @@ export const generateReport = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return sendUnauthorized(res, 'Authentication required');
     }
 
     const { request } = req.body;
 
     if (!request || typeof request !== 'string') {
-      return res.status(400).json({
-        success: false,
-        message: 'Report request is required'
-      });
+      return sendBadRequest(res, 'Report request is required');
     }
 
     const userContext = buildUserContext(req);
@@ -442,21 +363,15 @@ export const generateReport = async (req: Request, res: Response) => {
       reportType: report.reportType
     });
 
-    return res.json({
-      success: true,
-      data: report
-    });
+    return sendSuccess(res, report);
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to generate report', {
-      error: error.message,
+      error: getErrorMessage(error),
       userId: req.user?.id
     });
 
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to generate report'
-    });
+    return sendServerError(res, 'Failed to generate report');
   }
 };
 
@@ -468,21 +383,13 @@ export const healthCheck = async (req: Request, res: Response) => {
   try {
     const health = await aiAssistantService.healthCheck();
 
-    const statusCode = health.status === 'healthy' ? 200 : 503;
+    if (health.status === 'healthy') {
+      return sendSuccess(res, health);
+    } else {
+      return sendError(res, 503, 'Service unavailable', 'SERVICE_UNAVAILABLE');
+    }
 
-    return res.status(statusCode).json({
-      success: health.status === 'healthy',
-      data: health
-    });
-
-  } catch (error: any) {
-    return res.status(503).json({
-      success: false,
-      data: {
-        status: 'unhealthy',
-        anthropic: false,
-        database: false
-      }
-    });
+  } catch (error) {
+    return sendError(res, 503, 'Service unavailable', 'SERVICE_UNAVAILABLE');
   }
 };

@@ -3,6 +3,8 @@ import logger from '../../utils/logger';
 import prisma from '../../services/database';
 import { PortalRequest } from '../../types/express.d';
 import * as billingService from '../../services/portal/billing.service';
+import { sendSuccess, sendBadRequest, sendUnauthorized, sendServerError } from '../../utils/apiResponse';
+import { getErrorMessage, getErrorCode } from '../../utils/errorHelpers';
 
 /**
  * Get balance information for client
@@ -13,10 +15,7 @@ export const getBalance = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Get all charges for the client
@@ -41,22 +40,16 @@ export const getBalance = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved balance for client ${clientId}: $${currentBalance.toFixed(2)}`);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        currentBalance,
-        totalCharges,
-        totalPayments,
-        lastPaymentDate: lastPayment?.paymentDate || null,
-        lastPaymentAmount: lastPayment ? lastPayment.paymentAmount.toNumber() : null,
-      },
+    return sendSuccess(res, {
+      currentBalance,
+      totalCharges,
+      totalPayments,
+      lastPaymentDate: lastPayment?.paymentDate || null,
+      lastPaymentAmount: lastPayment ? lastPayment.paymentAmount.toNumber() : null,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching balance:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch balance information',
-    });
+    return sendServerError(res, 'Failed to fetch balance information');
   }
 };
 
@@ -69,10 +62,7 @@ export const getCharges = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const charges = await prisma.chargeEntry.findMany({
@@ -91,16 +81,10 @@ export const getCharges = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${formattedCharges.length} charges for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: formattedCharges,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, formattedCharges);
+  } catch (error) {
     logger.error('Error fetching charges:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch charges',
-    });
+    return sendServerError(res, 'Failed to fetch charges');
   }
 };
 
@@ -113,10 +97,7 @@ export const getPayments = async (req: PortalRequest, res: Response) => {
     const clientId = req.portalAccount?.clientId;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     const payments = await prisma.paymentRecord.findMany({
@@ -134,16 +115,10 @@ export const getPayments = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Retrieved ${formattedPayments.length} payments for client ${clientId}`);
 
-    return res.status(200).json({
-      success: true,
-      data: formattedPayments,
-    });
-  } catch (error: any) {
+    return sendSuccess(res, formattedPayments);
+  } catch (error) {
     logger.error('Error fetching payments:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch payment history',
-    });
+    return sendServerError(res, 'Failed to fetch payment history');
   }
 };
 
@@ -157,18 +132,12 @@ export const makePayment = async (req: PortalRequest, res: Response) => {
     const { amount, paymentMethodId, description } = req.body;
 
     if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-      });
+      return sendUnauthorized(res, 'Unauthorized');
     }
 
     // Validate amount
     if (!amount || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid payment amount',
-      });
+      return sendBadRequest(res, 'Invalid payment amount');
     }
 
     // Calculate current balance to validate payment
@@ -176,10 +145,7 @@ export const makePayment = async (req: PortalRequest, res: Response) => {
 
     // Validate payment doesn't exceed balance
     if (amount > balanceInfo.currentBalance) {
-      return res.status(400).json({
-        success: false,
-        message: 'Payment amount cannot exceed current balance',
-      });
+      return sendBadRequest(res, 'Payment amount cannot exceed current balance');
     }
 
     // Process payment via Stripe using billing service
@@ -192,26 +158,17 @@ export const makePayment = async (req: PortalRequest, res: Response) => {
 
     logger.info(`Payment processed for client ${clientId}: $${amount} (${result.stripePaymentIntent})`);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Payment processed successfully',
-      data: {
-        id: result.paymentRecord.id,
-        amount: result.paymentRecord.paymentAmount,
-        transactionId: result.stripePaymentIntent,
-        paymentDate: result.paymentRecord.paymentDate,
-      },
-    });
-  } catch (error: any) {
+    return sendSuccess(res, {
+      id: result.paymentRecord.id,
+      amount: result.paymentRecord.paymentAmount,
+      transactionId: result.stripePaymentIntent,
+      paymentDate: result.paymentRecord.paymentDate,
+    }, 'Payment processed successfully');
+  } catch (error) {
     logger.error('Error processing payment:', error);
 
     // Handle specific error messages from Stripe
-    const message = error.message || 'Failed to process payment';
-    const statusCode = error.statusCode || 500;
-
-    return res.status(statusCode).json({
-      success: false,
-      message,
-    });
+    const message = getErrorMessage(error) || 'Failed to process payment';
+    return sendServerError(res, message);
   }
 };
