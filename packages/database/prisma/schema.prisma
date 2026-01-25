@@ -4159,7 +4159,7 @@ model PriorAuthorizationQuestionnaire {
 
   // Header Fields (auto-populated, stored for record)
   clientName       String
-  clientDOB        DateTime
+  clientDOB        DateTime?
   diagnosisDisplay String   @db.Text // Full display string with ICD-10 codes
   insuranceDisplay String   @db.VarChar(255) // Payer name + member ID
 
