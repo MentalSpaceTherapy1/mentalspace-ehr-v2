@@ -4,6 +4,7 @@ import api from '../../lib/api';
 import UseSessionDialog from './UseSessionDialog';
 import RenewalDialog from './RenewalDialog';
 import ConfirmModal from '../ConfirmModal';
+import PAQuestionnaireForm from './PAQuestionnaireForm';
 
 interface PriorAuthorization {
   id: string;
@@ -47,6 +48,7 @@ export default function AuthorizationCard({ authorization, onEdit }: Authorizati
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -281,6 +283,12 @@ export default function AuthorizationCard({ authorization, onEdit }: Authorizati
             </button>
           )}
           <button
+            onClick={() => setShowQuestionnaire(true)}
+            className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-bold text-sm"
+          >
+            Questionnaire
+          </button>
+          <button
             onClick={() => onEdit(authorization)}
             className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-bold text-sm"
           >
@@ -308,6 +316,14 @@ export default function AuthorizationCard({ authorization, onEdit }: Authorizati
         <RenewalDialog
           authorization={authorization}
           onClose={() => setShowRenewalDialog(false)}
+        />
+      )}
+
+      {/* Clinical Questionnaire Form */}
+      {showQuestionnaire && (
+        <PAQuestionnaireForm
+          priorAuthorizationId={authorization.id}
+          onClose={() => setShowQuestionnaire(false)}
         />
       )}
 

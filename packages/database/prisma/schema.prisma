@@ -327,6 +327,10 @@ model User {
   // Treatment Plan Reminder Tracking
   treatmentPlanReminders TreatmentPlanReminder[] @relation("TreatmentPlanReminders")
 
+  // Prior Authorization Questionnaire Relations
+  paQuestionnairesCreated  PriorAuthorizationQuestionnaire[] @relation("QuestionnaireCreator")
+  paQuestionnairesModified PriorAuthorizationQuestionnaire[] @relation("QuestionnaireModifier")
+
   @@map("users")
 }
 
@@ -4045,6 +4049,33 @@ model ClientProvider {
 // PHASE 2: PRIOR AUTHORIZATIONS (Module 2)
 // ============================================================================
 
+// Clinical questionnaire severity levels - used for all symptom dropdowns
+enum SeverityLevel {
+  NA
+  MILD
+  MODERATE
+  SEVERE
+}
+
+// Transportation availability options
+enum TransportationOption {
+  YES
+  NO
+  OTHER
+}
+
+// Prior Authorization status enum
+enum PAStatus {
+  DRAFT
+  SUBMITTED
+  PENDING
+  APPROVED
+  DENIED
+  APPEAL
+  EXPIRED
+  EXHAUSTED
+}
+
 model PriorAuthorization {
   id          String @id @default(uuid())
   clientId    String
@@ -4109,6 +4140,7 @@ model PriorAuthorization {
   renewedFrom        PriorAuthorization?  @relation("AuthRenewal", fields: [renewedFromId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   renewedTo          PriorAuthorization[] @relation("AuthRenewal")
   creator            User                 @relation("AuthCreator", fields: [createdBy], references: [id])
+  questionnaire      PriorAuthorizationQuestionnaire?
 
   @@index([clientId])
   @@index([insuranceId])
@@ -4116,6 +4148,107 @@ model PriorAuthorization {
   @@index([endDate])
   @@index([sessionsRemaining])
   @@map("prior_authorizations")
+}
+
+// Clinical questionnaire for Prior Authorization requests
+// Matches CMO form structure for CareSource, Amerigroup, Peach State
+model PriorAuthorizationQuestionnaire {
+  id                   String             @id @default(uuid())
+  priorAuthorizationId String             @unique
+  priorAuthorization   PriorAuthorization @relation(fields: [priorAuthorizationId], references: [id], onDelete: Cascade)
+
+  // Header Fields (auto-populated, stored for record)
+  clientName       String
+  clientDOB        DateTime
+  diagnosisDisplay String   @db.Text // Full display string with ICD-10 codes
+  insuranceDisplay String   @db.VarChar(255) // Payer name + member ID
+
+  // === ANXIETY DISORDERS (6 fields) ===
+  anxiety_obsessions_compulsions SeverityLevel @default(NA)
+  anxiety_generalized            SeverityLevel @default(NA)
+  anxiety_panic_attacks          SeverityLevel @default(NA)
+  anxiety_phobias                SeverityLevel @default(NA)
+  anxiety_somatic_complaints     SeverityLevel @default(NA)
+  anxiety_ptsd_symptoms          SeverityLevel @default(NA)
+
+  // === MANIA (5 fields) ===
+  mania_insomnia         SeverityLevel @default(NA)
+  mania_grandiosity      SeverityLevel @default(NA)
+  mania_pressured_speech SeverityLevel @default(NA)
+  mania_racing_thoughts  SeverityLevel @default(NA)
+  mania_poor_judgement   SeverityLevel @default(NA)
+
+  // === PSYCHOTIC DISORDERS (5 fields) ===
+  psychotic_delusions_paranoia   SeverityLevel @default(NA)
+  psychotic_selfcare_issues      SeverityLevel @default(NA)
+  psychotic_hallucinations       SeverityLevel @default(NA)
+  psychotic_disorganized_thought SeverityLevel @default(NA)
+  psychotic_loose_associations   SeverityLevel @default(NA)
+
+  // === DEPRESSION (9 fields) ===
+  depression_impaired_concentration  SeverityLevel @default(NA)
+  depression_impaired_memory         SeverityLevel @default(NA)
+  depression_psychomotor_retardation SeverityLevel @default(NA)
+  depression_sexual_issues           SeverityLevel @default(NA)
+  depression_appetite_disturbance    SeverityLevel @default(NA)
+  depression_irritability            SeverityLevel @default(NA)
+  depression_agitation               SeverityLevel @default(NA)
+  depression_sleep_disturbance       SeverityLevel @default(NA)
+  depression_hopelessness            SeverityLevel @default(NA)
+
+  // === SUBSTANCE ABUSE (7 dropdowns + 1 text) ===
+  substance_loss_of_control     SeverityLevel @default(NA)
+  substance_amnesic_episodes    SeverityLevel @default(NA)
+  substance_legal_problems      SeverityLevel @default(NA)
+  substance_alcohol_abuse       SeverityLevel @default(NA)
+  substance_opiate_abuse        SeverityLevel @default(NA)
+  substance_prescription_abuse  SeverityLevel @default(NA)
+  substance_polysubstance_abuse SeverityLevel @default(NA)
+  substance_other_drugs         String? // Text field for specifying other drugs
+
+  // === PERSONALITY DISORDER (7 dropdowns + 1 text) ===
+  personality_oddness            SeverityLevel @default(NA)
+  personality_oppositional       SeverityLevel @default(NA)
+  personality_disregard_law      SeverityLevel @default(NA)
+  personality_self_injuries      SeverityLevel @default(NA)
+  personality_entitlement        SeverityLevel @default(NA)
+  personality_passive_aggressive SeverityLevel @default(NA)
+  personality_dependency         SeverityLevel @default(NA)
+  personality_enduring_traits    String? // Text field for specifying traits
+
+  // === NARRATIVE SECTIONS (12 fields) ===
+  narrative_risk_of_harm            String  @db.Text // Risk of Harm - SI/HI concerns
+  narrative_functional_status       String  @db.Text // Functional Status - ADLs, role fulfillment
+  narrative_comorbidities           String  @db.Text // Co-morbidities - medical/SUD conditions
+  narrative_environmental_stressors String  @db.Text // Environmental Stressors - home/work/school
+  narrative_natural_support         String  @db.Text // Natural Support in the Environment
+  narrative_treatment_response      String  @db.Text // Response to Treatment + Discharge Goals
+  narrative_level_of_care           String  @db.Text // Level of Care - engagement
+  transportation_available          TransportationOption @default(YES)
+  transportation_notes              String? @db.Text // Additional notes if OTHER
+  narrative_history                 String  @db.Text // History - MH treatment history
+  narrative_presenting_problems     String  @db.Text // Presenting Problems - current issues
+  narrative_other_clinical_info     String? @db.Text // Other Clinical Information (optional)
+  narrative_current_medications     String  @db.Text // Current Medications list
+
+  // === AI GENERATION TRACKING ===
+  aiGeneratedAt        DateTime? // When AI generation was triggered
+  aiGeneratedBy        String?   // User who triggered generation
+  aiDataSourcesSummary Json?     // Which records were used { progressNotes: [], assessments: [], etc }
+  aiConfidenceScores   Json?     // Per-field confidence { anxiety_generalized: 0.92, ... }
+
+  // === METADATA ===
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      String
+  lastModifiedBy String
+
+  // Relations
+  creator  User @relation("QuestionnaireCreator", fields: [createdBy], references: [id])
+  modifier User @relation("QuestionnaireModifier", fields: [lastModifiedBy], references: [id])
+
+  @@index([priorAuthorizationId])
+  @@map("prior_authorization_questionnaires")
 }
 
 // ============================================================================

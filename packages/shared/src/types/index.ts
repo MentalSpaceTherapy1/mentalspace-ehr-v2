@@ -2,6 +2,9 @@
 import { UserRole } from '../constants/roles';
 export { UserRole };
 
+// Prior Authorization Questionnaire Types
+export * from './priorAuthQuestionnaire';
+
 // API Response Types
 export interface ApiResponse<T = any> {
   success: boolean;

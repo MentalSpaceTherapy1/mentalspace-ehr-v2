@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as priorAuthController from '../controllers/priorAuthorization.controller';
+import * as questionnaireController from '../controllers/priorAuthQuestionnaire.controller';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -61,5 +62,45 @@ router.post('/:id/renew', priorAuthController.renewAuthorization);
  * Delete prior authorization
  */
 router.delete('/:id', priorAuthController.deleteAuthorization);
+
+// =============================================================================
+// QUESTIONNAIRE ROUTES
+// =============================================================================
+
+/**
+ * GET /api/v1/prior-authorizations/:id/questionnaire
+ * Get clinical questionnaire for a prior authorization
+ */
+router.get('/:id/questionnaire', questionnaireController.getQuestionnaire);
+
+/**
+ * POST /api/v1/prior-authorizations/:id/questionnaire
+ * Create or update clinical questionnaire for a prior authorization
+ */
+router.post('/:id/questionnaire', questionnaireController.saveQuestionnaire);
+
+/**
+ * DELETE /api/v1/prior-authorizations/:id/questionnaire
+ * Delete clinical questionnaire (for draft PA deletion)
+ */
+router.delete('/:id/questionnaire', questionnaireController.deleteQuestionnaire);
+
+/**
+ * POST /api/v1/prior-authorizations/:id/copy-questionnaire
+ * Copy questionnaire from previous PA to new PA (for reauthorization)
+ */
+router.post('/:id/copy-questionnaire', questionnaireController.copyQuestionnaire);
+
+/**
+ * POST /api/v1/prior-authorizations/:id/generate-with-lisa
+ * Generate questionnaire content using Lisa AI from patient chart data
+ */
+router.post('/:id/generate-with-lisa', questionnaireController.generateWithLisa);
+
+/**
+ * GET /api/v1/prior-authorizations/:id/pdf
+ * Generate and download PDF of the PA questionnaire
+ */
+router.get('/:id/pdf', questionnaireController.downloadPdf);
 
 export default router;
