@@ -34,7 +34,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       success: true,
       data: settings,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Practice Settings Routes:Error fetching practice settings:', error);
     res.status(500).json({
       success: false,
@@ -55,7 +55,7 @@ router.get('/public', async (req: Request, res: Response) => {
       success: true,
       data: settings,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Practice Settings Routes:Error fetching public settings:', error);
     res.status(500).json({
       success: false,
@@ -100,7 +100,7 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
       data: updatedSettings,
       message: 'Practice settings updated successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Practice Settings Routes:Error updating practice settings:', error);
     res.status(500).json({
       success: false,
@@ -132,7 +132,7 @@ router.post('/initialize', authenticate, async (req: Request, res: Response) => 
       data: settings,
       message: 'Practice settings initialized successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Practice Settings Routes:Error initializing practice settings:', error);
     res.status(500).json({
       success: false,
@@ -177,7 +177,7 @@ router.patch('/ai-features', authenticate, async (req: Request, res: Response) =
       data: updatedSettings,
       message: `AI features ${enabled ? 'enabled' : 'disabled'} successfully`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Practice Settings Routes:Error toggling AI features:', error);
     res.status(500).json({
       success: false,
@@ -239,7 +239,7 @@ router.patch('/compliance-lockout', authenticate, async (req: Request, res: Resp
       data: updatedSettings,
       message: 'Compliance lockout settings updated successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Practice Settings Routes:Error updating compliance lockout:', error);
     res.status(500).json({
       success: false,
@@ -285,7 +285,7 @@ router.post('/test-email', authenticate, async (req: Request, res: Response) => 
       success: true,
       message: `Test email sent to ${testEmailAddress}`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Practice Settings Routes:Error sending test email:', error);
     res.status(500).json({
       success: false,

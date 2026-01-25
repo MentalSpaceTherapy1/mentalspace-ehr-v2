@@ -1,7 +1,7 @@
 import { auditLogger } from '../utils/logger';
 import prisma from './database';
 import { UserRoles } from '@mentalspace/shared';
-import { AppointmentStatus, WaitlistStatus } from '@mentalspace/database';
+import { Prisma, AppointmentStatus, WaitlistStatus } from '@mentalspace/database';
 
 interface WaitlistEntryData {
   clientId: string;
@@ -72,7 +72,7 @@ export async function getWaitlistEntries(filters: {
   clinicianId?: string;
   priority?: string;
 }) {
-  const where: any = {};
+  const where: Prisma.WaitlistEntryWhereInput = {};
 
   if (filters.status) {
     where.status = filters.status;

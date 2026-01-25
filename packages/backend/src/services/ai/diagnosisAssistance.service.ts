@@ -72,7 +72,7 @@ class DiagnosisAssistanceService {
       );
 
       return this.parseResponse(response);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Diagnosis Assistance Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`Failed to generate diagnosis assistance: ${error.message}`);
     }

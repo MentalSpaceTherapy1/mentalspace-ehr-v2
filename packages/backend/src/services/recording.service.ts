@@ -163,7 +163,7 @@ export async function startRecording(
       status: 'RECORDING',
       startedAt: sessionRecording.recordingStartedAt,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to start recording', {
       error: error.message,
       roomSid,
@@ -249,7 +249,7 @@ export async function stopRecording(
       duration,
       stoppedAt: endedAt,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to stop recording', {
       error: error.message,
       recordingSid,
@@ -289,7 +289,7 @@ export async function getRecordingStatus(recordingSid: string): Promise<any> {
       mediaUrl: recording.links?.media,
       dateCreated: recording.dateCreated,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get recording status', {
       error: error.message,
       recordingSid,
@@ -410,7 +410,7 @@ export async function downloadAndUploadRecording(
     });
 
     return updatedRecording;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to download and upload recording', {
       error: error.message,
       recordingSid,
@@ -484,7 +484,7 @@ export async function deleteRecording(
       userId,
       reason,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete recording', {
       error: error.message,
       recordingId,
@@ -516,7 +516,7 @@ export async function getSessionRecordings(sessionId: string, userId: string): P
     }
 
     return recordings;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get session recordings', {
       error: error.message,
       sessionId,
@@ -590,7 +590,7 @@ export async function listRecordings(filters: {
     ]);
 
     return { recordings, total };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to list recordings', {
       error: error.message,
       filters,
@@ -630,7 +630,7 @@ export async function logRecordingAccess(data: {
     });
 
     // Update view/download counts
-    const updateData: any = {
+    const updateData: Prisma.SessionRecordingUpdateInput = {
       accessLog,
       lastAccessedAt: new Date(),
       lastModifiedBy: data.userId,
@@ -646,7 +646,7 @@ export async function logRecordingAccess(data: {
       where: { id: data.recordingId },
       data: updateData,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to log recording access', {
       error: error.message,
       recordingId: data.recordingId,

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import userService from '../services/user.service';
+import userService, { UserFilters } from '../services/user.service';
 import authService from '../services/auth.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { UserRole } from '@mentalspace/shared';
@@ -12,7 +12,7 @@ export class UserController {
    * GET /api/v1/users
    */
   getUsers = asyncHandler(async (req: Request, res: Response) => {
-    const filters: any = {};
+    const filters: UserFilters = {};
 
     if (req.query.search) filters.search = req.query.search as string;
     if (req.query.role) filters.role = req.query.role as UserRole;

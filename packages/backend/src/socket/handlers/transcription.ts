@@ -97,13 +97,13 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
       try {
         const status = await transcriptionService.getTranscriptionStatus(sessionId);
         socket.emit('transcription:status', status);
-      } catch (err: any) {
+      } catch (err: unknown) {
         logger.warn('Failed to get initial transcription status', {
           error: err.message,
           sessionId,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error joining transcription session', {
         error: error.message,
         userId,
@@ -137,7 +137,7 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         sessionId,
         message: 'Successfully left transcription session',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error leaving transcription session', {
         error: error.message,
         userId,
@@ -176,7 +176,7 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         userId,
         socketId: socket.id,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error tracking participant join', {
         error: error.message,
         userId,
@@ -212,7 +212,7 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         userId,
         socketId: socket.id,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error tracking participant leave', {
         error: error.message,
         userId,
@@ -285,7 +285,7 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error starting audio streaming', {
         error: error.message,
         userId,
@@ -334,7 +334,7 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error stopping audio streaming', {
         error: error.message,
         userId,
@@ -414,7 +414,7 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         });
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error processing audio chunk', {
         error: error.message,
         userId,
@@ -460,7 +460,7 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         sessionId,
         count: transcripts.length,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error getting transcript history', {
         error: error.message,
         userId,
@@ -483,7 +483,7 @@ export function setupTranscriptionHandlers(io: SocketIOServer, socket: Socket) {
         timestamp: new Date().toISOString(),
         connected: true,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error handling transcription ping', {
         error: error.message,
         userId,

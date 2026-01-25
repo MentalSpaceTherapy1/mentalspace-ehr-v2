@@ -57,7 +57,7 @@ export async function getSchedulingRules(filters?: {
   includeOrgWide?: boolean;
 }): Promise<SchedulingRule[]> {
   try {
-    const where: any = {};
+    const where: Prisma.SchedulingRuleWhereInput = {};
 
     if (filters?.isActive !== undefined) {
       where.isActive = filters.isActive;
@@ -93,7 +93,7 @@ export async function getSchedulingRules(filters?: {
     });
 
     return rules;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get scheduling rules', {
       error: error.message,
       filters,
@@ -122,7 +122,7 @@ export async function getSchedulingRuleById(id: string): Promise<SchedulingRule 
     });
 
     return rule;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get scheduling rule by ID', {
       error: error.message,
       id,
@@ -207,7 +207,7 @@ export async function createSchedulingRule(
     });
 
     return rule;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create scheduling rule', {
       error: error.message,
       data,
@@ -265,7 +265,7 @@ export async function updateSchedulingRule(
     });
 
     return rule;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update scheduling rule', {
       error: error.message,
       id,
@@ -296,7 +296,7 @@ export async function deleteSchedulingRule(id: string): Promise<void> {
       ruleId: id,
       clinicianId: existingRule.clinicianId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete scheduling rule', {
       error: error.message,
       id,
@@ -358,7 +358,7 @@ export async function getEffectiveRules(clinicianId: string): Promise<Scheduling
       createdAt: new Date(),
       updatedAt: new Date(),
     } as SchedulingRule;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get effective rules', {
       error: error.message,
       clinicianId,
@@ -428,7 +428,7 @@ export async function validateSlot(
     }
 
     return { valid: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to validate slot', {
       error: error.message,
       clinicianId,

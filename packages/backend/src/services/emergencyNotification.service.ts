@@ -107,7 +107,7 @@ This is an automated emergency notification from MentalSpace EHR.
         supervisorEmail: supervisor.email,
         sessionId: data.sessionId,
       });
-    } catch (emailError: any) {
+    } catch (emailError: unknown) {
       logger.error('Failed to send emergency email', {
         error: emailError.message,
         supervisorId: supervisor.id,
@@ -129,7 +129,7 @@ This is an automated emergency notification from MentalSpace EHR.
           supervisorId: supervisor.id,
           supervisorPhone: supervisor.phoneNumber,
         });
-      } catch (smsError: any) {
+      } catch (smsError: unknown) {
         logger.error('Failed to send emergency SMS', {
           error: smsError.message,
           supervisorId: supervisor.id,
@@ -161,7 +161,7 @@ This is an automated emergency notification from MentalSpace EHR.
       supervisorEmail: supervisor.email,
       notificationSent: true,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to notify supervisor', {
       error: error.message,
       sessionId: data.sessionId,
@@ -203,7 +203,7 @@ export async function notifyEmergencyContact(
       contactPhone: contact.phone,
       notificationAttempted: true,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to notify emergency contact', {
       error: error.message,
       sessionId,
@@ -247,7 +247,7 @@ export async function log911Call(
       success: true,
       timestamp: new Date(),
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to log 911 call', {
       error: error.message,
       sessionId,
@@ -325,7 +325,7 @@ MentalSpace EHR
       success: true,
       resourceCount: resources.length,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to send crisis resources to client', {
       error: error.message,
       sessionId,
@@ -405,7 +405,7 @@ export async function generateEmergencyIncidentReport(sessionId: string) {
     });
 
     return report;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to generate emergency incident report', {
       error: error.message,
       sessionId,

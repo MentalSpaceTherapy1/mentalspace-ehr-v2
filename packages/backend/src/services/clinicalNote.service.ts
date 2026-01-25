@@ -220,7 +220,7 @@ class ClinicalNoteService {
       });
 
       return { valid: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { valid: false, message: error.message };
     }
   }
@@ -402,7 +402,7 @@ class ClinicalNoteService {
       });
 
       return note;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle Prisma unique constraint violation
       if (error.code === 'P2002') {
         throw new BadRequestError(

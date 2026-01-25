@@ -148,7 +148,7 @@ export async function getAllChangeRequests(filters?: {
   onlySensitive?: boolean;
 }) {
   try {
-    const where: any = {};
+    const where: Prisma.TherapistChangeRequestWhereInput = {};
 
     if (filters?.status) {
       where.status = filters.status;
@@ -394,7 +394,7 @@ export async function getChangeRequestStatistics(filters?: {
   endDate?: Date;
 }) {
   try {
-    const where: any = {};
+    const where: Prisma.TherapistChangeRequestWhereInput = {};
 
     if (filters?.clinicianId) {
       where.currentClinicianId = filters.clinicianId;

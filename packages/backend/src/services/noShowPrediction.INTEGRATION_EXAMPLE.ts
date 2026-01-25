@@ -494,7 +494,7 @@ export async function getAppointmentRisk(appointmentId: string) {
       success: true,
       data: prediction,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message,
@@ -511,7 +511,7 @@ export async function recalculateAppointmentRisk(appointmentId: string) {
       message: 'Risk recalculated successfully',
       data: prediction,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message,
@@ -535,7 +535,7 @@ export async function getHighRiskAppointmentsRoute(
       data: appointments,
       count: appointments.length,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message,
@@ -552,7 +552,7 @@ export async function recalculateAllRisksRoute(daysAhead: number = 30) {
       message: 'Batch risk recalculation complete',
       data: results,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message,
@@ -575,7 +575,7 @@ export async function getModelAccuracyRoute(
       success: true,
       data: accuracy,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message,

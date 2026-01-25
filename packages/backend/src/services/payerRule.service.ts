@@ -143,7 +143,7 @@ export async function getPayerRuleById(id: string): Promise<PayerRule | null> {
  * Get all payer rules with optional filters
  */
 export async function getPayerRules(filters?: PayerRuleFilters): Promise<PayerRule[]> {
-  const where: any = {};
+  const where: Prisma.PayerRuleWhereInput = {};
 
   if (filters?.payerId) {
     where.payerId = filters.payerId;
@@ -229,7 +229,7 @@ export async function testRuleAgainstNotes(
   }
 
   // Find notes that would match this rule
-  const dateFilter: any = {};
+  const dateFilter: Prisma.ClinicalNoteWhereInput = {};
   if (startDate) dateFilter.gte = startDate;
   if (endDate) dateFilter.lte = endDate;
 

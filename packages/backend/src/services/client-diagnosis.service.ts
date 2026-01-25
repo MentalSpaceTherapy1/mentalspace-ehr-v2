@@ -232,7 +232,7 @@ export async function getClientDiagnoses(
     diagnosisType?: string;
   }
 ) {
-  const where: any = { clientId };
+  const where: Prisma.ClientDiagnosisWhereInput = { clientId };
 
   if (options?.activeOnly) {
     where.status = 'ACTIVE';
@@ -327,7 +327,7 @@ export async function updateDiagnosisStatus(
 ) {
   const diagnosis = await getDiagnosisById(diagnosisId);
 
-  const updateData: any = {
+  const updateData: Prisma.ClientDiagnosisUpdateInput = {
     status,
     lastReviewedDate: new Date()
   };

@@ -130,14 +130,14 @@ async function checkDueSoonReminders() {
           clinicianId: note.clinicianId,
           hoursUntilDue,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Error sending due soon reminder', {
           error: error.message,
           noteId: note.id,
         });
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error in checkDueSoonReminders job', {
       error: error.message,
     });
@@ -228,14 +228,14 @@ async function checkOverdueReminders() {
         if (config.enableEscalation && hoursOverdue >= config.escalationAfterHours) {
           await sendEscalationReminder(note, hoursOverdue, config.escalateTo);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Error sending overdue reminder', {
           error: error.message,
           noteId: note.id,
         });
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error in checkOverdueReminders job', {
       error: error.message,
     });
@@ -291,7 +291,7 @@ async function sendEscalationReminder(
         });
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error sending escalation reminder', {
       error: error.message,
       noteId: note.id,
@@ -373,14 +373,14 @@ async function checkSundayWarnings() {
             clinicianId: note.clinicianId,
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Error sending Sunday warning', {
           error: error.message,
           noteId: note.id,
         });
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error in checkSundayWarnings job', {
       error: error.message,
     });
@@ -464,14 +464,14 @@ async function sendDailyDigests() {
             upcomingCount: upcomingNotes.length,
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Error sending daily digest', {
           error: error.message,
           clinicianId: clinician.id,
         });
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error in sendDailyDigests job', {
       error: error.message,
     });

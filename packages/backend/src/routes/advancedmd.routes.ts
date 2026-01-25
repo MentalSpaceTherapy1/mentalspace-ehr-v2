@@ -97,7 +97,7 @@ router.get('/patients/:clientId/sync-status', requireAuth, async (req: Request, 
       syncError: client.amdSyncError,
       isSynced: !!client.advancedMDPatientId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error getting patient sync status:', error);
     res.status(500).json({ error: 'Failed to get sync status', message: error.message });
   }
@@ -132,7 +132,7 @@ router.post('/patients/:clientId/sync', requireAdminOrBilling, async (req: Reque
         syncLogId: result.syncLogId,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error syncing patient:', error);
     res.status(500).json({ error: 'Failed to sync patient', message: error.message });
   }
@@ -157,7 +157,7 @@ router.get('/patients/:clientId/sync-logs', requireAdminOrBilling, async (req: R
     });
 
     res.json({ logs });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error getting patient sync logs:', error);
     res.status(500).json({ error: 'Failed to get sync logs', message: error.message });
   }
@@ -202,7 +202,7 @@ router.get('/appointments/:appointmentId/sync-status', requireAuth, async (req: 
       syncError: appointment.amdSyncError,
       isSynced: !!appointment.advancedMDVisitId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error getting appointment sync status:', error);
     res.status(500).json({ error: 'Failed to get sync status', message: error.message });
   }
@@ -258,7 +258,7 @@ router.post('/appointments/:appointmentId/sync', requireAdminOrBilling, async (r
         appointmentId: result.appointmentId,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error syncing appointment:', error);
     res.status(500).json({ error: 'Failed to sync appointment', message: error.message });
   }
@@ -295,7 +295,7 @@ router.post('/appointments/bulk-sync', requireAdminOrBilling, async (req: Reques
       errorCount,
       results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error bulk syncing appointments:', error);
     res.status(500).json({ error: 'Failed to bulk sync appointments', message: error.message });
   }
@@ -322,7 +322,7 @@ router.post('/appointments/pull-updates', requireAdminOrBilling, async (req: Req
       updatedCount: updates.length,
       updates,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error pulling appointment updates:', error);
     res.status(500).json({ error: 'Failed to pull updates', message: error.message });
   }
@@ -362,7 +362,7 @@ router.post('/appointments/:appointmentId/status-update', requireAdminOrBilling,
       status,
       syncedToAMD: !!appointment.advancedMDVisitId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error updating appointment status:', error);
     res.status(500).json({ error: 'Failed to update status', message: error.message });
   }
@@ -432,7 +432,7 @@ router.get('/sync/dashboard', requireAdminOrBilling, async (req: Request, res: R
       recentActivity: recentLogs,
       errorCount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error getting dashboard:', error);
     res.status(500).json({ error: 'Failed to get dashboard', message: error.message });
   }
@@ -452,7 +452,7 @@ router.get('/sync/logs', requireAdminOrBilling, async (req: Request, res: Respon
       offset = '0',
     } = req.query;
 
-    const where: any = {};
+    const where: Prisma.AdvancedMDSyncLogWhereInput = {};
 
     if (syncType) where.syncType = syncType;
     if (syncStatus) where.syncStatus = syncStatus;
@@ -477,7 +477,7 @@ router.get('/sync/logs', requireAdminOrBilling, async (req: Request, res: Respon
         hasMore: parseInt(offset as string) + parseInt(limit as string) < totalCount,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error getting sync logs:', error);
     res.status(500).json({ error: 'Failed to get sync logs', message: error.message });
   }
@@ -519,7 +519,7 @@ router.get('/sync/stats', requireAdminOrBilling, async (req: Request, res: Respo
       syncCounts,
       averageDuration: avgDuration._avg.durationMs,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error getting sync stats:', error);
     res.status(500).json({ error: 'Failed to get sync stats', message: error.message });
   }
@@ -558,7 +558,7 @@ router.get('/sync/config', requireAdminOrBilling, async (req: Request, res: Resp
       tokenExpiresAt: config.tokenExpiresAt,
       hasValidToken: config.tokenExpiresAt ? new Date(config.tokenExpiresAt) > new Date() : false,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Error getting config:', error);
     res.status(500).json({ error: 'Failed to get config', message: error.message });
   }
@@ -585,7 +585,7 @@ router.post('/sync/test-connection', requireAdminOrBilling, async (req: Request,
       connected: true,
       timestamp: new Date(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Routes: Connection test failed:', error);
     res.status(200).json({
       success: false,

@@ -423,7 +423,7 @@ class OnboardingService {
   async getOnboardingChecklists(filters: OnboardingFilters) {
     const { mentorId, completed, page = 1, limit = 20 } = filters;
 
-    const where: any = {};
+    const where: Prisma.OnboardingChecklistWhereInput = {};
 
     if (mentorId) {
       where.mentorId = mentorId;

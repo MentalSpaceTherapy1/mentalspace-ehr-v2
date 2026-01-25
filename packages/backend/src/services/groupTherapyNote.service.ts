@@ -236,7 +236,7 @@ export async function createGroupTherapyNote(params: CreateGroupTherapyNoteParam
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create group therapy note', {
       error: error.message,
       groupId: params.groupId,
@@ -325,7 +325,7 @@ export async function updateGroupAttendance(params: UpdateAttendanceParams) {
     });
 
     return updatedRecords;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update group attendance', {
       error: error.message,
       noteId: params.noteId,
@@ -358,7 +358,7 @@ export async function getGroupAttendance(appointmentId: string) {
     });
 
     return attendance;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get group attendance', {
       error: error.message,
       appointmentId,
@@ -388,7 +388,7 @@ export async function getGroupMembers(groupId: string) {
     });
 
     return members;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get group members', {
       error: error.message,
       groupId,

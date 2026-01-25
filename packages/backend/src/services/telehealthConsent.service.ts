@@ -65,7 +65,7 @@ export async function getOrCreateTelehealthConsent(data: CreateConsentData) {
     });
 
     return newConsent;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get or create telehealth consent', {
       error: error.message,
       clientId: data.clientId,
@@ -112,7 +112,7 @@ export async function signTelehealthConsent(
     });
 
     return consent;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to sign telehealth consent', {
       error: error.message,
       consentId,
@@ -143,7 +143,7 @@ export async function hasValidTelehealthConsent(
     });
 
     return !!consent;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to check telehealth consent', {
       error: error.message,
       clientId,
@@ -178,7 +178,7 @@ export async function withdrawTelehealthConsent(
     });
 
     return consent;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to withdraw telehealth consent', {
       error: error.message,
       consentId,
@@ -198,7 +198,7 @@ export async function getClientTelehealthConsents(clientId: string) {
     });
 
     return consents;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get client telehealth consents', {
       error: error.message,
       clientId,

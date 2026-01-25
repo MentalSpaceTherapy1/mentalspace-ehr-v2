@@ -246,7 +246,7 @@ export const getAssessmentHistory = async (req: PortalRequest, res: Response) =>
       return sendUnauthorized(res, 'Unauthorized');
     }
 
-    const where: any = {
+    const where: Prisma.AssessmentAssignmentWhereInput = {
       clientId,
       status: 'COMPLETED',
     };

@@ -34,7 +34,7 @@ export async function getUpcomingAppointments(clientId: string) {
     });
 
     return appointments;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get upcoming appointments', {
       error: error.message,
       clientId,
@@ -72,7 +72,7 @@ export async function getPastAppointments(clientId: string, limit: number = 20) 
     });
 
     return appointments;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get past appointments', {
       error: error.message,
       clientId,
@@ -109,7 +109,7 @@ export async function getAppointmentDetails(appointmentId: string, clientId: str
     }
 
     return appointment;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get appointment details', {
       error: error.message,
       appointmentId,
@@ -155,7 +155,7 @@ export async function requestCancellation(appointmentId: string, clientId: strin
     });
 
     return updated;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to cancel appointment', {
       error: error.message,
       appointmentId,

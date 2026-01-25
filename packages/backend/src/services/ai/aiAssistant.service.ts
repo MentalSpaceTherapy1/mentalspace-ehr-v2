@@ -363,7 +363,7 @@ class AIAssistantService {
         tokensUsed
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('AI Assistant error processing message', {
         error: error.message,
         userId,
@@ -442,7 +442,7 @@ class AIAssistantService {
 
       yield { type: 'done', content: fullResponse, messageId: assistantMessage.id };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('AI Assistant streaming error', { error: error.message, userId });
       yield { type: 'error', content: error.message };
     }
@@ -471,7 +471,7 @@ class AIAssistantService {
           requiresStaffAccess: parsed.requiresStaffAccess || false
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.warn('Intent detection fallback to GENERAL', { error: error.message });
     }
 
@@ -574,7 +574,7 @@ class AIAssistantService {
           context.metrics = await this.gatherOperationalContext(intent, userContext);
           break;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error gathering context', { error: error.message, intent: intent.topic });
     }
 
@@ -885,7 +885,7 @@ class AIAssistantService {
           end: now.toISOString()
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error gathering billing context', { error: error.message });
       return { error: 'Unable to retrieve billing data' };
     }
@@ -975,7 +975,7 @@ class AIAssistantService {
         },
         departments: departmentStats
       }];
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error gathering staff context', { error: error.message });
       return [{ error: 'Unable to retrieve staff data' }];
     }
@@ -1058,7 +1058,7 @@ class AIAssistantService {
           end: now.toISOString()
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error gathering HR context', { error: error.message });
       return { error: 'Unable to retrieve HR data' };
     }
@@ -1127,7 +1127,7 @@ class AIAssistantService {
           end: now.toISOString()
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error gathering compliance context', { error: error.message });
       return { error: 'Unable to retrieve compliance data' };
     }
@@ -1523,7 +1523,7 @@ Please provide a helpful, accurate response based on the data provided. If you r
         where: { id: conversationId },
         data: { title: title.trim().slice(0, 100) }
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.warn('Failed to generate conversation title', { error: error.message });
     }
   }

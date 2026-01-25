@@ -45,7 +45,7 @@ export async function createTwilioRoom(uniqueName: string, recordingEnabled = fa
       dateCreated: room.dateCreated,
       maxParticipants: room.maxParticipants,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create Twilio room', {
       error: error.message,
       uniqueName,
@@ -96,7 +96,7 @@ export async function generateTwilioAccessToken(
       identity,
       roomName,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to generate Twilio access token', {
       error: error.message,
       roomName,
@@ -130,7 +130,7 @@ export async function endTwilioRoom(roomSid: string) {
       status: room.status,
       duration: room.duration,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to end Twilio room', {
       error: error.message,
       roomSid,
@@ -159,7 +159,7 @@ export async function getTwilioRoom(roomSid: string) {
       duration: room.duration,
       maxParticipants: room.maxParticipants,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get Twilio room', {
       error: error.message,
       roomSid,
@@ -186,7 +186,7 @@ export async function getRoomParticipants(roomSid: string) {
       dateCreated: p.dateCreated,
       duration: p.duration,
     }));
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get room participants', {
       error: error.message,
       roomSid,

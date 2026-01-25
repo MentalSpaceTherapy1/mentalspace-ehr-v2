@@ -85,7 +85,7 @@ export async function getEffectiveConfig(userId: string, noteType?: string) {
     // Return default configuration if none exists
     logger.warn('No reminder configuration found, using defaults');
     return null;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get effective reminder config', {
       error: error.message,
       userId,
@@ -154,7 +154,7 @@ export async function createReminderConfig(params: CreateReminderConfigParams) {
     });
 
     return config;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create reminder configuration', {
       error: error.message,
       params,
@@ -189,7 +189,7 @@ export async function updateReminderConfig(params: UpdateReminderConfigParams) {
     });
 
     return config;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update reminder configuration', {
       error: error.message,
       configId: params.id,
@@ -209,7 +209,7 @@ export async function deleteReminderConfig(id: string) {
 
     logger.info('Reminder configuration deleted', { configId: id });
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete reminder configuration', {
       error: error.message,
       configId: id,
@@ -231,7 +231,7 @@ export async function getAllConfigs() {
     });
 
     return configs;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get all reminder configurations', {
       error: error.message,
     });
@@ -249,7 +249,7 @@ export async function getPracticeConfig() {
         configurationType: 'PRACTICE',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get practice reminder configuration', {
       error: error.message,
     });
@@ -268,7 +268,7 @@ export async function getUserConfig(userId: string) {
         userId,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get user reminder configuration', {
       error: error.message,
       userId,
@@ -288,7 +288,7 @@ export async function getNoteTypeConfig(noteType: string) {
         noteType,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get note-type reminder configuration', {
       error: error.message,
       noteType,
@@ -326,7 +326,7 @@ export async function initializeDefaultConfig() {
     }
 
     return existing;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to initialize default config', {
       error: error.message,
     });

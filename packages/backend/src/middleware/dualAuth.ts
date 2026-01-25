@@ -166,7 +166,7 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
       });
 
       return next();
-    } catch (portalError: any) {
+    } catch (portalError: unknown) {
       // Portal authentication failed, try staff authentication
       logger.info('[DUAL AUTH] Portal JWT failed, trying staff session auth', {
         error: portalError.message,
@@ -236,7 +236,7 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
         });
 
         return next();
-      } catch (staffError: any) {
+      } catch (staffError: unknown) {
         logger.warn('[DUAL AUTH] Staff authentication FAILED', {
           error: staffError.message,
           errorName: staffError.name,
@@ -256,7 +256,7 @@ export const authenticateDual = async (req: Request, res: Response, next: NextFu
         });
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Dual authentication error', {
       error: error.message,
     });

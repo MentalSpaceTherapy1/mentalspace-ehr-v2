@@ -65,7 +65,7 @@ class AnthropicService {
       }
 
       return textContent.text;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Anthropic API Error:', {
         errorType: error instanceof Error ? error.constructor.name : typeof error,
         message: error.message,
@@ -112,7 +112,7 @@ class AnthropicService {
           yield chunk.delta.text;
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Anthropic Streaming Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`AI Streaming Error: ${error.message}`);
     }
@@ -175,7 +175,7 @@ Provide analysis in JSON format:
         throw new Error('No JSON in response');
       }
       return JSON.parse(jsonMatch[0]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Financial analysis error:', { message: error.message });
       throw error;
     }
@@ -243,7 +243,7 @@ Provide enhanced forecast for the next 14 days in JSON format:
         throw new Error('No JSON in response');
       }
       return JSON.parse(jsonMatch[0]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Revenue forecast enhancement error:', { message: error.message });
       throw error;
     }
@@ -307,7 +307,7 @@ Provide insights in JSON format:
         throw new Error('No JSON in response');
       }
       return JSON.parse(jsonMatch[0]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Report insights generation error:', { message: error.message });
       throw error;
     }

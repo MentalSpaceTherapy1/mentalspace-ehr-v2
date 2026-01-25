@@ -213,7 +213,7 @@ class MetricService {
     metricType?: string,
     limit: number = 30
   ): Promise<any[]> {
-    const where: any = { clinicianId: userId };
+    const where: Prisma.ProductivityMetricWhereInput = { clinicianId: userId };
     if (metricType) {
       where.metricType = metricType;
     }

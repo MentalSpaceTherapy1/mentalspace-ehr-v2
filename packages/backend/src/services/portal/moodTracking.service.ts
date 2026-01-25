@@ -60,7 +60,7 @@ export async function getMoodEntries(data: {
   limit?: number;
 }) {
   try {
-    const where: any = { clientId: data.clientId };
+    const where: Prisma.MoodEntryWhereInput = { clientId: data.clientId };
 
     if (data.startDate || data.endDate) {
       where.entryDate = {};

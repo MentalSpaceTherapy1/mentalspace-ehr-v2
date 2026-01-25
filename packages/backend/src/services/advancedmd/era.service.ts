@@ -229,7 +229,7 @@ export class AdvancedMDERAService {
           result.unmatchedCount++;
           result.unmatchedPayments.push(record);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         result.errors.push(`Error processing record: ${error.message}`);
         result.errorCount++;
       }
@@ -625,7 +625,7 @@ export class AdvancedMDERAService {
         postedAmount: pendingPayment.paidAmount,
         adjustmentAmount: pendingPayment.adjustmentAmount || undefined,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error posting payment', { error: error.message, pendingPaymentId });
       return {
         success: false,
@@ -747,7 +747,7 @@ export class AdvancedMDERAService {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('ERA Service: Error reconciling payments', { error: error.message });
       return {
         ...result,

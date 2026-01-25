@@ -70,7 +70,7 @@ class BillingIntelligenceService {
       );
 
       return this.parseResponse(response);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Billing Intelligence Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`Failed to analyze billing: ${error.message}`);
     }

@@ -83,7 +83,7 @@ router.post('/import/json', requireBillingAccess, async (req: Request, res: Resp
       message: `Imported ${result.importedCount} of ${result.totalRecords} records`,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error importing payments:', error);
     res.status(500).json({
       success: false,
@@ -133,7 +133,7 @@ router.post('/import/csv', requireBillingAccess, async (req: Request, res: Respo
       message: `Imported ${result.importedCount} of ${result.totalRecords} records from CSV`,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error importing CSV payments:', error);
     res.status(500).json({
       success: false,
@@ -176,7 +176,7 @@ router.post('/import/835', requireBillingAccess, async (req: Request, res: Respo
       message: `Imported ${result.importedCount} of ${result.totalRecords} records from 835 file`,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error importing 835 file:', error);
     res.status(500).json({
       success: false,
@@ -207,7 +207,7 @@ router.get('/pending', requireBillingAccess, async (req: Request, res: Response)
       count: payments.length,
       data: payments,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error getting pending payments:', error);
     res.status(500).json({
       success: false,
@@ -238,7 +238,7 @@ router.get('/pending/:id', requireBillingAccess, async (req: Request, res: Respo
       success: true,
       data: payment,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error getting pending payment:', error);
     res.status(500).json({
       success: false,
@@ -271,7 +271,7 @@ router.put('/pending/:id/match', requireBillingAccess, async (req: Request, res:
       message: 'Payment matched successfully',
       data: payment,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error matching payment:', error);
     res.status(500).json({
       success: false,
@@ -307,7 +307,7 @@ router.post('/pending/:id/post', requireBillingAccess, async (req: Request, res:
         error: result.error,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error posting payment:', error);
     res.status(500).json({
       success: false,
@@ -354,7 +354,7 @@ router.post('/batch-post', requireBillingAccess, async (req: Request, res: Respo
       },
       results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error batch posting payments:', error);
     res.status(500).json({
       success: false,
@@ -385,7 +385,7 @@ router.post('/post-all-matched', requireBillingAccess, async (req: Request, res:
       },
       results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error posting all matched payments:', error);
     res.status(500).json({
       success: false,
@@ -426,7 +426,7 @@ router.post('/reconcile', requireBillingAccess, async (req: Request, res: Respon
         : 'Reconciliation failed',
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error reconciling payments:', error);
     res.status(500).json({
       success: false,
@@ -452,7 +452,7 @@ router.get('/stats', requireBillingAccess, async (req: Request, res: Response) =
       success: true,
       data: stats,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('ERA Routes: Error getting ERA stats:', error);
     res.status(500).json({
       success: false,

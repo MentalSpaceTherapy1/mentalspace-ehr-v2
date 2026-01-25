@@ -81,7 +81,7 @@ async function processConsentExpirationReminders() {
             clientEmail: consent.client.email,
             daysBeforeExpiration,
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           failedReminders++;
 
           reminderLogs.push({
@@ -110,7 +110,7 @@ async function processConsentExpirationReminders() {
       failedReminders,
       durationMs: duration,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Consent expiration reminder job failed', {
       error: error.message,
       stack: error.stack,

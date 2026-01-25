@@ -52,7 +52,7 @@ app.get('/api/v1/csrf-token', (req: Request, res: Response) => {
   try {
     const token = generateCsrfToken(req, res);
     res.json({ csrfToken: token });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to generate CSRF token', {
       error: error.message,
       stack: error.stack,

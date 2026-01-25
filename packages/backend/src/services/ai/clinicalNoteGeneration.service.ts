@@ -64,7 +64,7 @@ class ClinicalNoteGenerationService {
         suggestions: parsed.suggestions,
         warnings: parsed.warnings,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Note Generation Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`Failed to generate clinical note: ${error.message}`);
     }

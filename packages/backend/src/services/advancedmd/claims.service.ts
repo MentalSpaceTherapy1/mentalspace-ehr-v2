@@ -214,7 +214,7 @@ export class AdvancedMDClaimsService {
         claimNumber: claim.claimNumber,
         submittedAt: new Date(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Claims Service: Error creating claim:', error.message);
       return {
         success: false,
@@ -352,7 +352,7 @@ export class AdvancedMDClaimsService {
         advancedMDClaimId,
         submittedAt: new Date(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error submitting claim', { error: error.message, claimId });
       return {
         success: false,
@@ -485,7 +485,7 @@ export class AdvancedMDClaimsService {
         totalAdjustment: this.parseAmount(statusData.totalAdjustment),
         patientResponsibility: this.parseAmount(statusData.patientResponsibility),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error checking claim status', { error: error.message, claimId });
       return {
         success: false,
@@ -552,7 +552,7 @@ export class AdvancedMDClaimsService {
     endDate: Date,
     status?: ClaimStatus
   ): Promise<any[]> {
-    const where: any = {
+    const where: Prisma.ClaimWhereInput = {
       serviceStartDate: { gte: startDate, lte: endDate },
     };
 
@@ -634,7 +634,7 @@ export class AdvancedMDClaimsService {
 
       // Submit the claim
       return this.submitClaim(claimId);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Claims Service: Error resubmitting claim:', error.message);
       return {
         success: false,
@@ -866,7 +866,7 @@ export class AdvancedMDClaimsService {
    * Get claim statistics
    */
   async getClaimStatistics(startDate?: Date, endDate?: Date): Promise<any> {
-    const where: any = {};
+    const where: Prisma.ClaimWhereInput = {};
     if (startDate && endDate) {
       where.serviceStartDate = { gte: startDate, lte: endDate };
     }

@@ -248,7 +248,7 @@ export const bookAppointment = async (req: PortalRequest, res: Response) => {
           appointmentId: appointment.id,
           createdBy: clientId,
         });
-      } catch (telehealthError: any) {
+      } catch (telehealthError: unknown) {
         logger.warn('Failed to create telehealth session, appointment still created', {
           appointmentId: appointment.id,
           error: telehealthError.message,
@@ -455,7 +455,7 @@ export const cancelAppointment = async (req: PortalRequest, res: Response) => {
             lastModifiedBy: clientId,
           },
         });
-      } catch (telehealthError: any) {
+      } catch (telehealthError: unknown) {
         logger.warn('Failed to cancel telehealth session', {
           appointmentId,
           error: telehealthError.message,

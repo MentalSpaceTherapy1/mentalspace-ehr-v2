@@ -83,7 +83,7 @@ class EmailReminderService {
         port: smtpPort,
         secure: smtpSecure,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to initialize email transporter', {
         error: error.message,
       });
@@ -135,7 +135,7 @@ class EmailReminderService {
       });
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to send due soon reminder', {
         error: error.message,
         recipientEmail: options.recipientEmail,
@@ -183,7 +183,7 @@ class EmailReminderService {
       });
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to send overdue reminder', {
         error: error.message,
         recipientEmail: options.recipientEmail,
@@ -228,7 +228,7 @@ class EmailReminderService {
       });
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to send Sunday warning reminder', {
         error: error.message,
         recipientEmail: options.recipientEmail,
@@ -280,7 +280,7 @@ class EmailReminderService {
       });
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to send escalation reminder', {
         error: error.message,
         recipientEmail: options.recipientEmail,
@@ -323,7 +323,7 @@ class EmailReminderService {
       });
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to send daily digest', {
         error: error.message,
         recipientEmail: options.recipientEmail,

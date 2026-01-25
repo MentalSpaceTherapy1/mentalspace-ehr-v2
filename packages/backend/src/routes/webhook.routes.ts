@@ -46,7 +46,7 @@ router.post(
         sig,
         config.stripeWebhookSecret
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Stripe webhook signature verification failed:', err.message);
       return res.status(400).json({ error: 'Invalid signature' });
     }
@@ -78,7 +78,7 @@ router.post(
       }
 
       res.json({ received: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error processing Stripe webhook:', error);
       // Return 200 to prevent Stripe from retrying - we'll handle the error internally
       res.json({ received: true, error: error.message });

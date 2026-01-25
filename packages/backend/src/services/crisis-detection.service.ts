@@ -8,6 +8,7 @@
  */
 
 import prisma from './database';
+import { Prisma } from '@mentalspace/database';
 import logger from '../utils/logger';
 import { UserRoles } from '@mentalspace/shared';
 import {
@@ -16,6 +17,19 @@ import {
   getHighestSeverity,
   CRISIS_DETECTION_CONFIG,
 } from '../config/crisis-keywords';
+
+/**
+ * Filters for querying crisis logs
+ */
+export interface CrisisLogFilters {
+  severity?: CrisisSeverity;
+  reviewed?: boolean;
+  userId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  skip?: number;
+  take?: number;
+}
 
 /**
  * Detect crisis keywords in a message text
@@ -364,17 +378,9 @@ export async function markActionTaken(
 /**
  * Get crisis detection logs with filtering and pagination
  */
-export async function getCrisisLogs(filters: {
-  severity?: CrisisSeverity;
-  reviewed?: boolean;
-  userId?: string;
-  startDate?: Date;
-  endDate?: Date;
-  skip?: number;
-  take?: number;
-}) {
+export async function getCrisisLogs(filters: CrisisLogFilters) {
   try {
-    const where: any = {};
+    const where: Prisma.CrisisDetectionLogWhereInput = {};
 
     if (filters.severity) {
       where.severity = filters.severity;
@@ -430,7 +436,7 @@ export async function getCrisisStats(filters?: {
   endDate?: Date;
 }) {
   try {
-    const where: any = {};
+    const where: Prisma.CrisisDetectionLogWhereInput = {};
 
     if (filters?.startDate || filters?.endDate) {
       where.detectedAt = {};

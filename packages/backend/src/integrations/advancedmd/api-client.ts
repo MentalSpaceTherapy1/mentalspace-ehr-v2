@@ -166,7 +166,7 @@ export class AdvancedMDAPIClient {
         data: response.data as T,
         syncLogId,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const isRateLimitError = this.isRateLimitError(error);
 
       // Record failure

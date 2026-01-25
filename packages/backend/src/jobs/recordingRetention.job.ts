@@ -89,7 +89,7 @@ async function processUpcomingDeletions() {
     }
 
     return upcomingDeletions.length;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to process upcoming deletions', {
       error: error.message,
     });
@@ -151,7 +151,7 @@ async function archiveExpiredRecordings() {
             originalScheduledDeletion: recording.scheduledDeletionAt,
           },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Failed to archive recording', {
           error: error.message,
           recordingId: recording.id,
@@ -160,7 +160,7 @@ async function archiveExpiredRecordings() {
     }
 
     return expiredRecordings.length;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to archive expired recordings', {
       error: error.message,
     });
@@ -211,7 +211,7 @@ async function deleteRecordingsAfterGracePeriod() {
           originalScheduledDeletion: recording.scheduledDeletionAt,
           actualDeletionDate: new Date(),
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Failed to delete recording', {
           error: error.message,
           recordingId: recording.id,
@@ -220,7 +220,7 @@ async function deleteRecordingsAfterGracePeriod() {
     }
 
     return recordingsToDelete.length;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete recordings after grace period', {
       error: error.message,
     });
@@ -273,7 +273,7 @@ async function cleanupFailedRecordings() {
           status: recording.status,
           lastUpdated: recording.updatedAt,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Failed to cleanup stuck recording', {
           error: error.message,
           recordingId: recording.id,
@@ -282,7 +282,7 @@ async function cleanupFailedRecordings() {
     }
 
     return stuckRecordings.length;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to cleanup failed recordings', {
       error: error.message,
     });

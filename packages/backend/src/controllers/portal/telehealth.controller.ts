@@ -85,7 +85,7 @@ export const getSession = async (req: PortalRequest, res: Response) => {
           appointmentId,
           sessionId: newSession.id,
         });
-      } catch (createError: any) {
+      } catch (createError: unknown) {
         logger.warn('Failed to auto-create telehealth session for portal', {
           clientId,
           appointmentId,

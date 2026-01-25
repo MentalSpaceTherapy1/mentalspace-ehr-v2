@@ -86,7 +86,7 @@ router.get('/client/:clientId', requireEligibilityAccess, async (req: Request, r
         data: result,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Eligibility Routes: Error checking eligibility:', error);
     res.status(500).json({
       success: false,
@@ -118,7 +118,7 @@ router.get('/appointment/:appointmentId', requireEligibilityAccess, async (req: 
         data: result,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Eligibility Routes: Error checking appointment eligibility:', error);
     res.status(500).json({
       success: false,
@@ -159,7 +159,7 @@ router.post('/batch', requireEligibilityAccess, async (req: Request, res: Respon
       success: true,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Eligibility Routes: Error in batch eligibility check:', error);
     res.status(500).json({
       success: false,
@@ -190,7 +190,7 @@ router.post('/date-appointments', requireEligibilityAccess, async (req: Request,
       success: true,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Eligibility Routes: Error checking date appointments eligibility:', error);
     res.status(500).json({
       success: false,
@@ -222,7 +222,7 @@ router.get('/history/:clientId', requireEligibilityAccess, async (req: Request, 
       success: true,
       data: history,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Eligibility Routes: Error getting eligibility history:', error);
     res.status(500).json({
       success: false,
@@ -257,7 +257,7 @@ router.get('/last/:clientId', requireEligibilityAccess, async (req: Request, res
         error: 'No eligibility check found for this client',
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Eligibility Routes: Error getting last eligibility check:', error);
     res.status(500).json({
       success: false,
@@ -283,7 +283,7 @@ router.get('/cache/stats', requireEligibilityAccess, async (req: Request, res: R
       success: true,
       data: stats,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Eligibility Routes: Error getting cache stats:', error);
     res.status(500).json({
       success: false,
@@ -307,7 +307,7 @@ router.delete('/cache/client/:clientId', requireEligibilityAccess, async (req: R
       success: true,
       message: `Cache cleared for client ${clientId}`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Eligibility Routes: Error clearing client cache:', error);
     res.status(500).json({
       success: false,
@@ -340,7 +340,7 @@ router.delete('/cache/all', requireEligibilityAccess, async (req: Request, res: 
       success: true,
       message: 'All eligibility cache cleared',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Eligibility Routes: Error clearing all cache:', error);
     res.status(500).json({
       success: false,

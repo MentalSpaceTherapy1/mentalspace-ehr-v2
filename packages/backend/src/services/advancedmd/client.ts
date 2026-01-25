@@ -112,7 +112,7 @@ class AdvancedMDClient {
 
       const duration = Date.now() - startTime;
       logger.info('AdvancedMD token refreshed successfully', { duration: `${duration}ms` });
-    } catch (error: any) {
+    } catch (error: unknown) {
       const duration = Date.now() - startTime;
       logger.error('Failed to refresh AdvancedMD token', {
         error: error.message,
@@ -156,7 +156,7 @@ class AdvancedMDClient {
         });
 
         return response.data;
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
 
         const duration = Date.now() - startTime;

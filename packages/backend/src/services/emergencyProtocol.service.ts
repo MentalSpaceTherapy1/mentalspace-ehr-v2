@@ -62,7 +62,7 @@ export async function getEmergencyProtocols(includeInactive: boolean = false) {
     });
 
     return protocols;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get emergency protocols', {
       error: error.message,
     });
@@ -134,7 +134,7 @@ export async function getProtocolForEmergencyType(emergencyType: string) {
     });
 
     return protocol;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get protocol for emergency type', {
       error: error.message,
       emergencyType,
@@ -157,7 +157,7 @@ export async function getEmergencyProtocolById(id: string) {
     }
 
     return protocol;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get emergency protocol', {
       error: error.message,
       id,
@@ -185,7 +185,7 @@ export async function createEmergencyProtocol(data: CreateEmergencyProtocolData)
     });
 
     return protocol;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create emergency protocol', {
       error: error.message,
       name: data.name,
@@ -214,7 +214,7 @@ export async function updateEmergencyProtocol(
     });
 
     return protocol;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update emergency protocol', {
       error: error.message,
       id,
@@ -243,7 +243,7 @@ export async function deleteEmergencyProtocol(id: string, userId: string) {
     });
 
     return protocol;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete emergency protocol', {
       error: error.message,
       id,
@@ -279,7 +279,7 @@ export async function reorderEmergencyProtocols(
     });
 
     return results;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to reorder emergency protocols', {
       error: error.message,
     });
@@ -322,7 +322,7 @@ export async function searchEmergencyProtocols(searchTerm: string) {
     });
 
     return protocols;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to search emergency protocols', {
       error: error.message,
       searchTerm,

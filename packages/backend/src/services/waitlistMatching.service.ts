@@ -1,6 +1,6 @@
 import { auditLogger } from '../utils/logger';
 import prisma from './database';
-import { AppointmentStatus } from '@mentalspace/database';
+import { Prisma, AppointmentStatus } from '@mentalspace/database';
 
 /**
  * Module 3 Phase 2.2: Waitlist Automation Service
@@ -493,7 +493,7 @@ export async function recordOfferResponse(
   accepted: boolean,
   notes?: string
 ): Promise<void> {
-  const updateData: any = {
+  const updateData: Prisma.WaitlistEntryUpdateInput = {
     updatedAt: new Date(),
   };
 
@@ -531,7 +531,7 @@ export async function getMatchingStats(
   startDate?: Date,
   endDate?: Date
 ): Promise<MatchingStats> {
-  const where: any = {};
+  const where: Prisma.WaitlistEntryWhereInput = {};
 
   if (startDate || endDate) {
     where.updatedAt = {};

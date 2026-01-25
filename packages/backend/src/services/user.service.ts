@@ -1,7 +1,7 @@
 import prisma from './database';
 import bcrypt from 'bcryptjs';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../utils/errors';
-import { UserRole } from '@mentalspace/database';
+import { UserRole, Prisma } from '@mentalspace/database';
 import { sendEmail, EmailTemplates } from './email.service';
 import {
   generateTemporaryPassword,
@@ -62,7 +62,7 @@ class UserService {
     } = filters;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.UserWhereInput = {};
 
     if (search) {
       where.OR = [

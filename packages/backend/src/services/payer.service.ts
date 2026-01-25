@@ -96,7 +96,7 @@ export async function getPayerById(id: string): Promise<Payer | null> {
  * Get all payers with optional filters
  */
 export async function getPayers(filters?: PayerFilters): Promise<Payer[]> {
-  const where: any = {};
+  const where: Prisma.PayerWhereInput = {};
 
   if (filters?.payerType) {
     where.payerType = filters.payerType;

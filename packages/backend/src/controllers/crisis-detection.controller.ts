@@ -16,6 +16,7 @@ import {
   reviewDetection,
   markActionTaken,
   getCrisisStats,
+  CrisisLogFilters,
 } from '../services/crisis-detection.service';
 import { CrisisSeverity } from '../config/crisis-keywords';
 import { sendSuccess, sendBadRequest, sendUnauthorized, sendNotFound, sendServerError } from '../utils/apiResponse';
@@ -42,7 +43,7 @@ export const getAllCrisisLogs = async (req: Request, res: Response) => {
     const take = parseInt(limit as string);
 
     // Build filters
-    const filters: any = {
+    const filters: CrisisLogFilters = {
       skip,
       take,
     };
@@ -212,7 +213,7 @@ export const getCrisisStatistics = async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
 
-    const filters: any = {};
+    const filters: { startDate?: Date; endDate?: Date } = {};
 
     if (startDate) {
       filters.startDate = new Date(startDate as string);

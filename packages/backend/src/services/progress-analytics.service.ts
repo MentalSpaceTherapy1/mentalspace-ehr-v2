@@ -739,7 +739,7 @@ export class ProgressAnalyticsService {
   ) {
     const { startDate, endDate, limit = 20 } = options;
 
-    const where: any = {
+    const where: Prisma.ClinicalNoteWhereInput = {
       clientId,
       status: { in: ['SIGNED', 'COSIGNED', 'LOCKED'] },
     };

@@ -71,7 +71,7 @@ class OpenAIService {
       }
 
       return content;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('OpenAI API Error:', {
         errorType: error instanceof Error ? error.constructor.name : typeof error,
         message: error.message
@@ -118,7 +118,7 @@ class OpenAIService {
           yield content;
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('OpenAI Streaming Error:', {
         errorType: error instanceof Error ? error.constructor.name : typeof error
       });
@@ -180,7 +180,7 @@ Provide analysis in JSON format:
       });
 
       return JSON.parse(response);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Financial analysis error:', { message: error.message });
       throw error;
     }
@@ -245,7 +245,7 @@ Provide enhanced forecast for the next 14 days in JSON format:
       });
 
       return JSON.parse(response);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Revenue forecast enhancement error:', { message: error.message });
       throw error;
     }
@@ -306,7 +306,7 @@ Provide insights in JSON format:
       });
 
       return JSON.parse(response);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Report insights generation error:', { message: error.message });
       throw error;
     }

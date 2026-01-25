@@ -53,7 +53,7 @@ export async function generateCredentialingReport(params: CredentialingReportPar
     futureDate.setDate(futureDate.getDate() + daysUntilExpiration);
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.CredentialWhereInput = {};
 
     if (credentialType) where.credentialType = credentialType;
     if (verificationStatus) where.verificationStatus = verificationStatus;
@@ -327,7 +327,7 @@ export async function generateTrainingComplianceReport(params: TrainingComplianc
     } = params;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.TrainingRecordWhereInput = {};
 
     if (trainingType) where.trainingType = trainingType;
     if (category) where.category = category;
@@ -608,7 +608,7 @@ export async function generatePolicyComplianceReport(params: PolicyComplianceRep
     const { startDate, endDate, category, status, department } = params;
 
     // Build where clause for policies
-    const where: any = { isActive: true };
+    const where: Prisma.PolicyWhereInput = { isActive: true };
 
     if (category) where.category = category;
     if (status) where.status = status;
@@ -813,7 +813,7 @@ export async function generateIncidentAnalysisReport(params: IncidentAnalysisRep
     const { startDate, endDate, incidentType, severity, investigationStatus, department } = params;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.IncidentWhereInput = {};
 
     if (incidentType) where.incidentType = incidentType;
     if (severity) where.severity = severity;
@@ -1030,7 +1030,7 @@ export async function generatePerformanceReport(params: PerformanceReportParams)
     const end = endDate || new Date();
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.ProductivityMetricWhereInput = {
       periodStart: { gte: start },
       periodEnd: { lte: end }
     };
@@ -1289,7 +1289,7 @@ export async function generateAttendanceReport(params: AttendanceReportParams) {
     const end = endDate || new Date();
 
     // Build where clause - GroupAttendance relates through member and appointment
-    const where: any = {
+    const where: Prisma.GroupAttendanceWhereInput = {
       appointment: {
         startTime: {
           gte: start,
@@ -1682,7 +1682,7 @@ export async function generateVendorReport(params: VendorReportParams) {
     const { category, isActive, includePerformance = true } = params;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.VendorWhereInput = {};
     if (category) where.category = category;
     if (isActive !== undefined) where.isActive = isActive;
 
@@ -2050,7 +2050,7 @@ export async function generateAuditTrailReport(params: AuditTrailReportParams) {
     const end = endDate || new Date();
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.AuditLogWhereInput = {
       timestamp: {
         gte: start,
         lte: end

@@ -161,7 +161,7 @@ export async function getAppointmentTypeById(
 export async function getAllAppointmentTypes(
   filters?: AppointmentTypeFilters
 ): Promise<AppointmentType[]> {
-  const where: any = {};
+  const where: Prisma.AppointmentTypeWhereInput = {};
 
   if (filters?.category) {
     where.category = filters.category;

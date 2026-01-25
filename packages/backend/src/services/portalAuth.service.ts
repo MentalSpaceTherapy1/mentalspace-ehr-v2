@@ -99,7 +99,7 @@ export async function registerPortalAccount(data: RegisterPortalAccountData) {
       verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined, // Only for dev
       emailSent,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to register portal account', {
       error: error.message,
       clientId: data.clientId,
@@ -150,7 +150,7 @@ export async function portalLogin(data: PortalLoginData) {
     if (!isValidPassword) {
       // Increment failed login attempts
       const failedAttempts = portalAccount.failedLoginAttempts + 1;
-      const updateData: any = {
+      const updateData: Prisma.PortalAccountUpdateInput = {
         failedLoginAttempts: failedAttempts,
       };
 
@@ -312,7 +312,7 @@ export async function portalLogin(data: PortalLoginData) {
         accountStatus: portalAccount.accountStatus,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Portal login failed', {
       error: error.message,
       email: data.email,
@@ -352,7 +352,7 @@ export async function verifyEmail(token: string) {
     });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Email verification failed', {
       error: error.message,
     });
@@ -394,7 +394,7 @@ export async function requestPasswordReset(email: string) {
       message: 'If account exists, password reset email will be sent',
       resetToken, // Return for testing; remove in production
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Password reset request failed', {
       error: error.message,
       email,
@@ -442,7 +442,7 @@ export async function resetPassword(token: string, newPassword: string) {
     });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Password reset failed', {
       error: error.message,
     });
@@ -504,7 +504,7 @@ export async function changePortalPassword(portalAccountId: string, currentPassw
       message: 'Password changed successfully. Your new password is valid for 6 months.',
       passwordExpiresAt,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Portal password change failed', {
       error: error.message,
       portalAccountId,
@@ -614,7 +614,7 @@ export async function inviteClientToPortal(clientId: string, invitedBy: string) 
       tempPasswordExpiry,
       verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to invite client to portal', {
       error: error.message,
       clientId,
@@ -698,7 +698,7 @@ export async function resendPortalInvitation(clientId: string) {
       emailSent,
       verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to resend portal invitation', {
       error: error.message,
       clientId,

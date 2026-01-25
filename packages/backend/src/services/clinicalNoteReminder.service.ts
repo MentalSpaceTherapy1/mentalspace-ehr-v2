@@ -125,7 +125,7 @@ export const clinicalNoteReminderService = {
       });
 
       return reminder;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to schedule reminder', {
         error: error.message,
         noteId: data.noteId,
@@ -182,7 +182,7 @@ export const clinicalNoteReminderService = {
       });
 
       return reminders;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to schedule all reminders', {
         error: error.message,
         noteId,
@@ -221,7 +221,7 @@ export const clinicalNoteReminderService = {
       });
 
       return reminders;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to get pending reminders', {
         error: error.message,
       });
@@ -303,7 +303,7 @@ export const clinicalNoteReminderService = {
       });
 
       return updated;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to send reminder', {
         error: error.message,
         reminderId,
@@ -367,7 +367,7 @@ export const clinicalNoteReminderService = {
       logger.info('Finished processing reminders', results);
 
       return results;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to process pending reminders', {
         error: error.message,
       });
@@ -523,7 +523,7 @@ export const clinicalNoteReminderService = {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to cancel reminders', {
         error: error.message,
         noteId,
@@ -555,7 +555,7 @@ export const clinicalNoteReminderService = {
       });
 
       return reminders;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to get reminders for note', {
         error: error.message,
         noteId,
@@ -593,7 +593,7 @@ export const clinicalNoteReminderService = {
       });
 
       return reminders;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to get reminders for user', {
         error: error.message,
         userId,

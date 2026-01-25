@@ -116,7 +116,7 @@ export class AuthService {
     if (!isPasswordValid) {
       // Increment failed login attempts
       const newFailedAttempts = user.failedLoginAttempts + 1;
-      const updateData: any = {
+      const updateData: Prisma.UserUpdateInput = {
         failedLoginAttempts: newFailedAttempts,
       };
 

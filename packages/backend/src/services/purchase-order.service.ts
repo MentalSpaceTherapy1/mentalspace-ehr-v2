@@ -362,7 +362,7 @@ export async function updatePurchaseOrder(
     throw new Error('Can only update pending purchase orders');
   }
 
-  let updateData: any = { ...data };
+  let updateData: Prisma.PurchaseOrderWhereInput = { ...data };
 
   // If items are updated, recalculate totals
   if (data.items) {

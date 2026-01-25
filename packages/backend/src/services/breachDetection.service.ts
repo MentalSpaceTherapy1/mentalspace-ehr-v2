@@ -127,7 +127,7 @@ export class BreachDetectionService {
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     // Query audit logs for PHI access
-    const where: any = {
+    const where: Prisma.AuditLogWhereInput = {
       timestamp: { gte: oneDayAgo },
       entityType: { in: ['CLIENT', 'CLINICAL_NOTE', 'MEDICATION', 'DIAGNOSIS'] },
       action: { in: ['VIEW', 'READ', 'ACCESS', 'EXPORT'] },

@@ -111,7 +111,7 @@ export async function getAvailableSlots(
     });
 
     return results;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get available slots', {
       error: error.message,
       clinicianId,
@@ -331,7 +331,7 @@ async function getClinicianSchedule(clinicianId: string) {
       createdBy: clinicianId,
       lastModifiedBy: clinicianId,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get clinician schedule', {
       error: error.message,
       clinicianId,
@@ -369,7 +369,7 @@ async function getExistingAppointments(
     });
 
     return appointments;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get existing appointments', {
       error: error.message,
       clinicianId,
@@ -404,7 +404,7 @@ async function getScheduleExceptions(
     });
 
     return exceptions;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get schedule exceptions', {
       error: error.message,
       clinicianId,
@@ -487,7 +487,7 @@ export async function canBookSlot(
     }
 
     return { canBook: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to check if slot can be booked', {
       error: error.message,
       clinicianId,
@@ -531,7 +531,7 @@ export async function canCancelAppointment(
     }
 
     return { canCancel: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to check if appointment can be cancelled', {
       error: error.message,
       appointmentId,
@@ -608,7 +608,7 @@ export async function getAvailableClinicians(): Promise<any[]> {
     });
 
     return allClinicians;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get available clinicians', {
       error: error.message,
     });

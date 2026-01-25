@@ -115,7 +115,7 @@ export class EmailReminderService {
         hasAttachments: !!options.attachments?.length,
         messageId: (response as any)?.data?.id || 'unknown',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to send email via Resend', {
         error: error.message,
         to: options.to,

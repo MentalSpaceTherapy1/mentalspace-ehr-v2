@@ -125,7 +125,7 @@ export async function uploadRecording(params: UploadRecordingParams): Promise<{ 
       size: fileSize,
       etag: uploadResult.ETag || '',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to upload recording to S3', {
       error: error.message,
       recordingSid: params.recordingSid,
@@ -165,7 +165,7 @@ export async function generatePresignedUrl(params: PresignedUrlParams): Promise<
     });
 
     return url;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to generate presigned URL', {
       error: error.message,
       bucket: params.bucket,
@@ -195,7 +195,7 @@ export async function streamRecording(bucket: string, key: string): Promise<Read
 
     // Convert ReadableStream to Node.js Readable stream
     return response.Body as Readable;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to stream recording from S3', {
       error: error.message,
       bucket,
@@ -220,7 +220,7 @@ export async function deleteRecording(params: DeleteRecordingParams): Promise<vo
     await s3Client.send(command);
 
     logger.info('Recording deleted from S3', { bucket, key });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete recording from S3', {
       error: error.message,
       bucket: params.bucket,
@@ -251,7 +251,7 @@ export async function getRecordingMetadata(bucket: string, key: string): Promise
       storageClass: response.StorageClass,
       serverSideEncryption: response.ServerSideEncryption,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get recording metadata', {
       error: error.message,
       bucket,
@@ -281,7 +281,7 @@ export async function listRecordings(bucket: string, prefix?: string): Promise<a
       etag: item.ETag,
       storageClass: item.StorageClass,
     }));
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to list recordings', {
       error: error.message,
       bucket,
@@ -308,7 +308,7 @@ export async function applyRetentionPolicy(bucket: string, key: string, daysToAr
 
     // Actual lifecycle transitions are configured in S3 bucket settings
     // Example: STANDARD -> STANDARD_IA (30 days) -> GLACIER (90 days) -> DEEP_ARCHIVE (365 days)
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to apply retention policy', {
       error: error.message,
       bucket,
@@ -369,7 +369,7 @@ export async function copyRecording(
       destBucket,
       destKey,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to copy recording', {
       error: error.message,
       sourceBucket,
@@ -419,7 +419,7 @@ export async function validateBucketAccess(bucket: string): Promise<boolean> {
     await s3Client.send(command);
 
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('S3 bucket access validation failed', {
       error: error.message,
       bucket,
@@ -494,7 +494,7 @@ export async function uploadDocument(params: UploadDocumentParams): Promise<Uplo
       size: body.length,
       url: `s3://${bucket}/${key}`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to upload document to S3', {
       error: error.message,
       bucket: params.bucket,
@@ -536,7 +536,7 @@ export async function generateUploadPresignedUrl(params: {
     });
 
     return { url, key };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to generate upload presigned URL', {
       error: error.message,
       bucket: params.bucket,
@@ -566,7 +566,7 @@ export async function deleteDocument(bucket: string, key: string): Promise<void>
     await s3Client.send(command);
 
     logger.info('Document deleted from S3', { bucket, key });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete document from S3', {
       error: error.message,
       bucket,

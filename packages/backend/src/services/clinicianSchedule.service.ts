@@ -1,6 +1,6 @@
 import { auditLogger } from '../utils/logger';
 import prisma from './database';
-import { AppointmentStatus } from '@mentalspace/database';
+import { Prisma, AppointmentStatus } from '@mentalspace/database';
 
 interface DaySchedule {
   isAvailable: boolean;
@@ -209,7 +209,7 @@ export async function getScheduleExceptions(
   startDate?: Date,
   endDate?: Date
 ) {
-  const where: any = { clinicianId };
+  const where: Prisma.ScheduleExceptionWhereInput = { clinicianId };
 
   if (startDate && endDate) {
     where.OR = [

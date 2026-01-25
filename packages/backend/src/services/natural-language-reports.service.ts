@@ -157,7 +157,7 @@ Return only valid JSON with no additional text.`;
     }
 
     return parsed;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error parsing natural language query:', { error: error.message, query });
     throw new Error(`Failed to parse query: ${error.message}`);
   }
@@ -311,7 +311,7 @@ export async function processNaturalLanguageQuery(
       summary,
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error processing natural language query:', { error: error.message, query });
 
     return {

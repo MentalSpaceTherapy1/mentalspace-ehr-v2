@@ -51,7 +51,7 @@ export async function createChimeMeeting(externalMeetingId: string) {
     });
 
     return response.Meeting;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Chime meeting creation failed', {
       errorName: error.name,
       errorMessage: error.message,

@@ -124,7 +124,7 @@ export class AdvancedMDLookupService {
       }
 
       return { found: false, code: cptCode };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Lookup Service: Error looking up CPT code', { cptCode, error: error.message });
       return { found: false, code: cptCode };
     }
@@ -205,7 +205,7 @@ export class AdvancedMDLookupService {
         description: undefined,
         code: icdCode,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Lookup Service: Error looking up ICD-10 code', { icdCode, error: error.message });
 
       // ICD codes can often be used directly
@@ -290,7 +290,7 @@ export class AdvancedMDLookupService {
         amdId: modifierCode,
         code: modifierCode,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Lookup Service: Error looking up modifier', { modifierCode, error: error.message });
 
       // Modifiers can often be used directly
@@ -347,7 +347,7 @@ export class AdvancedMDLookupService {
       }
 
       return { found: false };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Lookup Service: Error looking up provider', { providerName, error: error.message });
       return { found: false };
     }
@@ -398,7 +398,7 @@ export class AdvancedMDLookupService {
       }
 
       return { found: false };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Lookup Service: Error looking up facility', { facilityName, error: error.message });
       return { found: false };
     }
@@ -469,7 +469,7 @@ export class AdvancedMDLookupService {
           description,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Lookup Service: Error saving cache to database', { error: error.message });
     }
   }
@@ -523,7 +523,7 @@ export class AdvancedMDLookupService {
       }
 
       logger.info(`[Lookup Service] Loaded ${cacheEntries.length} cached lookups from database`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Lookup Service: Error loading cache from database', { error: error.message });
     }
   }

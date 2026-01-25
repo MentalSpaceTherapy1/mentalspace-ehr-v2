@@ -931,7 +931,7 @@ export async function updateAccountSettings(data: {
     }
 
     // If email is being changed, require verification
-    let updateData: any = {};
+    let updateData: Prisma.PortalAccountWhereInput = {};
     let emailChanged = false;
 
     if (data.email && data.email !== portalAccount.email) {

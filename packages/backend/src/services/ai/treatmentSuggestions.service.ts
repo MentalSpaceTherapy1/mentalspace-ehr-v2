@@ -77,7 +77,7 @@ class TreatmentSuggestionsService {
       );
 
       return this.parseResponse(response);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Treatment Suggestions Error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       throw new Error(`Failed to generate treatment suggestions: ${error.message}`);
     }

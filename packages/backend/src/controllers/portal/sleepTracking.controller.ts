@@ -121,7 +121,7 @@ export const getSleepLogs = async (req: PortalRequest, res: Response) => {
     }
 
     // Build date filter
-    let dateFilter: any = {};
+    let dateFilter: Prisma.SleepLogWhereInput = {};
     if (days) {
       const daysNum = parseInt(days as string);
       const start = new Date();

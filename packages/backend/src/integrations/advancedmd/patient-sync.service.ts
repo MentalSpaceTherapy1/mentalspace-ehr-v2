@@ -134,7 +134,7 @@ export class AdvancedMDPatientSyncService {
 
       // Parse response
       return this.parseLookupResponse(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await this.rateLimiter.recordFailure('LOOKUPPATIENT', error.message, false);
       logger.error('AMD Patient Sync: Lookup failed:', error.message);
       throw error;
@@ -169,7 +169,7 @@ export class AdvancedMDPatientSyncService {
 
       await this.rateLimiter.recordSuccess('LOOKUPPATIENT');
       return this.parseLookupResponse(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await this.rateLimiter.recordFailure('LOOKUPPATIENT', error.message, false);
       throw error;
     }
@@ -264,7 +264,7 @@ export class AdvancedMDPatientSyncService {
         advancedMDPatientId: patientId,
         syncLogId: syncLog.id,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       await this.rateLimiter.recordFailure('ADDPATIENT', error.message, false);
       await this.completeSyncLog(syncLog.id, 'error', null, null, error.message);
 
@@ -375,7 +375,7 @@ export class AdvancedMDPatientSyncService {
         advancedMDPatientId: client.advancedMDPatientId,
         syncLogId: syncLog.id,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       await this.rateLimiter.recordFailure('GETDEMOGRAPHIC', error.message, false);
       await this.completeSyncLog(syncLog.id, 'error', null, null, error.message);
 
@@ -432,7 +432,7 @@ export class AdvancedMDPatientSyncService {
 
       // Create new patient in AMD
       return this.createPatient(clientId, profileId, options);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('AMD Patient Sync: Sync to AMD failed:', error.message);
       return {
         success: false,
@@ -473,7 +473,7 @@ export class AdvancedMDPatientSyncService {
         success: true,
         advancedMDPatientId,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('AMD Patient Sync: Sync from AMD failed:', error.message);
       return {
         success: false,
@@ -512,7 +512,7 @@ export class AdvancedMDPatientSyncService {
 
       // Parse and return updated patients
       return this.parseUpdatedPatientsResponse(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await this.rateLimiter.recordFailure('GETUPDATEDPATIENTS', error.message, false);
       throw error;
     }

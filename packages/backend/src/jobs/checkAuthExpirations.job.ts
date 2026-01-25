@@ -22,7 +22,7 @@ export function startAuthExpirationCheckJob() {
       await PriorAuthService.checkExpiringAuthorizations();
 
       logger.info('Prior authorization expiration check completed successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error in prior authorization expiration check job', {
         error: error.message,
         stack: error.stack,
@@ -43,7 +43,7 @@ export async function runAuthExpirationCheckNow(): Promise<void> {
   try {
     await PriorAuthService.checkExpiringAuthorizations();
     logger.info('Manual prior authorization expiration check completed successfully');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error in manual prior authorization expiration check', {
       error: error.message,
       stack: error.stack,

@@ -116,7 +116,7 @@ export class TwilioReminderService {
         body: message.body,
         dateCreated: message.dateCreated,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to send SMS', {
         error: error.message,
         code: error.code,
@@ -162,7 +162,7 @@ export class TwilioReminderService {
         from: call.from,
         dateCreated: call.dateCreated,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to make voice call', {
         error: error.message,
         code: error.code,

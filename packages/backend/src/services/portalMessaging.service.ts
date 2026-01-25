@@ -53,7 +53,7 @@ export async function sendMessage(data: SendMessageData) {
     });
 
     return message;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to send portal message', {
       error: error.message,
       clientId: data.clientId,
@@ -77,7 +77,7 @@ export async function getMessages(clientId: string) {
     });
 
     return messages;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get portal messages', {
       error: error.message,
       clientId,
@@ -102,7 +102,7 @@ export async function getMessageThread(threadId: string, clientId: string) {
     });
 
     return messages;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get message thread', {
       error: error.message,
       threadId,
@@ -137,7 +137,7 @@ export async function markAsRead(messageId: string, clientId: string) {
     });
 
     return updated;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to mark message as read', {
       error: error.message,
       messageId,
@@ -198,7 +198,7 @@ export async function replyToMessage(messageId: string, clientId: string, replyT
     });
 
     return reply;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to send reply', {
       error: error.message,
       messageId,
@@ -222,7 +222,7 @@ export async function getUnreadCount(clientId: string): Promise<number> {
     });
 
     return count;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get unread count', {
       error: error.message,
       clientId,

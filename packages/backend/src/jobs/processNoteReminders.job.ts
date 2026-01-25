@@ -19,7 +19,7 @@ export function startNoteReminderJob() {
         failed: results.failed,
         cancelled: results.cancelled,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Note reminder job failed', {
         error: error.message,
         stack: error.stack,
@@ -47,7 +47,7 @@ export async function triggerNoteReminderJob() {
     logger.info('Manual note reminder job completed', results);
 
     return results;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Manual note reminder job failed', {
       error: error.message,
       stack: error.stack,

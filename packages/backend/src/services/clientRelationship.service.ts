@@ -693,7 +693,7 @@ export async function getCareTeam(clientId: string) {
  * Get all relationships for a client (basic list)
  */
 export async function getClientRelationships(clientId: string, activeOnly: boolean = true) {
-  const where: any = {
+  const where: Prisma.ClientRelationshipWhereInput = {
     OR: [
       { client1Id: clientId },
       { client2Id: clientId }
@@ -732,7 +732,7 @@ export async function getClientRelationships(clientId: string, activeOnly: boole
  * Get all providers for a client (basic list)
  */
 export async function getClientProviders(clientId: string, activeOnly: boolean = true) {
-  const where: any = { clientId };
+  const where: Prisma.ClientProviderWhereInput = { clientId };
 
   if (activeOnly) {
     where.isActive = true;

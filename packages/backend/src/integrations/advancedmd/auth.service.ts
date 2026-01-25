@@ -134,7 +134,7 @@ export class AdvancedMDAuthService {
           logger.info('AdvancedMD stored session expired, will re-authenticate');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('AdvancedMD Auth initialization error', { error: error.message });
       throw new Error(`Failed to initialize AdvancedMD auth: ${error.message}`);
     }
@@ -216,7 +216,7 @@ export class AdvancedMDAuthService {
       await this.persistSession();
 
       logger.info('AdvancedMD authentication successful', { tokenExpiresAt: expiresAt });
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw new Error(`Authentication failed: ${error.message}`);
     }
   }
@@ -397,7 +397,7 @@ export class AdvancedMDAuthService {
           redirectURLScheduler: this.session.redirectURLScheduler,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('AdvancedMD failed to persist session', { error: error.message });
       // Don't throw - session is still valid in memory
     }

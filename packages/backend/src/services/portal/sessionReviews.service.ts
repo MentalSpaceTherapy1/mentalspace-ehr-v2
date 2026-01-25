@@ -152,7 +152,7 @@ export async function getTherapistReviews(data: {
   includePrivate?: boolean;
 }) {
   try {
-    const where: any = {
+    const where: Prisma.SessionReviewWhereInput = {
       clinicianId: data.clinicianId,
     };
 
@@ -336,7 +336,7 @@ export async function getAllReviews(filters?: {
 
 export async function getReviewStatistics(clinicianId?: string) {
   try {
-    const where: any = {};
+    const where: Prisma.SessionReviewWhereInput = {};
     if (clinicianId) {
       where.clinicianId = clinicianId;
     }

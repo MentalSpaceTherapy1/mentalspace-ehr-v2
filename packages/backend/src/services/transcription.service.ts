@@ -161,7 +161,7 @@ async function verifyTranscriptionConsent(sessionId: string): Promise<boolean> {
     }
 
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error verifying transcription consent', {
       error: error.message,
       sessionId,
@@ -229,7 +229,7 @@ export async function startTranscription(sessionId: string, userId: string) {
       message: 'Transcription started successfully',
       session: updatedSession
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to start transcription', {
       error: error.message,
       stack: error.stack,
@@ -271,7 +271,7 @@ export async function stopTranscription(sessionId: string, userId: string) {
         if (stream && stream.destroy) {
           stream.destroy();
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         logger.warn('Error destroying stream', { error: err.message, sessionId });
       }
       activeStreams.delete(sessionId);
@@ -304,7 +304,7 @@ export async function stopTranscription(sessionId: string, userId: string) {
       message: 'Transcription stopped successfully',
       session: updatedSession,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to stop transcription', {
       error: error.message,
       stack: error.stack,
@@ -335,7 +335,7 @@ export async function getTranscripts(sessionId: string, options?: {
       return []; // Return empty array for non-existent sessions
     }
 
-    const where: any = { sessionId };
+    const where: Prisma.TelehealthSessionWhereInput = { sessionId };
     if (!options?.includePartial) {
       where.isPartial = false;
     }
@@ -348,7 +348,7 @@ export async function getTranscripts(sessionId: string, options?: {
     });
 
     return transcripts;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get transcripts', {
       error: error.message,
       sessionId,
@@ -386,7 +386,7 @@ export async function getFormattedTranscript(sessionId: string): Promise<string>
     }
 
     return formattedText;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get formatted transcript', {
       error: error.message,
       sessionId,
@@ -508,7 +508,7 @@ export async function processAudioStream(
     }
 
     logger.info('🎤 Audio stream processing completed', { sessionId, totalChunks: chunkCount, totalBytes });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('🎤 Failed to process audio stream', {
       error: error.message,
       errorName: error.name,
@@ -607,7 +607,7 @@ async function processTranscriptResult(sessionId: string, result: Result) {
       isPartial,
       speakerLabel: transcript.speakerLabel,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to process transcript result', {
       error: error.message,
       sessionId,
@@ -752,7 +752,7 @@ async function addTranscriptionAuditLog(
       eventType,
       userId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to add transcription audit log', {
       error: error.message,
       sessionId,
@@ -793,7 +793,7 @@ export async function enableTranscriptionConsent(
     });
 
     return session;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update transcription consent', {
       error: error.message,
       sessionId,
@@ -835,7 +835,7 @@ export async function getTranscriptionStatus(sessionId: string) {
       transcriptCount,
       isActive: session.transcriptionStatus === 'IN_PROGRESS',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get transcription status', {
       error: error.message,
       sessionId,
@@ -893,7 +893,7 @@ export async function deleteTranscripts(sessionId: string, userId: string) {
       success: true,
       deletedCount: result.count,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete transcripts', {
       error: error.message,
       sessionId,
@@ -970,7 +970,7 @@ Unauthorized disclosure is prohibited by law.
 `;
 
     return exportContent;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to export transcript', {
       error: error.message,
       sessionId,

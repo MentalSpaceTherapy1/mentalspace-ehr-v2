@@ -53,7 +53,7 @@ export async function getSecret(secretName: string, useCache = true): Promise<st
 
     logger.info('Secret retrieved from AWS Secrets Manager', { secretName });
     return secretValue;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to retrieve secret from AWS Secrets Manager', {
       secretName,
       error: error.message,
@@ -225,7 +225,7 @@ export async function initializeSecrets(): Promise<void> {
     ]);
 
     logger.info('Secrets initialized successfully');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to initialize secrets', { error: error.message });
 
     // In production, this should be a fatal error

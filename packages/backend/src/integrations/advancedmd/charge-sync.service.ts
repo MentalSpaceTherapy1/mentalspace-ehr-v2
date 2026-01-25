@@ -193,7 +193,7 @@ export class AdvancedMDChargeSyncService {
           error: submissionResult.error,
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Charge Sync: Error submitting charge', { chargeId, error: error.message });
       await this.updateChargeSyncStatus(chargeId, 'error', error.message);
       return {
@@ -327,7 +327,7 @@ export class AdvancedMDChargeSyncService {
           error: errorMsg,
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Charge Sync: Error updating charge', { chargeId, error: error.message });
       await this.updateChargeSyncStatus(chargeId, 'error', error.message);
       return {
@@ -408,7 +408,7 @@ export class AdvancedMDChargeSyncService {
           error: errorMsg,
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Charge Sync: Error voiding charge', { chargeId, error: error.message });
       return {
         success: false,
@@ -467,7 +467,7 @@ export class AdvancedMDChargeSyncService {
         success: false,
         error: typeof error === 'string' ? error : error.message,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Charge Sync: Error calling SaveCharges API', { error: error.message });
       return {
         success: false,
@@ -639,7 +639,7 @@ export class AdvancedMDChargeSyncService {
           });
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Charge Sync: Error syncing charges for visit', { visitId, error: error.message });
     }
   }

@@ -115,7 +115,7 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
         if (!twilioRoom || !twilioRoom.roomSid) {
           throw new Error('Invalid Twilio room response');
         }
-      } catch (twilioError: any) {
+      } catch (twilioError: unknown) {
         // Check if it's a network/DNS error
         const isNetworkError = twilioError.message?.includes('getaddrinfo') ||
                                twilioError.message?.includes('ENOTFOUND') ||
@@ -171,7 +171,7 @@ export async function createTelehealthSession(data: CreateTelehealthSessionData)
     });
 
     return session;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create telehealth session', {
       errorMessage: error.message,
       errorName: error.name,
@@ -241,7 +241,7 @@ export async function joinTelehealthSession(data: JoinSessionData) {
             appointmentId: data.sessionId,
             sessionId: session?.id,
           });
-        } catch (createError: any) {
+        } catch (createError: unknown) {
           logger.error('Failed to auto-create telehealth session', {
             appointmentId: data.sessionId,
             error: createError.message,
@@ -313,7 +313,7 @@ export async function joinTelehealthSession(data: JoinSessionData) {
         if (!tokenData || !tokenData.token) {
           throw new Error('Invalid Twilio token response');
         }
-      } catch (twilioError: any) {
+      } catch (twilioError: unknown) {
         const isNetworkError = twilioError.message?.includes('getaddrinfo') ||
                                twilioError.message?.includes('ENOTFOUND') ||
                                twilioError.message?.includes('EAI_AGAIN');
@@ -376,7 +376,7 @@ export async function joinTelehealthSession(data: JoinSessionData) {
       twilioRoomName: roomName,
       twilioIdentity: identity,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to join telehealth session', {
       errorMessage: error.message,
       errorName: error.name,
@@ -416,7 +416,7 @@ export async function endTelehealthSession(sessionId: string, userId: string, en
     if (!isMockMode) {
       try {
         await twilioService.endTwilioRoom(roomSid);
-      } catch (twilioError: any) {
+      } catch (twilioError: unknown) {
         // Log but don't fail if Twilio is unavailable
         logger.warn('Failed to end Twilio room - continuing with local cleanup', {
           sessionId,
@@ -452,7 +452,7 @@ export async function endTelehealthSession(sessionId: string, userId: string, en
           appointmentId: session.appointmentId,
           sessionId,
         });
-      } catch (appointmentError: any) {
+      } catch (appointmentError: unknown) {
         // Log but don't fail - session end is more critical
         logger.warn('Failed to update appointment status', {
           appointmentId: session.appointmentId,
@@ -470,7 +470,7 @@ export async function endTelehealthSession(sessionId: string, userId: string, en
     });
 
     return updatedSession;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to end telehealth session', {
       errorMessage: error.message,
       errorName: error.name,
@@ -513,7 +513,7 @@ export async function getTelehealthSession(appointmentId: string) {
     });
 
     return session;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get telehealth session', {
       errorMessage: error.message,
       errorName: error.name,
@@ -548,7 +548,7 @@ export async function updateSessionStatus(
     });
 
     return session;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update session status', {
       errorMessage: error.message,
       errorName: error.name,
@@ -585,7 +585,7 @@ export async function enableRecording(
     });
 
     return session;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to enable recording', {
       errorMessage: error.message,
       errorName: error.name,
@@ -614,7 +614,7 @@ export async function stopRecording(sessionId: string, userId: string) {
     });
 
     return session;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to stop recording', {
       errorMessage: error.message,
       errorName: error.name,
@@ -675,7 +675,7 @@ export async function getClientEmergencyContact(sessionId: string) {
       phone: primaryContact.phone,
       relationship: primaryContact.relationship,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get client emergency contact', {
       errorMessage: error.message,
       errorName: error.name,
@@ -774,7 +774,7 @@ export async function activateEmergency(data: {
     }
 
     return updatedSession;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to activate emergency protocol', {
       errorMessage: error.message,
       errorName: error.name,
@@ -871,7 +871,7 @@ export async function verifyClientConsent(
       consentType,
       message: 'Valid consent on file',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to verify client consent', {
       error: error.message,
       clientId,
@@ -999,7 +999,7 @@ export async function createSessionRating(data: CreateSessionRatingData) {
     });
 
     return rating;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create session rating', {
       error: error.message,
       sessionId: data.sessionId,
@@ -1129,7 +1129,7 @@ export async function getAllSessionRatings(params: GetAllSessionRatingsParams) {
         hasMore: skip + ratings.length < totalCount,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get session ratings', {
       error: error.message,
     });
@@ -1198,7 +1198,7 @@ export async function getSessionRatingStats() {
       recentRatings, // last 30 days
       distribution: fullDistribution,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get session rating stats', {
       error: error.message,
     });
@@ -1262,7 +1262,7 @@ export async function getSessionRating(
     }
 
     return rating;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get session rating', {
       error: error.message,
       sessionId,

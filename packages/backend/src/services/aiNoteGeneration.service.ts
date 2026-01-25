@@ -460,7 +460,7 @@ export async function generateSOAPNote(
       tokenCount: updatedNote.tokenCount!,
       createdAt: updatedNote.createdAt.toISOString(),
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to generate SOAP note', {
       error: error.message,
       sessionId: request.sessionId,
@@ -540,7 +540,7 @@ export async function generateRiskAssessment(
     });
 
     return result.riskAssessment;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to generate risk assessment', {
       error: error.message,
       sessionId,
@@ -702,7 +702,7 @@ Please regenerate the note incorporating this feedback while maintaining clinica
       tokenCount: updatedNote.tokenCount!,
       createdAt: updatedNote.createdAt.toISOString(),
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to regenerate note', {
       error: error.message,
       aiNoteId: request.aiNoteId,
@@ -744,7 +744,7 @@ function parseClaudeResponse(responseText: string): any {
 
     const parsed = JSON.parse(cleanedText);
     return parsed;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to parse Claude response', {
       error: error.message,
       responseText: responseText.substring(0, 500),
@@ -814,7 +814,7 @@ async function logAuditEvent(
         timestamp: new Date(),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to log audit event', {
       error: error.message,
       aiNoteId,

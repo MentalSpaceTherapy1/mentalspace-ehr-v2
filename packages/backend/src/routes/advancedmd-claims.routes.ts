@@ -90,7 +90,7 @@ router.post('/', requireClaimsAccess, async (req: Request, res: Response) => {
         validationErrors: result.validationErrors,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Claims Routes: Error creating claim:', error);
     res.status(500).json({
       success: false,
@@ -122,7 +122,7 @@ router.post('/:claimId/submit', requireClaimsAccess, async (req: Request, res: R
         error: result.error,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Claims Routes: Error submitting claim:', error);
     res.status(500).json({
       success: false,
@@ -169,7 +169,7 @@ router.post('/batch-submit', requireClaimsAccess, async (req: Request, res: Resp
       },
       results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Claims Routes: Error batch submitting claims:', error);
     res.status(500).json({
       success: false,
@@ -202,7 +202,7 @@ router.post('/:claimId/resubmit', requireClaimsAccess, async (req: Request, res:
         error: result.error,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Claims Routes: Error resubmitting claim:', error);
     res.status(500).json({
       success: false,
@@ -237,7 +237,7 @@ router.get('/:claimId/status', requireClaimsAccess, async (req: Request, res: Re
         error: result.error,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Claims Routes: Error checking claim status:', error);
     res.status(500).json({
       success: false,
@@ -275,7 +275,7 @@ router.post('/batch-status', requireClaimsAccess, async (req: Request, res: Resp
       success: true,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Claims Routes: Error batch checking claim status:', error);
     res.status(500).json({
       success: false,
@@ -298,7 +298,7 @@ router.post('/check-all-pending', requireClaimsAccess, async (req: Request, res:
       message: `Checked ${result.totalChecked} pending claims`,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Claims Routes: Error checking all pending claims:', error);
     res.status(500).json({
       success: false,
@@ -338,7 +338,7 @@ router.get('/', requireClaimsAccess, async (req: Request, res: Response) => {
       count: claims.length,
       data: claims,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Claims Routes: Error getting claims:', error);
     res.status(500).json({
       success: false,
@@ -365,7 +365,7 @@ router.get('/stats', requireClaimsAccess, async (req: Request, res: Response) =>
       success: true,
       data: stats,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Claims Routes: Error getting claim statistics:', error);
     res.status(500).json({
       success: false,

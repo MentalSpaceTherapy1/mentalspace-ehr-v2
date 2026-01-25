@@ -98,7 +98,7 @@ router.get('/charges/:id/sync-status', requireAdminOrBilling, async (req: Reques
       cptCode: charge.cptCode,
       amount: charge.chargeAmount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error getting charge sync status:', error);
     res.status(500).json({ error: 'Failed to get sync status', message: error.message });
   }
@@ -149,7 +149,7 @@ router.post('/charges/:id/submit', requireAdminOrBilling, async (req: Request, r
         validationErrors: result.validationErrors,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error submitting charge:', error);
     res.status(500).json({ error: 'Failed to submit charge', message: error.message });
   }
@@ -178,7 +178,7 @@ router.post('/charges/batch-submit', requireAdminOrBilling, async (req: Request,
       failureCount: result.failureCount,
       results: result.results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error batch submitting charges:', error);
     res.status(500).json({ error: 'Failed to batch submit charges', message: error.message });
   }
@@ -222,7 +222,7 @@ router.post('/appointments/:id/submit-charges', requireAdminOrBilling, async (re
       failureCount: result.failureCount,
       results: result.results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error submitting appointment charges:', error);
     res.status(500).json({ error: 'Failed to submit appointment charges', message: error.message });
   }
@@ -269,7 +269,7 @@ router.put('/charges/:id', requireAdminOrBilling, async (req: Request, res: Resp
         chargeId: result.chargeId,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error updating charge:', error);
     res.status(500).json({ error: 'Failed to update charge', message: error.message });
   }
@@ -321,7 +321,7 @@ router.delete('/charges/:id', requireAdminOrBilling, async (req: Request, res: R
         chargeId: result.chargeId,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error voiding charge:', error);
     res.status(500).json({ error: 'Failed to void charge', message: error.message });
   }
@@ -342,7 +342,7 @@ router.post('/charges/sync-status/:visitId', requireAdminOrBilling, async (req: 
       message: 'Charge status synced successfully',
       visitId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error syncing charge status:', error);
     res.status(500).json({ error: 'Failed to sync charge status', message: error.message });
   }
@@ -361,7 +361,7 @@ router.get('/charges/sync-stats', requireAdminOrBilling, async (req: Request, re
       stats,
       timestamp: new Date(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error getting sync stats:', error);
     res.status(500).json({ error: 'Failed to get sync stats', message: error.message });
   }
@@ -397,7 +397,7 @@ router.get('/lookup/cpt/:code', requireAdminOrBilling, async (req: Request, res:
         error: `CPT code ${code} not found in AdvancedMD`,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error looking up CPT code:', error);
     res.status(500).json({ error: 'Failed to lookup CPT code', message: error.message });
   }
@@ -429,7 +429,7 @@ router.get('/lookup/icd/:code', requireAdminOrBilling, async (req: Request, res:
         error: `ICD-10 code ${code} not found in AdvancedMD`,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error looking up ICD code:', error);
     res.status(500).json({ error: 'Failed to lookup ICD code', message: error.message });
   }
@@ -461,7 +461,7 @@ router.get('/lookup/modifier/:code', requireAdminOrBilling, async (req: Request,
         error: `Modifier code ${code} not found in AdvancedMD`,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error looking up modifier code:', error);
     res.status(500).json({ error: 'Failed to lookup modifier code', message: error.message });
   }
@@ -493,7 +493,7 @@ router.get('/lookup/provider/:name', requireAdminOrBilling, async (req: Request,
         error: `Provider ${name} not found in AdvancedMD`,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error looking up provider:', error);
     res.status(500).json({ error: 'Failed to lookup provider', message: error.message });
   }
@@ -525,7 +525,7 @@ router.get('/lookup/facility/:name', requireAdminOrBilling, async (req: Request,
         error: `Facility ${name} not found in AdvancedMD`,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error looking up facility:', error);
     res.status(500).json({ error: 'Failed to lookup facility', message: error.message });
   }
@@ -549,7 +549,7 @@ router.post('/lookup/cpt/batch', requireAdminOrBilling, async (req: Request, res
       message: 'CPT codes batch lookup completed and cached',
       count: results.size,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error batch looking up CPT codes:', error);
     res.status(500).json({ error: 'Failed to batch lookup CPT codes', message: error.message });
   }
@@ -573,7 +573,7 @@ router.post('/lookup/icd/batch', requireAdminOrBilling, async (req: Request, res
       message: 'ICD-10 codes batch lookup completed and cached',
       count: results.size,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error batch looking up ICD codes:', error);
     res.status(500).json({ error: 'Failed to batch lookup ICD codes', message: error.message });
   }
@@ -629,7 +629,7 @@ router.get('/cache/stats', requireAdminOrBilling, async (req: Request, res: Resp
       oldestEntry: oldest?.createdAt,
       newestEntry: newest?.createdAt,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error getting cache stats:', error);
     res.status(500).json({ error: 'Failed to get cache stats', message: error.message });
   }
@@ -664,7 +664,7 @@ router.delete('/cache/clear', requireAdminOrBilling, async (req: Request, res: R
         deletedCount: result.count,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AdvancedMD Billing Routes: Error clearing cache:', error);
     res.status(500).json({ error: 'Failed to clear cache', message: error.message });
   }

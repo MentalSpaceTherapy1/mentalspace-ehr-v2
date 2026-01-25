@@ -331,7 +331,7 @@ export class AdvancedMDAppointmentSyncService {
         syncDirection: 'to_amd',
         message: 'Appointment synced to AdvancedMD successfully',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Update appointment with error
       await prisma.appointment.update({
         where: { id: appointmentId },
@@ -462,7 +462,7 @@ export class AdvancedMDAppointmentSyncService {
         syncDirection: 'to_amd',
         message: 'Appointment updated in AdvancedMD successfully',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       await prisma.appointment.update({
         where: { id: appointmentId },
         data: {
@@ -588,7 +588,7 @@ export class AdvancedMDAppointmentSyncService {
         syncDirection: 'from_amd',
         message: 'Appointment synced from AdvancedMD successfully',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       await prisma.advancedMDSyncLog.update({
         where: { id: syncLog.id },
         data: {

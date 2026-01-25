@@ -259,7 +259,7 @@ export async function getClientDiagnoses(
   clientId: string,
   activeOnly: boolean = false
 ) {
-  const where: any = { clientId };
+  const where: Prisma.DiagnosisWhereInput = { clientId };
 
   if (activeOnly) {
     where.status = 'Active';

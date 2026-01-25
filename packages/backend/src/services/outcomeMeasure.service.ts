@@ -272,7 +272,7 @@ export const outcomeMeasureService = {
       limit?: number;
     }
   ) {
-    const where: any = { clientId };
+    const where: Prisma.OutcomeMeasureWhereInput = { clientId };
 
     if (filters?.measureType) {
       where.measureType = filters.measureType;
@@ -378,7 +378,7 @@ export const outcomeMeasureService = {
     startDate?: Date,
     endDate?: Date
   ) {
-    const where: any = {
+    const where: Prisma.OutcomeMeasureWhereInput = {
       clientId,
       measureType,
     };

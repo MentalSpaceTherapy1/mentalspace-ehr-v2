@@ -42,7 +42,7 @@ router.get('/detailed', async (req: Request, res: Response) => {
       message: 'Database connection successful',
       responseTime: '<100ms',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     healthChecks.checks.database = {
       status: 'unhealthy',
       message: 'Database connection failed',
@@ -88,7 +88,7 @@ router.get('/ready', async (req: Request, res: Response) => {
       ready: true,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(503).json({
       success: false,
       ready: false,

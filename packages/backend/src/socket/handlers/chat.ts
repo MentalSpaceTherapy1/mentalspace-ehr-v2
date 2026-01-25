@@ -47,7 +47,7 @@ export function setupChatHandlers(io: SocketIOServer, socket: Socket) {
         sessionId,
         message: 'Successfully joined chat session',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error joining chat session', {
         error: error.message,
         userId,
@@ -105,7 +105,7 @@ export function setupChatHandlers(io: SocketIOServer, socket: Socket) {
         sessionId,
         timestamp: timestamp || new Date().toISOString(),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error sending chat message', {
         error: error.message,
         userId,
@@ -139,7 +139,7 @@ export function setupChatHandlers(io: SocketIOServer, socket: Socket) {
         sessionId,
         message: 'Successfully left chat session',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error leaving chat session', {
         error: error.message,
         userId,

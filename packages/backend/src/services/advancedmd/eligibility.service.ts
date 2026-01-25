@@ -237,7 +237,7 @@ export class AdvancedMDEligibilityService {
         cachedResult: false,
         checkedAt: new Date(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Eligibility Service: Error checking eligibility:', error.message);
       return {
         success: false,
@@ -288,7 +288,7 @@ export class AdvancedMDEligibilityService {
         appointment.client.insuranceInfo[0]?.id,
         appointment.appointmentDate
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Eligibility Service: Error checking appointment eligibility:', error.message);
       return {
         success: false,
@@ -404,7 +404,7 @@ export class AdvancedMDEligibilityService {
         success: true,
         eligibilityData,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Eligibility Service: API call failed:', error.message);
       return { success: false, error: error.message };
     }
@@ -535,7 +535,7 @@ export class AdvancedMDEligibilityService {
           } as any,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Log but don't fail if database storage fails
       logger.error('Eligibility Service: Failed to store eligibility result:', error.message);
     }

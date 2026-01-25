@@ -125,7 +125,7 @@ export class SleepTrackingService {
       limit = 50,
     } = filters;
 
-    const where: any = { clientId };
+    const where: Prisma.SleepLogWhereInput = { clientId };
 
     // Date range filter
     if (startDate || endDate) {

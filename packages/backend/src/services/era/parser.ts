@@ -211,7 +211,7 @@ export class ERAParser {
             }
             break;
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Error parsing ERA segment', {
           segment: segmentId,
           error: error.message,

@@ -123,7 +123,7 @@ export async function getCrisisResources(filter?: CrisisResourceFilter) {
     });
 
     return resources;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get crisis resources', {
       error: error.message,
       filter,
@@ -187,7 +187,7 @@ export async function getCrisisResourcesForEmergency(
     });
 
     return resources;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get crisis resources for emergency', {
       error: error.message,
       emergencyType,
@@ -210,7 +210,7 @@ export async function getCrisisResourceById(id: string) {
     }
 
     return resource;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get crisis resource', {
       error: error.message,
       id,
@@ -239,7 +239,7 @@ export async function createCrisisResource(data: CreateCrisisResourceData) {
     });
 
     return resource;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create crisis resource', {
       error: error.message,
       name: data.name,
@@ -268,7 +268,7 @@ export async function updateCrisisResource(
     });
 
     return resource;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update crisis resource', {
       error: error.message,
       id,
@@ -297,7 +297,7 @@ export async function deleteCrisisResource(id: string, userId: string) {
     });
 
     return resource;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete crisis resource', {
       error: error.message,
       id,
@@ -333,7 +333,7 @@ export async function reorderCrisisResources(
     });
 
     return results;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to reorder crisis resources', {
       error: error.message,
     });
@@ -354,7 +354,7 @@ export async function getCrisisResourceCategories() {
     });
 
     return resources.map((r: any) => r.category);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get crisis resource categories', {
       error: error.message,
     });
@@ -397,7 +397,7 @@ export async function searchCrisisResources(searchTerm: string) {
     });
 
     return resources;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to search crisis resources', {
       error: error.message,
       searchTerm,

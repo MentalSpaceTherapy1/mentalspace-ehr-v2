@@ -95,7 +95,7 @@ async function setupLogGroup(): Promise<void> {
       await cloudWatchLogsClient.send(
         new CreateLogGroupCommand({ logGroupName: LOG_GROUP })
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ignore if already exists
       if (error.name !== 'ResourceAlreadyExistsException') {
         throw error;
@@ -112,7 +112,7 @@ async function setupLogGroup(): Promise<void> {
           logStreamName,
         })
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.name !== 'ResourceAlreadyExistsException') {
         throw error;
       }
@@ -580,7 +580,7 @@ async function logSecurityEvent(
       })
     );
     sequenceToken = response.nextSequenceToken;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Handle sequence token issues
     if (error.name === 'InvalidSequenceTokenException') {
       sequenceToken = error.expectedSequenceToken;

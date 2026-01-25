@@ -43,7 +43,7 @@ router.post('/generate-note', async (req: Request, res: Response) => {
     });
 
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Generate note error:', error);
     res.status(500).json({ error: error.message || 'Failed to generate note' });
   }
@@ -69,7 +69,7 @@ router.post('/suggest-field', async (req: Request, res: Response) => {
     );
 
     res.json({ suggestion });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Field suggestion error:', error);
     res.status(500).json({ error: error.message || 'Failed to generate field suggestion' });
   }
@@ -90,7 +90,7 @@ router.post('/treatment-recommendations', async (req: Request, res: Response) =>
     const result = await treatmentSuggestionsService.generateTreatmentRecommendations(input);
 
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Treatment recommendations error:', error);
     res.status(500).json({ error: error.message || 'Failed to generate treatment recommendations' });
   }
@@ -115,7 +115,7 @@ router.post('/suggest-interventions', async (req: Request, res: Response) => {
     );
 
     res.json({ interventions });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Intervention suggestions error:', error);
     res.status(500).json({ error: error.message || 'Failed to suggest interventions' });
   }
@@ -140,7 +140,7 @@ router.post('/generate-goals', async (req: Request, res: Response) => {
     );
 
     res.json({ goals });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Goal generation error:', error);
     res.status(500).json({ error: error.message || 'Failed to generate goals' });
   }
@@ -165,7 +165,7 @@ router.post('/suggest-homework', async (req: Request, res: Response) => {
     );
 
     res.json({ assignments });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Homework suggestion error:', error);
     res.status(500).json({ error: error.message || 'Failed to suggest homework' });
   }
@@ -186,7 +186,7 @@ router.post('/analyze-diagnosis', async (req: Request, res: Response) => {
     const result = await diagnosisAssistanceService.analyzeDiagnostic(input);
 
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Diagnosis analysis error:', error);
     res.status(500).json({ error: error.message || 'Failed to analyze diagnosis' });
   }
@@ -211,7 +211,7 @@ router.post('/map-dsm5-criteria', async (req: Request, res: Response) => {
     );
 
     res.json(mapping);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:DSM-5 mapping error:', error);
     res.status(500).json({ error: error.message || 'Failed to map DSM-5 criteria' });
   }
@@ -235,7 +235,7 @@ router.post('/differential-diagnosis', async (req: Request, res: Response) => {
     );
 
     res.json({ differentials });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Differential diagnosis error:', error);
     res.status(500).json({ error: error.message || 'Failed to generate differential diagnosis' });
   }
@@ -259,7 +259,7 @@ router.post('/clarifying-questions', async (req: Request, res: Response) => {
     );
 
     res.json({ questions });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Clarifying questions error:', error);
     res.status(500).json({ error: error.message || 'Failed to generate clarifying questions' });
   }
@@ -284,7 +284,7 @@ router.post('/recommend-icd10', async (req: Request, res: Response) => {
     );
 
     res.json(codeRecommendation);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:ICD-10 recommendation error:', error);
     res.status(500).json({ error: error.message || 'Failed to recommend ICD-10 code' });
   }
@@ -305,7 +305,7 @@ router.post('/analyze-billing', async (req: Request, res: Response) => {
     const result = await billingIntelligenceService.analyzeBilling(input);
 
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Billing analysis error:', error);
     res.status(500).json({ error: error.message || 'Failed to analyze billing' });
   }
@@ -330,7 +330,7 @@ router.post('/suggest-cpt-code', async (req: Request, res: Response) => {
     );
 
     res.json(cptSuggestion);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:CPT code suggestion error:', error);
     res.status(500).json({ error: error.message || 'Failed to suggest CPT code' });
   }
@@ -354,7 +354,7 @@ router.post('/validate-medical-necessity', async (req: Request, res: Response) =
     );
 
     res.json(validation);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Medical necessity validation error:', error);
     res.status(500).json({ error: error.message || 'Failed to validate medical necessity' });
   }
@@ -380,7 +380,7 @@ router.post('/detect-billing-errors', async (req: Request, res: Response) => {
     );
 
     res.json({ errors });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Billing error detection failed:', error);
     res.status(500).json({ error: error.message || 'Failed to detect billing errors' });
   }
@@ -407,7 +407,7 @@ router.post('/analyze-financial', async (req: Request, res: Response) => {
     });
 
     res.json({ success: true, data: result });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Financial analysis error:', error);
     res.status(500).json({ error: error.message || 'Failed to analyze financial data' });
   }
@@ -433,7 +433,7 @@ router.post('/enhance-revenue-forecast', async (req: Request, res: Response) => 
     });
 
     res.json({ success: true, data: result });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Revenue forecast enhancement error:', error);
     res.status(500).json({ error: error.message || 'Failed to enhance revenue forecast' });
   }
@@ -459,7 +459,7 @@ router.post('/generate-report-insights', async (req: Request, res: Response) => 
     });
 
     res.json({ success: true, data: result });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('AI Routes:Report insights error:', error);
     res.status(500).json({ error: error.message || 'Failed to generate report insights' });
   }
@@ -483,7 +483,7 @@ router.get('/health', async (req: Request, res: Response) => {
       purpose: 'Clinical Notes, Financial AI, Analytics, Reports, Billing Intelligence',
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(503).json({
       status: 'unhealthy',
       service: 'Anthropic Claude AI',

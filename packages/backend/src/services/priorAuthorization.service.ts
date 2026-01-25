@@ -158,7 +158,7 @@ export async function updateAuthorization(
   }
 
   // If changing sessions authorized, recalculate sessions remaining
-  let updateData: any = { ...data };
+  let updateData: Prisma.PriorAuthorizationWhereInput = { ...data };
 
   if (data.sessionsAuthorized !== undefined) {
     updateData.sessionsRemaining = data.sessionsAuthorized - auth.sessionsUsed;
@@ -502,7 +502,7 @@ export async function getAuthorizationById(
 export async function getAuthorizations(
   filters?: AuthorizationFilters
 ): Promise<PriorAuthorization[]> {
-  const where: any = {};
+  const where: Prisma.PriorAuthorizationWhereInput = {};
 
   if (filters?.clientId) {
     where.clientId = filters.clientId;
