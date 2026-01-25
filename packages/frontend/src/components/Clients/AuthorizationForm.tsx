@@ -36,8 +36,8 @@ interface PriorAuthorization {
 
 interface Insurance {
   id: string;
-  payerName: string;
-  rank: number;
+  insuranceCompany: string;
+  rank: string;
 }
 
 interface Provider {
@@ -217,7 +217,7 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
               <option value="">Select Insurance</option>
               {insuranceList?.map((insurance) => (
                 <option key={insurance.id} value={insurance.id}>
-                  {insurance.payerName} (Rank {insurance.rank})
+                  {insurance.insuranceCompany} ({insurance.rank})
                 </option>
               ))}
             </select>

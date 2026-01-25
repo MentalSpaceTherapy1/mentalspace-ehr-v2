@@ -11,8 +11,8 @@ interface PriorAuthorization {
   insuranceId: string;
   insurance: {
     id: string;
-    payerName: string;
-    rank: number;
+    insuranceCompany: string;
+    rank: string;
   };
   authorizationNumber: string;
   authorizationType: string;

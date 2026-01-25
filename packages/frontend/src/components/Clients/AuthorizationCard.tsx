@@ -12,8 +12,8 @@ interface PriorAuthorization {
   insuranceId: string;
   insurance: {
     id: string;
-    payerName: string;
-    rank: number;
+    insuranceCompany: string;
+    rank: string;
   };
   authorizationNumber: string;
   authorizationType: string;
@@ -144,7 +144,7 @@ export default function AuthorizationCard({ authorization, onEdit }: Authorizati
                 {authorization.status}
               </span>
             </div>
-            <p className="text-gray-600 font-semibold">{authorization.insurance.payerName}</p>
+            <p className="text-gray-600 font-semibold">{authorization.insurance.insuranceCompany}</p>
             <p className="text-sm text-gray-500">{authorization.authorizationType}</p>
           </div>
         </div>
