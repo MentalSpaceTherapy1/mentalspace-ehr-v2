@@ -59,6 +59,7 @@ export const ClientForm = lazyLoad(() => import('../pages/Clients/ClientForm'));
 export const ClientDetail = lazyLoad(() => import('../pages/Clients/ClientDetail'));
 export const ClientDiagnosesPage = lazyLoad(() => import('../pages/Clients/ClientDiagnosesPage'));
 export const DuplicateDetectionPage = lazyLoad(() => import('../pages/Clients/DuplicateDetectionPage'));
+export const PriorAuthorizationsPage = lazyLoad(() => import('../pages/Clients/PriorAuthorizationsPage'));
 
 // ============================================================================
 // Clinical Notes

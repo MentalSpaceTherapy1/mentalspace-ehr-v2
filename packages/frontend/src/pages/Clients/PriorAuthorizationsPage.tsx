@@ -48,8 +48,8 @@ export default function PriorAuthorizationsPage() {
   const { data: authorizations, isLoading, error } = useQuery<PriorAuthorization[]>({
     queryKey: ['prior-authorizations', clientId],
     queryFn: async () => {
-      const response = await api.get(`/prior-authorizations/client/${clientId}`);
-      return response.data.data;
+      const response = await api.get(`/prior-authorizations?clientId=${clientId}`);
+      return response.data.data?.authorizations || response.data.authorizations || [];
     },
   });
 

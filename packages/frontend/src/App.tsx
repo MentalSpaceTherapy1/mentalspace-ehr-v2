@@ -313,6 +313,14 @@ function App() {
           }
         />
         <Route
+          path="/clients/:clientId/prior-authorizations"
+          element={
+            <PrivateRoute>
+              <LazyRoutes.PriorAuthorizationsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/clients/duplicates"
           element={
             <PrivateRoute>
