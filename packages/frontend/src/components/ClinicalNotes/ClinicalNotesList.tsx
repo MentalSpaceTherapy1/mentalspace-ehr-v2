@@ -75,7 +75,7 @@ export default function ClinicalNotesList({ clientId }: ClinicalNotesListProps) 
     },
   });
 
-  const notes: ClinicalNote[] = notesData?.data || [];
+  const notes: ClinicalNote[] = notesData?.data?.notes || notesData?.notes || [];
   const filteredNotes = selectedNoteType === 'all'
     ? notes
     : notes.filter(note => note.noteType === selectedNoteType);
