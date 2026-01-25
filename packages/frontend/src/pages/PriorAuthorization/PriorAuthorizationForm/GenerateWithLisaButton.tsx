@@ -13,8 +13,10 @@ import React, { useState, useEffect } from 'react';
 
 interface GenerateWithLisaButtonProps {
   priorAuthId: string;
-  onGenerationComplete: (data: any) => void;
-  onError: (error: Error) => void;
+  clientId?: string;
+  onGenerate: () => void;
+  onGenerationComplete?: (data: any) => void;
+  onError?: (error: Error) => void;
   isLoading?: boolean;
   disabled?: boolean;
 }
@@ -23,6 +25,7 @@ type ButtonState = 'default' | 'loading' | 'success' | 'error';
 
 export default function GenerateWithLisaButton({
   priorAuthId,
+  onGenerate,
   onGenerationComplete,
   onError,
   isLoading = false,
@@ -50,7 +53,8 @@ export default function GenerateWithLisaButton({
   const handleClick = () => {
     if (buttonState === 'loading' || disabled) return;
     setButtonState('loading');
-    // Parent component handles the actual API call
+    // Trigger the parent's API call
+    onGenerate();
   };
 
   const getButtonContent = () => {

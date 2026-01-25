@@ -205,6 +205,7 @@ export default function PriorAuthorizationForm({
       {/* Generate with Lisa Button */}
       <GenerateWithLisaButton
         priorAuthId={priorAuthorizationId}
+        onGenerate={handleGenerateWithLisa}
         onGenerationComplete={(data) => {
           setFormData({ ...DEFAULT_FORM_DATA, ...data });
           setHasUnsavedChanges(true);

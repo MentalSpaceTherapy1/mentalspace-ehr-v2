@@ -196,6 +196,42 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
     }
   }, [existingQuestionnaire]);
 
+  // Generate with Lisa mutation
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      let paId = authorization?.id;
+
+      // If no PA exists yet, we can't generate - show a message
+      if (!paId) {
+        // For new PAs, we'll generate mock data or skip the API call
+        // In production, this would create a temp PA or call a different endpoint
+        throw new Error('Please save the questionnaire first before generating with Lisa');
+      }
+
+      const response = await api.post(`/prior-authorizations/${paId}/generate-with-lisa`, {
+        regenerateFields: ['all'],
+        preserveUserEdits: false,
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const generatedData = data.data?.questionnaire?.formData || data.questionnaire?.formData || data.data || data;
+      if (generatedData) {
+        setQuestionnaireData({ ...DEFAULT_QUESTIONNAIRE_DATA, ...generatedData });
+      }
+      setIsGenerating(false);
+    },
+    onError: (error) => {
+      console.error('Lisa generation failed:', error);
+      setIsGenerating(false);
+    },
+  });
+
+  const handleTriggerGenerate = () => {
+    setIsGenerating(true);
+    generateMutation.mutate();
+  };
+
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -323,9 +359,10 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
       <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200">
         <GenerateWithLisaButton
           priorAuthId={authorization?.id || 'new'}
+          onGenerate={handleTriggerGenerate}
           onGenerationComplete={handleGenerateWithLisa}
           onError={(error) => console.error('Lisa generation failed:', error)}
-          isLoading={isGenerating}
+          isLoading={isGenerating || generateMutation.isPending}
           disabled={saveMutation.isPending}
         />
       </div>
