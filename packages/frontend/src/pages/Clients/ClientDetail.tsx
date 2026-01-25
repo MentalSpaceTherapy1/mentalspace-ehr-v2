@@ -17,7 +17,7 @@ export default function ClientDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'demographics' | 'appointments' | 'clinical-notes' | 'diagnoses' | 'portal' | 'assessments'>('demographics');
+  const [activeTab, setActiveTab] = useState<'demographics' | 'appointments' | 'clinical-notes' | 'diagnoses' | 'prior-auth' | 'portal' | 'assessments'>('demographics');
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
   // Fetch client data
@@ -205,6 +205,16 @@ export default function ClientDetail() {
             }`}
           >
             Diagnoses
+          </button>
+          <button
+            onClick={() => setActiveTab('prior-auth')}
+            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              activeTab === 'prior-auth'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+            }`}
+          >
+            Prior Auth
           </button>
           <button
             onClick={() => setActiveTab('portal')}
@@ -497,6 +507,23 @@ export default function ClientDetail() {
           </div>
           <p className="text-gray-600">
             Click "Manage Diagnoses" to view and edit this client's diagnosis history.
+          </p>
+        </div>
+      )}
+
+      {activeTab === 'prior-auth' && (
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">Prior Authorizations</h2>
+            <button
+              onClick={() => navigate(`/clients/${id}/prior-authorizations`)}
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold"
+            >
+              Manage Prior Authorizations
+            </button>
+          </div>
+          <p className="text-gray-600">
+            Track and manage prior authorizations for insurance coverage. Click "Manage Prior Authorizations" to view authorization status, sessions remaining, and complete clinical questionnaires with Lisa AI assistance.
           </p>
         </div>
       )}
