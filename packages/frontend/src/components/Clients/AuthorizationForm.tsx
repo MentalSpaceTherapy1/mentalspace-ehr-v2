@@ -13,6 +13,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
+import { useAuth } from '../../hooks/useAuth';
 import PAFormHeader from '../../pages/PriorAuthorization/PriorAuthorizationForm/PAFormHeader';
 import ClinicalGridSection from '../../pages/PriorAuthorization/PriorAuthorizationForm/ClinicalGridSection';
 import NarrativeSectionsContainer, { TransportationOption } from '../../pages/PriorAuthorization/PriorAuthorizationForm/NarrativeSectionsContainer';
@@ -149,6 +150,7 @@ const DEFAULT_QUESTIONNAIRE_DATA: Record<string, any> = {
 
 export default function AuthorizationForm({ clientId, authorization, onClose }: AuthorizationFormProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState<'clinical' | 'narratives'>('clinical');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -210,18 +212,21 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
           throw new Error('Client must have insurance on file before generating with Lisa');
         }
 
+        if (!user?.id) {
+          throw new Error('You must be logged in to generate with Lisa');
+        }
+
         const paData = {
           clientId,
           insuranceId: primaryInsurance.id,
           authorizationNumber: `PA-${Date.now()}`,
-          authorizationType: 'OUTPATIENT_MENTAL_HEALTH',
-          status: 'PENDING',
+          authorizationType: 'OUTPATIENT_THERAPY',
           sessionsAuthorized: 12,
           startDate: new Date().toISOString(),
           endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
           cptCodes: ['90837'],
           diagnosisCodes: primaryDiagnosis ? [primaryDiagnosis.code] : [],
-          requestingProviderId: null,
+          requestingProviderId: user.id,
         };
 
         const createResponse = await api.post('/prior-authorizations', paData);
@@ -264,18 +269,25 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
         const primaryInsurance = insuranceList?.find(i => i.rank === 'PRIMARY') || insuranceList?.[0];
         const primaryDiagnosis = client?.diagnoses?.[0];
 
+        if (!primaryInsurance?.id) {
+          throw new Error('Client must have insurance on file');
+        }
+
+        if (!user?.id) {
+          throw new Error('You must be logged in');
+        }
+
         const paData = {
           clientId,
-          insuranceId: primaryInsurance?.id,
+          insuranceId: primaryInsurance.id,
           authorizationNumber: `PA-${Date.now()}`,
-          authorizationType: 'OUTPATIENT_MENTAL_HEALTH',
-          status: 'PENDING',
+          authorizationType: 'OUTPATIENT_THERAPY',
           sessionsAuthorized: 12,
           startDate: new Date().toISOString(),
           endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days
           cptCodes: ['90837'],
           diagnosisCodes: primaryDiagnosis ? [primaryDiagnosis.code] : [],
-          requestingProviderId: null, // Will be set by backend from current user
+          requestingProviderId: user.id,
         };
 
         const response = await api.post('/prior-authorizations', paData);
