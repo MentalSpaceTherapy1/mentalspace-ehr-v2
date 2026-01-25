@@ -12,8 +12,87 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- CreateTable
-CREATE TABLE "prior_authorization_questionnaires" (
+-- CreateTable: prior_authorizations (if not exists)
+CREATE TABLE IF NOT EXISTS "prior_authorizations" (
+    "id" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "insuranceId" TEXT NOT NULL,
+    "authorizationNumber" VARCHAR(100) NOT NULL,
+    "authorizationType" TEXT NOT NULL,
+    "cptCodes" TEXT[],
+    "diagnosisCodes" TEXT[],
+    "sessionsAuthorized" INTEGER NOT NULL,
+    "sessionsUsed" INTEGER NOT NULL DEFAULT 0,
+    "sessionsRemaining" INTEGER NOT NULL,
+    "sessionUnit" TEXT NOT NULL DEFAULT 'SESSIONS',
+    "requestDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "approvalDate" TIMESTAMP(3),
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3) NOT NULL,
+    "lastUsedDate" TIMESTAMP(3),
+    "requestingProviderId" TEXT NOT NULL,
+    "performingProviderId" TEXT,
+    "status" TEXT NOT NULL,
+    "denialReason" TEXT,
+    "appealStatus" TEXT,
+    "appealDate" TIMESTAMP(3),
+    "appealNotes" TEXT,
+    "documentationSubmitted" BOOLEAN NOT NULL DEFAULT false,
+    "clinicalJustification" TEXT,
+    "supportingDocuments" TEXT[],
+    "renewalRequested" BOOLEAN NOT NULL DEFAULT false,
+    "renewalRequestDate" TIMESTAMP(3),
+    "renewedFromId" TEXT,
+    "renewedToId" TEXT,
+    "warningsSent" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdBy" TEXT NOT NULL,
+
+    CONSTRAINT "prior_authorizations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex for prior_authorizations (if not exists)
+CREATE UNIQUE INDEX IF NOT EXISTS "prior_authorizations_authorizationNumber_key" ON "prior_authorizations"("authorizationNumber");
+CREATE INDEX IF NOT EXISTS "prior_authorizations_clientId_idx" ON "prior_authorizations"("clientId");
+CREATE INDEX IF NOT EXISTS "prior_authorizations_insuranceId_idx" ON "prior_authorizations"("insuranceId");
+CREATE INDEX IF NOT EXISTS "prior_authorizations_status_idx" ON "prior_authorizations"("status");
+CREATE INDEX IF NOT EXISTS "prior_authorizations_endDate_idx" ON "prior_authorizations"("endDate");
+CREATE INDEX IF NOT EXISTS "prior_authorizations_sessionsRemaining_idx" ON "prior_authorizations"("sessionsRemaining");
+
+-- AddForeignKeys for prior_authorizations (if not exists)
+DO $$ BEGIN
+    ALTER TABLE "prior_authorizations" ADD CONSTRAINT "prior_authorizations_clientId_fkey"
+        FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE "prior_authorizations" ADD CONSTRAINT "prior_authorizations_insuranceId_fkey"
+        FOREIGN KEY ("insuranceId") REFERENCES "insurance_information"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE "prior_authorizations" ADD CONSTRAINT "prior_authorizations_requestingProviderId_fkey"
+        FOREIGN KEY ("requestingProviderId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE "prior_authorizations" ADD CONSTRAINT "prior_authorizations_performingProviderId_fkey"
+        FOREIGN KEY ("performingProviderId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE "prior_authorizations" ADD CONSTRAINT "prior_authorizations_renewedFromId_fkey"
+        FOREIGN KEY ("renewedFromId") REFERENCES "prior_authorizations"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE "prior_authorizations" ADD CONSTRAINT "prior_authorizations_createdBy_fkey"
+        FOREIGN KEY ("createdBy") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- CreateTable: prior_authorization_questionnaires
+CREATE TABLE IF NOT EXISTS "prior_authorization_questionnaires" (
     "id" TEXT NOT NULL,
     "priorAuthorizationId" TEXT NOT NULL,
 
@@ -106,17 +185,22 @@ CREATE TABLE "prior_authorization_questionnaires" (
     CONSTRAINT "prior_authorization_questionnaires_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "prior_authorization_questionnaires_priorAuthorizationId_key" ON "prior_authorization_questionnaires"("priorAuthorizationId");
+-- CreateIndex for questionnaires
+CREATE UNIQUE INDEX IF NOT EXISTS "prior_authorization_questionnaires_priorAuthorizationId_key" ON "prior_authorization_questionnaires"("priorAuthorizationId");
+CREATE INDEX IF NOT EXISTS "prior_authorization_questionnaires_priorAuthorizationId_idx" ON "prior_authorization_questionnaires"("priorAuthorizationId");
 
--- CreateIndex
-CREATE INDEX "prior_authorization_questionnaires_priorAuthorizationId_idx" ON "prior_authorization_questionnaires"("priorAuthorizationId");
+-- AddForeignKeys for questionnaires
+DO $$ BEGIN
+    ALTER TABLE "prior_authorization_questionnaires" ADD CONSTRAINT "prior_authorization_questionnaires_priorAuthorizationId_fkey"
+        FOREIGN KEY ("priorAuthorizationId") REFERENCES "prior_authorizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- AddForeignKey
-ALTER TABLE "prior_authorization_questionnaires" ADD CONSTRAINT "prior_authorization_questionnaires_priorAuthorizationId_fkey" FOREIGN KEY ("priorAuthorizationId") REFERENCES "prior_authorizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "prior_authorization_questionnaires" ADD CONSTRAINT "prior_authorization_questionnaires_createdBy_fkey"
+        FOREIGN KEY ("createdBy") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- AddForeignKey
-ALTER TABLE "prior_authorization_questionnaires" ADD CONSTRAINT "prior_authorization_questionnaires_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "prior_authorization_questionnaires" ADD CONSTRAINT "prior_authorization_questionnaires_lastModifiedBy_fkey" FOREIGN KEY ("lastModifiedBy") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "prior_authorization_questionnaires" ADD CONSTRAINT "prior_authorization_questionnaires_lastModifiedBy_fkey"
+        FOREIGN KEY ("lastModifiedBy") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
