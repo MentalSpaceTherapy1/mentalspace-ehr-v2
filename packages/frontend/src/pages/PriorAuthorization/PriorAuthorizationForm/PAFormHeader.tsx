@@ -28,7 +28,13 @@ export default function PAFormHeader({
     if (!dateStr) return 'N/A';
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+      // Use UTC to avoid timezone shifts for dates stored as midnight UTC
+      return date.toLocaleDateString('en-US', {
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC'
+      });
     } catch {
       return dateStr;
     }
