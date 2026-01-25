@@ -21,6 +21,7 @@ import { ClinicalNotesValidationService } from './clinical-notes-validation.serv
 import { AppointmentEligibilityService } from './appointment-eligibility.service';
 import { DiagnosisInheritanceService } from './diagnosis-inheritance.service';
 import * as SignatureService from './signature.service';
+import { isClientTreatmentPlanOverdue } from './treatmentPlanCompliance.service';
 
 // Note types enum
 export const NOTE_TYPES = {
@@ -369,10 +370,41 @@ class ClinicalNoteService {
       select: {
         isUnderSupervision: true,
         supervisorId: true,
+        roles: true,
       },
     });
 
     const requiresCosign = clinician?.isUnderSupervision || false;
+
+    // Phase 5.x: Treatment Plan Compliance Check
+    // Block note creation if treatment plan is overdue (unless creating a Treatment Plan)
+    if (validatedData.noteType !== 'Treatment Plan') {
+      const treatmentPlanCheck = await isClientTreatmentPlanOverdue(validatedData.clientId);
+
+      if (treatmentPlanCheck.isOverdue) {
+        // Check if user is admin/supervisor who can override
+        const userRoles = clinician?.roles || [];
+        const canOverride = userRoles.some((role: string) =>
+          ['ADMINISTRATOR', 'SUPER_ADMIN', 'SUPERVISOR', 'CLINICAL_DIRECTOR'].includes(role)
+        );
+
+        if (!canOverride) {
+          throw new BadRequestError(
+            treatmentPlanCheck.message ||
+              'Cannot create clinical notes for clients with overdue treatment plans. Please update the treatment plan first.'
+          );
+        }
+
+        // Log the override for compliance tracking
+        logger.warn('Treatment plan compliance override by supervisor/admin', {
+          clientId: validatedData.clientId,
+          userId,
+          userRoles,
+          treatmentPlanStatus: treatmentPlanCheck.status,
+          daysOverdue: treatmentPlanCheck.daysOverdue,
+        });
+      }
+    }
 
     logger.info('Creating clinical note', {
       clientId: validatedData.clientId,

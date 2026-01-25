@@ -324,6 +324,9 @@ model User {
   userCredentials UserCredentials?
   userPreferences UserPreferences?
 
+  // Treatment Plan Reminder Tracking
+  treatmentPlanReminders TreatmentPlanReminder[] @relation("TreatmentPlanReminders")
+
   @@map("users")
 }
 
@@ -874,6 +877,9 @@ model Client {
 
   // AI Personal Assistant Relations
   aiConversations AIConversation[]
+
+  // Treatment Plan Reminder Tracking
+  treatmentPlanReminders TreatmentPlanReminder[]
 
   @@map("clients")
 }
@@ -4145,6 +4151,27 @@ model AppointmentReminder {
   @@index([deliveryStatus])
   @@index([sentAt])
   @@map("appointment_reminders")
+}
+
+// TreatmentPlanReminder - Tracks treatment plan reminder notifications
+model TreatmentPlanReminder {
+  id            String   @id @default(uuid())
+  clientId      String
+  clinicianId   String
+  sentAt        DateTime @default(now())
+  reminderCount Int      @default(1)
+  isOverdue     Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client    Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clinician User   @relation("TreatmentPlanReminders", fields: [clinicianId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([clinicianId])
+  @@index([sentAt])
+  @@map("treatment_plan_reminders")
 }
 
 // ReminderConfiguration - Practice-level reminder settings

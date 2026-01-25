@@ -41,6 +41,16 @@ export {
   type PaymentReminderData,
 } from './billing.templates';
 
+// Treatment Plan templates
+export {
+  renderTreatmentPlanDueSoon,
+  renderTreatmentPlanOverdue,
+  renderTreatmentPlanSupervisorAlert,
+  type TreatmentPlanDueSoonData,
+  type TreatmentPlanOverdueData,
+  type TreatmentPlanSupervisorAlertData,
+} from './treatmentPlan.templates';
+
 import {
   NotificationType,
   RenderedTemplate,
@@ -50,6 +60,7 @@ import {
 import * as appointmentTemplates from './appointment.templates';
 import * as clinicalTemplates from './clinical.templates';
 import * as billingTemplates from './billing.templates';
+import * as treatmentPlanTemplates from './treatmentPlan.templates';
 
 /**
  * Unified template renderer that routes to the appropriate template based on type
@@ -116,6 +127,20 @@ export class UnifiedTemplateRenderer implements TemplateRenderer {
       case 'PAYMENT_REMINDER':
         return billingTemplates.renderPaymentReminder(
           data as unknown as billingTemplates.PaymentReminderData
+        );
+
+      // Treatment Plan notifications
+      case 'TREATMENT_PLAN_DUE_SOON':
+        return treatmentPlanTemplates.renderTreatmentPlanDueSoon(
+          data as unknown as treatmentPlanTemplates.TreatmentPlanDueSoonData
+        );
+      case 'TREATMENT_PLAN_OVERDUE':
+        return treatmentPlanTemplates.renderTreatmentPlanOverdue(
+          data as unknown as treatmentPlanTemplates.TreatmentPlanOverdueData
+        );
+      case 'TREATMENT_PLAN_SUPERVISOR_ALERT':
+        return treatmentPlanTemplates.renderTreatmentPlanSupervisorAlert(
+          data as unknown as treatmentPlanTemplates.TreatmentPlanSupervisorAlertData
         );
 
       // Fallback for types not yet implemented

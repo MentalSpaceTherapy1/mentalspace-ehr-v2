@@ -1,5 +1,6 @@
 import logger, { logControllerError } from '../../utils/logger';
 import anthropicService from './anthropic.service';
+import prisma from '../database';
 
 /**
  * AI Treatment Suggestions Service
@@ -218,6 +219,293 @@ Suggest 2-3 specific homework assignments. Return as JSON:
       logger.error('Homework suggestion error:', { errorType: error instanceof Error ? error.constructor.name : typeof error });
       return [];
     }
+  }
+
+  /**
+   * Generate a comprehensive treatment plan from client's latest clinical notes
+   * Uses the last 6 notes and diagnosis to create evidence-based treatment recommendations
+   */
+  async generateTreatmentPlanFromNotes(clientId: string): Promise<{
+    treatmentPlan: TreatmentSuggestionsResult;
+    sourceData: {
+      notesAnalyzed: number;
+      diagnoses: string[];
+      presentingProblems: string[];
+      treatmentProgress: string;
+    };
+  }> {
+    try {
+      // Fetch client information including diagnoses
+      const client = await prisma.client.findUnique({
+        where: { id: clientId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          dateOfBirth: true,
+          diagnoses: {
+            select: {
+              id: true,
+              code: true,
+              description: true,
+              isPrimary: true,
+              status: true,
+            },
+            where: {
+              status: 'ACTIVE',
+            },
+            orderBy: {
+              isPrimary: 'desc',
+            },
+          },
+        },
+      });
+
+      if (!client) {
+        throw new Error(`Client not found: ${clientId}`);
+      }
+
+      // Fetch the latest 6 clinical notes for this client
+      const notes = await prisma.clinicalNote.findMany({
+        where: {
+          clientId,
+          status: { in: ['SIGNED', 'COSIGNED', 'COMPLETED'] },
+          noteType: { in: ['Progress Note', 'Intake Assessment', 'Treatment Plan', 'Assessment'] },
+        },
+        orderBy: {
+          serviceDate: 'desc',
+        },
+        take: 6,
+        select: {
+          id: true,
+          noteType: true,
+          serviceDate: true,
+          content: true,
+          status: true,
+        },
+      });
+
+      if (notes.length === 0) {
+        throw new Error('No clinical notes found for treatment plan generation');
+      }
+
+      // Extract presenting problems and progress from notes
+      const presentingProblems: Set<string> = new Set();
+      const progressIndicators: string[] = [];
+
+      for (const note of notes) {
+        const content = note.content as Record<string, unknown> | null;
+        if (content) {
+          // Extract presenting problems from various note fields
+          if (content.presentingProblem) {
+            presentingProblems.add(String(content.presentingProblem));
+          }
+          if (content.chiefComplaint) {
+            presentingProblems.add(String(content.chiefComplaint));
+          }
+          if (Array.isArray(content.presentingProblems)) {
+            content.presentingProblems.forEach((p: unknown) => presentingProblems.add(String(p)));
+          }
+
+          // Extract progress indicators
+          if (content.progress) {
+            progressIndicators.push(`${note.noteType} (${note.serviceDate.toISOString().split('T')[0]}): ${content.progress}`);
+          }
+          if (content.sessionSummary) {
+            progressIndicators.push(`Session summary: ${String(content.sessionSummary).slice(0, 200)}...`);
+          }
+          if (content.clinicalFormulation) {
+            progressIndicators.push(`Clinical formulation: ${String(content.clinicalFormulation).slice(0, 200)}...`);
+          }
+        }
+      }
+
+      // Prepare diagnoses array
+      const diagnoses = client.diagnoses.map(d => `${d.code} - ${d.description}${d.isPrimary ? ' (Primary)' : ''}`);
+
+      // Calculate client age
+      const age = client.dateOfBirth
+        ? Math.floor((Date.now() - new Date(client.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        : undefined;
+
+      // Build comprehensive prompt for AI
+      const systemPrompt = this.buildTreatmentPlanSystemPrompt();
+      const userPrompt = this.buildTreatmentPlanFromNotesPrompt({
+        diagnoses,
+        presentingProblems: Array.from(presentingProblems),
+        progressIndicators,
+        clientAge: age,
+        notesCount: notes.length,
+        notesSummary: notes.map(n => ({
+          type: n.noteType,
+          date: n.serviceDate.toISOString().split('T')[0],
+          content: n.content,
+        })),
+      });
+
+      const response = await anthropicService.generateCompletion(systemPrompt, userPrompt, {
+        maxTokens: 4000,
+        temperature: 0.6,
+      });
+
+      const treatmentPlan = this.parseResponse(response);
+
+      return {
+        treatmentPlan,
+        sourceData: {
+          notesAnalyzed: notes.length,
+          diagnoses,
+          presentingProblems: Array.from(presentingProblems),
+          treatmentProgress: progressIndicators.length > 0 ? progressIndicators.join('\n') : 'No progress notes available',
+        },
+      };
+    } catch (error) {
+      logger.error('Treatment plan generation from notes error:', {
+        clientId,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Build system prompt specifically for treatment plan generation from notes
+   */
+  private buildTreatmentPlanSystemPrompt(): string {
+    return `You are an expert clinical psychologist creating a comprehensive treatment plan based on a client's clinical history.
+
+You are reviewing clinical notes to create an evidence-based treatment plan that:
+1. Addresses all identified diagnoses with appropriate interventions
+2. Builds on documented progress and therapeutic gains
+3. Targets remaining presenting problems with specific, measurable goals
+4. Recommends evidence-based treatment modalities appropriate for the diagnoses
+5. Considers client's treatment history and response to interventions
+
+Your treatment plan should follow the Georgia Board requirements:
+- Include specific, measurable, attainable, relevant, and time-bound (SMART) goals
+- Address each diagnosis with appropriate treatment modality
+- Include specific interventions and techniques
+- Specify expected outcomes and timeline
+- Be reviewable within 90 days
+
+IMPORTANT:
+- Base recommendations on the clinical evidence from the notes
+- Consider what has worked and what hasn't based on progress notes
+- Provide rationale for each recommendation tied to the clinical data
+- Include cultural considerations if relevant information is present
+- Note any contraindications based on client history`;
+  }
+
+  /**
+   * Build user prompt for treatment plan generation from notes
+   */
+  private buildTreatmentPlanFromNotesPrompt(data: {
+    diagnoses: string[];
+    presentingProblems: string[];
+    progressIndicators: string[];
+    clientAge?: number;
+    notesCount: number;
+    notesSummary: Array<{ type: string; date: string; content: unknown }>;
+  }): string {
+    let prompt = `Generate a comprehensive treatment plan based on the following clinical history:\n\n`;
+
+    prompt += `DIAGNOSES:\n${data.diagnoses.join('\n')}\n\n`;
+
+    if (data.presentingProblems.length > 0) {
+      prompt += `PRESENTING PROBLEMS:\n${data.presentingProblems.join('\n')}\n\n`;
+    }
+
+    if (data.clientAge) {
+      prompt += `CLIENT AGE: ${data.clientAge}\n\n`;
+    }
+
+    prompt += `CLINICAL NOTES REVIEWED: ${data.notesCount} notes\n\n`;
+
+    if (data.progressIndicators.length > 0) {
+      prompt += `TREATMENT PROGRESS:\n${data.progressIndicators.join('\n')}\n\n`;
+    }
+
+    // Include summarized note content
+    prompt += `RECENT CLINICAL DOCUMENTATION:\n`;
+    for (const note of data.notesSummary) {
+      const content = note.content as Record<string, unknown> | null;
+      if (content) {
+        const summary = this.summarizeNoteContent(content);
+        prompt += `\n${note.type} (${note.date}):\n${summary}\n`;
+      }
+    }
+
+    prompt += `\nBased on this clinical history, provide a comprehensive treatment plan in JSON format:
+{
+  "recommendations": [
+    {
+      "modality": "Treatment modality name (e.g., CBT, DBT, EMDR)",
+      "evidenceLevel": "Strongly Recommended|Recommended|Suggested|Experimental",
+      "rationale": "Why this is recommended based on the clinical data",
+      "specificTechniques": ["Technique 1", "Technique 2"],
+      "expectedOutcomes": "What outcomes to expect and timeline",
+      "contraindications": ["If any based on client history"]
+    }
+  ],
+  "interventions": [
+    {
+      "intervention": "Specific intervention name",
+      "category": "CBT|DBT|ACT|IPT|EMDR|etc",
+      "description": "What the intervention involves",
+      "implementation": "How to implement in sessions",
+      "expectedBenefit": "Expected therapeutic benefit"
+    }
+  ],
+  "goalSuggestions": [
+    {
+      "goalText": "SMART goal statement",
+      "rationale": "Why this goal based on presenting problems",
+      "measurableObjectives": ["Specific objective 1", "Specific objective 2"],
+      "targetTimeframe": "e.g., 12 weeks, 90 days",
+      "progressIndicators": ["How to measure progress"]
+    }
+  ],
+  "culturalConsiderations": ["Cultural factors to consider in treatment"],
+  "confidence": 0.85
+}
+
+Ensure:
+- At least 2-3 treatment modality recommendations
+- At least 3-5 specific interventions
+- At least 3-5 SMART goals addressing the presenting problems
+- Goals should be achievable within 90 days for review compliance`;
+
+    return prompt;
+  }
+
+  /**
+   * Summarize note content for AI prompt
+   */
+  private summarizeNoteContent(content: Record<string, unknown>): string {
+    const relevantFields = [
+      'chiefComplaint',
+      'presentingProblem',
+      'mentalStatusExam',
+      'sessionSummary',
+      'progress',
+      'interventionsUsed',
+      'clientResponse',
+      'clinicalFormulation',
+      'riskAssessment',
+      'treatmentGoals',
+    ];
+
+    const summary: string[] = [];
+    for (const field of relevantFields) {
+      if (content[field]) {
+        const value = content[field];
+        const text = typeof value === 'string' ? value : JSON.stringify(value);
+        summary.push(`- ${field}: ${text.slice(0, 300)}${text.length > 300 ? '...' : ''}`);
+      }
+    }
+
+    return summary.length > 0 ? summary.join('\n') : 'No detailed content available';
   }
 
   /**

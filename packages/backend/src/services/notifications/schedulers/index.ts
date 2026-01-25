@@ -13,8 +13,14 @@ export {
   clinicalNoteReminderScheduler,
 } from './clinical.scheduler';
 
+export {
+  TreatmentPlanReminderScheduler,
+  treatmentPlanReminderScheduler,
+} from './treatmentPlan.scheduler';
+
 import { appointmentReminderScheduler } from './appointment.scheduler';
 import { clinicalNoteReminderScheduler } from './clinical.scheduler';
+import { treatmentPlanReminderScheduler } from './treatmentPlan.scheduler';
 import logger from '../../../utils/logger';
 
 /**
@@ -25,6 +31,7 @@ export function startAllSchedulers(): void {
 
   appointmentReminderScheduler.start();
   clinicalNoteReminderScheduler.start();
+  treatmentPlanReminderScheduler.start();
 
   logger.info('All notification schedulers started');
 }
@@ -37,6 +44,7 @@ export function stopAllSchedulers(): void {
 
   appointmentReminderScheduler.stop();
   clinicalNoteReminderScheduler.stop();
+  treatmentPlanReminderScheduler.stop();
 
   logger.info('All notification schedulers stopped');
 }
@@ -48,6 +56,7 @@ export function getAllSchedulerStatus() {
   return {
     appointmentReminder: appointmentReminderScheduler.getStatus(),
     clinicalNoteReminder: clinicalNoteReminderScheduler.getStatus(),
+    treatmentPlanReminder: treatmentPlanReminderScheduler.getStatus(),
   };
 }
 
@@ -60,6 +69,7 @@ export async function runAllSchedulersNow() {
   const results = await Promise.allSettled([
     appointmentReminderScheduler.runNow(),
     clinicalNoteReminderScheduler.runNow(),
+    treatmentPlanReminderScheduler.runNow(),
   ]);
 
   return {
@@ -67,5 +77,7 @@ export async function runAllSchedulersNow() {
       results[0].status === 'fulfilled' ? results[0].value : { error: (results[0] as PromiseRejectedResult).reason },
     clinicalNoteReminder:
       results[1].status === 'fulfilled' ? results[1].value : { error: (results[1] as PromiseRejectedResult).reason },
+    treatmentPlanReminder:
+      results[2].status === 'fulfilled' ? results[2].value : { error: (results[2] as PromiseRejectedResult).reason },
   };
 }

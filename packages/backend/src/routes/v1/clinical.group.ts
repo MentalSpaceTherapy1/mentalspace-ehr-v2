@@ -12,6 +12,7 @@ import clinicalNoteReminderRoutes from '../clinicalNoteReminder.routes';
 import reminderConfigRoutes from '../reminderConfig.routes';
 import groupTherapyNoteRoutes from '../groupTherapyNote.routes';
 import supervisionRoutes from '../supervision.routes';
+import treatmentPlanComplianceRoutes from '../treatmentPlanCompliance.routes';
 
 const router = Router();
 
@@ -37,5 +38,8 @@ router.use('/reminder-config', reminderConfigRoutes);
 
 // Supervision
 router.use('/supervision', supervisionRoutes);
+
+// Treatment Plan Compliance (Phase 5.x)
+router.use('/treatment-plan-compliance', treatmentPlanComplianceRoutes);
 
 export default router;

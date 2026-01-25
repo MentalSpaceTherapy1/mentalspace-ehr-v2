@@ -30,6 +30,10 @@ export type NotificationType =
   | 'NOTE_PENDING_COSIGN'
   | 'NOTE_ESCALATION'
   | 'NOTE_DAILY_DIGEST'
+  // Treatment Plan notifications (Phase 5.x)
+  | 'TREATMENT_PLAN_DUE_SOON'
+  | 'TREATMENT_PLAN_OVERDUE'
+  | 'TREATMENT_PLAN_SUPERVISOR_ALERT'
   // Billing notifications
   | 'CLAIM_SUBMITTED'
   | 'CLAIM_DENIED'
