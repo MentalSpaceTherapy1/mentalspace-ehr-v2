@@ -45,9 +45,9 @@ jobs:
 
       - name: Fix Rollup platform binaries
         run: |
-          # Reinstall rollup to get platform-specific native binaries
+          # Force install Linux-specific Rollup binary
           # This fixes cross-platform lockfile issues with optional dependencies
-          npm rebuild @rollup/rollup-linux-x64-gnu || npm install @rollup/rollup-linux-x64-gnu --no-save
+          npm install @rollup/rollup-linux-x64-gnu --save-optional --force
 
       - name: Build shared package
         run: |
