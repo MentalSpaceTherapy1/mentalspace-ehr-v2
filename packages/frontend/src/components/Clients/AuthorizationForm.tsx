@@ -201,11 +201,31 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
     mutationFn: async () => {
       let paId = authorization?.id;
 
-      // If no PA exists yet, we can't generate - show a message
+      // If no PA exists yet, create one first
       if (!paId) {
-        // For new PAs, we'll generate mock data or skip the API call
-        // In production, this would create a temp PA or call a different endpoint
-        throw new Error('Please save the questionnaire first before generating with Lisa');
+        const primaryInsurance = insuranceList?.find(i => i.rank === 'PRIMARY') || insuranceList?.[0];
+        const primaryDiagnosis = client?.diagnoses?.[0];
+
+        if (!primaryInsurance?.id) {
+          throw new Error('Client must have insurance on file before generating with Lisa');
+        }
+
+        const paData = {
+          clientId,
+          insuranceId: primaryInsurance.id,
+          authorizationNumber: `PA-${Date.now()}`,
+          authorizationType: 'OUTPATIENT_MENTAL_HEALTH',
+          status: 'PENDING',
+          sessionsAuthorized: 12,
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+          cptCodes: ['90837'],
+          diagnosisCodes: primaryDiagnosis ? [primaryDiagnosis.code] : [],
+          requestingProviderId: null,
+        };
+
+        const createResponse = await api.post('/prior-authorizations', paData);
+        paId = createResponse.data.data?.id || createResponse.data.id;
       }
 
       const response = await api.post(`/prior-authorizations/${paId}/generate-with-lisa`, {
@@ -220,6 +240,8 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
         setQuestionnaireData({ ...DEFAULT_QUESTIONNAIRE_DATA, ...generatedData });
       }
       setIsGenerating(false);
+      // Refresh the prior authorizations list in case we created a new PA
+      queryClient.invalidateQueries({ queryKey: ['prior-authorizations', clientId] });
     },
     onError: (error) => {
       console.error('Lisa generation failed:', error);
