@@ -11,13 +11,12 @@ import {
   getComplianceSummary,
   getDashboardData,
 } from '../controllers/treatmentPlanCompliance.controller';
-import { authenticateToken } from '../middleware/auth.middleware';
-import { requireRole } from '../middleware/roleAuth.middleware';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+router.use(authenticate);
 
 /**
  * GET /api/treatment-plan-compliance/summary
@@ -26,14 +25,14 @@ router.use(authenticateToken);
  */
 router.get(
   '/summary',
-  requireRole([
+  authorize(
     'ADMINISTRATOR',
     'SUPER_ADMIN',
     'SUPERVISOR',
     'CLINICAL_DIRECTOR',
     'CLINICIAN',
     'INTERN',
-  ]),
+  ),
   getComplianceSummary
 );
 
@@ -44,14 +43,14 @@ router.get(
  */
 router.get(
   '/dashboard',
-  requireRole([
+  authorize(
     'ADMINISTRATOR',
     'SUPER_ADMIN',
     'SUPERVISOR',
     'CLINICAL_DIRECTOR',
     'CLINICIAN',
     'INTERN',
-  ]),
+  ),
   getDashboardData
 );
 
@@ -62,14 +61,14 @@ router.get(
  */
 router.get(
   '/all',
-  requireRole([
+  authorize(
     'ADMINISTRATOR',
     'SUPER_ADMIN',
     'SUPERVISOR',
     'CLINICAL_DIRECTOR',
     'CLINICIAN',
     'INTERN',
-  ]),
+  ),
   getAllClientsStatus
 );
 
@@ -80,14 +79,14 @@ router.get(
  */
 router.get(
   '/check/:clientId',
-  requireRole([
+  authorize(
     'ADMINISTRATOR',
     'SUPER_ADMIN',
     'SUPERVISOR',
     'CLINICAL_DIRECTOR',
     'CLINICIAN',
     'INTERN',
-  ]),
+  ),
   checkClientCompliance
 );
 
@@ -98,14 +97,14 @@ router.get(
  */
 router.get(
   '/client/:clientId',
-  requireRole([
+  authorize(
     'ADMINISTRATOR',
     'SUPER_ADMIN',
     'SUPERVISOR',
     'CLINICAL_DIRECTOR',
     'CLINICIAN',
     'INTERN',
-  ]),
+  ),
   getClientStatus
 );
 
