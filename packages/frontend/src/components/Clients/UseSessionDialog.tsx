@@ -10,7 +10,7 @@ interface PriorAuthorization {
   sessionsUsed: number;
   sessionsRemaining: number;
   insurance: {
-    payerName: string;
+    insuranceCompany: string;
   };
 }
 
@@ -67,7 +67,7 @@ export default function UseSessionDialog({ authorization, onClose }: UseSessionD
             </div>
             <div className="mb-3">
               <p className="text-sm font-semibold text-gray-600">Insurance</p>
-              <p className="text-base font-bold text-gray-900">{authorization.insurance.payerName}</p>
+              <p className="text-base font-bold text-gray-900">{authorization.insurance.insuranceCompany}</p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-white/70 p-2 rounded-lg">

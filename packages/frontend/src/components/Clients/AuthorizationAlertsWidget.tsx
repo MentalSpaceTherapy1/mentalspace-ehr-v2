@@ -15,7 +15,7 @@ interface PriorAuthorization {
   sessionsRemaining: number;
   endDate: string;
   insurance: {
-    payerName: string;
+    insuranceCompany: string;
   };
 }
 
@@ -155,7 +155,7 @@ export default function AuthorizationAlertsWidget({
                           Auth: {auth.authorizationNumber}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {auth.insurance.payerName}
+                          {auth.insurance.insuranceCompany}
                         </p>
                       </div>
                       <div className="text-right">
@@ -213,7 +213,7 @@ export default function AuthorizationAlertsWidget({
                           Auth: {auth.authorizationNumber}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {auth.insurance.payerName}
+                          {auth.insurance.insuranceCompany}
                         </p>
                       </div>
                       <div className="text-right">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import ICD10Autocomplete from '../ClinicalNotes/ICD10Autocomplete';
+import PriorAuthorizationForm from '../../pages/PriorAuthorization/PriorAuthorizationForm';
 
 interface PriorAuthorization {
   id: string;
@@ -9,8 +10,8 @@ interface PriorAuthorization {
   insuranceId: string;
   insurance: {
     id: string;
-    payerName: string;
-    rank: number;
+    insuranceCompany: string;
+    rank: string;
   };
   authorizationNumber: string;
   authorizationType: string;
@@ -69,6 +70,8 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
   const queryClient = useQueryClient();
   const [cptSearchTerm, setCptSearchTerm] = useState('');
   const [showCptDropdown, setShowCptDropdown] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'questionnaire'>('details');
+  const [createdAuthId, setCreatedAuthId] = useState<string | null>(authorization?.id || null);
 
   const [formData, setFormData] = useState<{
     insuranceId: string;
@@ -144,17 +147,25 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
         endDate: new Date(data.endDate).toISOString(),
       };
 
-      if (authorization) {
-        const response = await api.put(`/prior-authorizations/${authorization.id}`, submitData);
+      if (authorization || createdAuthId) {
+        const id = authorization?.id || createdAuthId;
+        const response = await api.put(`/prior-authorizations/${id}`, submitData);
         return response.data;
       } else {
         const response = await api.post('/prior-authorizations', submitData);
         return response.data;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['prior-authorizations', clientId] });
-      onClose();
+      // If creating new, capture the ID and switch to questionnaire tab
+      if (!authorization && !createdAuthId && data?.data?.id) {
+        setCreatedAuthId(data.data.id);
+        setActiveTab('questionnaire');
+      } else if (!authorization && !createdAuthId && data?.id) {
+        setCreatedAuthId(data.id);
+        setActiveTab('questionnaire');
+      }
     },
   });
 
@@ -188,9 +199,9 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
 
   return (
     <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-l-indigo-500">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-gray-800">
-          {authorization ? 'Edit Authorization' : 'New Authorization'}
+          {authorization || createdAuthId ? 'Edit Authorization' : 'New Authorization'}
         </h2>
         <button
           onClick={onClose}
@@ -200,6 +211,51 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
         </button>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="flex border-b border-gray-200 mb-6">
+        <button
+          type="button"
+          onClick={() => setActiveTab('details')}
+          className={`px-6 py-3 font-semibold text-sm transition-colors ${
+            activeTab === 'details'
+              ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+          }`}
+        >
+          Authorization Details
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('questionnaire')}
+          disabled={!authorization && !createdAuthId}
+          className={`px-6 py-3 font-semibold text-sm transition-colors ${
+            activeTab === 'questionnaire'
+              ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+          } ${!authorization && !createdAuthId ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          Clinical Questionnaire
+          {!authorization && !createdAuthId && (
+            <span className="ml-2 text-xs text-gray-500">(Save details first)</span>
+          )}
+        </button>
+      </div>
+
+      {/* Clinical Questionnaire Tab */}
+      {activeTab === 'questionnaire' && (authorization?.id || createdAuthId) && (
+        <div className="mb-6">
+          <PriorAuthorizationForm
+            priorAuthorizationId={authorization?.id || createdAuthId!}
+            onClose={onClose}
+            onSaveSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['prior-authorizations', clientId] });
+            }}
+          />
+        </div>
+      )}
+
+      {/* Authorization Details Tab */}
+      {activeTab === 'details' && (
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {/* Insurance */}
@@ -453,11 +509,12 @@ export default function AuthorizationForm({ clientId, authorization, onClose }: 
                 Saving...
               </>
             ) : (
-              <>{authorization ? 'Update' : 'Create'} Authorization</>
+              <>{authorization || createdAuthId ? 'Update' : 'Save & Continue to Questionnaire'}</>
             )}
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 }

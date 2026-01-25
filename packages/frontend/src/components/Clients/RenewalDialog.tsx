@@ -9,8 +9,8 @@ interface PriorAuthorization {
   insuranceId: string;
   insurance: {
     id: string;
-    payerName: string;
-    rank: number;
+    insuranceCompany: string;
+    rank: string;
   };
   authorizationNumber: string;
   authorizationType: string;
@@ -192,7 +192,7 @@ export default function RenewalDialog({ authorization, onClose }: RenewalDialogP
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-600">Insurance</p>
-                  <p className="text-base font-bold text-gray-900">{authorization.insurance.payerName}</p>
+                  <p className="text-base font-bold text-gray-900">{authorization.insurance.insuranceCompany}</p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-600">Type</p>
